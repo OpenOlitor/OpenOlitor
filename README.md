@@ -14,7 +14,7 @@ Die ersten Version wird folgende fachlichen Anforderungen unterteilt in verschie
 4. Ressourcenplanung und Auswertungen
 
 ## Organisation
-Für die Entwicklung und den Unterhalt wurde der Vereion "OpenOlitor" gegründet. 
+Für die Entwicklung und den Unterhalt wurde der Verein "OpenOlitor" gegründet. 
 Der Vereinszweck wurde wie folgt definiert:
 „Der Verein bezweckt die Erarbeitung und Weiterentwicklung der Open Source-Softwareplattform OpenOlitor zur Förderung der regionalen Vertragslandwirtschaft und anderen Formen der Vermarktung von landwirtschaftlichen Produkten.“
 
