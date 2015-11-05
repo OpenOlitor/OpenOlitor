@@ -1,0 +1,2 @@
+# OpenOlitor
+Administrationsplattform für Vertragslandwirtschaftsprojekte
