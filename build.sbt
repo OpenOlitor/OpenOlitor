@@ -22,7 +22,7 @@ libraryDependencies ++= {
     "org.scalaz" 		  %% "scalaz-core"						 % "7.1.5",
     //akka persistence journal driver
     "com.okumin" 		  %% "akka-persistence-sql-async" 		 % "0.3.1",
-    "com.github.mauricio" %% "mysql-async" 						 % "0.2.16",
+    "com.github.mauricio" %% "mysql-async" 						 % "0.2.16"
   )
 }
 
