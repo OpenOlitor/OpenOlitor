@@ -34,11 +34,18 @@ import spray.json.DefaultJsonProtocol._
 import ch.openolitor.helloworld.HelloWorldJsonProtocol
 import ch.openolitor.stammdaten.StammdatenRoutes
 import ch.openolitor.helloworld.HelloWorldRoutes
+import ch.openolitor.core.domain._
+import ch.openolitor.stammdaten.StammdatenEntityStoreView
+import akka.actor.ActorRef
+import akka.actor.Props
+
+object RouteServiceActor {
+  def props(entityStore: ActorRef): Props = Props(classOf[RouteServiceActor], entityStore)
+}
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor extends Actor with DefaultRouteService with HelloWorldRoutes with StammdatenRoutes {
-
+class RouteServiceActor(override val entityStore: ActorRef) extends Actor with ActorReferences with DefaultRouteService with HelloWorldRoutes with StammdatenRoutes {
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   def actorRefFactory = context
@@ -46,7 +53,9 @@ class RouteServiceActor extends Actor with DefaultRouteService with HelloWorldRo
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  def receive = runRoute(helloWorldRoute ~ stammdatenRoute)
+  def receive = {
+    runRoute(helloWorldRoute ~ stammdatenRoute)
+  }
 }
 
 // this trait defines our service behavior independently from the service actor

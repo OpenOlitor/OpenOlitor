@@ -30,8 +30,9 @@ import spray.httpx.SprayJsonSupport._
 import spray.routing.Directive.pimpApply
 import spray.json._
 import spray.json.DefaultJsonProtocol._
+import ch.openolitor.core.ActorReferences
 
-trait StammdatenRoutes extends HttpService {
+trait StammdatenRoutes extends HttpService with ActorReferences {
 
   val stammdatenRoute =
     path("abo") {

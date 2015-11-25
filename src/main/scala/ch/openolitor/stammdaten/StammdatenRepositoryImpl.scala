@@ -25,21 +25,22 @@ package ch.openolitor.stammdaten
 import ch.openolitor.core.repositories.StammdatenWriteRepository
 import ch.openolitor.core.models.BaseEntity
 import java.util.UUID
+import scalikejdbc._
 
 trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
-  override def cleanupDatabase() = {
+  override def cleanupDatabase()(implicit session: DBSession = AutoSession) = {
     //TODO: implement
   }
 
-  override def insert(id: UUID, entity: BaseEntity) = {
+  override def insert(id: UUID, entity: BaseEntity)(implicit session: DBSession = AutoSession) = {
     //TODO: implement using entity match
   }
 
-  override def delete(entity: BaseEntity) = {
+  override def delete(entity: BaseEntity)(implicit session: DBSession = AutoSession) = {
     //TODO: implement using entity match
   }
 
-  override def update(entity: BaseEntity) = {
+  override def update(entity: BaseEntity)(implicit session: DBSession = AutoSession) = {
     //TODO: implement using entity match
   }
 }

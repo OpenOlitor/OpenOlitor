@@ -20,58 +20,32 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.stammdaten
 
-import akka.persistence.PersistentView
+import akka.actor.Props
+import ch.openolitor.core.domain.EntityStoreView
+import ch.openolitor.core.domain.EntityStoreView
+import ch.openolitor.stammdaten.domain.views.StammdatenInsertActor
+import akka.actor.Actor
+import ch.openolitor.core.domain.EntityStoreViewComponent
+import ch.openolitor.stammdaten.domain.views.StammdatenUpdateActor
+import ch.openolitor.stammdaten.domain.views.StammdatenDeleteActor
+import ch.openolitor.core.domain.EntityStoreView
 
-import akka.actor._
-import scala.concurrent.duration._
-import akka.actor.SupervisorStrategy.Restart
-
-/**
- * Component mit Referenzen auf weitere Dienste
- */
-trait EntityStoreViewComponent extends Actor {
-  val insertActor: ActorRef
-  val updateActor: ActorRef
-  val deleteActor: ActorRef
-
-  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
-    case _: Exception => Restart
-  }
-}
-
-object EntityStoreView {
-  case object Startup
+object StammdatenEntityStoreView {
+  def props(): Props = Props(classOf[StammdatenEntityStoreView])
 }
 
 /**
- * Diese generische EntityStoreView delelegiert die Events an die jeweilige modulspezifische ActorRef
+ * Zusammenfügen des Componenten (cake pattern) zu der persistentView
  */
-class EntityStoreView(module: String) extends PersistentView with ActorLogging {
-  self: EntityStoreViewComponent =>
+class StammdatenEntityStoreView extends EntityStoreView("stammdaten") with StammdatenEntityStoreViewComponent
 
-  import EntityStore._
-  import EntityStoreView._
-
-  override val persistenceId = EntityStore.persistenceId
-  override val viewId = s"$module-entity-store"
-
-  override def autoUpdateInterval = 100 millis
-
-  /**
-   * Delegate to
-   */
-  val receive: Receive = {
-    case e: EntityStoreInitialized =>
-      deleteActor ! e
-    case e: EntityInsertedEvent =>
-      insertActor ! e
-    case e: EntityUpdatedEvent =>
-      updateActor ! e
-    case e: EntityDeletedEvent =>
-      deleteActor ! e
-    case Startup =>
-      log.debug("Received startup command")
-  }
+/**
+ * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
+ */
+trait StammdatenEntityStoreViewComponent extends EntityStoreViewComponent {
+  val insertActor = context.actorOf(StammdatenInsertActor.props)
+  val updateActor = context.actorOf(StammdatenUpdateActor.props)
+  val deleteActor = context.actorOf(StammdatenDeleteActor.props)
 }

@@ -23,7 +23,6 @@
 package ch.openolitor.helloworld
 
 import spray.json.DefaultJsonProtocol
-import ch.openolitor.stammdaten.HelloWorld
 
 object HelloWorldJsonProtocol extends DefaultJsonProtocol {
   implicit val helloWorldFormat = jsonFormat1(HelloWorld)

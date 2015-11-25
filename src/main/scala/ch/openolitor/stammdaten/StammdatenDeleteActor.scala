@@ -46,6 +46,8 @@ class StammdatenDeleteActor extends Actor with ActorLogging {
   import EntityStore._
 
   val receive: Receive = {
+    case EntityStoreInitialized =>
+      stammdatenRepository.cleanupDatabase
     case EntityDeletedEvent(meta, entity) =>
       //TODO: implement entity based matching
       log.debug(s"Receive delete event for entity:$entity")

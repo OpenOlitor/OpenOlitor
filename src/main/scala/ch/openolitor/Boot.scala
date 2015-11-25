@@ -22,18 +22,21 @@
 \*                                                                           */
 package ch.openolitor
 
-import akka.actor.{ ActorSystem, Props }
+import akka.actor.{ ActorSystem, Props, ActorRef }
 import akka.pattern.ask
 import akka.io.IO
 import spray.can.Http
 import akka.util.Timeout
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.typesafe.config.ConfigFactory
 import collection.JavaConversions._
 import scalaz._
 import Scalaz._
 import com.typesafe.config.Config
-import ch.openolitor.core.RouteServiceActor
+import ch.openolitor.core._
+import ch.openolitor.core.domain._
+import ch.openolitor.stammdaten.StammdatenEntityStoreView
 
 object Boot extends App {
 
@@ -73,8 +76,17 @@ object Boot extends App {
     configs.map { cfg =>
       implicit val app = ActorSystem(cfg.name, config.getConfig(s"openolitor.${cfg.key}").withFallback(config))
 
+      //initialuze root actors
+      val duration = Duration.create(5, SECONDS);
+      val system = app.actorOf(SystemActor.props, "system")
+      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props), duration).asInstanceOf[ActorRef]
+      val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props), duration).asInstanceOf[ActorRef]
+
+      //initialize global persistentviews
+      stammdatenEntityStoreView ! EntityStoreView.Startup
+
       // create and start our service actor
-      val service = app.actorOf(Props[RouteServiceActor], "route-service")
+      val service = app.actorOf(RouteServiceActor.props(entityStore), "route-service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler
       IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.port)

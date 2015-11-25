@@ -35,5 +35,5 @@ trait BaseWriteRepository {
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
-  def cleanupDatabase()
+  def cleanupDatabase()(implicit session: DBSession = AutoSession)
 }
