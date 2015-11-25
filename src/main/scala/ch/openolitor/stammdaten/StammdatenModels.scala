@@ -39,7 +39,7 @@ import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.models.BaseEntity
 
-sealed trait Lieferzeitpunkt
+sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
 
 object Lieferzeitpunkt {

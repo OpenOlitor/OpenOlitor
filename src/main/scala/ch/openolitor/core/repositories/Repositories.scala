@@ -28,12 +28,11 @@ import scalikejdbc.DBSession
 import scalikejdbc.AutoSession
 
 trait BaseWriteRepository {
-
   def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession)
   def update(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession)
   def delete(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession)
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
-  def cleanupDatabase()(implicit session: DBSession = AutoSession)
+  def cleanupDatabase()
 }

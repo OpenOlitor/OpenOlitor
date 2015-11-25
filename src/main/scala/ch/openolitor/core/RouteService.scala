@@ -23,21 +23,11 @@
 package ch.openolitor.core
 
 import akka.actor.Actor
-import spray.routing._
-import spray.http._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
-import spray.json._
-import spray.json.DefaultJsonProtocol._
-import ch.openolitor.helloworld.HelloWorldJsonProtocol
-import ch.openolitor.stammdaten.StammdatenRoutes
-import ch.openolitor.helloworld.HelloWorldRoutes
-import ch.openolitor.core.domain._
-import ch.openolitor.stammdaten.StammdatenEntityStoreView
 import akka.actor.ActorRef
 import akka.actor.Props
+import ch.openolitor.helloworld.HelloWorldRoutes
+import ch.openolitor.stammdaten.StammdatenRoutes
+import spray.routing.HttpService
 
 object RouteServiceActor {
   def props(entityStore: ActorRef): Props = Props(classOf[RouteServiceActor], entityStore)

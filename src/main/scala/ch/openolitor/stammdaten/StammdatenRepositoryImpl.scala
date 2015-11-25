@@ -26,9 +26,12 @@ import ch.openolitor.core.repositories.StammdatenWriteRepository
 import ch.openolitor.core.models._
 import java.util.UUID
 import scalikejdbc._
+import scalikejdbc.async._
+import scalikejdbc.async.FutureImplicits._
+import scala.concurrent.ExecutionContext
 
 trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
-  override def cleanupDatabase()(implicit session: DBSession = AutoSession) = {
+  override def cleanupDatabase() = {
 
     //drop all tables
     DB autoCommit { implicit session =>

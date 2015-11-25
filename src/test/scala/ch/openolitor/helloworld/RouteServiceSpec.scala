@@ -27,7 +27,7 @@ import spray.testkit.Specs2RouteTest
 import spray.http._
 import StatusCodes._
 import spray.json._
-import ch.openolitor.helloworld.HelloWorldJsonProtocol._
+import ch.openolitor.stammdaten.HelloWorldJsonProtocol._
 import ch.openolitor.helloworld._
 import ch.openolitor.core.HelloWorld
 import ch.openolitor.core.RouteService

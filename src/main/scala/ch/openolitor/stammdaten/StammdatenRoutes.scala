@@ -31,15 +31,44 @@ import spray.routing.Directive.pimpApply
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import ch.openolitor.core.ActorReferences
+import spray.httpx.unmarshalling.Unmarshaller
 
 trait StammdatenRoutes extends HttpService with ActorReferences {
+  import StammdatenJsonProtocol._
 
   val stammdatenRoute =
-    path("abo") {
+    path("abotypen") {
       get {
         complete {
+          //get list of abotypen
           ""
         }
+      } ~
+        post {
+          entity(as[Abotyp]) { abotyp =>
+            //create abotyp
+            complete(abotyp)
+          }
+        }
+    } ~
+      path("abotypen" / Segment) { id =>
+        get {
+          complete {
+            //get detail of abotyp
+            ""
+          }
+        } ~
+          put {
+            entity(as[Abotyp]) { abotyp =>
+              //update abotyp
+              complete(abotyp)
+            }
+          } ~
+          delete {
+            complete {
+              //delete abottyp
+              ""
+            }
+          }
       }
-    }
 }
