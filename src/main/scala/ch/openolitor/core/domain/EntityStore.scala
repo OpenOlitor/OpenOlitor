@@ -27,6 +27,7 @@ import akka.persistence._
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models.BaseEntity
+import ch.openolitor.core.models.BaseId
 
 /**
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
@@ -42,15 +43,15 @@ object EntityStore {
   def props(): Props = Props(classOf[EntityStore])
 
   //base commands
-  case class InsertEntityCommand(entity: BaseEntity) extends Command
-  case class UpdateEntityCommand(entity: BaseEntity) extends Command
-  case class DeleteEntityCommand(entity: BaseEntity) extends Command
+  case class InsertEntityCommand(entity: BaseEntity[_ <: BaseId]) extends Command
+  case class UpdateEntityCommand(entity: BaseEntity[_ <: BaseId]) extends Command
+  case class DeleteEntityCommand(entity: BaseEntity[_ <: BaseId]) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: BaseEntity) extends PersistetEvent
-  case class EntityUpdatedEvent(meta: EventMetadata, entity: BaseEntity) extends PersistetEvent
-  case class EntityDeletedEvent(meta: EventMetadata, entity: BaseEntity) extends PersistetEvent
+  case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: BaseEntity[_ <: BaseId]) extends PersistetEvent
+  case class EntityUpdatedEvent(meta: EventMetadata, entity: BaseEntity[_ <: BaseId]) extends PersistetEvent
+  case class EntityDeletedEvent(meta: EventMetadata, entity: BaseEntity[_ <: BaseId]) extends PersistetEvent
 
   // other actor messages
 }

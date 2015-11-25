@@ -24,6 +24,10 @@ package ch.openolitor.core.models
 
 import java.util.UUID
 
-trait BaseEntity {
+trait BaseId {
   val id: UUID
+}
+
+trait BaseEntity[T <: BaseId] {
+  val id: Option[T]
 }
