@@ -22,45 +22,52 @@
 \*                                                                           */
 package ch.openolitor.helloworld
 
-import org.specs2.mutable.Specification
-import spray.testkit.Specs2RouteTest
+import akka.actor.Actor
+import spray.routing._
 import spray.http._
-import StatusCodes._
+import spray.http.MediaTypes._
+import spray.httpx.marshalling.ToResponseMarshallable._
+import spray.httpx.SprayJsonSupport._
+import spray.routing.Directive.pimpApply
 import spray.json._
-import ch.openolitor.helloworld.HelloWorldJsonProtocol._
-import ch.openolitor.helloworld._
-import ch.openolitor.core.HelloWorld
-import ch.openolitor.core.RouteService
-import ch.openolitor.stammdaten.HelloWorld
+import spray.json.DefaultJsonProtocol._
 
-class RouteServiceSpec extends Specification with Specs2RouteTest with RouteService {
-  def actorRefFactory = system
+case class HelloWorld(message: String)
 
-  "HelloWorldService" should {
+// this trait defines our service behavior independently from the service actor
+trait HelloWorldRoutes extends HttpService {
 
-    "return a greeting for GET requests to the root path as xml" in {
-      Get("/hello/xml") ~> myRoute ~> check {
-        responseAs[String] must contain("<h1>Hello World</h1>")
-      }
+  import HelloWorldJsonProtocol._
 
-      "return a greeting for GET requests to the root path as json" in {
-        Get("/hello/json") ~> myRoute ~> check {
-          responseAs[String].parseJson.convertTo[HelloWorld] must beEqualTo(HelloWorld("Hello World!"))
+  val helloWorldRoute =
+    pathPrefix("hello") {
+      helloRoute()
+    }
+
+  /**
+   * Hello World demo routes
+   */
+  def helloRoute(): Route =
+    path("xml") {
+      get {
+        respondWithMediaType(`text/xml`) { // XML is marshalled to `text/xml` by default, so we simply override here
+          complete {
+            <html>
+              <body>
+                <h1>Hello World</h1>
+              </body>
+            </html>
+          }
         }
       }
-    }
-
-    "leave GET requests to other paths unhandled" in {
-      Get("/kermit") ~> myRoute ~> check {
-        handled must beFalse
+    } ~
+      path("json") {
+        get {
+          respondWithMediaType(`application/json`) {
+            complete {
+              HelloWorld("Hello World!")
+            }
+          }
+        }
       }
-    }
-
-    "return a MethodNotAllowed error for PUT requests to the root path" in {
-      Put("/hello/xml") ~> sealRoute(myRoute) ~> check {
-        status === MethodNotAllowed
-        responseAs[String] === "HTTP method not allowed, supported methods: GET"
-      }
-    }
-  }
 }

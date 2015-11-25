@@ -20,47 +20,35 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.helloworld
+package ch.openolitor.core.domain
 
-import org.specs2.mutable.Specification
-import spray.testkit.Specs2RouteTest
-import spray.http._
-import StatusCodes._
-import spray.json._
-import ch.openolitor.helloworld.HelloWorldJsonProtocol._
-import ch.openolitor.helloworld._
-import ch.openolitor.core.HelloWorld
-import ch.openolitor.core.RouteService
-import ch.openolitor.stammdaten.HelloWorld
+import akka.persistence.PersistentView
+import akka.actor._
+import scala.concurrent.duration._
 
-class RouteServiceSpec extends Specification with Specs2RouteTest with RouteService {
-  def actorRefFactory = system
+/**
+ * Diese generische EntityStoreView delelegiert die Events an die jeweilige modulspezifische ActorRef
+ */
+class EntityStoreView(insertActor: ActorRef, updateActor: ActorRef, deleteActor: ActorRef) extends PersistentView with ActorLogging {
 
-  "HelloWorldService" should {
+  import EntityStore._
 
-    "return a greeting for GET requests to the root path as xml" in {
-      Get("/hello/xml") ~> myRoute ~> check {
-        responseAs[String] must contain("<h1>Hello World</h1>")
-      }
+  override val persistenceId = EntityStore.persistenceId
+  override val viewId = "stammdaten-entity-store"
 
-      "return a greeting for GET requests to the root path as json" in {
-        Get("/hello/json") ~> myRoute ~> check {
-          responseAs[String].parseJson.convertTo[HelloWorld] must beEqualTo(HelloWorld("Hello World!"))
-        }
-      }
-    }
+  override def autoUpdateInterval = 100 millis
 
-    "leave GET requests to other paths unhandled" in {
-      Get("/kermit") ~> myRoute ~> check {
-        handled must beFalse
-      }
-    }
-
-    "return a MethodNotAllowed error for PUT requests to the root path" in {
-      Put("/hello/xml") ~> sealRoute(myRoute) ~> check {
-        status === MethodNotAllowed
-        responseAs[String] === "HTTP method not allowed, supported methods: GET"
-      }
-    }
+  /**
+   * Delegate to
+   */
+  val receive: Receive = {
+    case e: EntityStoreInitialized =>
+      deleteActor ! e
+    case e: EntityInsertedEvent =>
+      insertActor ! e
+    case e: EntityUpdatedEvent =>
+      updateActor ! e
+    case e: EntityDeletedEvent =>
+      deleteActor ! e
   }
 }

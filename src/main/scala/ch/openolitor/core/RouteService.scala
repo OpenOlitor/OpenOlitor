@@ -32,10 +32,12 @@ import spray.routing.Directive.pimpApply
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import ch.openolitor.helloworld.HelloWorldJsonProtocol
+import ch.openolitor.stammdaten.StammdatenRoutes
+import ch.openolitor.helloworld.HelloWorldRoutes
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor extends Actor with RouteService {
+class RouteServiceActor extends Actor with DefaultRouteService with HelloWorldRoutes with StammdatenRoutes {
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -44,45 +46,9 @@ class RouteServiceActor extends Actor with RouteService {
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  def receive = runRoute(myRoute)
+  def receive = runRoute(helloWorldRoute ~ stammdatenRoute)
 }
 
-case class HelloWorld(message: String)
-
 // this trait defines our service behavior independently from the service actor
-trait RouteService extends HttpService {
-
-  import HelloWorldJsonProtocol._
-
-  val myRoute =
-    pathPrefix("hello") {
-      helloRoute()
-    }
-
-  /**
-   * Hello World demo routes
-   */
-  def helloRoute(): Route =
-    path("xml") {
-      get {
-        respondWithMediaType(`text/xml`) { // XML is marshalled to `text/xml` by default, so we simply override here
-          complete {
-            <html>
-              <body>
-                <h1>Hello World</h1>
-              </body>
-            </html>
-          }
-        }
-      }
-    } ~
-      path("json") {
-        get {
-          respondWithMediaType(`application/json`) {
-            complete {
-              HelloWorld("Hello World!")
-            }
-          }
-        }
-      }
+trait DefaultRouteService extends HttpService {
 }

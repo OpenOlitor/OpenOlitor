@@ -20,47 +20,20 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.helloworld
+package ch.openolitor.core.repositories
 
-import org.specs2.mutable.Specification
-import spray.testkit.Specs2RouteTest
-import spray.http._
-import StatusCodes._
-import spray.json._
-import ch.openolitor.helloworld.HelloWorldJsonProtocol._
-import ch.openolitor.helloworld._
-import ch.openolitor.core.HelloWorld
-import ch.openolitor.core.RouteService
-import ch.openolitor.stammdaten.HelloWorld
+import ch.openolitor.core.models.BaseEntity
+import java.util.UUID
+import scalikejdbc.DBSession
+import scalikejdbc.AutoSession
 
-class RouteServiceSpec extends Specification with Specs2RouteTest with RouteService {
-  def actorRefFactory = system
+trait BaseWriteRepository {
 
-  "HelloWorldService" should {
+  def insert(id: UUID, entity: BaseEntity)(implicit session: DBSession = AutoSession)
+  def update(entity: BaseEntity)(implicit session: DBSession = AutoSession)
+  def delete(entity: BaseEntity)(implicit session: DBSession = AutoSession)
+}
 
-    "return a greeting for GET requests to the root path as xml" in {
-      Get("/hello/xml") ~> myRoute ~> check {
-        responseAs[String] must contain("<h1>Hello World</h1>")
-      }
-
-      "return a greeting for GET requests to the root path as json" in {
-        Get("/hello/json") ~> myRoute ~> check {
-          responseAs[String].parseJson.convertTo[HelloWorld] must beEqualTo(HelloWorld("Hello World!"))
-        }
-      }
-    }
-
-    "leave GET requests to other paths unhandled" in {
-      Get("/kermit") ~> myRoute ~> check {
-        handled must beFalse
-      }
-    }
-
-    "return a MethodNotAllowed error for PUT requests to the root path" in {
-      Put("/hello/xml") ~> sealRoute(myRoute) ~> check {
-        status === MethodNotAllowed
-        responseAs[String] === "HTTP method not allowed, supported methods: GET"
-      }
-    }
-  }
+trait StammdatenWriteRepository extends BaseWriteRepository {
+  def cleanupDatabase()
 }

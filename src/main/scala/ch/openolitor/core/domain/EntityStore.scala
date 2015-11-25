@@ -36,6 +36,8 @@ object EntityStore {
 
   val VERSION = 1
 
+  val persistenceId = "entity-store"
+
   case class EventStoreState(seqNr: Long, lastId: Option[UUID]) extends State
   def props(): Props = Props(classOf[EntityStore])
 
@@ -45,10 +47,10 @@ object EntityStore {
   case class DeleteEntityCommand(entity: BaseEntity) extends Command
 
   //events raised by this aggregateroot
-  case class EntityStoreInitialized(metas: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent(metas: EventMetadata, id: UUID, entity: BaseEntity) extends PersistetEvent
-  case class EntityUpdatedEvent(metas: EventMetadata, entity: BaseEntity) extends PersistetEvent
-  case class EntityDeletedEvent(metas: EventMetadata, entity: BaseEntity) extends PersistetEvent
+  case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
+  case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: BaseEntity) extends PersistetEvent
+  case class EntityUpdatedEvent(meta: EventMetadata, entity: BaseEntity) extends PersistetEvent
+  case class EntityDeletedEvent(meta: EventMetadata, entity: BaseEntity) extends PersistetEvent
 
   // other actor messages
 }
@@ -59,7 +61,7 @@ class EntityStore extends AggregateRoot {
 
   log.debug(s"EntityStore: created")
 
-  override def persistenceId: String = "entity-store"
+  override def persistenceId: String = EntityStore.persistenceId
 
   type S = EventStoreState
   override var state: EventStoreState = EventStoreState(0, None)
