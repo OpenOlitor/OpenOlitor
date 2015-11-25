@@ -29,7 +29,26 @@ import scalikejdbc._
 
 trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
   override def cleanupDatabase()(implicit session: DBSession = AutoSession) = {
-    //TODO: implement
+
+    //drop all tables
+    DB autoCommit { implicit session =>
+      sql"drop table ${Postlieferung.table}".execute.apply()
+      sql"drop table ${Depotlieferung.table}".execute.apply()
+      sql"drop table ${Heimlieferung.table}".execute.apply()
+      sql"drop table ${Depot.table}".execute.apply()
+      sql"drop table ${Tour.table}".execute.apply()
+      sql"drop table ${Abotyp.table}".execute.apply()
+    }
+
+    //create tables
+    DB autoCommit { implicit session =>
+      sql"create table ${Postlieferung.table}  (id int not null, abo_typ_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Depotlieferung.table} (id int not null, abo_typ_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Heimlieferung.table} (id int not null, abo_typ_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Depot.table} (id int not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
+      sql"create table ${Tour.table} (id int not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
+      sql"create table ${Abotyp.table} (id int not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preisEinheit varchar(20) not null, aktiv bit)".execute.apply()
+    }
   }
 
   override def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession) = {

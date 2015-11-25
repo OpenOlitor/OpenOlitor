@@ -35,6 +35,9 @@ import DBUtils._
 import ch.openolitor.core.models.BaseId
 import java.sql.ResultSet
 import org.joda.time.DateTime
+import ch.openolitor.core.models.BaseEntity
+import ch.openolitor.core.models.BaseId
+import ch.openolitor.core.models.BaseEntity
 
 sealed trait Lieferzeitpunkt
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -80,10 +83,11 @@ object Preiseinheit {
   }
 }
 
-sealed trait Vertriebsart
-case class Depotlieferung(abotypId: AbotypId, depotId: DepotId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
-case class Heimlieferung(abotypId: AbotypId, tourId: TourId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
-case class Postlieferung(abotypId: AbotypId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
+case class VertriebsartId(id: UUID) extends BaseId
+sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
+case class Depotlieferung(id: Option[VertriebsartId], abotypId: AbotypId, depotId: DepotId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
+case class Heimlieferung(id: Option[VertriebsartId], abotypId: AbotypId, tourId: TourId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
+case class Postlieferung(id: Option[VertriebsartId], abotypId: AbotypId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
 
 sealed trait Waehrung
 case object CHF extends Waehrung
@@ -174,6 +178,8 @@ object DBUtils {
   implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder[TourId](TourId.apply _)
   implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder[DepotId](DepotId.apply _)
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder[AbotypId](AbotypId.apply _)
+  implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder[VertriebsartId](VertriebsartId.apply _)
+
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
