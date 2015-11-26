@@ -39,15 +39,15 @@ trait StammdatenReadRepository {
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
-  lazy val t = Abotyp.syntax("t")
+  lazy val aboTyp = Abotyp.syntax("t")
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, cpContext: ConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
       select
-        .from(Abotyp as t)
-        .where.append(t.aktiv)
-        .orderBy(t.name)
-    }.map(Abotyp(t)).list.future
+        .from(Abotyp as aboTyp)
+        .where.append(aboTyp.aktiv)
+        .orderBy(aboTyp.name)
+    }.map(Abotyp(aboTyp)).list.future
   }
 }
 
@@ -88,8 +88,15 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
     //TODO: implement using entity match
   }
 
-  override def delete(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext) = {
-    //TODO: implement using entity match
+  override def delete(id: BaseId)(implicit cpContext: ConnectionPoolContext) = {
+    id match {
+      case id: AbotypId =>
+        DB autoCommit { implicit session =>
+          withSQL {
+            deleteFrom(Abotyp).where.eq(Abotyp.column.id, id)
+          }.update.apply()
+        }
+    }
   }
 
   override def update(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext) = {

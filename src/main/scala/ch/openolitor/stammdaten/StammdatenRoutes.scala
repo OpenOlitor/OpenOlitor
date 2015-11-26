@@ -30,16 +30,22 @@ import spray.httpx.SprayJsonSupport._
 import spray.routing.Directive.pimpApply
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-import ch.openolitor.core.ActorReferences
+import ch.openolitor.core._
+import ch.openolitor.core.domain._
+import ch.openolitor.core.db._
 import spray.httpx.unmarshalling.Unmarshaller
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util._
-import ch.openolitor.core.db.AsyncConnectionPoolContextAware
+import java.util.UUID
 
-trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware {
+trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {
   self: StammdatenRepositoryComponent =>
 
+  implicit val abotypIdParamConverter = string2BaseIdConverter[AbotypId](AbotypId.apply)
+  implicit val abotypIdPath = string2BaseIdPathMatcher[AbotypId](AbotypId.apply)
+
   import StammdatenJsonProtocol._
+  import EntityStore._
 
   val stammdatenRoute =
     path("abotypen") {
@@ -56,7 +62,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           }
         }
     } ~
-      path("abotypen" / Segment) { id =>
+      path("abotypen" / abotypIdPath) { id =>
         get {
           complete {
             //get detail of abotyp
@@ -71,8 +77,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           } ~
           delete {
             complete {
-              //delete abottyp
-              ""
+              entityStore ! EntityStore.DeleteEntityCommand(id)
             }
           }
       }

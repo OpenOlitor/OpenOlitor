@@ -30,5 +30,5 @@ trait BaseWriteRepository {
 
   def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
   def update(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
-  def delete(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
+  def delete(id: BaseId)(implicit cpContext: ConnectionPoolContext)
 }

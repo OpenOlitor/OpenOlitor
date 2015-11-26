@@ -49,6 +49,8 @@ class StammdatenDeleteActor(override val sysConfig: SystemConfig) extends Actor 
     case _: EntityStoreInitialized =>
       log.debug("Received EntityStoreInitialized, cleanupDatabase")
       writeRepository.cleanupDatabase
+    case EntityDeletedEvent(meta, id: AbotypId) =>
+      writeRepository.delete(id)
     case EntityDeletedEvent(meta, entity) =>
       //TODO: implement entity based matching
       log.debug(s"Receive delete event for entity:$entity")
