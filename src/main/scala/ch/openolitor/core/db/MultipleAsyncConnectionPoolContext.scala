@@ -20,60 +20,19 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.core.db
 
-import spray.routing._
-import spray.http._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
-import spray.json._
-import spray.json.DefaultJsonProtocol._
-import ch.openolitor.core.ActorReferences
-import spray.httpx.unmarshalling.Unmarshaller
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util._
-import ch.openolitor.core.db.AsyncConnectionPoolContextAware
+import scalikejdbc.async.AsyncConnectionPool
+import scalikejdbc.async.AsyncConnectionPool._
 
-trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware {
-  self: StammdatenRepositoryComponent =>
+case class MultipleAsyncConnectionPoolContext(contexts: (Any, AsyncConnectionPool)*) {
+  def this() {
+    this(Nil: _*)
+  }
 
-  import StammdatenJsonProtocol._
+  private lazy val pools = contexts.toMap
 
-  val stammdatenRoute =
-    path("abotypen") {
-      get {
-        //fetch list of abotypen
-        onSuccess(readRepository.getAbotypen) { abotypen =>
-          complete(abotypen)
-        }
-      } ~
-        post {
-          entity(as[Abotyp]) { abotyp =>
-            //create abotyp
-            complete(abotyp)
-          }
-        }
-    } ~
-      path("abotypen" / Segment) { id =>
-        get {
-          complete {
-            //get detail of abotyp
-            ""
-          }
-        } ~
-          put {
-            entity(as[Abotyp]) { abotyp =>
-              //update abotyp
-              complete(abotyp)
-            }
-          } ~
-          delete {
-            complete {
-              //delete abottyp
-              ""
-            }
-          }
-      }
+  def get(name: Any = AsyncConnectionPool.DEFAULT_NAME): AsyncConnectionPool = pools.get(name).getOrElse {
+    throw new IllegalStateException("No connection context for " + name + ".")
+  }
 }

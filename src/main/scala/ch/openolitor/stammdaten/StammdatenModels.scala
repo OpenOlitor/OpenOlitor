@@ -37,6 +37,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.models.BaseEntity
+import scala.concurrent.ExecutionContext
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -134,6 +135,8 @@ case class Tour(id: Option[TourId], name: String, beschreibung: Option[String]) 
 object Abotyp extends SQLSyntaxSupport[Abotyp] {
   override val tableName = "Abotyp"
 
+  override def columnNames = Seq("id", "name", "beschreibung", "lieferrhythmus", "enddatum", "anzahl_lieferungen", "anzahl_abwesenheiten", "preis", "preisEinheit", "aktiv")
+
   def apply(p: SyntaxProvider[Abotyp])(rs: WrappedResultSet): Abotyp = apply(p.resultName)(rs)
 
   def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp =
@@ -143,12 +146,16 @@ object Abotyp extends SQLSyntaxSupport[Abotyp] {
 object Tour extends SQLSyntaxSupport[Tour] {
   override val tableName = "Tour"
 
+  override def columnNames = Seq("id", "name", "beschreibung")
+
   def apply(rs: WrappedResultSet, rn: ResultName[Tour]): Tour =
     autoConstruct(rs, rn)
 }
 
 object Depot extends SQLSyntaxSupport[Depot] {
   override val tableName = "Depot"
+
+  override def columnNames = Seq("id", "name", "beschreibung")
 
   def apply(rs: WrappedResultSet, rn: ResultName[Depot]): Depot =
     autoConstruct(rs, rn)
@@ -157,6 +164,8 @@ object Depot extends SQLSyntaxSupport[Depot] {
 object Heimlieferung extends SQLSyntaxSupport[Heimlieferung] {
   override val tableName = "Heimlieferung"
 
+  override def columnNames = Seq("id", "abo_typ_id", "tour_id", "liefertage")
+
   def apply(rs: WrappedResultSet, rn: ResultName[Heimlieferung]): Heimlieferung =
     autoConstruct(rs, rn)
 }
@@ -164,12 +173,16 @@ object Heimlieferung extends SQLSyntaxSupport[Heimlieferung] {
 object Depotlieferung extends SQLSyntaxSupport[Depotlieferung] {
   override val tableName = "Depotlieferung"
 
+  override def columnNames = Seq("id", "abo_typ_id", "depot_id", "liefertage")
+
   def apply(rs: WrappedResultSet, rn: ResultName[Depotlieferung]): Depotlieferung =
     autoConstruct(rs, rn)
 }
 
 object Postlieferung extends SQLSyntaxSupport[Postlieferung] {
   override val tableName = "Postlieferung"
+
+  override def columnNames = Seq("id", "abo_typ_id", "liefertage")
 
   def apply(rs: WrappedResultSet, rn: ResultName[Postlieferung]): Postlieferung =
     autoConstruct(rs, rn)

@@ -41,11 +41,13 @@ import ch.openolitor.stammdaten.StammdatenEntityStoreView
 import scalikejdbc.ConnectionPoolContext
 import ch.openolitor.core.db._
 
-case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext)
+case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
 object Boot extends App {
 
-  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer)
+  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer) {
+    val configKey = s"openolitor.${key}"
+  }
 
   val config = ConfigFactory.load()
 
@@ -82,29 +84,39 @@ object Boot extends App {
    */
   def startServices(configs: NonEmptyList[MandantConfiguration]): Unit = {
     configs.map { cfg =>
-      val configKey = s"openolitor.${cfg.key}"
-      implicit val app = ActorSystem(cfg.name, config.getConfig(configKey).withFallback(config))
+      implicit val app = ActorSystem(cfg.name, config.getConfig(cfg.configKey).withFallback(config))
 
-      implicit val sysCfg = systemConfig(cfg.key)
+      implicit val sysCfg = systemConfig(cfg)
 
       //initialuze root actors
-      val duration = Duration.create(5, SECONDS);
-      val system = app.actorOf(SystemActor.props, "system")
-      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props), duration).asInstanceOf[ActorRef]
-      val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props), duration).asInstanceOf[ActorRef]
+      val duration = Duration.create(1, SECONDS);
+      val system = app.actorOf(SystemActor.props, "oo-system")
+      println(s"oo-system:$system")
+      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props, "entity-store"), duration).asInstanceOf[ActorRef]
+      println(s"oo-system:$system -> entityStore:$entityStore")
+      val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 
       //initialize global persistentviews
+      println(s"oo-system: send Startup to entityStoreview")
       stammdatenEntityStoreView ! EntityStoreView.Startup
 
+      //send a dummy command to initialize store
+      println(s"oo-system: send initialize to entityStore")
+      entityStore ! "Initialize"
+
       // create and start our service actor
-      val service = app.actorOf(RouteServiceActor.props(entityStore), "route-service")
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore), "route-service"), duration).asInstanceOf[ActorRef]
+      println(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler
       IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.port)
+      println(s"oo-system: configured listener on port ${cfg.port}")
     }
   }
 
-  def systemConfig(mandant: String) = SystemConfig(mandant, connectionPoolContext(mandant))
+  def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant.key, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant))
 
-  def connectionPoolContext(mandant: String) = MandantDBs(mandant).connectionPoolContext
+  def connectionPoolContext(mandant: MandantConfiguration) = MandantDBs(mandant.configKey).connectionPoolContext
+
+  def asyncConnectionPoolContext(mandant: MandantConfiguration) = AsyncMandantDBs(mandant.configKey).connectionPoolContext
 }

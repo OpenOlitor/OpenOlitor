@@ -65,6 +65,7 @@ class EntityStoreView(module: String) extends PersistentView with ActorLogging {
    */
   val receive: Receive = {
     case e: EntityStoreInitialized =>
+      log.debug(s"Received EntityStoreInitialized, delegate to deleteActor:$deleteActor")
       deleteActor ! e
     case e: EntityInsertedEvent =>
       insertActor ! e

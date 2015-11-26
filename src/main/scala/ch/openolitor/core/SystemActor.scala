@@ -30,7 +30,7 @@ import scalikejdbc.config._
 import ch.openolitor.core.db._
 
 object SystemActor {
-  case class Child(props: Props)
+  case class Child(props: Props, name: String)
 
   def props(implicit sysConfig: SystemConfig): Props = Props(classOf[SystemActor], sysConfig)
 }
@@ -41,17 +41,22 @@ object SystemActor {
 class SystemActor(sysConfig: SystemConfig) extends Actor with ActorLogging {
   import SystemActor._
 
+  log.debug(s"oo-system:SystemActor initialization:$sysConfig")
+
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
-    case _: Exception =>
+    case e =>
+      log.warning(s"Child actor failed:$e")
       Restart
   }
 
   def receive: Receive = {
-    case Child(props) =>
-      log.debug(s"Request child actor for props:$props")
-      val actorRef = context.actorOf(props)
+    case Child(props, name) =>
+      log.debug(s"oo-system:Request child actor for props:$props")
+      val actorRef = context.actorOf(props, name)
 
       //return created actor
       sender ! actorRef
+    case e =>
+      log.debug(s"oo-system:Received unknown event:$e")
   }
 }

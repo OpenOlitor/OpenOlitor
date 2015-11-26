@@ -46,10 +46,13 @@ class StammdatenDeleteActor(override val sysConfig: SystemConfig) extends Actor 
   import EntityStore._
 
   val receive: Receive = {
-    case EntityStoreInitialized =>
+    case _: EntityStoreInitialized =>
+      log.debug("Received EntityStoreInitialized, cleanupDatabase")
       writeRepository.cleanupDatabase
     case EntityDeletedEvent(meta, entity) =>
       //TODO: implement entity based matching
       log.debug(s"Receive delete event for entity:$entity")
+    case e =>
+      log.warning(s"Unknown event:$e")
   }
 }

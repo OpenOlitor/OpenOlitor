@@ -48,5 +48,7 @@ class StammdatenInsertActor(override val sysConfig: SystemConfig) extends Actor 
     case EntityInsertedEvent(meta, id, entity) =>
       //TODO: implement entity based matching
       log.debug(s"Receive insert event for entity:$entity with id:$id")
+    case e =>
+      log.warning(s"Unknown event:$e")
   }
 }

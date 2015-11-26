@@ -49,7 +49,7 @@ class StammdatenEntityStoreView(implicit val sysConfig: SystemConfig) extends En
 trait StammdatenEntityStoreViewComponent extends EntityStoreViewComponent {
   implicit val sysConfig: SystemConfig
 
-  val insertActor = context.actorOf(StammdatenInsertActor.props)
-  val updateActor = context.actorOf(StammdatenUpdateActor.props)
-  val deleteActor = context.actorOf(StammdatenDeleteActor.props)
+  val insertActor = context.actorOf(StammdatenInsertActor.props, "insert-actor")
+  val updateActor = context.actorOf(StammdatenUpdateActor.props, "update-actor")
+  val deleteActor = context.actorOf(StammdatenDeleteActor.props, "delete-actor")
 }

@@ -81,6 +81,7 @@ class EntityStore extends AggregateRoot {
   }
 
   override def restoreFromSnapshot(metadata: SnapshotMetadata, state: State) = {
+    log.debug(s"restoreFromSnapshot:$state")
     state match {
       case Removed => context become removed
       case Created => context become created
@@ -96,11 +97,11 @@ class EntityStore extends AggregateRoot {
       sender ! state
     case Initialize(state) =>
       //this event is used to initialize actor from within testcases
-      log.debug(s"Initialize: $state")
+      log.error(s"Initialize: $state")
       this.state = state
       context become created
     case e =>
-      log.debug(s"Initialize eventstore with event:$e")
+      log.error(s"Initialize eventstore with event:$e")
       state = incState
       persist(EntityStoreInitialized(metadata))(afterEventPersisted)
       context become created
@@ -130,7 +131,7 @@ class EntityStore extends AggregateRoot {
     case GetState =>
       sender ! state
     case other =>
-      log.debug(s"Received unknown command")
+      log.warning(s"Received unknown command:$other")
   }
 
   def metadata = {
@@ -146,10 +147,12 @@ class EntityStore extends AggregateRoot {
    */
   val removed: Receive = {
     case GetState =>
+      log.warning(s"Received GetState in state removed")
       sender() ! state
     case KillAggregate =>
+      log.warning(s"Received KillAggregate in state removed")
       context.stop(self)
   }
 
-  override val receiveCommand: Receive = uninitialized
+  override val receiveCommand = uninitialized
 }

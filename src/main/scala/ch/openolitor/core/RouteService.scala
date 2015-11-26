@@ -37,11 +37,13 @@ object RouteServiceActor {
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig) extends Actor with ActorReferences
+class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig)
+  extends Actor with ActorReferences
   with DefaultRouteService
   with HelloWorldRoutes
   with StammdatenRoutes
   with DefaultStammdatenRepositoryComponent {
+
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   def actorRefFactory = context
@@ -49,9 +51,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  def receive = {
-    runRoute(helloWorldRoute ~ stammdatenRoute)
-  }
+  def receive = runRoute(helloWorldRoute ~ stammdatenRoute)
 }
 
 // this trait defines our service behavior independently from the service actor

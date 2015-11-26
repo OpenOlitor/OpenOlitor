@@ -28,24 +28,26 @@ import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
 import scala.concurrent.ExecutionContext
+import ch.openolitor.core.db._
+import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
+import akka.event.Logging
 
 trait StammdatenReadRepository {
-  def getAbotypen(implicit cpContext: ConnectionPoolContext): Future[List[Abotyp]]
+  def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, cpContext: ConnectionPoolContext): Future[List[Abotyp]]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
   lazy val t = Abotyp.syntax("t")
 
-  def getAbotypen(implicit cpContext: ConnectionPoolContext): Future[List[Abotyp]] = {
-    //    withSQL {
-    //      select
-    //        .from(Abotyp as t)
-    //        .where.append(t.aktiv)
-    //        .orderBy(t.name)
-    //    }.map(Abotyp(t)).list.future
-    ???
+  def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, cpContext: ConnectionPoolContext): Future[List[Abotyp]] = {
+    withSQL {
+      select
+        .from(Abotyp as t)
+        .where.append(t.aktiv)
+        .orderBy(t.name)
+    }.map(Abotyp(t)).list.future
   }
 }
 
@@ -56,25 +58,30 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
 class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
 
+    println(s"oo-system: cleanupDatabase - drop tables")
+
     //drop all tables
     DB autoCommit { implicit session =>
-      sql"drop table ${Postlieferung.table}".execute.apply()
-      sql"drop table ${Depotlieferung.table}".execute.apply()
-      sql"drop table ${Heimlieferung.table}".execute.apply()
-      sql"drop table ${Depot.table}".execute.apply()
-      sql"drop table ${Tour.table}".execute.apply()
-      sql"drop table ${Abotyp.table}".execute.apply()
+      sql"drop table if exists ${Postlieferung.table}".execute.apply()
+      sql"drop table if exists ${Depotlieferung.table}".execute.apply()
+      sql"drop table if exists ${Heimlieferung.table}".execute.apply()
+      sql"drop table if exists ${Depot.table}".execute.apply()
+      sql"drop table if exists ${Tour.table}".execute.apply()
+      sql"drop table if exists ${Abotyp.table}".execute.apply()
     }
 
+    println(s"oo-system: cleanupDatabase - create tables")
     //create tables
     DB autoCommit { implicit session =>
-      sql"create table ${Postlieferung.table}  (id int not null, abo_typ_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Depotlieferung.table} (id int not null, abo_typ_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Heimlieferung.table} (id int not null, abo_typ_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Depot.table} (id int not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${Tour.table} (id int not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${Abotyp.table} (id int not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preisEinheit varchar(20) not null, aktiv bit)".execute.apply()
+      sql"create table ${Postlieferung.table}  (id varchar(36) not null, abo_typ_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Depotlieferung.table} (id varchar(36) not null, abo_typ_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Heimlieferung.table} (id varchar(36) not null, abo_typ_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Depot.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
+      sql"create table ${Tour.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
+      sql"create table ${Abotyp.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preisEinheit varchar(20) not null, aktiv bit)".execute.apply()
     }
+
+    println(s"oo-system: cleanupDatabase - end")
   }
 
   override def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext) = {

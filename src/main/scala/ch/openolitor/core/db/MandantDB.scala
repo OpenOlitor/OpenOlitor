@@ -68,7 +68,7 @@ case class MandantDBs(configKey: String) extends DBs
   }
 
   def connectionPoolContext(): ConnectionPoolContext = {
-    val context = for (dbName <- dbNames) yield (dbName, loadConnectionPool(Symbol(dbName)))
+    val context = for (dbName <- dbNames) yield (Symbol(dbName), loadConnectionPool(Symbol(dbName)))
     //: _* converts list into a varargs parameter of type tuple2
     MultipleConnectionPoolContext(context: _*)
   }
