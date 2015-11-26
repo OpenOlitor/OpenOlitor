@@ -24,11 +24,11 @@ package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
 import java.util.UUID
-import scalikejdbc.DBSession
-import scalikejdbc.AutoSession
+import scalikejdbc._
 
 trait BaseWriteRepository {
-  def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession)
-  def update(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession)
-  def delete(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession)
+
+  def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
+  def update(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
+  def delete(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
 }

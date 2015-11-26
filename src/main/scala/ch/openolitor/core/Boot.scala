@@ -20,8 +20,9 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor
+package ch.openolitor.core
 
+import scalikejdbc.config._
 import akka.actor.{ ActorSystem, Props, ActorRef }
 import akka.pattern.ask
 import akka.io.IO
@@ -32,11 +33,15 @@ import scala.concurrent.duration._
 import com.typesafe.config.ConfigFactory
 import collection.JavaConversions._
 import scalaz._
-import Scalaz._
+import scalaz.Scalaz._
 import com.typesafe.config.Config
 import ch.openolitor.core._
 import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten.StammdatenEntityStoreView
+import scalikejdbc.ConnectionPoolContext
+import ch.openolitor.core.db._
+
+case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext)
 
 object Boot extends App {
 
@@ -51,6 +56,9 @@ object Boot extends App {
 
   //TODO: start proxy service routing to mandant instances
   val proxyService = Option(config.getBoolean("openolitor.run-proxy-service")).getOrElse(false)
+
+  //configure default settings for scalikejdbc
+  scalikejdbc.config.DBs.loadGlobalSettings()
 
   def getMandantConfiguration(config: Config): NonEmptyList[MandantConfiguration] = {
     val mandanten = config.getStringList("openolitor.mandanten").toList
@@ -77,9 +85,11 @@ object Boot extends App {
       val configKey = s"openolitor.${cfg.key}"
       implicit val app = ActorSystem(cfg.name, config.getConfig(configKey).withFallback(config))
 
+      implicit val sysCfg = systemConfig(cfg.key)
+
       //initialuze root actors
       val duration = Duration.create(5, SECONDS);
-      val system = app.actorOf(SystemActor.props(configKey), "system")
+      val system = app.actorOf(SystemActor.props, "system")
       val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props), duration).asInstanceOf[ActorRef]
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props), duration).asInstanceOf[ActorRef]
 
@@ -93,4 +103,8 @@ object Boot extends App {
       IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.port)
     }
   }
+
+  def systemConfig(mandant: String) = SystemConfig(mandant, connectionPoolContext(mandant))
+
+  def connectionPoolContext(mandant: String) = MandantDBs(mandant).connectionPoolContext
 }

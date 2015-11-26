@@ -20,60 +20,24 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.core
 
-import spray.routing._
-import spray.http._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
-import spray.json._
-import spray.json.DefaultJsonProtocol._
-import ch.openolitor.core.ActorReferences
-import spray.httpx.unmarshalling.Unmarshaller
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util._
-import ch.openolitor.core.db.ConnectionPoolContextAware
+import akka.actor._
 
-trait StammdatenRoutes extends HttpService with ActorReferences with ConnectionPoolContextAware {
-  self: StammdatenRepositoryComponent =>
+/**
+ * Ein actor welcher automatisch für eine Anzahl Events auf dem Eventstream Bus registriert
+ */
+trait SubscriberActor extends Actor {
 
-  import StammdatenJsonProtocol._
+  def subscribedClasses: Seq[Class[_]]
 
-  val stammdatenRoute =
-    path("abotypen") {
-      get {
-        //fetch list of abotypen
-        onSuccess(readRepository.getAbotypen) { abotypen =>
-          complete(abotypen)
-        }
-      } ~
-        post {
-          entity(as[Abotyp]) { abotyp =>
-            //create abotyp
-            complete(abotyp)
-          }
-        }
-    } ~
-      path("abotypen" / Segment) { id =>
-        get {
-          complete {
-            //get detail of abotyp
-            ""
-          }
-        } ~
-          put {
-            entity(as[Abotyp]) { abotyp =>
-              //update abotyp
-              complete(abotyp)
-            }
-          } ~
-          delete {
-            complete {
-              //delete abottyp
-              ""
-            }
-          }
-      }
+  override def preStart() {
+    super.preStart()
+    subscribedClasses.foreach(this.context.system.eventStream.subscribe(this.self, _))
+  }
+
+  override def postStop() {
+    subscribedClasses.foreach(this.context.system.eventStream.unsubscribe(this.self, _))
+    super.postStop()
+  }
 }

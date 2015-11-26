@@ -24,22 +24,24 @@ package ch.openolitor.stammdaten.domain.views
 
 import akka.persistence.PersistentView
 import akka.actor._
+import ch.openolitor.core._
+import ch.openolitor.core.db._
 import ch.openolitor.core.domain.EntityStore
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
 
 object StammdatenDeleteActor {
-  def props(): Props = Props(classOf[DefaultStammdatenDeleteActor])
+  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenDeleteActor], sysConfig)
 }
 
-class DefaultStammdatenDeleteActor
-  extends StammdatenDeleteActor with DefaultStammdatenRepositoryComponent {
+class DefaultStammdatenDeleteActor(sysConfig: SystemConfig)
+  extends StammdatenDeleteActor(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
  */
-class StammdatenDeleteActor extends Actor with ActorLogging {
+class StammdatenDeleteActor(override val sysConfig: SystemConfig) extends Actor with ActorLogging with ConnectionPoolContextAware {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 

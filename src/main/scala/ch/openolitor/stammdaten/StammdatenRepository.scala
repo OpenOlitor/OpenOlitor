@@ -32,28 +32,29 @@ import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
 
 trait StammdatenReadRepository {
-  def getAbotypen(implicit session: AsyncDBSession = AsyncDB.sharedSession, cxt: ExecutionContext): Future[List[Abotyp]]
+  def getAbotypen(implicit cpContext: ConnectionPoolContext): Future[List[Abotyp]]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
   lazy val t = Abotyp.syntax("t")
 
-  def getAbotypen(implicit session: AsyncDBSession = AsyncDB.sharedSession, cxt: ExecutionContext): Future[List[Abotyp]] = {
-    withSQL {
-      select
-        .from(Abotyp as t)
-        .where.append(t.aktiv)
-        .orderBy(t.name)
-    }.map(Abotyp(t)).list.future
+  def getAbotypen(implicit cpContext: ConnectionPoolContext): Future[List[Abotyp]] = {
+    //    withSQL {
+    //      select
+    //        .from(Abotyp as t)
+    //        .where.append(t.aktiv)
+    //        .orderBy(t.name)
+    //    }.map(Abotyp(t)).list.future
+    ???
   }
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
-  def cleanupDatabase()
+  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 }
 
 class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
-  override def cleanupDatabase() = {
+  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
 
     //drop all tables
     DB autoCommit { implicit session =>
@@ -76,15 +77,15 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
     }
   }
 
-  override def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession) = {
+  override def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext) = {
     //TODO: implement using entity match
   }
 
-  override def delete(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession) = {
+  override def delete(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext) = {
     //TODO: implement using entity match
   }
 
-  override def update(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession = AutoSession) = {
+  override def update(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext) = {
     //TODO: implement using entity match
   }
 }

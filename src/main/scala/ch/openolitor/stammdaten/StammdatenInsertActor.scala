@@ -24,21 +24,23 @@ package ch.openolitor.stammdaten.domain.views
 
 import akka.actor._
 import akka.persistence.PersistentView
+import ch.openolitor.core._
+import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.domain.EntityStore
 import ch.openolitor.stammdaten._
 
 object StammdatenInsertActor {
-  def props(): Props = Props(classOf[DefaultStammdatenInsertActor])
+  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenInsertActor], sysConfig)
 }
 
-class DefaultStammdatenInsertActor
-  extends StammdatenInsertActor with DefaultStammdatenRepositoryComponent {
+class DefaultStammdatenInsertActor(sysConfig: SystemConfig)
+  extends StammdatenInsertActor(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
-class StammdatenInsertActor extends Actor with ActorLogging {
+class StammdatenInsertActor(override val sysConfig: SystemConfig) extends Actor with ActorLogging with ConnectionPoolContextAware {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 

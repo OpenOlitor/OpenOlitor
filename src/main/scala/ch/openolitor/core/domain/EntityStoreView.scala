@@ -27,6 +27,7 @@ import akka.persistence.PersistentView
 import akka.actor._
 import scala.concurrent.duration._
 import akka.actor.SupervisorStrategy.Restart
+import ch.openolitor._
 
 /**
  * Component mit Referenzen auf weitere Dienste

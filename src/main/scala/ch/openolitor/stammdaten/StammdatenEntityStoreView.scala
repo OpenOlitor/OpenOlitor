@@ -23,28 +23,32 @@
 package ch.openolitor.stammdaten
 
 import akka.actor.Props
+
 import ch.openolitor.core.domain.EntityStoreView
 import ch.openolitor.core.domain.EntityStoreView
 import ch.openolitor.stammdaten.domain.views.StammdatenInsertActor
 import akka.actor.Actor
+import ch.openolitor.core._
 import ch.openolitor.core.domain.EntityStoreViewComponent
 import ch.openolitor.stammdaten.domain.views.StammdatenUpdateActor
 import ch.openolitor.stammdaten.domain.views.StammdatenDeleteActor
 import ch.openolitor.core.domain.EntityStoreView
 
 object StammdatenEntityStoreView {
-  def props(): Props = Props(classOf[StammdatenEntityStoreView])
+  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[StammdatenEntityStoreView], sysConfig)
 }
 
 /**
  * Zusammenfügen des Componenten (cake pattern) zu der persistentView
  */
-class StammdatenEntityStoreView extends EntityStoreView("stammdaten") with StammdatenEntityStoreViewComponent
+class StammdatenEntityStoreView(implicit val sysConfig: SystemConfig) extends EntityStoreView("stammdaten") with StammdatenEntityStoreViewComponent
 
 /**
  * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
  */
 trait StammdatenEntityStoreViewComponent extends EntityStoreViewComponent {
+  implicit val sysConfig: SystemConfig
+
   val insertActor = context.actorOf(StammdatenInsertActor.props)
   val updateActor = context.actorOf(StammdatenUpdateActor.props)
   val deleteActor = context.actorOf(StammdatenDeleteActor.props)

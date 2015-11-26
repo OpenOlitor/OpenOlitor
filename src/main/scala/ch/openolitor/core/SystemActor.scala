@@ -25,23 +25,21 @@ package ch.openolitor.core
 import akka.actor._
 import scala.concurrent.duration._
 import akka.actor.SupervisorStrategy.Restart
-import scalikejdbc.async.AsyncConnectionPool
-import scalikejdbc.config.TypesafeConfig
+import scalikejdbc._
+import scalikejdbc.config._
+import ch.openolitor.core.db._
 
 object SystemActor {
   case class Child(props: Props)
 
-  def props(configKey: String): Props = Props(classOf[SystemActor], configKey)
+  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[SystemActor], sysConfig)
 }
 
 /**
  * SystemActor wird benutzt, damit die Supervisor Strategy über alle child actors definiert werden kann
  */
-class SystemActor(configKey: String) extends Actor with ActorLogging with TypesafeConfig {
+class SystemActor(sysConfig: SystemConfig) extends Actor with ActorLogging {
   import SystemActor._
-
-  //configure scalike environment based on mandant configuration
-  scalikejdbc.config.DBsWithEnv(configKey).setupAll()
 
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
     case _: Exception =>
@@ -51,6 +49,9 @@ class SystemActor(configKey: String) extends Actor with ActorLogging with Typesa
   def receive: Receive = {
     case Child(props) =>
       log.debug(s"Request child actor for props:$props")
-      sender ! context.actorOf(props)
+      val actorRef = context.actorOf(props)
+
+      //return created actor
+      sender ! actorRef
   }
 }

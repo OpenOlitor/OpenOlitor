@@ -24,22 +24,24 @@ package ch.openolitor.stammdaten.domain.views
 
 import akka.persistence.PersistentView
 import akka.actor._
+import ch.openolitor.core._
+import ch.openolitor.core.db._
 import ch.openolitor.core.domain.EntityStore
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
 
 object StammdatenUpdateActor {
-  def props(): Props = Props(classOf[DefaultStammdatenUpdateActor])
+  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenUpdateActor], sysConfig)
 }
 
-class DefaultStammdatenUpdateActor
-  extends StammdatenUpdateActor with DefaultStammdatenRepositoryComponent {
+class DefaultStammdatenUpdateActor(sysConfig: SystemConfig)
+  extends StammdatenUpdateActor(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
  */
-class StammdatenUpdateActor extends Actor with ActorLogging {
+class StammdatenUpdateActor(override val sysConfig: SystemConfig) extends Actor with ActorLogging with ConnectionPoolContextAware {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 
