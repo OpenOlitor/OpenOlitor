@@ -100,6 +100,19 @@ object Waehrung {
   }
 }
 
+trait IAbotyp {
+  val id: Option[AbotypId]
+  val name: String
+  val beschreibung: Option[String]
+  val lieferrhythmus: Rhythmus
+  val enddatum: Option[DateTime]
+  val anzahlLieferungen: Option[Int]
+  val anzahlAbwesenheiten: Option[Int]
+  val preis: BigDecimal
+  val preisEinheit: Preiseinheit
+  val aktiv: Boolean
+}
+
 case class AbotypId(id: UUID) extends BaseId
 case class Abotyp(id: Option[AbotypId],
   name: String,
@@ -113,7 +126,7 @@ case class Abotyp(id: Option[AbotypId],
   aktiv: Boolean,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime]) extends BaseEntity[AbotypId]
+  letzteLieferung: Option[DateTime]) extends BaseEntity[AbotypId] with IAbotyp
 
 case class Projekt(id: UUID,
   name: String,
