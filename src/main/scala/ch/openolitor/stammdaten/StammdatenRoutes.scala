@@ -32,16 +32,20 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 import ch.openolitor.core.ActorReferences
 import spray.httpx.unmarshalling.Unmarshaller
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util._
 
 trait StammdatenRoutes extends HttpService with ActorReferences {
+  self: StammdatenRepositoryComponent =>
+
   import StammdatenJsonProtocol._
 
   val stammdatenRoute =
     path("abotypen") {
       get {
-        complete {
-          //get list of abotypen
-          ""
+        //fetch list of abotypen
+        onSuccess(readRepository.getAbotypen) { abotypen =>
+          complete(abotypen)
         }
       } ~
         post {

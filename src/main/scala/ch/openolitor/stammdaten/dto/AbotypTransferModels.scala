@@ -20,8 +20,12 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.repositories
+package ch.openolitor.stammdaten.dto
 
-trait WriteRepositoryComponent {
-  val stammdatenRepository: StammdatenWriteRepository
+import ch.openolitor.stammdaten._
+
+class AbotypTransferModels {
+
+  case class AbotypDetail(abotyp: Abotyp, vertriebsarten: Seq[Vertriebsart])
+
 }

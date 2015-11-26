@@ -26,28 +26,26 @@ import akka.persistence.PersistentView
 import akka.actor._
 import ch.openolitor.core.domain.EntityStore
 import scala.concurrent.duration._
-import ch.openolitor.core.repositories.WriteRepositoryComponent
-import ch.openolitor.core.repositories.WriteRepositoryComponent
-import ch.openolitor.core.repositories.DefaultWriteRepositoryComponent
+import ch.openolitor.stammdaten._
 
 object StammdatenDeleteActor {
   def props(): Props = Props(classOf[DefaultStammdatenDeleteActor])
 }
 
-class DefaultStammdatenDeleteActor()
-  extends StammdatenDeleteActor() with DefaultWriteRepositoryComponent {
+class DefaultStammdatenDeleteActor
+  extends StammdatenDeleteActor with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
  */
 class StammdatenDeleteActor extends Actor with ActorLogging {
-  self: WriteRepositoryComponent =>
+  self: StammdatenRepositoryComponent =>
   import EntityStore._
 
   val receive: Receive = {
     case EntityStoreInitialized =>
-      stammdatenRepository.cleanupDatabase
+      writeRepository.cleanupDatabase
     case EntityDeletedEvent(meta, entity) =>
       //TODO: implement entity based matching
       log.debug(s"Receive delete event for entity:$entity")

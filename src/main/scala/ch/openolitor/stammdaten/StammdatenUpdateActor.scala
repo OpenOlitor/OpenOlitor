@@ -26,23 +26,21 @@ import akka.persistence.PersistentView
 import akka.actor._
 import ch.openolitor.core.domain.EntityStore
 import scala.concurrent.duration._
-import ch.openolitor.core.repositories.WriteRepositoryComponent
-import ch.openolitor.core.repositories.WriteRepositoryComponent
-import ch.openolitor.core.repositories.DefaultWriteRepositoryComponent
+import ch.openolitor.stammdaten._
 
 object StammdatenUpdateActor {
   def props(): Props = Props(classOf[DefaultStammdatenUpdateActor])
 }
 
-class DefaultStammdatenUpdateActor()
-  extends StammdatenUpdateActor() with DefaultWriteRepositoryComponent {
+class DefaultStammdatenUpdateActor
+  extends StammdatenUpdateActor with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
  */
 class StammdatenUpdateActor extends Actor with ActorLogging {
-  self: WriteRepositoryComponent =>
+  self: StammdatenRepositoryComponent =>
   import EntityStore._
 
   val receive: Receive = {

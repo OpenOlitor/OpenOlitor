@@ -74,11 +74,12 @@ object Boot extends App {
    */
   def startServices(configs: NonEmptyList[MandantConfiguration]): Unit = {
     configs.map { cfg =>
-      implicit val app = ActorSystem(cfg.name, config.getConfig(s"openolitor.${cfg.key}").withFallback(config))
+      val configKey = s"openolitor.${cfg.key}"
+      implicit val app = ActorSystem(cfg.name, config.getConfig(configKey).withFallback(config))
 
       //initialuze root actors
       val duration = Duration.create(5, SECONDS);
-      val system = app.actorOf(SystemActor.props, "system")
+      val system = app.actorOf(SystemActor.props(configKey), "system")
       val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props), duration).asInstanceOf[ActorRef]
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props), duration).asInstanceOf[ActorRef]
 

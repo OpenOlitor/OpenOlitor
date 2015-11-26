@@ -75,5 +75,5 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
       }
   }
 
-  implicit val abottypFormat = jsonFormat10(Abotyp.apply)
+  implicit val abottypFormat = jsonFormat12(Abotyp.apply)
 }

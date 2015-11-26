@@ -22,7 +22,7 @@
 \*                                                                           */
 package ch.openolitor.core.domain
 
-case class EventMetadata(version: Int, timestmap: Long, seqNr: Long, source: String)
+case class EventMetadata(version: Int, timestamp: Long, seqNr: Long, source: String)
 
 trait PersistetEvent extends Serializable {
   val meta: EventMetadata

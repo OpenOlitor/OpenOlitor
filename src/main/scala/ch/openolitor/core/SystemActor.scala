@@ -25,21 +25,27 @@ package ch.openolitor.core
 import akka.actor._
 import scala.concurrent.duration._
 import akka.actor.SupervisorStrategy.Restart
+import scalikejdbc.async.AsyncConnectionPool
+import scalikejdbc.config.TypesafeConfig
 
 object SystemActor {
   case class Child(props: Props)
 
-  def props(): Props = Props(classOf[SystemActor])
+  def props(configKey: String): Props = Props(classOf[SystemActor], configKey)
 }
 
 /**
  * SystemActor wird benutzt, damit die Supervisor Strategy über alle child actors definiert werden kann
  */
-trait SystemActor extends Actor with ActorLogging {
+class SystemActor(configKey: String) extends Actor with ActorLogging with TypesafeConfig {
   import SystemActor._
 
+  //configure scalike environment based on mandant configuration
+  scalikejdbc.config.DBsWithEnv(configKey).setupAll()
+
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
-    case _: Exception => Restart
+    case _: Exception =>
+      Restart
   }
 
   def receive: Receive = {

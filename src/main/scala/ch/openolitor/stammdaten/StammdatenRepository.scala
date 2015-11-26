@@ -22,15 +22,37 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
-import ch.openolitor.core.repositories.StammdatenWriteRepository
 import ch.openolitor.core.models._
 import java.util.UUID
 import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
 import scala.concurrent.ExecutionContext
+import ch.openolitor.core.repositories.BaseWriteRepository
+import scala.concurrent._
 
-trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
+trait StammdatenReadRepository {
+  def getAbotypen(implicit session: AsyncDBSession = AsyncDB.sharedSession, cxt: ExecutionContext): Future[List[Abotyp]]
+}
+
+class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
+  lazy val t = Abotyp.syntax("t")
+
+  def getAbotypen(implicit session: AsyncDBSession = AsyncDB.sharedSession, cxt: ExecutionContext): Future[List[Abotyp]] = {
+    withSQL {
+      select
+        .from(Abotyp as t)
+        .where.append(t.aktiv)
+        .orderBy(t.name)
+    }.map(Abotyp(t)).list.future
+  }
+}
+
+trait StammdatenWriteRepository extends BaseWriteRepository {
+  def cleanupDatabase()
+}
+
+class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
   override def cleanupDatabase() = {
 
     //drop all tables

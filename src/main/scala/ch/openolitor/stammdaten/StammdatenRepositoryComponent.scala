@@ -20,31 +20,14 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.domain.views
+package ch.openolitor.stammdaten
 
-import akka.actor._
-import akka.persistence.PersistentView
-import ch.openolitor.core.domain.EntityStore
-import ch.openolitor.stammdaten._
-
-object StammdatenInsertActor {
-  def props(): Props = Props(classOf[DefaultStammdatenInsertActor])
+trait StammdatenRepositoryComponent {
+  val writeRepository: StammdatenWriteRepository
+  val readRepository: StammdatenReadRepository
 }
 
-class DefaultStammdatenInsertActor
-  extends StammdatenInsertActor with DefaultStammdatenRepositoryComponent {
-}
-
-/**
- * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
- */
-class StammdatenInsertActor extends Actor with ActorLogging {
-  self: StammdatenRepositoryComponent =>
-  import EntityStore._
-
-  val receive: Receive = {
-    case EntityInsertedEvent(meta, id, entity) =>
-      //TODO: implement entity based matching
-      log.debug(s"Receive insert event for entity:$entity with id:$id")
-  }
+trait DefaultStammdatenRepositoryComponent extends StammdatenRepositoryComponent {
+  override val writeRepository: StammdatenWriteRepository = new StammdatenWriteRepositoryImpl
+  override val readRepository: StammdatenReadRepository = new StammdatenReadRepositoryImpl
 }

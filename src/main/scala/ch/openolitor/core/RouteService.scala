@@ -28,6 +28,7 @@ import akka.actor.Props
 import ch.openolitor.helloworld.HelloWorldRoutes
 import ch.openolitor.stammdaten.StammdatenRoutes
 import spray.routing.HttpService
+import ch.openolitor.stammdaten.DefaultStammdatenRepositoryComponent
 
 object RouteServiceActor {
   def props(entityStore: ActorRef): Props = Props(classOf[RouteServiceActor], entityStore)
@@ -35,7 +36,11 @@ object RouteServiceActor {
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor(override val entityStore: ActorRef) extends Actor with ActorReferences with DefaultRouteService with HelloWorldRoutes with StammdatenRoutes {
+class RouteServiceActor(override val entityStore: ActorRef) extends Actor with ActorReferences
+  with DefaultRouteService
+  with HelloWorldRoutes
+  with StammdatenRoutes
+  with DefaultStammdatenRepositoryComponent {
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   def actorRefFactory = context

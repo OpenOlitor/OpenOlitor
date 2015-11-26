@@ -9,6 +9,7 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 libraryDependencies ++= {
   val akkaV = "2.3.14"
   val sprayV = "1.3.3"
+  val scalalikeV = "2.3.0"
   Seq(
     "io.spray"            %%  "spray-can"     					 % sprayV,
     "io.spray"            %%  "spray-routing" 					 % sprayV,
@@ -21,11 +22,13 @@ libraryDependencies ++= {
     "org.specs2"          %%  "specs2-core"   					 % "2.4.2" % "test",
     "org.scalaz" 		  %%  "scalaz-core"						 % "7.1.5",
     //akka persistence journal driver
-    "com.okumin" 		  %% "akka-persistence-sql-async" 		 % "0.3.1",
+    "com.okumin" 		  %% "akka-persistence-sql-async" 		 % "0.2.1", //use older version to stay compatible with akka 1.3.x
     "com.github.mauricio" %% "mysql-async" 						 % "0.2.16",
     //
-    "org.scalikejdbc" 	  %% "scalikejdbc-jsr310" 				 % "2.3.0",
-    "org.scalikejdbc" 	  %% "scalikejdbc-syntax-support-macro"  % "2.3.0"
+    "org.scalikejdbc" 	  %% "scalikejdbc-config"				 % scalalikeV,
+    "org.scalikejdbc" 	  %% "scalikejdbc-syntax-support-macro"  % scalalikeV,
+    "ch.qos.logback"  	  %  "logback-classic"    		  		 % "1.1.3",
+    "org.mariadb.jdbc"	  %  "mariadb-java-client"               % "1.3.2"    
   )
 }
 

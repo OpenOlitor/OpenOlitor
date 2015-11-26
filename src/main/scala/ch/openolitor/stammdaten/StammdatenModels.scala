@@ -30,7 +30,6 @@ import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.models.BaseId
 import scalikejdbc.SQLSyntaxSupportFeature._
 import scalikejdbc._
-import scalikejdbc.jsr310._
 import DBUtils._
 import ch.openolitor.core.models.BaseId
 import java.sql.ResultSet
@@ -110,7 +109,10 @@ case class Abotyp(id: Option[AbotypId],
   anzahlAbwesenheiten: Option[Int],
   preis: BigDecimal,
   preisEinheit: Preiseinheit,
-  aktiv: Boolean) extends BaseEntity[AbotypId]
+  aktiv: Boolean,
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  letzteLieferung: Option[DateTime]) extends BaseEntity[AbotypId]
 
 case class Projekt(id: UUID,
   name: String,
@@ -132,7 +134,9 @@ case class Tour(id: Option[TourId], name: String, beschreibung: Option[String]) 
 object Abotyp extends SQLSyntaxSupport[Abotyp] {
   override val tableName = "Abotyp"
 
-  def apply(rs: WrappedResultSet, rn: ResultName[Abotyp]): Abotyp =
+  def apply(p: SyntaxProvider[Abotyp])(rs: WrappedResultSet): Abotyp = apply(p.resultName)(rs)
+
+  def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp =
     autoConstruct(rs, rn)
 }
 
