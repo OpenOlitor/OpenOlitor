@@ -37,6 +37,9 @@ import spray.httpx.unmarshalling.Unmarshaller
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util._
 import java.util.UUID
+import akka.pattern.ask
+import scala.concurrent.duration._
+import akka.util.Timeout
 
 trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {
   self: StammdatenRepositoryComponent =>
@@ -46,6 +49,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
 
   import StammdatenJsonProtocol._
   import EntityStore._
+
+  implicit val timeout = Timeout(5.seconds)
 
   val stammdatenRoute =
     path("abotypen") {
@@ -76,8 +81,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
             }
           } ~
           delete {
-            complete {
-              entityStore ! EntityStore.DeleteEntityCommand(id)
+            onSuccess(entityStore ? EntityStore.DeleteEntityCommand(id)) { result =>
+              complete("")
             }
           }
       }

@@ -27,37 +27,35 @@ import spray.testkit.Specs2RouteTest
 import spray.http._
 import StatusCodes._
 import spray.json._
-import ch.openolitor.stammdaten.HelloWorldJsonProtocol._
 import ch.openolitor.helloworld._
-import ch.openolitor.core.HelloWorld
-import ch.openolitor.core.RouteService
-import ch.openolitor.stammdaten.HelloWorld
 
-class RouteServiceSpec extends Specification with Specs2RouteTest with RouteService {
+class RouteServiceSpec extends Specification with Specs2RouteTest with HelloWorldRoutes {
   def actorRefFactory = system
+
+  import HelloWorldJsonProtocol._
 
   "HelloWorldService" should {
 
     "return a greeting for GET requests to the root path as xml" in {
-      Get("/hello/xml") ~> myRoute ~> check {
+      Get("/hello/xml") ~> helloWorldRoute ~> check {
         responseAs[String] must contain("<h1>Hello World</h1>")
       }
 
       "return a greeting for GET requests to the root path as json" in {
-        Get("/hello/json") ~> myRoute ~> check {
+        Get("/hello/json") ~> helloWorldRoute ~> check {
           responseAs[String].parseJson.convertTo[HelloWorld] must beEqualTo(HelloWorld("Hello World!"))
         }
       }
     }
 
     "leave GET requests to other paths unhandled" in {
-      Get("/kermit") ~> myRoute ~> check {
+      Get("/kermit") ~> helloWorldRoute ~> check {
         handled must beFalse
       }
     }
 
     "return a MethodNotAllowed error for PUT requests to the root path" in {
-      Put("/hello/xml") ~> sealRoute(myRoute) ~> check {
+      Put("/hello/xml") ~> sealRoute(helloWorldRoute) ~> check {
         status === MethodNotAllowed
         responseAs[String] === "HTTP method not allowed, supported methods: GET"
       }
