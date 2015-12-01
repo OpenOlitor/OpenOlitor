@@ -69,9 +69,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
     } ~
       path("abotypen" / abotypIdPath) { id =>
         get {
-          complete {
-            //get detail of abotyp
-            ""
+          //get detail of abotyp
+          onSuccess(readRepository.getAbotyp(id)) { abotyp =>
+            abotyp.map(a => complete(a)).getOrElse(complete(StatusCodes.NotFound))
           }
         } ~
           put {

@@ -25,23 +25,23 @@ package ch.openolitor.stammdaten.dto
 import ch.openolitor.stammdaten._
 import org.joda.time.DateTime
 import ch.openolitor.core.models._
+import scalikejdbc._
 
-class AbotypTransferModels {
+case class AbotypDetail(id: Option[AbotypId],
+  name: String,
+  beschreibung: Option[String],
+  lieferrhythmus: Rhythmus,
+  enddatum: Option[DateTime],
+  anzahlLieferungen: Option[Int],
+  anzahlAbwesenheiten: Option[Int],
+  preis: BigDecimal,
+  preisEinheit: Preiseinheit,
+  aktiv: Boolean,
+  vertriebsarten: Seq[Vertriebsartdetail],
+  anzahlAbonnenten: Int,
+  letzteLieferung: Option[DateTime]) extends BaseEntity[AbotypId] with IAbotyp
 
-  case class AbotypDetail(id: Option[AbotypId],
-    name: String,
-    beschreibung: Option[String],
-    lieferrhythmus: Rhythmus,
-    enddatum: Option[DateTime],
-    anzahlLieferungen: Option[Int],
-    anzahlAbwesenheiten: Option[Int],
-    preis: BigDecimal,
-    preisEinheit: Preiseinheit,
-    aktiv: Boolean,
-    vertriebsarten: Seq[Vertriebsartdetail]) extends BaseEntity[AbotypId] with IAbotyp
-
-  sealed trait Vertriebsartdetail
-  case class DepotlieferungDetail(id: Option[VertriebsartId], depot: Depot, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
-  case class HeimlieferungDetail(id: Option[VertriebsartId], tour: Tour, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
-  case class PostDetail(id: Option[VertriebsartId], liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
-}
+sealed trait Vertriebsartdetail extends Product
+case class DepotlieferungDetail(id: Option[VertriebsartId], depot: Depot, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class HeimlieferungDetail(id: Option[VertriebsartId], tour: Tour, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class PostlieferungDetail(id: Option[VertriebsartId], liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail

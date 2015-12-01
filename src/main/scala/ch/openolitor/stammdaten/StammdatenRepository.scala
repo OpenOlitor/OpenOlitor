@@ -33,21 +33,67 @@ import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
 import akka.event.Logging
+import ch.openolitor.stammdaten.dto._
 
 trait StammdatenReadRepository {
-  def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, cpContext: ConnectionPoolContext): Future[List[Abotyp]]
+  def getAbotyp(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
+  def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
   lazy val aboTyp = Abotyp.syntax("t")
+  lazy val pl = Postlieferung.syntax("pl")
+  lazy val dl = Depotlieferung.syntax("dl")
+  lazy val d = Depot.syntax("d")
+  lazy val t = Tour.syntax("t")
+  lazy val hl = Heimlieferung.syntax("hl")
 
-  def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, cpContext: ConnectionPoolContext): Future[List[Abotyp]] = {
+  def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
       select
         .from(Abotyp as aboTyp)
         .where.append(aboTyp.aktiv)
         .orderBy(aboTyp.name)
     }.map(Abotyp(aboTyp)).list.future
+  }
+
+  override def getAbotyp(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {
+    withSQL {
+      select
+        .from(Abotyp as aboTyp)
+        .leftJoin(Postlieferung as pl).on(aboTyp.id, pl.abotypId)
+        .leftJoin(Heimlieferung as hl).on(aboTyp.id, hl.abotypId)
+        .leftJoin(Depotlieferung as dl).on(aboTyp.id, dl.abotypId)
+        .leftJoin(Depot as d).on(dl.depotId, d.id)
+        .leftJoin(Tour as t).on(hl.tourId, t.id)
+    }.one(Abotyp(aboTyp))
+      .toManies(
+        rs => Postlieferung.opt(pl)(rs),
+        rs => Heimlieferung.opt(hl)(rs),
+        rs => Depotlieferung.opt(dl)(rs),
+        rs => Depot.opt(d)(rs),
+        rs => Tour.opt(t)(rs))
+      .map({ (abotyp, pls, hms, dls, depot, tour) =>
+        val vertriebsarten =
+          pls.map(pl => PostlieferungDetail(pl.id, pl.liefertage)) ++
+            hms.map(hm => HeimlieferungDetail(hm.id, tour.head, hm.liefertage)) ++
+            dls.map(dl => DepotlieferungDetail(dl.id, depot.head, dl.liefertage))
+
+        AbotypDetail(abotyp.id,
+          abotyp.name,
+          abotyp.beschreibung,
+          abotyp.lieferrhythmus,
+          abotyp.enddatum,
+          abotyp.anzahlLieferungen,
+          abotyp.anzahlAbwesenheiten,
+          abotyp.preis,
+          abotyp.preisEinheit,
+          abotyp.aktiv,
+          vertriebsarten,
+          abotyp.anzahlAbonnenten,
+          abotyp.letzteLieferung)
+      })
+      .single.future
   }
 }
 

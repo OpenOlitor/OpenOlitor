@@ -28,6 +28,12 @@ import java.util.UUID
 import org.joda.time._
 import org.joda.time.format._
 import ch.openolitor.core.BaseJsonProtocol
+import ch.openolitor.stammdaten.dto.AbotypDetail
+import ch.openolitor.stammdaten.dto.Vertriebsartdetail
+import ch.openolitor.stammdaten.dto.PostlieferungDetail
+import ch.openolitor.stammdaten.dto.HeimlieferungDetail
+import ch.openolitor.stammdaten.dto.DepotlieferungDetail
+import ch.openolitor.stammdaten.dto.PostlieferungDetail
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten
@@ -63,17 +69,29 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
   implicit val heimlieferungFormat = jsonFormat4(Heimlieferung.apply)
   implicit val postlieferungFormat = jsonFormat3(Postlieferung.apply)
 
-  implicit val vertriebsartFormat = new JsonFormat[Lieferzeitpunkt] {
-    def write(obj: Lieferzeitpunkt): JsValue =
+  implicit val depot = jsonFormat3(Depot.apply)
+  implicit val tour = jsonFormat3(Tour.apply)
+
+  implicit val postlieferungDetailFormat = jsonFormat2(PostlieferungDetail.apply)
+  implicit val depotlieferungDetailFormat = jsonFormat3(DepotlieferungDetail.apply)
+  implicit val heimlieferungDetailFormat = jsonFormat3(HeimlieferungDetail.apply)
+
+  implicit val vertriebsartDetailFormat = new JsonFormat[Vertriebsartdetail] {
+    def write(obj: Vertriebsartdetail): JsValue =
       JsObject((obj match {
-        case w: Wochentag => w.toJson
+        case p: PostlieferungDetail => p.toJson
+        case hl: HeimlieferungDetail => hl.toJson
+        case dl: DepotlieferungDetail => dl.toJson
       }).asJsObject.fields + ("type" -> JsString(obj.productPrefix)))
 
-    def read(json: JsValue): Lieferzeitpunkt =
+    def read(json: JsValue): Vertriebsartdetail =
       json.asJsObject.getFields("type") match {
-        case Seq(JsString("Wochentag")) => json.convertTo[Wochentag]
+        case Seq(JsString("PostlieferungDetail")) => json.convertTo[PostlieferungDetail]
+        case Seq(JsString("HeimlieferungDetail")) => json.convertTo[HeimlieferungDetail]
+        case Seq(JsString("DepotlieferungDetail")) => json.convertTo[DepotlieferungDetail]
       }
   }
 
   implicit val abottypFormat = jsonFormat12(Abotyp.apply)
+  implicit val abottypDetailFormat = jsonFormat13(AbotypDetail.apply)
 }

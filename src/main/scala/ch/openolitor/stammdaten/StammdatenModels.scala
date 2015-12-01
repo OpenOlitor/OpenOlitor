@@ -161,8 +161,13 @@ object Tour extends SQLSyntaxSupport[Tour] {
 
   override def columnNames = Seq("id", "name", "beschreibung")
 
-  def apply(rs: WrappedResultSet, rn: ResultName[Tour]): Tour =
+  def apply(p: SyntaxProvider[Tour])(rs: WrappedResultSet): Tour = apply(p.resultName)(rs)
+
+  def apply(rn: ResultName[Tour])(rs: WrappedResultSet): Tour =
     autoConstruct(rs, rn)
+
+  def opt(m: SyntaxProvider[Tour])(rs: WrappedResultSet): Option[Tour] =
+    rs.longOpt(m.resultName.id).map(_ => Tour(m)(rs))
 }
 
 object Depot extends SQLSyntaxSupport[Depot] {
@@ -170,8 +175,13 @@ object Depot extends SQLSyntaxSupport[Depot] {
 
   override def columnNames = Seq("id", "name", "beschreibung")
 
-  def apply(rs: WrappedResultSet, rn: ResultName[Depot]): Depot =
+  def apply(p: SyntaxProvider[Depot])(rs: WrappedResultSet): Depot = apply(p.resultName)(rs)
+
+  def apply(rn: ResultName[Depot])(rs: WrappedResultSet): Depot =
     autoConstruct(rs, rn)
+
+  def opt(m: SyntaxProvider[Depot])(rs: WrappedResultSet): Option[Depot] =
+    rs.longOpt(m.resultName.id).map(_ => Depot(m)(rs))
 }
 
 object Heimlieferung extends SQLSyntaxSupport[Heimlieferung] {
@@ -179,8 +189,13 @@ object Heimlieferung extends SQLSyntaxSupport[Heimlieferung] {
 
   override def columnNames = Seq("id", "abo_typ_id", "tour_id", "liefertage")
 
-  def apply(rs: WrappedResultSet, rn: ResultName[Heimlieferung]): Heimlieferung =
+  def apply(p: SyntaxProvider[Heimlieferung])(rs: WrappedResultSet): Heimlieferung = apply(p.resultName)(rs)
+
+  def apply(rn: ResultName[Heimlieferung])(rs: WrappedResultSet): Heimlieferung =
     autoConstruct(rs, rn)
+
+  def opt(m: SyntaxProvider[Heimlieferung])(rs: WrappedResultSet): Option[Heimlieferung] =
+    rs.longOpt(m.resultName.id).map(_ => Heimlieferung(m)(rs))
 }
 
 object Depotlieferung extends SQLSyntaxSupport[Depotlieferung] {
@@ -188,8 +203,13 @@ object Depotlieferung extends SQLSyntaxSupport[Depotlieferung] {
 
   override def columnNames = Seq("id", "abo_typ_id", "depot_id", "liefertage")
 
-  def apply(rs: WrappedResultSet, rn: ResultName[Depotlieferung]): Depotlieferung =
+  def apply(p: SyntaxProvider[Depotlieferung])(rs: WrappedResultSet): Depotlieferung = apply(p.resultName)(rs)
+
+  def apply(rn: ResultName[Depotlieferung])(rs: WrappedResultSet): Depotlieferung =
     autoConstruct(rs, rn)
+
+  def opt(m: SyntaxProvider[Depotlieferung])(rs: WrappedResultSet): Option[Depotlieferung] =
+    rs.longOpt(m.resultName.id).map(_ => Depotlieferung(m)(rs))
 }
 
 object Postlieferung extends SQLSyntaxSupport[Postlieferung] {
@@ -197,8 +217,13 @@ object Postlieferung extends SQLSyntaxSupport[Postlieferung] {
 
   override def columnNames = Seq("id", "abo_typ_id", "liefertage")
 
-  def apply(rs: WrappedResultSet, rn: ResultName[Postlieferung]): Postlieferung =
+  def apply(p: SyntaxProvider[Postlieferung])(rs: WrappedResultSet): Postlieferung = apply(p.resultName)(rs)
+
+  def apply(rn: ResultName[Postlieferung])(rs: WrappedResultSet): Postlieferung =
     autoConstruct(rs, rn)
+
+  def opt(m: SyntaxProvider[Postlieferung])(rs: WrappedResultSet): Option[Postlieferung] =
+    rs.longOpt(m.resultName.id).map(_ => Postlieferung(m)(rs))
 }
 
 object DBUtils {
