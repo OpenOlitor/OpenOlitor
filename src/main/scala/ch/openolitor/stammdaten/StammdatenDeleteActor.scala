@@ -52,7 +52,7 @@ class StammdatenDeleteActor(override val sysConfig: SystemConfig) extends Actor 
       writeRepository.cleanupDatabase
     case EntityDeletedEvent(meta, id: AbotypId) =>
       DB autoCommit { implicit session =>
-        writeRepository.delete(id)
+        writeRepository.deleteEntity(id)
       }
     case EntityDeletedEvent(meta, entity) =>
       //TODO: implement entity based matching

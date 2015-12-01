@@ -63,7 +63,7 @@ class StammdatenUpdateActor(override val sysConfig: SystemConfig) extends Actor 
       abotyp.preis, abotyp.preisEinheit, abotyp.aktiv, abotyp.anzahlAbonnenten, abotyp.letzteLieferung)
     DB autoCommit { implicit session =>
       //create abotyp
-      writeRepository.updateAbotyp(typ)
+      writeRepository.updateEntity(typ)
 
       //TODO: update vertriebsarten mapping
       abotyp.vertriebsarten.map { vertriebsart =>

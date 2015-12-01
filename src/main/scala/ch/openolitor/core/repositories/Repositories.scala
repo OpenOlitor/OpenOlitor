@@ -28,7 +28,7 @@ import scalikejdbc._
 
 trait BaseWriteRepository {
 
-  //def insert(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
-  //def update(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
-  //def delete(id: BaseId)(implicit session: DBSession)
+  def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
+  def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
+  def deleteEntity(id: BaseId)(implicit session: DBSession)
 }

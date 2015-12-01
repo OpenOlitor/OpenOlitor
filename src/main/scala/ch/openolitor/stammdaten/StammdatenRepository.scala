@@ -100,12 +100,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-
-  def insert(abotyp: Abotyp)(implicit session: DBSession)
-
-  def delete(id: AbotypId)(implicit session: DBSession)
-
-  def updateAbotyp(abotyp: Abotyp)(implicit session: DBSession)
 }
 
 class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging {
@@ -137,41 +131,21 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     logger.debug(s"oo-system: cleanupDatabase - end")
   }
 
-  def insert(abotyp: Abotyp)(implicit session: DBSession) = {
-    withSQL(insertInto(Abotyp).values(abotyp)).update.apply()
-  }
-
-  def delete(id: AbotypId)(implicit session: DBSession) = {
-    withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, id)).update.apply()
-  }
-
-  def updateAbotyp(abotyp: Abotyp)(implicit session: DBSession) = {
-    withSQL(update(Abotyp).set(Abotyp.column.name -> abotyp.name).where.eq(Abotyp.column.id, abotyp.id.get)).update.apply()
-  }
-
-  /*override def insert(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
-    withSQL {
-      insert(entity).apply()
+  def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
+    entity match {
+      case abotyp: Abotyp => withSQL(insertInto(Abotyp).values(abotyp)).update.apply()
     }
   }
 
-  override def delete[E <: BaseEntity[I], I >: BaseId](id: I, entity: BaseEntitySQLSyntaxSupport[_])(implicit session: DBSession) = {
-    val col = Abotyp.column.id
-    val f2 = withSQL(deleteFrom(Abotyp).where(Abotyp.column.id, id))
-    val f = deleteFrom(entity).where(Abotyp.column.id, id)
-    withSQL(deleteFrom(entity).where(Abotyp.column.id, id)).update.apply()
+  def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
+    entity match {
+      case abotyp: Abotyp => withSQL(update(Abotyp).set(Abotyp.column.name -> abotyp.name).where.eq(Abotyp.column.id, abotyp.id.get)).update.apply()
+    }
+  }
+
+  def deleteEntity(id: BaseId)(implicit session: DBSession) = {
     id match {
-      case id: AbotypId =>
-        DB autoCommit { implicit session =>
-          withSQL {
-            deleteFrom(Abotyp).where.eq(Abotyp.column.id, id)
-          }.update.apply()
-        }
+      case abotypId: AbotypId => withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, abotypId)).update.apply()
     }
   }
-
-  override def update(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext) = {
-    //TODO: implement using entity match
-  }*/
-
 }

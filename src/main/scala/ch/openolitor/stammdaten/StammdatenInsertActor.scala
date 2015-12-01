@@ -63,7 +63,7 @@ class StammdatenInsertActor(override val sysConfig: SystemConfig) extends Actor 
       abotyp.preis, abotyp.preisEinheit, true, 0, None)
     DB autoCommit { implicit session =>
       //create abotyp
-      writeRepository.insert(typ)
+      writeRepository.insertEntity(typ)
 
       //insert vertriebsarten
       abotyp.vertriebsarten.map { vertriebsart =>
