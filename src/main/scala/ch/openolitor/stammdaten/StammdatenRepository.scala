@@ -130,7 +130,7 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
       sql"create table ${Heimlieferung.table} (id varchar(36) not null, abo_typ_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
       sql"create table ${Depot.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${Tour.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${Abotyp.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preisEinheit varchar(20) not null, aktiv bit)".execute.apply()
+      sql"create table ${Abotyp.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preis_einheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp)".execute.apply()
     }
 
     println(s"oo-system: cleanupDatabase - end")
