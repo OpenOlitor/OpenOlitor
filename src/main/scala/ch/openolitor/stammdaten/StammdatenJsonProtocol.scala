@@ -28,12 +28,7 @@ import java.util.UUID
 import org.joda.time._
 import org.joda.time.format._
 import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.dto.AbotypDetail
-import ch.openolitor.stammdaten.dto.Vertriebsartdetail
-import ch.openolitor.stammdaten.dto.PostlieferungDetail
-import ch.openolitor.stammdaten.dto.HeimlieferungDetail
-import ch.openolitor.stammdaten.dto.DepotlieferungDetail
-import ch.openolitor.stammdaten.dto.PostlieferungDetail
+import ch.openolitor.stammdaten.dto._
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten
@@ -49,7 +44,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
 
   //id formats
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId.apply)
-  implicit val abortypIdFormat = baseIdFormat(AbotypId.apply)
+  implicit val abotypIdFormat = baseIdFormat(AbotypId.apply)
   implicit val depotIdFormat = baseIdFormat(DepotId.apply)
   implicit val tourIdFormat = baseIdFormat(TourId.apply)
 
@@ -92,6 +87,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
       }
   }
 
-  implicit val abottypFormat = jsonFormat12(Abotyp.apply)
-  implicit val abottypDetailFormat = jsonFormat13(AbotypDetail.apply)
+  implicit val abotypFormat = jsonFormat12(Abotyp.apply)
+  implicit val abotypDetailFormat = jsonFormat13(AbotypDetail.apply)
+  implicit val abotypCreateFormat = jsonFormat9(AbotypCreate.apply)
 }

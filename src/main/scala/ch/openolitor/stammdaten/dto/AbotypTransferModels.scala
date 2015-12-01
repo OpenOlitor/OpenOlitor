@@ -27,6 +27,17 @@ import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import scalikejdbc._
 
+case class AbotypCreate(
+  name: String,
+  beschreibung: Option[String],
+  lieferrhythmus: Rhythmus,
+  enddatum: Option[DateTime],
+  anzahlLieferungen: Option[Int],
+  anzahlAbwesenheiten: Option[Int],
+  preis: BigDecimal,
+  preisEinheit: Preiseinheit,
+  vertriebsarten: Seq[Vertriebsartdetail])
+
 case class AbotypDetail(id: Option[AbotypId],
   name: String,
   beschreibung: Option[String],

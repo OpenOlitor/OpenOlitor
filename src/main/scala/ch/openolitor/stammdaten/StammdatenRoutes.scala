@@ -40,6 +40,7 @@ import java.util.UUID
 import akka.pattern.ask
 import scala.concurrent.duration._
 import akka.util.Timeout
+import ch.openolitor.stammdaten.dto._
 
 trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {
   self: StammdatenRepositoryComponent =>
@@ -61,9 +62,14 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
         }
       } ~
         post {
-          entity(as[Abotyp]) { abotyp =>
+          entity(as[AbotypCreate]) { abotyp =>
             //create abotyp
-            complete(abotyp)
+            onSuccess(entityStore ? EntityStore.InsertEntityCommand(abotyp)) {
+              case id: UUID =>
+                complete(AbotypId(id))
+              case _ =>
+                complete(StatusCodes.BadRequest)
+            }
           }
         }
     } ~
@@ -75,9 +81,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           }
         } ~
           put {
-            entity(as[Abotyp]) { abotyp =>
+            entity(as[AbotypDetail]) { abotyp =>
               //update abotyp
-              complete(abotyp)
+              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(abotyp)) { result =>
+                complete(abotyp)
+              }
             }
           } ~
           delete {

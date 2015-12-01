@@ -43,13 +43,13 @@ object EntityStore {
   def props(): Props = Props(classOf[EntityStore])
 
   //base commands
-  case class InsertEntityCommand(entity: BaseEntity[_ <: BaseId]) extends Command
+  case class InsertEntityCommand(entity: Any) extends Command
   case class UpdateEntityCommand(entity: BaseEntity[_ <: BaseId]) extends Command
   case class DeleteEntityCommand(id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: BaseEntity[_ <: BaseId]) extends PersistetEvent
+  case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: Any) extends PersistetEvent
   case class EntityUpdatedEvent(meta: EventMetadata, entity: BaseEntity[_ <: BaseId]) extends PersistetEvent
   case class EntityDeletedEvent(meta: EventMetadata, id: BaseId) extends PersistetEvent
 

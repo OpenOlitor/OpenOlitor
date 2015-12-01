@@ -28,7 +28,7 @@ import scalikejdbc._
 
 trait BaseWriteRepository {
 
-  def insert(id: UUID, entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
-  def update(entity: BaseEntity[_ <: BaseId])(implicit cpContext: ConnectionPoolContext)
-  def delete(id: BaseId)(implicit cpContext: ConnectionPoolContext)
+  //def insert(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
+  //def update(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
+  //def delete(id: BaseId)(implicit session: DBSession)
 }

@@ -45,7 +45,7 @@ object BaseJsonProtocol extends DefaultJsonProtocol {
       }
   }
 
-  def baseIdFormat[I <: BaseId](implicit fromJson: UUID => I) = new JsonFormat[I] {
+  def baseIdFormat[I <: BaseId](implicit fromJson: UUID => I) = new RootJsonFormat[I] {
     def write(obj: I): JsValue = JsString(obj.id.toString)
 
     def read(json: JsValue): I =

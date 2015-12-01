@@ -38,6 +38,8 @@ import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.models.BaseEntity
 import scala.concurrent.ExecutionContext
+import ch.openolitor.core.models.BaseEntity
+import scalikejdbc.metadata.Column
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -145,85 +147,76 @@ case class Tour(id: Option[TourId], name: String, beschreibung: Option[String]) 
 
 //DB Model bindig
 
-object Abotyp extends SQLSyntaxSupport[Abotyp] {
+trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] {
+  //override def columnNames 
+  def apply(p: SyntaxProvider[E])(rs: WrappedResultSet): E = apply(p.resultName)(rs)
+
+  def opt(e: SyntaxProvider[E])(rs: WrappedResultSet): Option[E] =
+    rs.longOpt(e.resultName.id).map(_ => apply(e)(rs))
+
+  def apply(rn: ResultName[E])(rs: WrappedResultSet): E
+}
+
+object Abotyp extends BaseEntitySQLSyntaxSupport[Abotyp] {
   override val tableName = "Abotyp"
 
-  override def columnNames = Seq("id", "name", "beschreibung", "lieferrhythmus", "enddatum", "anzahl_lieferungen", "anzahl_abwesenheiten", "preis", "preisEinheit", "aktiv")
+  override lazy val columns = autoColumns[Abotyp]()
 
-  def apply(p: SyntaxProvider[Abotyp])(rs: WrappedResultSet): Abotyp = apply(p.resultName)(rs)
+  //override def columnNames = Seq("id", "name", "beschreibung", "lieferrhythmus", "enddatum", "anzahl_lieferungen", "anzahl_abwesenheiten", "preis", "preisEinheit", "aktiv")
 
   def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp =
     autoConstruct(rs, rn)
 }
 
-object Tour extends SQLSyntaxSupport[Tour] {
+object Tour extends BaseEntitySQLSyntaxSupport[Tour] {
   override val tableName = "Tour"
 
-  override def columnNames = Seq("id", "name", "beschreibung")
+  //override def columnNames = Seq("id", "name", "beschreibung")
 
-  def apply(p: SyntaxProvider[Tour])(rs: WrappedResultSet): Tour = apply(p.resultName)(rs)
+  override lazy val columns = autoColumns[Tour]()
 
   def apply(rn: ResultName[Tour])(rs: WrappedResultSet): Tour =
     autoConstruct(rs, rn)
-
-  def opt(m: SyntaxProvider[Tour])(rs: WrappedResultSet): Option[Tour] =
-    rs.longOpt(m.resultName.id).map(_ => Tour(m)(rs))
 }
 
-object Depot extends SQLSyntaxSupport[Depot] {
+object Depot extends BaseEntitySQLSyntaxSupport[Depot] {
   override val tableName = "Depot"
 
-  override def columnNames = Seq("id", "name", "beschreibung")
-
-  def apply(p: SyntaxProvider[Depot])(rs: WrappedResultSet): Depot = apply(p.resultName)(rs)
+  //override def columnNames = Seq("id", "name", "beschreibung")
+  override lazy val columns = autoColumns[Depot]()
 
   def apply(rn: ResultName[Depot])(rs: WrappedResultSet): Depot =
     autoConstruct(rs, rn)
-
-  def opt(m: SyntaxProvider[Depot])(rs: WrappedResultSet): Option[Depot] =
-    rs.longOpt(m.resultName.id).map(_ => Depot(m)(rs))
 }
 
-object Heimlieferung extends SQLSyntaxSupport[Heimlieferung] {
+object Heimlieferung extends BaseEntitySQLSyntaxSupport[Heimlieferung] {
   override val tableName = "Heimlieferung"
 
-  override def columnNames = Seq("id", "abo_typ_id", "tour_id", "liefertage")
-
-  def apply(p: SyntaxProvider[Heimlieferung])(rs: WrappedResultSet): Heimlieferung = apply(p.resultName)(rs)
+  //override def columnNames = Seq("id", "abo_typ_id", "tour_id", "liefertage")
+  override lazy val columns = autoColumns[Heimlieferung]()
 
   def apply(rn: ResultName[Heimlieferung])(rs: WrappedResultSet): Heimlieferung =
     autoConstruct(rs, rn)
-
-  def opt(m: SyntaxProvider[Heimlieferung])(rs: WrappedResultSet): Option[Heimlieferung] =
-    rs.longOpt(m.resultName.id).map(_ => Heimlieferung(m)(rs))
 }
 
-object Depotlieferung extends SQLSyntaxSupport[Depotlieferung] {
+object Depotlieferung extends BaseEntitySQLSyntaxSupport[Depotlieferung] {
   override val tableName = "Depotlieferung"
 
-  override def columnNames = Seq("id", "abo_typ_id", "depot_id", "liefertage")
-
-  def apply(p: SyntaxProvider[Depotlieferung])(rs: WrappedResultSet): Depotlieferung = apply(p.resultName)(rs)
+  //override def columnNames = Seq("id", "abo_typ_id", "depot_id", "liefertage")
+  override lazy val columns = autoColumns[Depotlieferung]()
 
   def apply(rn: ResultName[Depotlieferung])(rs: WrappedResultSet): Depotlieferung =
     autoConstruct(rs, rn)
-
-  def opt(m: SyntaxProvider[Depotlieferung])(rs: WrappedResultSet): Option[Depotlieferung] =
-    rs.longOpt(m.resultName.id).map(_ => Depotlieferung(m)(rs))
 }
 
-object Postlieferung extends SQLSyntaxSupport[Postlieferung] {
+object Postlieferung extends BaseEntitySQLSyntaxSupport[Postlieferung] {
   override val tableName = "Postlieferung"
 
-  override def columnNames = Seq("id", "abo_typ_id", "liefertage")
-
-  def apply(p: SyntaxProvider[Postlieferung])(rs: WrappedResultSet): Postlieferung = apply(p.resultName)(rs)
+  //override def columnNames = Seq("id", "abo_typ_id", "liefertage")
+  override lazy val columns = autoColumns[Postlieferung]()
 
   def apply(rn: ResultName[Postlieferung])(rs: WrappedResultSet): Postlieferung =
     autoConstruct(rs, rn)
-
-  def opt(m: SyntaxProvider[Postlieferung])(rs: WrappedResultSet): Option[Postlieferung] =
-    rs.longOpt(m.resultName.id).map(_ => Postlieferung(m)(rs))
 }
 
 object DBUtils {

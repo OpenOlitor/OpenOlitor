@@ -28,6 +28,9 @@ import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.domain.EntityStore
 import ch.openolitor.stammdaten._
+import ch.openolitor.stammdaten.dto._
+import java.util.UUID
+import scalikejdbc.DB
 
 object StammdatenInsertActor {
   def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenInsertActor], sysConfig)
@@ -45,10 +48,27 @@ class StammdatenInsertActor(override val sysConfig: SystemConfig) extends Actor 
   import EntityStore._
 
   val receive: Receive = {
+    case EntityInsertedEvent(meta, id, abotyp: AbotypCreate) =>
+      insertAbotyp(id, abotyp)
     case EntityInsertedEvent(meta, id, entity) =>
+
       //TODO: implement entity based matching
       log.debug(s"Receive insert event for entity:$entity with id:$id")
     case e =>
       log.warning(s"Unknown event:$e")
+  }
+
+  def insertAbotyp(id: UUID, abotyp: AbotypCreate) = {
+    val typ = Abotyp(Some(AbotypId(id)), abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
+      abotyp.preis, abotyp.preisEinheit, true, 0, None)
+    DB autoCommit { implicit session =>
+      //create abotyp
+      writeRepository.insert(typ)
+
+      //insert vertriebsarten
+      abotyp.vertriebsarten.map { vertriebsart =>
+        //TODO: insert
+      }
+    }
   }
 }

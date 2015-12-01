@@ -29,6 +29,7 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.domain.EntityStore
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
+import scalikejdbc.DB
 
 object StammdatenDeleteActor {
   def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenDeleteActor], sysConfig)
@@ -50,7 +51,9 @@ class StammdatenDeleteActor(override val sysConfig: SystemConfig) extends Actor 
       log.debug("Received EntityStoreInitialized, cleanupDatabase")
       writeRepository.cleanupDatabase
     case EntityDeletedEvent(meta, id: AbotypId) =>
-      writeRepository.delete(id)
+      DB autoCommit { implicit session =>
+        writeRepository.delete(id)
+      }
     case EntityDeletedEvent(meta, entity) =>
       //TODO: implement entity based matching
       log.debug(s"Receive delete event for entity:$entity")

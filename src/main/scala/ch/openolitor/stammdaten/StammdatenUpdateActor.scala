@@ -29,6 +29,9 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.domain.EntityStore
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
+import ch.openolitor.stammdaten.dto.AbotypDetail
+import ch.openolitor.stammdaten.dto.AbotypDetail
+import scalikejdbc.DB
 
 object StammdatenUpdateActor {
   def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenUpdateActor], sysConfig)
@@ -46,10 +49,26 @@ class StammdatenUpdateActor(override val sysConfig: SystemConfig) extends Actor 
   import EntityStore._
 
   val receive: Receive = {
+    case EntityUpdatedEvent(meta, entity: AbotypDetail) =>
+      updateAbotyp(entity)
     case EntityUpdatedEvent(meta, entity) =>
       //TODO: implement entity based matching
       log.debug(s"Receive update event for entity:$entity")
     case e =>
       log.warning(s"Unknown event:$e")
+  }
+
+  def updateAbotyp(abotyp: AbotypDetail) = {
+    val typ = Abotyp(abotyp.id, abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
+      abotyp.preis, abotyp.preisEinheit, abotyp.aktiv, abotyp.anzahlAbonnenten, abotyp.letzteLieferung)
+    DB autoCommit { implicit session =>
+      //create abotyp
+      writeRepository.updateAbotyp(typ)
+
+      //TODO: update vertriebsarten mapping
+      abotyp.vertriebsarten.map { vertriebsart =>
+        //TODO: insert
+      }
+    }
   }
 }
