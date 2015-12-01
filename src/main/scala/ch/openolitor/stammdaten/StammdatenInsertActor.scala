@@ -51,23 +51,28 @@ class StammdatenInsertActor(override val sysConfig: SystemConfig) extends Actor 
     case EntityInsertedEvent(meta, id, abotyp: AbotypCreate) =>
       insertAbotyp(id, abotyp)
     case EntityInsertedEvent(meta, id, entity) =>
-
-      //TODO: implement entity based matching
-      log.debug(s"Receive insert event for entity:$entity with id:$id")
+      log.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
       log.warning(s"Unknown event:$e")
   }
 
   def insertAbotyp(id: UUID, abotyp: AbotypCreate) = {
-    val typ = Abotyp(Some(AbotypId(id)), abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
+    val typ = Abotyp(AbotypId(id), abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
       abotyp.preis, abotyp.preisEinheit, true, 0, None)
     DB autoCommit { implicit session =>
       //create abotyp
       writeRepository.insertEntity(typ)
 
       //insert vertriebsarten
-      abotyp.vertriebsarten.map { vertriebsart =>
-        //TODO: insert
+      abotyp.vertriebsarten.map {
+        _ match {
+          case pd: PostlieferungDetail =>
+            writeRepository.insertEntity(Postlieferung(VertriebsartId(), typ.id, pd.liefertage))
+          case dd: DepotlieferungDetail =>
+            writeRepository.insertEntity(Depotlieferung(VertriebsartId(), typ.id, dd.depot.id, dd.liefertage))
+          case hd: HeimlieferungDetail =>
+            writeRepository.insertEntity(Heimlieferung(VertriebsartId(), typ.id, hd.tour.id, hd.liefertage))
+        }
       }
     }
   }

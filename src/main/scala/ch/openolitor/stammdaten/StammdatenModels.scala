@@ -85,11 +85,11 @@ object Preiseinheit {
   }
 }
 
-case class VertriebsartId(id: UUID) extends BaseId
+case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
-case class Depotlieferung(id: Option[VertriebsartId], abotypId: AbotypId, depotId: DepotId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
-case class Heimlieferung(id: Option[VertriebsartId], abotypId: AbotypId, tourId: TourId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
-case class Postlieferung(id: Option[VertriebsartId], abotypId: AbotypId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
+case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
+case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
+case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
 
 sealed trait Waehrung
 case object CHF extends Waehrung
@@ -103,7 +103,7 @@ object Waehrung {
 }
 
 trait IAbotyp {
-  val id: Option[AbotypId]
+  val id: AbotypId
   val name: String
   val beschreibung: Option[String]
   val lieferrhythmus: Rhythmus
@@ -116,7 +116,7 @@ trait IAbotyp {
 }
 
 case class AbotypId(id: UUID) extends BaseId
-case class Abotyp(id: Option[AbotypId],
+case class Abotyp(id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
@@ -140,10 +140,10 @@ sealed trait Vertriebskanal {
 }
 
 case class DepotId(id: UUID) extends BaseId
-case class Depot(id: Option[DepotId], name: String, beschreibung: Option[String]) extends BaseEntity[DepotId] with Vertriebskanal
+case class Depot(id: DepotId, name: String, beschreibung: Option[String]) extends BaseEntity[DepotId] with Vertriebskanal
 
 case class TourId(id: UUID) extends BaseId
-case class Tour(id: Option[TourId], name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
+case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
 
 //DB Model bindig
 

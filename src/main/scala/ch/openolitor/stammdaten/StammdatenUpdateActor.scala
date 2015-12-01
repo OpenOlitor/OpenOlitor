@@ -52,8 +52,7 @@ class StammdatenUpdateActor(override val sysConfig: SystemConfig) extends Actor 
     case EntityUpdatedEvent(meta, entity: AbotypDetail) =>
       updateAbotyp(entity)
     case EntityUpdatedEvent(meta, entity) =>
-      //TODO: implement entity based matching
-      log.debug(s"Receive update event for entity:$entity")
+      log.debug(s"Receive unmatched update event for entity:$entity")
     case e =>
       log.warning(s"Unknown event:$e")
   }

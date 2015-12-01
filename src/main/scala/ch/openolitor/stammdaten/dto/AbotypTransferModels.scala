@@ -38,7 +38,7 @@ case class AbotypCreate(
   preisEinheit: Preiseinheit,
   vertriebsarten: Seq[Vertriebsartdetail])
 
-case class AbotypDetail(id: Option[AbotypId],
+case class AbotypDetail(id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
@@ -53,6 +53,6 @@ case class AbotypDetail(id: Option[AbotypId],
   letzteLieferung: Option[DateTime]) extends BaseEntity[AbotypId] with IAbotyp
 
 sealed trait Vertriebsartdetail extends Product
-case class DepotlieferungDetail(id: Option[VertriebsartId], depot: Depot, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class HeimlieferungDetail(id: Option[VertriebsartId], tour: Tour, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class PostlieferungDetail(id: Option[VertriebsartId], liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class DepotlieferungDetail(id: VertriebsartId, depot: Depot, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class HeimlieferungDetail(id: VertriebsartId, tour: Tour, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class PostlieferungDetail(id: VertriebsartId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail

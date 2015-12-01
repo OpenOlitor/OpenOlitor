@@ -29,5 +29,5 @@ trait BaseId {
 }
 
 trait BaseEntity[T <: BaseId] {
-  val id: Option[T]
+  val id: T
 }

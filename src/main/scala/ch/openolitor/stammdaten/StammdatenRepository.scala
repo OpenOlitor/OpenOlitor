@@ -139,7 +139,7 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
     entity match {
-      case abotyp: Abotyp => withSQL(update(Abotyp).set(Abotyp.column.name -> abotyp.name).where.eq(Abotyp.column.id, abotyp.id.get)).update.apply()
+      case abotyp: Abotyp => withSQL(update(Abotyp).set(Abotyp.column.name -> abotyp.name).where.eq(Abotyp.column.id, abotyp.id)).update.apply()
     }
   }
 
