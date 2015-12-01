@@ -25,7 +25,6 @@ case class OOAsyncDB(context: MultipleAsyncConnectionPoolContext, name: Any = As
    * @return shared session
    */
   def sharedSession: SharedAsyncDBSession = {
-    println(s"!!!!!!$name:$context")
     SharedAsyncDBSession(context.get(name).borrow())
   }
 

@@ -34,6 +34,7 @@ import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
 import akka.event.Logging
 import ch.openolitor.stammdaten.dto._
+import com.typesafe.scalalogging.LazyLogging
 
 trait StammdatenReadRepository {
   def getAbotyp(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
@@ -107,10 +108,10 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
   def updateAbotyp(abotyp: Abotyp)(implicit session: DBSession)
 }
 
-class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
+class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging {
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
 
-    println(s"oo-system: cleanupDatabase - drop tables")
+    logger.debug(s"oo-system: cleanupDatabase - drop tables")
 
     //drop all tables
     DB autoCommit { implicit session =>
@@ -122,7 +123,7 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
       sql"drop table if exists ${Abotyp.table}".execute.apply()
     }
 
-    println(s"oo-system: cleanupDatabase - create tables")
+    logger.debug(s"oo-system: cleanupDatabase - create tables")
     //create tables
     DB autoCommit { implicit session =>
       sql"create table ${Postlieferung.table}  (id varchar(36) not null, abo_typ_id int not null, liefertage varchar(256))".execute.apply()
@@ -133,7 +134,7 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository {
       sql"create table ${Abotyp.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preis_einheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp)".execute.apply()
     }
 
-    println(s"oo-system: cleanupDatabase - end")
+    logger.debug(s"oo-system: cleanupDatabase - end")
   }
 
   def insert(abotyp: Abotyp)(implicit session: DBSession) = {

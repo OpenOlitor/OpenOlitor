@@ -19,10 +19,13 @@ libraryDependencies ++= {
     "io.spray" 			  %%  "spray-json"    					 % "1.3.2",
     "com.typesafe.akka"   %%  "akka-actor"    					 % akkaV,
     "com.typesafe.akka"   %%  "akka-persistence-experimental"    % akkaV,    
+    "com.typesafe.akka"   %%  "akka-slf4j"    					 % akkaV,
     "com.typesafe.akka"   %%  "akka-testkit"  			    	 % akkaV   % "test",    
     "com.github.dnvriend" %%  "akka-persistence-inmemory" 		 % "1.0.5" % "test",
     "org.specs2"          %%  "specs2-core"   					 % "2.4.2" % "test",
     "org.scalaz" 		  %%  "scalaz-core"						 % "7.1.5",
+    //use scala logging to log outside of the actor system
+    "com.typesafe.scala-logging" %% "scala-logging"				 % "3.1.0",
     //akka persistence journal driver
     "com.okumin" 		  %% "akka-persistence-sql-async" 		 % "0.2.1", //use older version to stay compatible with akka 1.3.x
     "com.github.mauricio" %% "mysql-async" 						 % "0.2.16",

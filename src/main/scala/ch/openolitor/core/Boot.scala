@@ -40,10 +40,13 @@ import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten.StammdatenEntityStoreView
 import scalikejdbc.ConnectionPoolContext
 import ch.openolitor.core.db._
+import org.slf4j.Logger
+import akka.event.slf4j.Logger
+import com.typesafe.scalalogging.LazyLogging
 
 case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
-object Boot extends App {
+object Boot extends App with LazyLogging {
 
   case class MandantConfiguration(key: String, name: String, interface: String, port: Integer) {
     val configKey = s"openolitor.${key}"
@@ -91,26 +94,26 @@ object Boot extends App {
       //initialuze root actors
       val duration = Duration.create(1, SECONDS);
       val system = app.actorOf(SystemActor.props, "oo-system")
-      println(s"oo-system:$system")
+      logger.debug(s"oo-system:$system")
       val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props, "entity-store"), duration).asInstanceOf[ActorRef]
-      println(s"oo-system:$system -> entityStore:$entityStore")
+      logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 
       //initialize global persistentviews
-      println(s"oo-system: send Startup to entityStoreview")
+      logger.debug(s"oo-system: send Startup to entityStoreview")
       stammdatenEntityStoreView ! EntityStoreView.Startup
 
       //send a dummy command to initialize store
-      println(s"oo-system: send initialize to entityStore")
+      logger.debug(s"oo-system: send initialize to entityStore")
       entityStore ! "Initialize"
 
       // create and start our service actor
       val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore), "route-service"), duration).asInstanceOf[ActorRef]
-      println(s"oo-system: route-service:$service")
+      logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler
       IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.port)
-      println(s"oo-system: configured listener on port ${cfg.port}")
+      logger.debug(s"oo-system: configured listener on port ${cfg.port}")
     }
   }
 
