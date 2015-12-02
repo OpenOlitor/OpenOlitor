@@ -49,11 +49,13 @@ object EntityStoreView {
 /**
  * Diese generische EntityStoreView delelegiert die Events an die jeweilige modulspezifische ActorRef
  */
-class EntityStoreView(module: String) extends PersistentView with ActorLogging {
+trait EntityStoreView extends PersistentView with ActorLogging {
   self: EntityStoreViewComponent =>
 
   import EntityStore._
   import EntityStoreView._
+
+  val module: String
 
   override val persistenceId = EntityStore.persistenceId
   override val viewId = s"$module-entity-store"
@@ -65,8 +67,8 @@ class EntityStoreView(module: String) extends PersistentView with ActorLogging {
    */
   val receive: Receive = {
     case e: EntityStoreInitialized =>
-      log.debug(s"Received EntityStoreInitialized, delegate to deleteActor:$deleteActor")
-      deleteActor ! e
+      log.debug(s"Received EntityStoreInitialized")
+      initializeEntityStoreView()
     case e: EntityInsertedEvent =>
       insertActor ! e
     case e: EntityUpdatedEvent =>
@@ -76,4 +78,6 @@ class EntityStoreView(module: String) extends PersistentView with ActorLogging {
     case Startup =>
       log.debug("Received startup command")
   }
+
+  def initializeEntityStoreView(): Unit
 }

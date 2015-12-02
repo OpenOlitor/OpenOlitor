@@ -47,9 +47,6 @@ class StammdatenDeleteActor(override val sysConfig: SystemConfig) extends Actor 
   import EntityStore._
 
   val receive: Receive = {
-    case _: EntityStoreInitialized =>
-      log.debug("Received EntityStoreInitialized, cleanupDatabase")
-      writeRepository.cleanupDatabase
     case EntityDeletedEvent(meta, id: AbotypId) =>
       DB autoCommit { implicit session =>
         writeRepository.deleteEntity(id)

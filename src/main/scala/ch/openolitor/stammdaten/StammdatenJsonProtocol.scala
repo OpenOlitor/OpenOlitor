@@ -67,9 +67,9 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
   implicit val depot = jsonFormat3(Depot.apply)
   implicit val tour = jsonFormat3(Tour.apply)
 
-  implicit val postlieferungDetailFormat = jsonFormat2(PostlieferungDetail.apply)
-  implicit val depotlieferungDetailFormat = jsonFormat3(DepotlieferungDetail.apply)
-  implicit val heimlieferungDetailFormat = jsonFormat3(HeimlieferungDetail.apply)
+  implicit val postlieferungDetailFormat = jsonFormat1(PostlieferungDetail.apply)
+  implicit val depotlieferungDetailFormat = jsonFormat2(DepotlieferungDetail.apply)
+  implicit val heimlieferungDetailFormat = jsonFormat2(HeimlieferungDetail.apply)
 
   implicit val vertriebsartDetailFormat = new JsonFormat[Vertriebsartdetail] {
     def write(obj: Vertriebsartdetail): JsValue =
@@ -87,7 +87,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
       }
   }
 
-  implicit val abotypFormat = jsonFormat12(Abotyp.apply)
-  implicit val abotypDetailFormat = jsonFormat13(AbotypDetail.apply)
-  implicit val abotypCreateFormat = jsonFormat9(AbotypCreate.apply)
+  implicit val abotypFormat = jsonFormat13(Abotyp.apply)
+  implicit val abotypDetailFormat = jsonFormat14(AbotypDetail.apply)
+  implicit val abotypCreateFormat = jsonFormat10(AbotypCreate.apply)
 }

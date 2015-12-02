@@ -35,18 +35,19 @@ import scala.concurrent._
 import akka.event.Logging
 import ch.openolitor.stammdaten.dto._
 import com.typesafe.scalalogging.LazyLogging
+import scala.collection.SortedSet
 
 trait StammdatenReadRepository {
   def getAbotyp(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
 }
 
-class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
+class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging {
   lazy val aboTyp = Abotyp.syntax("t")
   lazy val pl = Postlieferung.syntax("pl")
   lazy val dl = Depotlieferung.syntax("dl")
   lazy val d = Depot.syntax("d")
-  lazy val t = Tour.syntax("t")
+  lazy val t = Tour.syntax("tr")
   lazy val hl = Heimlieferung.syntax("hl")
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
@@ -67,6 +68,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
         .leftJoin(Depotlieferung as dl).on(aboTyp.id, dl.abotypId)
         .leftJoin(Depot as d).on(dl.depotId, d.id)
         .leftJoin(Tour as t).on(hl.tourId, t.id)
+        .where.eq(aboTyp.id, id.id.toString)
     }.one(Abotyp(aboTyp))
       .toManies(
         rs => Postlieferung.opt(pl)(rs),
@@ -76,10 +78,10 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
         rs => Tour.opt(t)(rs))
       .map({ (abotyp, pls, hms, dls, depot, tour) =>
         val vertriebsarten =
-          pls.map(pl => PostlieferungDetail(pl.id, pl.liefertage)) ++
-            hms.map(hm => HeimlieferungDetail(hm.id, tour.head, hm.liefertage)) ++
-            dls.map(dl => DepotlieferungDetail(dl.id, depot.head, dl.liefertage))
-
+          pls.map(pl => PostlieferungDetail(pl.liefertage)) ++
+            hms.map(hm => HeimlieferungDetail(tour.head, hm.liefertage)) ++
+            dls.map(dl => DepotlieferungDetail(depot.head, dl.liefertage))
+        logger.debug(s"getAbottyp:$id, abotyp:$abotyp:$vertriebsarten")
         AbotypDetail(abotyp.id,
           abotyp.name,
           abotyp.beschreibung,
@@ -88,9 +90,9 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository {
           abotyp.anzahlLieferungen,
           abotyp.anzahlAbwesenheiten,
           abotyp.preis,
-          abotyp.preisEinheit,
+          abotyp.preiseinheit,
           abotyp.aktiv,
-          vertriebsarten,
+          vertriebsarten.toSet,
           abotyp.anzahlAbonnenten,
           abotyp.letzteLieferung)
       })
@@ -105,35 +107,36 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
 class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging {
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
 
-    logger.debug(s"oo-system: cleanupDatabase - drop tables")
-
     //drop all tables
     DB autoCommit { implicit session =>
+      logger.debug(s"oo-system: cleanupDatabase - drop tables")
+
       sql"drop table if exists ${Postlieferung.table}".execute.apply()
       sql"drop table if exists ${Depotlieferung.table}".execute.apply()
       sql"drop table if exists ${Heimlieferung.table}".execute.apply()
       sql"drop table if exists ${Depot.table}".execute.apply()
       sql"drop table if exists ${Tour.table}".execute.apply()
       sql"drop table if exists ${Abotyp.table}".execute.apply()
-    }
 
-    logger.debug(s"oo-system: cleanupDatabase - create tables")
-    //create tables
-    DB autoCommit { implicit session =>
-      sql"create table ${Postlieferung.table}  (id varchar(36) not null, abo_typ_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Depotlieferung.table} (id varchar(36) not null, abo_typ_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Heimlieferung.table} (id varchar(36) not null, abo_typ_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
+      logger.debug(s"oo-system: cleanupDatabase - create tables")
+      //create tables
+
+      sql"create table ${Postlieferung.table}  (id varchar(36) not null, abotyp_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Depotlieferung.table} (id varchar(36) not null, abotyp_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${Heimlieferung.table} (id varchar(36) not null, abotyp_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
       sql"create table ${Depot.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${Tour.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${Abotyp.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preis_einheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp)".execute.apply()
-    }
+      sql"create table ${Abotyp.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
 
-    logger.debug(s"oo-system: cleanupDatabase - end")
+      logger.debug(s"oo-system: cleanupDatabase - end")
+    }
   }
 
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
     entity match {
-      case abotyp: Abotyp => withSQL(insertInto(Abotyp).values(abotyp)).update.apply()
+      case abotyp: Abotyp =>
+        logger.debug(s"create Abotyp values:${abotyp.productIterator.toSeq.mkString(",")}")
+        withSQL(insertInto(Abotyp).values(parameters(abotyp)(Map()): _*)).update.apply()
     }
   }
 

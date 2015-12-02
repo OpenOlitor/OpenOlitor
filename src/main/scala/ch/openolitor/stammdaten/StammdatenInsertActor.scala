@@ -58,7 +58,7 @@ class StammdatenInsertActor(override val sysConfig: SystemConfig) extends Actor 
 
   def insertAbotyp(id: UUID, abotyp: AbotypCreate) = {
     val typ = Abotyp(AbotypId(id), abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
-      abotyp.preis, abotyp.preisEinheit, true, 0, None)
+      abotyp.preis, abotyp.preiseinheit, abotyp.aktiv, 0, None)
     DB autoCommit { implicit session =>
       //create abotyp
       writeRepository.insertEntity(typ)

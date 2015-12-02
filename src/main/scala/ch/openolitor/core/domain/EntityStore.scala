@@ -77,6 +77,7 @@ class EntityStore extends AggregateRoot {
     evt match {
       case EntityStoreInitialized(_) =>
         context become created
+      case _ =>
     }
   }
 

@@ -26,17 +26,20 @@ import ch.openolitor.stammdaten._
 import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import scalikejdbc._
+import scala.collection.SortedSet
 
+@SerialVersionUID(111111)
 case class AbotypCreate(
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
+  enddatum: Option[DateTime] = None,
+  anzahlLieferungen: Option[Int] = None,
+  anzahlAbwesenheiten: Option[Int] = None,
   preis: BigDecimal,
-  preisEinheit: Preiseinheit,
-  vertriebsarten: Seq[Vertriebsartdetail])
+  preiseinheit: Preiseinheit,
+  vertriebsarten: Set[Vertriebsartdetail],
+  aktiv: Boolean)
 
 case class AbotypDetail(id: AbotypId,
   name: String,
@@ -46,13 +49,14 @@ case class AbotypDetail(id: AbotypId,
   anzahlLieferungen: Option[Int],
   anzahlAbwesenheiten: Option[Int],
   preis: BigDecimal,
-  preisEinheit: Preiseinheit,
+  preiseinheit: Preiseinheit,
   aktiv: Boolean,
-  vertriebsarten: Seq[Vertriebsartdetail],
+  vertriebsarten: Set[Vertriebsartdetail],
   anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime]) extends BaseEntity[AbotypId] with IAbotyp
+  letzteLieferung: Option[DateTime],
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
 
 sealed trait Vertriebsartdetail extends Product
-case class DepotlieferungDetail(id: VertriebsartId, depot: Depot, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class HeimlieferungDetail(id: VertriebsartId, tour: Tour, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class PostlieferungDetail(id: VertriebsartId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class DepotlieferungDetail(depot: Depot, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class HeimlieferungDetail(tour: Tour, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class PostlieferungDetail(liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail

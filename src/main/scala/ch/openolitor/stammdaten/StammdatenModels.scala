@@ -87,9 +87,9 @@ object Preiseinheit {
 
 case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
-case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
-case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
-case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertage: Seq[Lieferzeitpunkt]) extends Vertriebsart
+case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
+case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
+case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
 
 sealed trait Waehrung
 case object CHF extends Waehrung
@@ -111,11 +111,15 @@ trait IAbotyp {
   val anzahlLieferungen: Option[Int]
   val anzahlAbwesenheiten: Option[Int]
   val preis: BigDecimal
-  val preisEinheit: Preiseinheit
+  val preiseinheit: Preiseinheit
   val aktiv: Boolean
+  val waehrung: Waehrung
 }
 
+@SerialVersionUID(111111)
 case class AbotypId(id: UUID) extends BaseId
+
+@SerialVersionUID(111111)
 case class Abotyp(id: AbotypId,
   name: String,
   beschreibung: Option[String],
@@ -124,11 +128,12 @@ case class Abotyp(id: AbotypId,
   anzahlLieferungen: Option[Int],
   anzahlAbwesenheiten: Option[Int],
   preis: BigDecimal,
-  preisEinheit: Preiseinheit,
+  preiseinheit: Preiseinheit,
   aktiv: Boolean,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime]) extends BaseEntity[AbotypId] with IAbotyp
+  letzteLieferung: Option[DateTime],
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
 
 case class Projekt(id: UUID,
   name: String,
@@ -232,8 +237,15 @@ object DBUtils {
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
-  implicit val lieferzeitpunktSeqTypeBinder: TypeBinder[Seq[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply))
+  implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
 
   def baseIdTypeBinder[T <: BaseId](implicit f: UUID => T): TypeBinder[T] = string.map(s => f(UUID.fromString(s)))
+
+  //DB parameter binders
+
+  /*rhythmusParameterBinder: ParameterBinder[Rhythmus] = new ParameterBinder[Rhythmus] {
+     override def value: A = _v
+     override def apply(stmt: PreparedStatement, idx: Int): Unit = binder.apply(stmt, idx)
+  }*/
 }
 

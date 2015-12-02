@@ -81,28 +81,6 @@ object BaseJsonProtocol extends DefaultJsonProtocol {
       deserializationError(f"'$v' is not a valid date value. Dates must be in compact ISO-8601 format, e.g. '$example'")
     }
   }
-  implicit val dateTimeOptionFormat = new JsonFormat[Option[DateTime]] {
 
-    val formatter = ISODateTimeFormat.basicDateTimeNoMillis
-
-    def write(obj: Option[DateTime]): JsValue = {
-      obj.map(x => JsString(formatter.print(x))).getOrElse(JsNull)
-    }
-
-    def read(json: JsValue): Option[DateTime] = json match {
-      case JsString(s) => try {
-        Some(formatter.parseDateTime(s))
-      } catch {
-        case t: Throwable => Some(error(s))
-      }
-      case _ =>
-        None
-    }
-
-    def error(v: Any): DateTime = {
-      val example = formatter.print(0)
-      deserializationError(f"'$v' is not a valid date value. Dates must be in compact ISO-8601 format, e.g. '$example'")
-    }
-  }
-
+  implicit val optionDateTimeFormat = new OptionFormat[DateTime]
 }

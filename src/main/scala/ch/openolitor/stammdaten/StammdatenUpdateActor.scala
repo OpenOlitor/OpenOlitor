@@ -59,7 +59,7 @@ class StammdatenUpdateActor(override val sysConfig: SystemConfig) extends Actor 
 
   def updateAbotyp(abotyp: AbotypDetail) = {
     val typ = Abotyp(abotyp.id, abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
-      abotyp.preis, abotyp.preisEinheit, abotyp.aktiv, abotyp.anzahlAbonnenten, abotyp.letzteLieferung)
+      abotyp.preis, abotyp.preiseinheit, abotyp.aktiv, abotyp.anzahlAbonnenten, abotyp.letzteLieferung)
     DB autoCommit { implicit session =>
       //create abotyp
       writeRepository.updateEntity(typ)

@@ -20,33 +20,38 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.repositories
+package ch.openolitor.core
 
-import ch.openolitor.core.models._
+import spray.http.{ HttpMethods, HttpMethod, HttpResponse, AllOrigins }
+import spray.http.HttpHeaders._
+import spray.http.HttpMethods._
+import spray.routing._
+import com.typesafe.scalalogging.LazyLogging
 
-import java.util.UUID
-import scalikejdbc._
+// see also https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+trait CORSSupport extends LazyLogging {
+  this: HttpService =>
 
-case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
+  private val allowOriginHeader = `Access-Control-Allow-Origin`(AllOrigins)
+  private val optionsCorsHeaders = List(
+    `Access-Control-Allow-Headers`("Origin, X-Requested-With, Content-Type, Accept, Accept-Encoding, Accept-Language, Host, Referer, User-Agent"),
+    `Access-Control-Max-Age`(1728000))
 
-trait ParameterBinderMapping[A] {
-  def bind(value: A): ParameterBinder[A]
-}
+  def cors[T]: Directive0 = mapRequestContext { ctx =>
+    ctx.withRouteResponseHandling({
+      //It is an option requeset for a resource that responds to some other method
+      case Rejected(x) if (ctx.request.method.equals(HttpMethods.OPTIONS) && !x.filter(_.isInstanceOf[MethodRejection]).isEmpty) => {
+        val allowedMethods: List[HttpMethod] = x.filter(_.isInstanceOf[MethodRejection]).map(rejection => {
+          rejection.asInstanceOf[MethodRejection].supported
+        })
+        logger.debug(s"Got cors request:$x:$allowedMethods")
+        ctx.complete(HttpResponse().withHeaders(
+          `Access-Control-Allow-Methods`(OPTIONS, allowedMethods: _*) :: allowOriginHeader ::
+            optionsCorsHeaders))
+      }
+    }).withHttpResponseHeadersMapped { headers =>
+      allowOriginHeader :: headers
 
-trait BaseWriteRepository {
-
-  def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
-  def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
-  def deleteEntity(id: BaseId)(implicit session: DBSession)
-
-  def parameters(entity: BaseEntity[_ <: BaseId])(implicit mapping: Map[Class[_], ParameterBinderMapping[_]]): Seq[Any] = {
-    import DBUtils._
-
-    val products = entity.productIterator.toSeq
-    products.map {
-      case p: BaseId => baseIdParameterBinder(p)
-      //case custom if mapping.contains(custom.getClass) => mapping.get(custom.getClass).get.bind(custom).asInstanceOf[ParameterBinder[A]]
-      case x => x
     }
   }
 }
