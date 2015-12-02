@@ -39,7 +39,7 @@ case class AbotypCreate(
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   vertriebsarten: Set[Vertriebsartdetail],
-  aktiv: Boolean)
+  aktiv: Boolean) extends Product
 
 case class AbotypDetail(id: AbotypId,
   name: String,
@@ -55,6 +55,19 @@ case class AbotypDetail(id: AbotypId,
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
   waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
+
+@SerialVersionUID(111111)
+case class AbotypUpdate(name: String,
+  beschreibung: Option[String],
+  lieferrhythmus: Rhythmus,
+  enddatum: Option[DateTime],
+  anzahlLieferungen: Option[Int],
+  anzahlAbwesenheiten: Option[Int],
+  preis: BigDecimal,
+  preiseinheit: Preiseinheit,
+  aktiv: Boolean,
+  vertriebsarten: Set[Vertriebsartdetail],
+  waehrung: Waehrung = CHF) extends Product
 
 sealed trait Vertriebsartdetail extends Product
 case class DepotlieferungDetail(depot: Depot, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail

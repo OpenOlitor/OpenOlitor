@@ -23,9 +23,9 @@
 package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
-
 import java.util.UUID
 import scalikejdbc._
+import ch.openolitor.stammdaten.BaseEntitySQLSyntaxSupport
 
 case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
 
@@ -35,6 +35,8 @@ trait ParameterBinderMapping[A] {
 
 trait BaseWriteRepository {
 
+  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession): Option[E]
+
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
   def deleteEntity(id: BaseId)(implicit session: DBSession)
@@ -43,7 +45,12 @@ trait BaseWriteRepository {
     import DBUtils._
 
     val products = entity.productIterator.toSeq
-    products.map {
+    products.map(parameter(_))
+  }
+
+  def parameter(value: Any)(implicit mapping: Map[Class[_], ParameterBinderMapping[_]]): Any = {
+    import DBUtils._
+    value match {
       case p: BaseId => baseIdParameterBinder(p)
       //case custom if mapping.contains(custom.getClass) => mapping.get(custom.getClass).get.bind(custom).asInstanceOf[ParameterBinder[A]]
       case x => x

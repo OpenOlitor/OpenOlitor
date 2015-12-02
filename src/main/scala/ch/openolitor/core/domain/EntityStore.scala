@@ -44,13 +44,13 @@ object EntityStore {
 
   //base commands
   case class InsertEntityCommand(entity: Any) extends Command
-  case class UpdateEntityCommand(entity: BaseEntity[_ <: BaseId]) extends Command
+  case class UpdateEntityCommand(id: BaseId, entity: Any) extends Command
   case class DeleteEntityCommand(id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
   case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: Any) extends PersistetEvent
-  case class EntityUpdatedEvent(meta: EventMetadata, entity: BaseEntity[_ <: BaseId]) extends PersistetEvent
+  case class EntityUpdatedEvent(meta: EventMetadata, id: BaseId, entity: Any) extends PersistetEvent
   case class EntityDeletedEvent(meta: EventMetadata, id: BaseId) extends PersistetEvent
 
   // other actor messages
@@ -120,10 +120,10 @@ class EntityStore extends AggregateRoot {
       state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
       persist(event)(afterEventPersisted)
       sender ! event
-    case UpdateEntityCommand(entity) =>
-      log.debug(s"Update entity:$entity")
+    case UpdateEntityCommand(id, entity) =>
+      log.debug(s"Update entity::$id, $entity")
       state = incState
-      persist(EntityUpdatedEvent(metadata, entity))(afterEventPersisted)
+      persist(EntityUpdatedEvent(metadata, id, entity))(afterEventPersisted)
     case DeleteEntityCommand(entity) =>
       state = incState
       persist(EntityDeletedEvent(metadata, entity))(afterEventPersisted)

@@ -38,7 +38,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.SortedSet
 
 trait StammdatenReadRepository {
-  def getAbotyp(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
+  def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
 }
 
@@ -59,7 +59,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(Abotyp(aboTyp)).list.future
   }
 
-  override def getAbotyp(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {
+  override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {
     withSQL {
       select
         .from(Abotyp as aboTyp)
@@ -132,17 +132,41 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     }
   }
 
+  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession): Option[E] = {
+    val alias = syntax.syntax("x")
+    withSQL {
+      select
+        .from(syntax as alias)
+        .where.eq(alias.id, id.id.toString)
+    }.map(syntax.apply(alias)).single.apply()
+  }
+
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
+    implicit val map = DBUtils.stammdatenParameterBinding
     entity match {
       case abotyp: Abotyp =>
         logger.debug(s"create Abotyp values:${abotyp.productIterator.toSeq.mkString(",")}")
-        withSQL(insertInto(Abotyp).values(parameters(abotyp)(Map()): _*)).update.apply()
+        withSQL(insertInto(Abotyp).values(parameters(abotyp): _*)).update.apply()
     }
   }
 
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
+    implicit val map = DBUtils.stammdatenParameterBinding
     entity match {
-      case abotyp: Abotyp => withSQL(update(Abotyp).set(Abotyp.column.name -> abotyp.name).where.eq(Abotyp.column.id, abotyp.id)).update.apply()
+      case abotyp: Abotyp =>
+        logger.debug(s"update abotyp:$abotyp")
+        withSQL(update(Abotyp).set(Abotyp.column.name -> parameter(abotyp.name),
+          Abotyp.column.beschreibung -> parameter(abotyp.beschreibung),
+          Abotyp.column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
+          Abotyp.column.enddatum -> parameter(abotyp.enddatum),
+          Abotyp.column.anzahlLieferungen -> parameter(abotyp.anzahlLieferungen),
+          Abotyp.column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
+          Abotyp.column.preis -> parameter(abotyp.preis),
+          Abotyp.column.preiseinheit -> parameter(abotyp.preiseinheit),
+          Abotyp.column.aktiv -> parameter(abotyp.aktiv),
+          Abotyp.column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
+          Abotyp.column.letzteLieferung -> parameter(abotyp.letzteLieferung),
+          Abotyp.column.waehrung -> parameter(abotyp.waehrung)).where.eq(Abotyp.column.id, abotyp.id)).update.apply()
     }
   }
 

@@ -47,24 +47,24 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   self: StammdatenRepositoryComponent =>
 
   val handle: Handle = {
-    case EntityUpdatedEvent(meta, entity: AbotypDetail) =>
-      updateAbotyp(entity)
-    case EntityUpdatedEvent(meta, entity) =>
-      logger.debug(s"Receive unmatched update event for entity:$entity")
+    case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypUpdate) =>
+      updateAbotyp(id, entity)
+    case EntityUpdatedEvent(meta, id, entity) =>
+      logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
       logger.warn(s"Unknown event:$e")
   }
 
-  def updateAbotyp(abotyp: AbotypDetail) = {
-    val typ = Abotyp(abotyp.id, abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
-      abotyp.preis, abotyp.preiseinheit, abotyp.aktiv, abotyp.anzahlAbonnenten, abotyp.letzteLieferung)
+  def updateAbotyp(id: AbotypId, update: AbotypUpdate) = {
     DB autoCommit { implicit session =>
-      //create abotyp
-      writeRepository.updateEntity(typ)
+      writeRepository.getById(Abotyp, id) map { abotyp =>
+        //map to abotyp
+        val copy = abotyp.copy(name = update.name, beschreibung = update.beschreibung, lieferrhythmus = update.lieferrhythmus,
+          enddatum = update.enddatum, anzahlLieferungen = update.anzahlLieferungen, anzahlAbwesenheiten = update.anzahlAbwesenheiten,
+          preis = update.preis, preiseinheit = update.preiseinheit, aktiv = update.aktiv, waehrung = update.waehrung)
+        writeRepository.updateEntity(copy)
 
-      //TODO: update vertriebsarten mapping
-      abotyp.vertriebsarten.map { vertriebsart =>
-        //TODO: insert
+        //TODO: update vertriebsarten mapping
       }
     }
   }

@@ -76,14 +76,22 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("abotypen" / abotypIdPath) { id =>
         get {
           //get detail of abotyp
-          onSuccess(readRepository.getAbotyp(id)) { abotyp =>
+          onSuccess(readRepository.getAbotypDetail(id)) { abotyp =>
             abotyp.map(a => complete(a)).getOrElse(complete(StatusCodes.NotFound))
           }
         } ~
           put {
-            entity(as[AbotypDetail]) { abotyp =>
+            entity(as[AbotypUpdate]) { abotyp =>
               //update abotyp
-              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(abotyp)) { result =>
+              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(id, abotyp)) { result =>
+                complete(abotyp)
+              }
+            }
+          } ~
+          post {
+            entity(as[AbotypUpdate]) { abotyp =>
+              //update abotyp
+              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(id, abotyp)) { result =>
                 complete(abotyp)
               }
             }

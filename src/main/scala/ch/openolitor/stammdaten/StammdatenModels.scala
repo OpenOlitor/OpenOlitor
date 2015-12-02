@@ -40,6 +40,7 @@ import ch.openolitor.core.models.BaseEntity
 import scala.concurrent.ExecutionContext
 import ch.openolitor.core.models.BaseEntity
 import scalikejdbc.metadata.Column
+import ch.openolitor.core.repositories.ParameterBinderMapping
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -240,6 +241,8 @@ object DBUtils {
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
 
   def baseIdTypeBinder[T <: BaseId](implicit f: UUID => T): TypeBinder[T] = string.map(s => f(UUID.fromString(s)))
+
+  implicit val stammdatenParameterBinding: Map[Class[_], ParameterBinderMapping[_]] = Map()
 
   //DB parameter binders
 
