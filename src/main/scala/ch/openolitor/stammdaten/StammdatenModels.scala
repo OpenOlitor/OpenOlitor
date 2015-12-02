@@ -176,7 +176,7 @@ object Abotyp extends BaseEntitySQLSyntaxSupport[Abotyp] {
 object Tour extends BaseEntitySQLSyntaxSupport[Tour] {
   override val tableName = "Tour"
 
-  //override def columnNames = Seq("id", "name", "beschreibung")
+  //override def columnNames = Seq("id", "rameters(abotyp)(Mapname", "beschreibung")
 
   override lazy val columns = autoColumns[Tour]()
 

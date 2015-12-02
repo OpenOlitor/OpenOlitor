@@ -23,19 +23,26 @@
 package ch.openolitor.core.domain
 
 import akka.persistence.PersistentView
-
 import akka.actor._
 import scala.concurrent.duration._
 import akka.actor.SupervisorStrategy.Restart
 import ch.openolitor._
+import ch.openolitor.core.models.BaseEntity
+import ch.openolitor.core.domain._
+
+trait EventService[E <: PersistetEvent] {
+  type Handle = (E => Unit)
+  val handle: Handle
+}
 
 /**
  * Component mit Referenzen auf weitere Dienste
  */
 trait EntityStoreViewComponent extends Actor {
-  val insertActor: ActorRef
-  val updateActor: ActorRef
-  val deleteActor: ActorRef
+  import EntityStore._
+  val insertService: EventService[EntityInsertedEvent]
+  val updateService: EventService[EntityUpdatedEvent]
+  val deleteService: EventService[EntityDeletedEvent]
 
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
     case _: Exception => Restart
@@ -70,14 +77,18 @@ trait EntityStoreView extends PersistentView with ActorLogging {
       log.debug(s"Received EntityStoreInitialized")
       initializeEntityStoreView()
     case e: EntityInsertedEvent =>
-      insertActor ! e
+      insertService.handle(e)
     case e: EntityUpdatedEvent =>
-      updateActor ! e
+      updateService.handle(e)
     case e: EntityDeletedEvent =>
-      deleteActor ! e
+      deleteService.handle(e)
     case Startup =>
       log.debug("Received startup command")
+    case e =>
+      handleCustomEvent(e)
   }
+
+  def handleCustomEvent(e: Any) = {}
 
   def initializeEntityStoreView(): Unit
 }

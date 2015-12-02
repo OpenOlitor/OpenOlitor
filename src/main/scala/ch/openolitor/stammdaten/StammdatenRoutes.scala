@@ -42,7 +42,7 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import ch.openolitor.stammdaten.dto._
 
-trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with CORSSupport {
+trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {
   self: StammdatenRepositoryComponent =>
 
   implicit val abotypIdParamConverter = string2BaseIdConverter[AbotypId](AbotypId.apply)
@@ -54,48 +54,44 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val timeout = Timeout(5.seconds)
 
   val stammdatenRoute =
-    cors {
-      path("abotypen") {
+    path("abotypen") {
+      get {
+        //fetch list of abotypen
+        onSuccess(readRepository.getAbotypen) { abotypen =>
+          complete(abotypen)
+        }
+      } ~
+        post {
+          entity(as[AbotypCreate]) { abotyp =>
+            //create abotyp
+            onSuccess(entityStore ? EntityStore.InsertEntityCommand(abotyp)) {
+              case id: UUID =>
+                complete(AbotypId(id))
+              case _ =>
+                complete(StatusCodes.BadRequest, "No id generated")
+            }
+          }
+        }
+    } ~
+      path("abotypen" / abotypIdPath) { id =>
         get {
-          //fetch list of abotypen
-          onSuccess(readRepository.getAbotypen) { abotypen =>
-            complete(abotypen)
+          //get detail of abotyp
+          onSuccess(readRepository.getAbotyp(id)) { abotyp =>
+            abotyp.map(a => complete(a)).getOrElse(complete(StatusCodes.NotFound))
           }
         } ~
-          post {
-            logger.error(s"Create new abottyp, got post request")
-            entity(as[AbotypCreate]) { abotyp =>
-              logger.error(s"Create new abottyp:$abotyp")
-              //create abotyp
-              onSuccess(entityStore ? EntityStore.InsertEntityCommand(abotyp)) {
-                case id: UUID =>
-                  complete(AbotypId(id))
-                case _ =>
-                  complete(StatusCodes.BadRequest, "No id generated")
+          put {
+            entity(as[AbotypDetail]) { abotyp =>
+              //update abotyp
+              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(abotyp)) { result =>
+                complete(abotyp)
               }
-            }
-          }
-      } ~
-        path("abotypen" / abotypIdPath) { id =>
-          get {
-            //get detail of abotyp
-            onSuccess(readRepository.getAbotyp(id)) { abotyp =>
-              abotyp.map(a => complete(a)).getOrElse(complete(StatusCodes.NotFound))
             }
           } ~
-            put {
-              entity(as[AbotypDetail]) { abotyp =>
-                //update abotyp
-                onSuccess(entityStore ? EntityStore.UpdateEntityCommand(abotyp)) { result =>
-                  complete(abotyp)
-                }
-              }
-            } ~
-            delete {
-              onSuccess(entityStore ? EntityStore.DeleteEntityCommand(id)) { result =>
-                complete("")
-              }
+          delete {
+            onSuccess(entityStore ? EntityStore.DeleteEntityCommand(id)) { result =>
+              complete("")
             }
-        }
-    }
+          }
+      }
 }

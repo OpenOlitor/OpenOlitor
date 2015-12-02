@@ -148,7 +148,11 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def deleteEntity(id: BaseId)(implicit session: DBSession) = {
     id match {
-      case abotypId: AbotypId => withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, abotypId)).update.apply()
+      case abotypId: AbotypId =>
+        logger.debug(s"delete from abotypen:$id")
+        withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, abotypId.id.toString)).update.apply()
+      case x =>
+        logger.warn(s"Can't delete requested  entity:$x")
     }
   }
 }

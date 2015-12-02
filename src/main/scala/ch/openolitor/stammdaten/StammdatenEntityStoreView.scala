@@ -22,17 +22,10 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
-import akka.actor.Props
-import ch.openolitor.core.domain.EntityStoreView
-import ch.openolitor.core.domain.EntityStoreView
-import ch.openolitor.stammdaten.domain.views.StammdatenInsertActor
-import akka.actor.Actor
+import ch.openolitor.core.domain._
 import ch.openolitor.core._
-import ch.openolitor.core.domain.EntityStoreViewComponent
-import ch.openolitor.stammdaten.domain.views.StammdatenUpdateActor
-import ch.openolitor.stammdaten.domain.views.StammdatenDeleteActor
-import ch.openolitor.core.domain.EntityStoreView
 import ch.openolitor.core.db.ConnectionPoolContextAware
+import akka.actor.Props
 
 object StammdatenEntityStoreView {
   def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenEntityStoreView], sysConfig)
@@ -59,9 +52,10 @@ trait StammdatenEntityStoreView extends EntityStoreView
  * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
  */
 trait StammdatenEntityStoreViewComponent extends EntityStoreViewComponent {
-  implicit val sysConfig: SystemConfig
+  import EntityStore._
+  val sysConfig: SystemConfig
 
-  val insertActor = context.actorOf(StammdatenInsertActor.props, "insert-actor")
-  val updateActor = context.actorOf(StammdatenUpdateActor.props, "update-actor")
-  val deleteActor = context.actorOf(StammdatenDeleteActor.props, "delete-actor")
+  override val insertService = StammdatenInsertService(sysConfig)
+  override val updateService = StammdatenUpdateService(sysConfig)
+  override val deleteService = StammdatenDeleteService(sysConfig)
 }

@@ -20,54 +20,42 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.domain.views
+package ch.openolitor.stammdaten
 
 import akka.persistence.PersistentView
 import akka.actor._
 import ch.openolitor.core._
 import ch.openolitor.core.db._
-import ch.openolitor.core.domain.EntityStore
+import ch.openolitor.core.domain._
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
-import ch.openolitor.stammdaten.dto.AbotypDetail
-import ch.openolitor.stammdaten.dto.AbotypDetail
 import scalikejdbc.DB
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.domain.EntityStore._
 
-object StammdatenUpdateActor {
-  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenUpdateActor], sysConfig)
+object StammdatenDeleteService {
+  def apply(implicit sysConfig: SystemConfig): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig)
 }
 
-class DefaultStammdatenUpdateActor(sysConfig: SystemConfig)
-  extends StammdatenUpdateActor(sysConfig) with DefaultStammdatenRepositoryComponent {
+class DefaultStammdatenDeleteService(sysConfig: SystemConfig)
+  extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
- * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
+ * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
  */
-class StammdatenUpdateActor(override val sysConfig: SystemConfig) extends Actor with ActorLogging with ConnectionPoolContextAware {
+class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent] with LazyLogging with ConnectionPoolContextAware {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 
-  val receive: Receive = {
-    case EntityUpdatedEvent(meta, entity: AbotypDetail) =>
-      updateAbotyp(entity)
-    case EntityUpdatedEvent(meta, entity) =>
-      log.debug(s"Receive unmatched update event for entity:$entity")
-    case e =>
-      log.warning(s"Unknown event:$e")
-  }
+  val handle: Handle = {
+    case EntityDeletedEvent(meta, id: AbotypId) =>
+      logger.debug(s"delete abotyp:$id")
 
-  def updateAbotyp(abotyp: AbotypDetail) = {
-    val typ = Abotyp(abotyp.id, abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
-      abotyp.preis, abotyp.preiseinheit, abotyp.aktiv, abotyp.anzahlAbonnenten, abotyp.letzteLieferung)
-    DB autoCommit { implicit session =>
-      //create abotyp
-      writeRepository.updateEntity(typ)
-
-      //TODO: update vertriebsarten mapping
-      abotyp.vertriebsarten.map { vertriebsart =>
-        //TODO: insert
+      DB autoCommit { implicit session =>
+        writeRepository.deleteEntity(id)
       }
-    }
+    case e =>
+      logger.warn(s"Unknown event:$e")
   }
 }

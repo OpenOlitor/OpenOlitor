@@ -42,7 +42,8 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   with DefaultRouteService
   with HelloWorldRoutes
   with StammdatenRoutes
-  with DefaultStammdatenRepositoryComponent {
+  with DefaultStammdatenRepositoryComponent
+  with CORSSupport {
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -51,7 +52,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  def receive = runRoute(helloWorldRoute ~ stammdatenRoute)
+  def receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
 }
 
 // this trait defines our service behavior independently from the service actor

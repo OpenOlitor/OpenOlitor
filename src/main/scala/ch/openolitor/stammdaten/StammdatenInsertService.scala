@@ -20,40 +20,39 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.domain.views
+package ch.openolitor.stammdaten
 
-import akka.actor._
-import akka.persistence.PersistentView
 import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
-import ch.openolitor.core.domain.EntityStore
+import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.dto._
 import java.util.UUID
 import scalikejdbc.DB
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.domain.EntityStore._
 
-object StammdatenInsertActor {
-  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenInsertActor], sysConfig)
+object StammdatenInsertService {
+  def apply(implicit sysConfig: SystemConfig): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig)
 }
 
-class DefaultStammdatenInsertActor(sysConfig: SystemConfig)
-  extends StammdatenInsertActor(sysConfig) with DefaultStammdatenRepositoryComponent {
+class DefaultStammdatenInsertService(sysConfig: SystemConfig)
+  extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
-class StammdatenInsertActor(override val sysConfig: SystemConfig) extends Actor with ActorLogging with ConnectionPoolContextAware {
+class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent] with LazyLogging with ConnectionPoolContextAware {
   self: StammdatenRepositoryComponent =>
-  import EntityStore._
 
-  val receive: Receive = {
+  val handle: Handle = {
     case EntityInsertedEvent(meta, id, abotyp: AbotypCreate) =>
       insertAbotyp(id, abotyp)
     case EntityInsertedEvent(meta, id, entity) =>
-      log.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
+      logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
-      log.warning(s"Unknown event:$e")
+      logger.warn(s"Unknown event:$e")
   }
 
   def insertAbotyp(id: UUID, abotyp: AbotypCreate) = {
