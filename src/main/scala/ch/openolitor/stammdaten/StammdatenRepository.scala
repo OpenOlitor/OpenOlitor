@@ -35,7 +35,7 @@ import scala.concurrent._
 import akka.event.Logging
 import ch.openolitor.stammdaten.dto._
 import com.typesafe.scalalogging.LazyLogging
-import scala.collection.SortedSet
+import ch.openolitor.core.repositories.BaseRepository._
 
 trait StammdatenReadRepository {
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
@@ -43,6 +43,8 @@ trait StammdatenReadRepository {
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging {
+  import StammdatenDB._
+
   lazy val aboTyp = Abotyp.syntax("t")
   lazy val pl = Postlieferung.syntax("pl")
   lazy val dl = Depotlieferung.syntax("dl")
@@ -68,7 +70,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .leftJoin(Depotlieferung as dl).on(aboTyp.id, dl.abotypId)
         .leftJoin(Depot as d).on(dl.depotId, d.id)
         .leftJoin(Tour as t).on(hl.tourId, t.id)
-        .where.eq(aboTyp.id, id.id.toString)
+        .where.eq(aboTyp.id, parameter(id))
     }.one(Abotyp(aboTyp))
       .toManies(
         rs => Postlieferung.opt(pl)(rs),
@@ -105,6 +107,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
 }
 
 class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging {
+  import StammdatenDB._
+
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
 
     //drop all tables
@@ -132,26 +136,26 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     }
   }
 
-  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession): Option[E] = {
+  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
+    binder: SqlBinder[I]): Option[E] = {
     val alias = syntax.syntax("x")
     withSQL {
       select
         .from(syntax as alias)
-        .where.eq(alias.id, id.id.toString)
+        .where.eq(alias.id, parameter(id))
     }.map(syntax.apply(alias)).single.apply()
   }
 
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
-    implicit val map = DBUtils.stammdatenParameterBinding
     entity match {
       case abotyp: Abotyp =>
-        logger.debug(s"create Abotyp values:${abotyp.productIterator.toSeq.mkString(",")}")
-        withSQL(insertInto(Abotyp).values(parameters(abotyp): _*)).update.apply()
+        val params = Abotyp.unapply(abotyp).get
+        logger.debug(s"create Abotyp values:$abotyp")
+        withSQL(insertInto(Abotyp).values(parameters(params): _*)).update.apply()
     }
   }
 
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
-    implicit val map = DBUtils.stammdatenParameterBinding
     entity match {
       case abotyp: Abotyp =>
         logger.debug(s"update abotyp:$abotyp")
@@ -166,7 +170,7 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
           Abotyp.column.aktiv -> parameter(abotyp.aktiv),
           Abotyp.column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
           Abotyp.column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-          Abotyp.column.waehrung -> parameter(abotyp.waehrung)).where.eq(Abotyp.column.id, abotyp.id)).update.apply()
+          Abotyp.column.waehrung -> parameter(abotyp.waehrung)).where.eq(Abotyp.column.id, parameter(abotyp.id))).update.apply()
     }
   }
 
@@ -174,7 +178,7 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     id match {
       case abotypId: AbotypId =>
         logger.debug(s"delete from abotypen:$id")
-        withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, abotypId.id.toString)).update.apply()
+        withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, parameter(abotypId))).update.apply()
       case x =>
         logger.warn(s"Can't delete requested  entity:$x")
     }

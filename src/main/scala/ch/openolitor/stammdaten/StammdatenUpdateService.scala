@@ -46,6 +46,8 @@ class DefaultStammdatenUpdateService(sysConfig: SystemConfig)
 class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent] with LazyLogging with ConnectionPoolContextAware {
   self: StammdatenRepositoryComponent =>
 
+  import StammdatenDB._
+
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypUpdate) =>
       updateAbotyp(id, entity)

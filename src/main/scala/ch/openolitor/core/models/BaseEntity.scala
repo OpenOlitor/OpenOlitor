@@ -32,11 +32,3 @@ trait BaseId {
 trait BaseEntity[T <: BaseId] extends Product {
   val id: T
 }
-
-object DBUtils {
-  //DB parameter binders
-
-  def baseIdParameterBinder(id: BaseId): ParameterBinder[BaseId] = ParameterBinder[BaseId](
-    value = id,
-    binder = (stmt, idx) => stmt.setString(idx, id.id.toString))
-}

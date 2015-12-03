@@ -30,7 +30,7 @@ import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.models.BaseId
 import scalikejdbc.SQLSyntaxSupportFeature._
 import scalikejdbc._
-import DBUtils._
+import StammdatenDB._
 import ch.openolitor.core.models.BaseId
 import java.sql.ResultSet
 import org.joda.time.DateTime
@@ -41,6 +41,8 @@ import scala.concurrent.ExecutionContext
 import ch.openolitor.core.models.BaseEntity
 import scalikejdbc.metadata.Column
 import ch.openolitor.core.repositories.ParameterBinderMapping
+import ch.openolitor.core.repositories.BaseRepository.SqlBinder
+import ch.openolitor.core.repositories.BaseRepository
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -225,8 +227,9 @@ object Postlieferung extends BaseEntitySQLSyntaxSupport[Postlieferung] {
     autoConstruct(rs, rn)
 }
 
-object DBUtils {
+object StammdatenDB {
   import TypeBinder._
+  import BaseRepository._
 
   // DB type binders
   implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder[TourId](TourId.apply _)
@@ -245,6 +248,11 @@ object DBUtils {
   implicit val stammdatenParameterBinding: Map[Class[_], ParameterBinderMapping[_]] = Map()
 
   //DB parameter binders
+
+  implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
+  implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
+  implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
+  implicit val abortypIdSqlBinder = baseIdSqlBinder[AbotypId]
 
   /*rhythmusParameterBinder: ParameterBinder[Rhythmus] = new ParameterBinder[Rhythmus] {
      override def value: A = _v

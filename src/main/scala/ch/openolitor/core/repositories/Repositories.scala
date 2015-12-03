@@ -26,6 +26,9 @@ import ch.openolitor.core.models._
 import java.util.UUID
 import scalikejdbc._
 import ch.openolitor.stammdaten.BaseEntitySQLSyntaxSupport
+import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
+import ch.openolitor.core.repositories.BaseRepository.SqlBinder
 
 case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
 
@@ -33,27 +36,78 @@ trait ParameterBinderMapping[A] {
   def bind(value: A): ParameterBinder[A]
 }
 
+object BaseRepository extends LazyLogging {
+
+  trait SqlBinder[T] extends (T => Any) {
+  }
+  def toStringSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value.toString }
+  def noConversionSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value }
+  def optionSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Option[V]] { def apply(value: Option[V]): Any = value.map(v => binder.apply(v)) }
+  def baseIdSqlBinder[I <: BaseId] = new SqlBinder[I] { def apply(value: I): Any = value.id.toString }
+
+  private case object DefaultSqlConverter extends SqlBinder[Any] { def apply(value: Any): Any = value }
+  // Just for convenience so NoConversion does not escape the scope.
+  private def defaultSqlConversion: SqlBinder[Any] = DefaultSqlConverter
+
+  implicit val stringSqlBinder = noConversionSqlBinder[String]
+  implicit val bigdecimalSqlBinder = noConversionSqlBinder[BigDecimal]
+  implicit val booleanSqlBinder = noConversionSqlBinder[Boolean]
+  implicit val intSqlBinder = noConversionSqlBinder[Int]
+  implicit val floatSqlBinder = noConversionSqlBinder[Float]
+  implicit val doubleSqlBinder = noConversionSqlBinder[Double]
+  implicit val longSqlBinder = noConversionSqlBinder[Long]
+  implicit val datetimeSqlBinder = noConversionSqlBinder[DateTime]
+  implicit val optionStringSqlBinder = optionSqlBinder[String]
+  implicit val optionDateTimeSqlBinder = optionSqlBinder[DateTime]
+  implicit val optionIntSqlBinder = optionSqlBinder[Int]
+
+  def parameters(entity: BaseEntity[_ <: BaseId]): Seq[Any] = {
+
+    val products = entity.productIterator.toSeq
+    products.map {
+      case p: ch.openolitor.stammdaten.AbotypId => parameter(p)(ch.openolitor.stammdaten.StammdatenDB.abortypIdSqlBinder)
+      case p => parameter(p)
+    }
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M](params: Tuple13[A, B, C, D, E, F, G, H, I, J, K, L, M])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M]) = {
+    Tuple13(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13)).productIterator.toSeq
+  }
+
+  def parameter[V](value: V)(implicit binder: SqlBinder[V] = defaultSqlConversion): Any = binder.apply(value)
+}
+
 trait BaseWriteRepository {
 
-  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession): Option[E]
+  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
+    binder: SqlBinder[I]): Option[E]
 
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
   def deleteEntity(id: BaseId)(implicit session: DBSession)
-
-  def parameters(entity: BaseEntity[_ <: BaseId])(implicit mapping: Map[Class[_], ParameterBinderMapping[_]]): Seq[Any] = {
-    import DBUtils._
-
-    val products = entity.productIterator.toSeq
-    products.map(parameter(_))
-  }
-
-  def parameter(value: Any)(implicit mapping: Map[Class[_], ParameterBinderMapping[_]]): Any = {
-    import DBUtils._
-    value match {
-      case p: BaseId => baseIdParameterBinder(p)
-      //case custom if mapping.contains(custom.getClass) => mapping.get(custom.getClass).get.bind(custom).asInstanceOf[ParameterBinder[A]]
-      case x => x
-    }
-  }
 }

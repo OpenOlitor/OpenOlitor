@@ -65,10 +65,13 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           entity(as[AbotypCreate]) { abotyp =>
             //create abotyp
             onSuccess(entityStore ? EntityStore.InsertEntityCommand(abotyp)) {
-              case id: UUID =>
-                complete(AbotypId(id))
-              case _ =>
-                complete(StatusCodes.BadRequest, "No id generated")
+              case event: EntityInsertedEvent =>
+                //load entity
+                onSuccess(readRepository.getAbotypDetail(AbotypId(event.id))) { abotyp =>
+                  complete(abotyp)
+                }
+              case x =>
+                complete(StatusCodes.BadRequest, s"No id generated:$x")
             }
           }
         }
@@ -80,19 +83,14 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
             abotyp.map(a => complete(a)).getOrElse(complete(StatusCodes.NotFound))
           }
         } ~
-          put {
+          (put | post) {
             entity(as[AbotypUpdate]) { abotyp =>
               //update abotyp
               onSuccess(entityStore ? EntityStore.UpdateEntityCommand(id, abotyp)) { result =>
-                complete(abotyp)
-              }
-            }
-          } ~
-          post {
-            entity(as[AbotypUpdate]) { abotyp =>
-              //update abotyp
-              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(id, abotyp)) { result =>
-                complete(abotyp)
+                //refetch entity
+                onSuccess(readRepository.getAbotypDetail(id)) { abotyp =>
+                  complete(abotyp)
+                }
               }
             }
           } ~
