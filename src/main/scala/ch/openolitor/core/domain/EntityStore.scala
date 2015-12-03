@@ -26,8 +26,8 @@ import akka.actor._
 import akka.persistence._
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
-import ch.openolitor.core.models.BaseEntity
-import ch.openolitor.core.models.BaseId
+import ch.openolitor.core.models._
+import ch.openolitor.core.Boot
 
 /**
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
@@ -43,9 +43,9 @@ object EntityStore {
   def props(): Props = Props(classOf[EntityStore])
 
   //base commands
-  case class InsertEntityCommand(entity: Any) extends Command
-  case class UpdateEntityCommand(id: BaseId, entity: Any) extends Command
-  case class DeleteEntityCommand(id: BaseId) extends Command
+  case class InsertEntityCommand(originator: UserId, entity: Any) extends Command
+  case class UpdateEntityCommand(originator: UserId, id: BaseId, entity: Any) extends Command
+  case class DeleteEntityCommand(originator: UserId, id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
@@ -104,7 +104,7 @@ class EntityStore extends AggregateRoot {
     case e =>
       log.error(s"Initialize eventstore with event:$e")
       state = incState
-      persist(EntityStoreInitialized(metadata))(afterEventPersisted)
+      persist(EntityStoreInitialized(metadata(Boot.systemUserId)))(afterEventPersisted)
       context become created
       //reprocess event
       created(e)
@@ -114,19 +114,19 @@ class EntityStore extends AggregateRoot {
    * Eventlog initialized, handle entity events
    */
   val created: Receive = {
-    case InsertEntityCommand(entity) =>
+    case InsertEntityCommand(userId, entity) =>
       log.debug(s"Insert entity:$entity")
-      val event = EntityInsertedEvent(metadata, newId, entity)
+      val event = EntityInsertedEvent(metadata(userId), newId, entity)
       state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
       persist(event)(afterEventPersisted)
       sender ! event
-    case UpdateEntityCommand(id, entity) =>
+    case UpdateEntityCommand(userId, id, entity) =>
       log.debug(s"Update entity::$id, $entity")
       state = incState
-      persist(EntityUpdatedEvent(metadata, id, entity))(afterEventPersisted)
-    case DeleteEntityCommand(entity) =>
+      persist(EntityUpdatedEvent(metadata(userId), id, entity))(afterEventPersisted)
+    case DeleteEntityCommand(userId, entity) =>
       state = incState
-      persist(EntityDeletedEvent(metadata, entity))(afterEventPersisted)
+      persist(EntityDeletedEvent(metadata(userId), entity))(afterEventPersisted)
     case KillAggregate =>
       context.stop(self)
     case GetState =>
@@ -135,8 +135,8 @@ class EntityStore extends AggregateRoot {
       log.warning(s"Received unknown command:$other")
   }
 
-  def metadata = {
-    EventMetadata(VERSION, now, state.seqNr, persistenceId)
+  def metadata(userId: UserId) = {
+    EventMetadata(userId, VERSION, now, state.seqNr, persistenceId)
   }
 
   def incState = {

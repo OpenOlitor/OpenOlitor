@@ -34,10 +34,10 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 
 object StammdatenDeleteService {
-  def apply(implicit sysConfig: SystemConfig): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig)
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig, system)
 }
 
-class DefaultStammdatenDeleteService(sysConfig: SystemConfig)
+class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
   extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
 }
 

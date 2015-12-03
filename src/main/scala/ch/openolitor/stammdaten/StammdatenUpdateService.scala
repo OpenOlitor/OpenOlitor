@@ -31,12 +31,13 @@ import ch.openolitor.stammdaten.dto._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
+import akka.actor.ActorSystem
 
 object StammdatenUpdateService {
-  def apply(implicit sysConfig: SystemConfig): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig)
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
 }
 
-class DefaultStammdatenUpdateService(sysConfig: SystemConfig)
+class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
   extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 

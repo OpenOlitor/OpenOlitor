@@ -41,6 +41,7 @@ import akka.pattern.ask
 import scala.concurrent.duration._
 import akka.util.Timeout
 import ch.openolitor.stammdaten.dto._
+import ch.openolitor.core.models.UserId
 
 trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {
   self: StammdatenRepositoryComponent =>
@@ -53,6 +54,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
 
   implicit val timeout = Timeout(5.seconds)
 
+  //TODO: get real userid from login
+  def userId: UserId = Boot.systemUserId
+
   val stammdatenRoute =
     path("abotypen") {
       get {
@@ -64,7 +68,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
         post {
           entity(as[AbotypCreate]) { abotyp =>
             //create abotyp
-            onSuccess(entityStore ? EntityStore.InsertEntityCommand(abotyp)) {
+            onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, abotyp)) {
               case event: EntityInsertedEvent =>
                 //load entity
                 onSuccess(readRepository.getAbotypDetail(AbotypId(event.id))) { abotyp =>
@@ -86,7 +90,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           (put | post) {
             entity(as[AbotypUpdate]) { abotyp =>
               //update abotyp
-              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(id, abotyp)) { result =>
+              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, abotyp)) { result =>
                 //refetch entity
                 onSuccess(readRepository.getAbotypDetail(id)) { abotyp =>
                   complete(abotyp)
@@ -95,7 +99,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
             }
           } ~
           delete {
-            onSuccess(entityStore ? EntityStore.DeleteEntityCommand(id)) { result =>
+            onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
               complete("")
             }
           }

@@ -22,66 +22,57 @@
 \*                                                                           */
 package ch.openolitor.core
 
-import spray.json.DefaultJsonProtocol
-import spray.json._
-import org.joda.time._
-import org.joda.time.format._
+import akka.actor._
 import ch.openolitor.core.models._
-import java.util.UUID
+import ch.openolitor.core.ws._
+import ch.openolitor.stammdaten._
+import spray.json._
+
+object DBEvent2UserMapping extends DefaultJsonProtocol {
+  def props(): Props = Props(classOf[DBEvent2UserMapping])
+
+  import StammdatenJsonProtocol._
+
+  def dbEventCreateWriter[E <: BaseEntity[_ <: BaseId]](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
+    def write(obj: DBEvent[E]): JsValue =
+      JsObject("type" -> JsString(obj.productPrefix), obj.entity.productPrefix -> writer.write(obj.entity))
+  }
+
+  implicit val abotypEventWriter = dbEventCreateWriter[Abotyp]
+}
 
 /**
- * Basis JSON Formatter for spray-json serialisierung/deserialisierung
+ * Redirect all dbevents to the client itself
  */
-object BaseJsonProtocol extends DefaultJsonProtocol {
-  val defaultConvert: Any => String = x => x.toString
+class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
+  import DBEvent2UserMapping._
+  import BaseJsonProtocol._
 
-  def enumFormat[E](implicit fromJson: String => E, toJson: E => String = defaultConvert) = new JsonFormat[E] {
-    def write(obj: E): JsValue = JsString(toJson(obj))
+  override val system = context.system
 
-    def read(json: JsValue): E =
-      json match {
-        case (JsString(value)) => fromJson(value)
-        case value => deserializationError(s"Unrecognized enum format:$value")
-      }
+  override def preStart() {
+    super.preStart()
+    //register ourself as listener to sendtoclient commands
+    context.system.eventStream.subscribe(self, classOf[DBEvent[_]])
   }
 
-  def baseIdFormat[I <: BaseId](implicit fromJson: UUID => I) = new RootJsonFormat[I] {
-    def write(obj: I): JsValue = JsString(obj.id.toString)
-
-    def read(json: JsValue): I =
-      json match {
-        case (JsString(value)) => fromJson(UUID.fromString(value))
-        case value => deserializationError(s"Unrecognized baseId format:$value")
-      }
+  override def postStop() {
+    context.system.eventStream.unsubscribe(self, classOf[DBEvent[_]])
+    super.postStop()
   }
 
-  /*
-   * joda datetime format
-   */
-  implicit val dateTimeFormat = new JsonFormat[DateTime] {
-
-    val formatter = ISODateTimeFormat.basicDateTimeNoMillis
-
-    def write(obj: DateTime): JsValue = {
-      JsString(formatter.print(obj))
-    }
-
-    def read(json: JsValue): DateTime = json match {
-      case JsString(s) => try {
-        formatter.parseDateTime(s)
-      } catch {
-        case t: Throwable => error(s)
-      }
-      case _ =>
-        error(json.toString())
-    }
-
-    def error(v: Any): DateTime = {
-      val example = formatter.print(0)
-      deserializationError(f"'$v' is not a valid date value. Dates must be in compact ISO-8601 format, e.g. '$example'")
-    }
+  val receive: Receive = {
+    //TODO: resolve module based json formats of entities, maybe create module based sealed interfaces?
+    case e @ EntityModified(userId, entity: Abotyp) =>
+      log.debug(s"receive EntityModified $userId, $entity")
+      send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityCreated(userId, entity: Abotyp) =>
+      log.debug(s"receive EntityCreated $userId, $entity")
+      send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityDeleted(userId, entity: Abotyp) =>
+      log.debug(s"receive EntityDeleted $userId, $entity")
+      send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+    case x =>
+      log.debug(s"receive unknown event $x")
   }
-
-  implicit val optionDateTimeFormat = new OptionFormat[DateTime]
-  implicit val userIdFormat = baseIdFormat(UserId.apply)
 }

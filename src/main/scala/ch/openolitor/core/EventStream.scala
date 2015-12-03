@@ -25,6 +25,11 @@ package ch.openolitor.core
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 
-trait ActorReferences {
-  val entityStore: ActorRef
+/**
+ * Trait providing a simple access to publish events to the eventstream per mandant
+ */
+trait EventStream {
+  val system: ActorSystem
+
+  def publish(msg: Object) = system.eventStream.publish(msg)
 }

@@ -8,15 +8,18 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 resolvers += "dnvriend at bintray" at "http://dl.bintray.com/dnvriend/maven"
 
+resolvers += "Spray" at "http://repo.spray.io"
+
 libraryDependencies ++= {
   val akkaV = "2.3.14"
   val sprayV = "1.3.3"
   val scalalikeV = "2.3.0"
   Seq(
     "io.spray"            %%  "spray-can"     					 % sprayV,
-    "io.spray"            %%  "spray-routing" 					 % sprayV,
+    "io.spray"            %%  "spray-routing-shapeless2" 		 % sprayV,
     "io.spray"            %%  "spray-testkit" 					 % sprayV  % "test",
     "io.spray" 			  %%  "spray-json"    					 % "1.3.2",
+    "com.wandoulabs.akka" %%  "spray-websocket" 				 % "0.1.4",
     "com.typesafe.akka"   %%  "akka-actor"    					 % akkaV,
     "com.typesafe.akka"   %%  "akka-persistence-experimental"    % akkaV,    
     "com.typesafe.akka"   %%  "akka-slf4j"    					 % akkaV,

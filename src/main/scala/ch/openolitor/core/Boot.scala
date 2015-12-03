@@ -43,6 +43,9 @@ import ch.openolitor.core.db._
 import org.slf4j.Logger
 import akka.event.slf4j.Logger
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.models.UserId
+import java.util.UUID
+import ch.openolitor.core.ws.ClientMessagesServer
 
 case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -53,6 +56,9 @@ object Boot extends App with LazyLogging {
   }
 
   val config = ConfigFactory.load()
+
+  //TODO: replace with real userid after login succeeded
+  val systemUserId = UserId(UUID.randomUUID)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
   val configs = getMandantConfiguration(config)
@@ -98,6 +104,12 @@ object Boot extends App with LazyLogging {
       val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props, "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
+
+      //start websocket service
+      val clientMessages = Await.result(system ? SystemActor.Child(ClientMessagesServer.props, "ws-client-messages"), duration).asInstanceOf[ActorRef]
+
+      //start actor mapping dbevents to client messages
+      val dbEventClientMessageMapper = Await.result(system ? SystemActor.Child(DBEvent2UserMapping.props, "db-event-mapper"), duration).asInstanceOf[ActorRef]
 
       //initialize global persistentviews
       logger.debug(s"oo-system: send Startup to entityStoreview")

@@ -22,12 +22,16 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
+import akka.actor.ActorSystem
+
 trait StammdatenRepositoryComponent {
   val writeRepository: StammdatenWriteRepository
   val readRepository: StammdatenReadRepository
 }
 
 trait DefaultStammdatenRepositoryComponent extends StammdatenRepositoryComponent {
-  override val writeRepository: StammdatenWriteRepository = new StammdatenWriteRepositoryImpl
+  val system: ActorSystem
+
+  override val writeRepository: StammdatenWriteRepository = new StammdatenWriteRepositoryImpl(system)
   override val readRepository: StammdatenReadRepository = new StammdatenReadRepositoryImpl
 }

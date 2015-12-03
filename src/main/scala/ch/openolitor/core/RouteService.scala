@@ -30,14 +30,15 @@ import ch.openolitor.stammdaten.StammdatenRoutes
 import spray.routing.HttpService
 import ch.openolitor.stammdaten.DefaultStammdatenRepositoryComponent
 import ch.openolitor.core._
+import akka.actor.ActorSystem
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig)
+  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
 }
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig)
+class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem)
   extends Actor with ActorReferences
   with DefaultRouteService
   with HelloWorldRoutes

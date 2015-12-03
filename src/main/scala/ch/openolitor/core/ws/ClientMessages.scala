@@ -20,11 +20,21 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core
+package ch.openolitor.core.ws
 
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
+import spray.json._
+import ch.openolitor.core.models.UserId
+import ch.openolitor.core.BaseJsonProtocol
 
-trait ActorReferences {
-  val entityStore: ActorRef
+object ClientMessages {
+  trait ClientMessage extends Product
+
+  case class HelloClient(userId: UserId) extends ClientMessage
+}
+
+object ClientMessagesJsonProtocol extends DefaultJsonProtocol {
+  import ClientMessages._
+  import BaseJsonProtocol._
+
+  implicit val helloClientFormat = jsonFormat1(HelloClient.apply)
 }

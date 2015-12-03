@@ -20,11 +20,41 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core
+package ch.openolitor.core.ws
 
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
+import spray.routing._
+import akka.actor._
+import spray.can.websocket
+import spray.can.websocket.frame.{ BinaryFrame, TextFrame }
+import spray.http._
+import spray.can.websocket.FrameCommandFailed
 
-trait ActorReferences {
-  val entityStore: ActorRef
+object ClientMessagesWorker {
+  case class Push(msg: String)
+
+  def props(serverConnection: ActorRef) = Props(classOf[ClientMessagesWorker], serverConnection)
+}
+class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
+  override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
+
+  import ClientMessagesWorker._
+
+  def businessLogic: Receive = {
+
+    case Push(msg) => send(TextFrame(msg))
+    // just bounce frames back for Autobahn testsuite
+    case x @ (_: BinaryFrame | _: TextFrame) =>
+      sender() ! x
+    case x: FrameCommandFailed =>
+      log.error("frame command failed", x)
+
+    case x: HttpRequest => // do something
+  }
+
+  def businessLogicNoUpgrade: Receive = {
+    implicit val refFactory: ActorRefFactory = context
+    runRoute {
+      getFromResourceDirectory("/")
+    }
+  }
 }

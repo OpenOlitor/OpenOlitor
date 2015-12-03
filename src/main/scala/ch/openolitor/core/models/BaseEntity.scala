@@ -29,6 +29,17 @@ trait BaseId {
   val id: UUID
 }
 
+case class UserId(id: UUID) extends BaseId
+
 trait BaseEntity[T <: BaseId] extends Product {
   val id: T
 }
+
+sealed trait DBEvent[E <: BaseEntity[_ <: BaseId]] extends Product {
+  val originator: UserId
+  val entity: E
+}
+//events raised by this aggregateroot
+case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
+case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
+case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]

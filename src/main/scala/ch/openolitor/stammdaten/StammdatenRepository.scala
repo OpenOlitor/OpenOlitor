@@ -36,6 +36,9 @@ import akka.event.Logging
 import ch.openolitor.stammdaten.dto._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.repositories.BaseRepository._
+import ch.openolitor.core.EventStream
+import ch.openolitor.core.Boot
+import akka.actor.ActorSystem
 
 trait StammdatenReadRepository {
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
@@ -106,7 +109,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 }
 
-class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging {
+class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream {
   import StammdatenDB._
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
@@ -152,6 +155,10 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
         val params = Abotyp.unapply(abotyp).get
         logger.debug(s"create Abotyp values:$abotyp")
         withSQL(insertInto(Abotyp).values(parameters(params): _*)).update.apply()
+
+        //publish event to stream
+        //TODO: fetch real user when security gets integrated 
+        publish(EntityCreated(Boot.systemUserId, entity))
     }
   }
 
@@ -171,6 +178,10 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
           Abotyp.column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
           Abotyp.column.letzteLieferung -> parameter(abotyp.letzteLieferung),
           Abotyp.column.waehrung -> parameter(abotyp.waehrung)).where.eq(Abotyp.column.id, parameter(abotyp.id))).update.apply()
+
+        //publish event to stream
+        //TODO: fetch real user when security gets integrated 
+        publish(EntityModified(Boot.systemUserId, entity))
     }
   }
 
@@ -178,7 +189,14 @@ class StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     id match {
       case abotypId: AbotypId =>
         logger.debug(s"delete from abotypen:$id")
-        withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, parameter(abotypId))).update.apply()
+        getById(Abotyp, abotypId) map { abotyp =>
+          withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, parameter(abotypId))).update.apply()
+
+          //publish event to stream
+          //TODO: fetch real user when security gets integrated 
+          publish(EntityDeleted(Boot.systemUserId, abotyp))
+        }
+
       case x =>
         logger.warn(s"Can't delete requested  entity:$x")
     }

@@ -26,12 +26,13 @@ import ch.openolitor.core.domain._
 import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import akka.actor.Props
+import akka.actor.ActorSystem
 
 object StammdatenEntityStoreView {
-  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultStammdatenEntityStoreView], sysConfig)
+  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenEntityStoreView], sysConfig, system)
 }
 
-class DefaultStammdatenEntityStoreView(implicit val sysConfig: SystemConfig) extends StammdatenEntityStoreView
+class DefaultStammdatenEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends StammdatenEntityStoreView
   with DefaultStammdatenRepositoryComponent
 
 /**
@@ -54,8 +55,9 @@ trait StammdatenEntityStoreView extends EntityStoreView
 trait StammdatenEntityStoreViewComponent extends EntityStoreViewComponent {
   import EntityStore._
   val sysConfig: SystemConfig
+  val system: ActorSystem
 
-  override val insertService = StammdatenInsertService(sysConfig)
-  override val updateService = StammdatenUpdateService(sysConfig)
-  override val deleteService = StammdatenDeleteService(sysConfig)
+  override val insertService = StammdatenInsertService(sysConfig, system)
+  override val updateService = StammdatenUpdateService(sysConfig, system)
+  override val deleteService = StammdatenDeleteService(sysConfig, system)
 }

@@ -31,12 +31,13 @@ import java.util.UUID
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
+import akka.actor.ActorSystem
 
 object StammdatenInsertService {
-  def apply(implicit sysConfig: SystemConfig): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig)
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
 }
 
-class DefaultStammdatenInsertService(sysConfig: SystemConfig)
+class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
   extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
