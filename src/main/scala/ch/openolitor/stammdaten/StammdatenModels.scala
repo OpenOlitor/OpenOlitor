@@ -153,6 +153,21 @@ case class Depot(id: DepotId, name: String, beschreibung: Option[String]) extend
 case class TourId(id: UUID) extends BaseId
 case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
 
+sealed trait Personentyp
+case object VEREINSMITGLIED extends Personentyp
+case object GOENNER extends Personentyp
+case object GENOSSENSCHAFTERIN extends Personentyp
+
+case class PersonId(id: UUID) extends BaseId
+case class Person(id: PersonId,
+  name: String,
+  vorname: String,
+  strasse: String,
+  hausNummer: Option[String],
+  plz: Int,
+  ort: String,
+  typen: Set[Personentyp])
+
 //DB Model bindig
 
 trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] {
