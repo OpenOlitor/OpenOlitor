@@ -51,7 +51,7 @@ case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, async
 
 object Boot extends App with LazyLogging {
 
-  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer) {
+  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer) {
     val configKey = s"openolitor.${key}"
   }
 
@@ -73,18 +73,21 @@ object Boot extends App with LazyLogging {
 
   def getMandantConfiguration(config: Config): NonEmptyList[MandantConfiguration] = {
     val mandanten = config.getStringList("openolitor.mandanten").toList
-    mandanten.toNel.map(_.map { mandant =>
-      val ifc = Option(config.getString(s"openolitor.$mandant.interface")).getOrElse("localhost")
-      val port = Option(config.getInt(s"openolitor.$mandant.port")).getOrElse(9000)
-      val name = Option(config.getString(s"openolitor.$mandant.name")).getOrElse(mandant)
+    mandanten.toNel.map(_.zipWithIndex.map {
+      case (mandant, index) =>
+        val ifc = Option(config.getString(s"openolitor.$mandant.interface")).getOrElse("localhost")
+        val port = Option(config.getInt(s"openolitor.$mandant.port")).getOrElse(9000 + index)
+        val wsPort = Option(config.getInt(s"openolitor.$mandant.webservicePort")).getOrElse(port + 1000)
+        val name = Option(config.getString(s"openolitor.$mandant.name")).getOrElse(mandant)
 
-      MandantConfiguration(mandant, name, ifc, port)
+        MandantConfiguration(mandant, name, ifc, port, wsPort)
     }).getOrElse {
       //default if no list of mandanten is configured
       val ifc = Option(config.getString("openolitor.interface")).getOrElse("localhost")
       val port = Option(config.getInt("openolitor.port")).getOrElse(9000)
+      val wsPort = Option(config.getInt("openolitor.webservicePort")).getOrElse(9001)
 
-      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port))
+      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort))
     }
   }
 
@@ -126,6 +129,10 @@ object Boot extends App with LazyLogging {
       // start a new HTTP server on port 9005 with our service actor as the handler
       IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.port)
       logger.debug(s"oo-system: configured listener on port ${cfg.port}")
+
+      //start new websocket service
+      IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.wsPort)
+      logger.debug(s"oo-system: configured ws listener on port ${cfg.wsPort}")
     }
   }
 
