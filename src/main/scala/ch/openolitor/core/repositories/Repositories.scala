@@ -41,8 +41,10 @@ object BaseRepository extends LazyLogging {
   trait SqlBinder[T] extends (T => Any) {
   }
   def toStringSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value.toString }
+  def seqSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Seq[V]] { def apply(values: Seq[V]): Any = values map (binder) mkString }
+  def setSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Set[V]] { def apply(values: Set[V]): Any = values map (binder) mkString }
   def noConversionSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value }
-  def optionSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Option[V]] { def apply(value: Option[V]): Any = value.map(v => binder.apply(v)) }
+  def optionSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Option[V]] { def apply(value: Option[V]): Any = value map (binder) }
   def baseIdSqlBinder[I <: BaseId] = new SqlBinder[I] { def apply(value: I): Any = value.id.toString }
 
   private case object DefaultSqlConverter extends SqlBinder[Any] { def apply(value: Any): Any = value }
@@ -66,7 +68,7 @@ object BaseRepository extends LazyLogging {
     val products = entity.productIterator.toSeq
     products.map {
       case p: ch.openolitor.stammdaten.AbotypId => parameter(p)(ch.openolitor.stammdaten.StammdatenDB.abortypIdSqlBinder)
-      case p => parameter(p)
+      case p                                    => parameter(p)
     }
   }
 
@@ -99,13 +101,24 @@ object BaseRepository extends LazyLogging {
       parameter(params._13)).productIterator.toSeq
   }
 
+  def parameters[A, B, C, D](params: Tuple4[A, B, C, D])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D]) = {
+    Tuple4(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4)).productIterator.toSeq
+  }
+
   def parameter[V](value: V)(implicit binder: SqlBinder[V] = defaultSqlConversion): Any = binder.apply(value)
 }
 
 trait BaseWriteRepository {
 
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
-    binder: SqlBinder[I]): Option[E]
+                                                                                             binder: SqlBinder[I]): Option[E]
 
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)

@@ -52,12 +52,10 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
     def write(obj: Lieferzeitpunkt): JsValue =
       JsObject((obj match {
         case w: Wochentag => w.toJson
-      }).asJsObject.fields + ("type" -> JsString(obj.productPrefix)))
+      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
 
     def read(json: JsValue): Lieferzeitpunkt =
-      json.asJsObject.getFields("type") match {
-        case Seq(JsString("Wochentag")) => json.convertTo[Wochentag]
-      }
+      json.convertTo[Wochentag]
   }
 
   implicit val depotlieferungFormat = jsonFormat4(Depotlieferung.apply)
@@ -77,13 +75,13 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
         case p: PostlieferungDetail => p.toJson
         case hl: HeimlieferungDetail => hl.toJson
         case dl: DepotlieferungDetail => dl.toJson
-      }).asJsObject.fields + ("type" -> JsString(obj.productPrefix)))
+      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
 
     def read(json: JsValue): Vertriebsartdetail =
-      json.asJsObject.getFields("type") match {
-        case Seq(JsString("PostlieferungDetail")) => json.convertTo[PostlieferungDetail]
-        case Seq(JsString("HeimlieferungDetail")) => json.convertTo[HeimlieferungDetail]
-        case Seq(JsString("DepotlieferungDetail")) => json.convertTo[DepotlieferungDetail]
+      json.asJsObject.getFields("typ") match {
+        case Seq(JsString("Postlieferung")) => json.convertTo[PostlieferungDetail]
+        case Seq(JsString("Heimlieferung")) => json.convertTo[HeimlieferungDetail]
+        case Seq(JsString("Depotlieferung")) => json.convertTo[DepotlieferungDetail]
       }
   }
 

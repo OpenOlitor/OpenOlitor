@@ -159,6 +159,15 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
         //publish event to stream
         //TODO: fetch real user when security gets integrated 
         publish(EntityCreated(Boot.systemUserId, entity))
+      case depotlieferung: Depotlieferung =>
+        val params = Depotlieferung.unapply(depotlieferung).get
+        logger.debug(s"create Depotlieferung values:$depotlieferung")
+        withSQL(insertInto(Depotlieferung).values(parameters(params): _*)).update.apply()
+
+        //publish event to stream
+        //TODO: fetch real user when security gets integrated 
+        publish(EntityCreated(Boot.systemUserId, entity))
+
     }
   }
 

@@ -124,23 +124,23 @@ case class AbotypId(id: UUID) extends BaseId
 
 @SerialVersionUID(111111)
 case class Abotyp(id: AbotypId,
-  name: String,
-  beschreibung: Option[String],
-  lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
-  preis: BigDecimal,
-  preiseinheit: Preiseinheit,
-  aktiv: Boolean,
-  //Zusatzinformationen
-  anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
+                  name: String,
+                  beschreibung: Option[String],
+                  lieferrhythmus: Rhythmus,
+                  enddatum: Option[DateTime],
+                  anzahlLieferungen: Option[Int],
+                  anzahlAbwesenheiten: Option[Int],
+                  preis: BigDecimal,
+                  preiseinheit: Preiseinheit,
+                  aktiv: Boolean,
+                  //Zusatzinformationen
+                  anzahlAbonnenten: Int,
+                  letzteLieferung: Option[DateTime],
+                  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
 
 case class Projekt(id: UUID,
-  name: String,
-  waehrung: Waehrung)
+                   name: String,
+                   waehrung: Waehrung)
 
 sealed trait Vertriebskanal {
   val name: String
@@ -160,13 +160,13 @@ case object GENOSSENSCHAFTERIN extends Personentyp
 
 case class PersonId(id: UUID) extends BaseId
 case class Person(id: PersonId,
-  name: String,
-  vorname: String,
-  strasse: String,
-  hausNummer: Option[String],
-  plz: Int,
-  ort: String,
-  typen: Set[Personentyp])
+                  name: String,
+                  vorname: String,
+                  strasse: String,
+                  hausNummer: Option[String],
+                  plz: Int,
+                  ort: String,
+                  typen: Set[Personentyp])
 
 //DB Model bindig
 
@@ -267,7 +267,11 @@ object StammdatenDB {
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
+  implicit val lieferzeipunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
+  implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val abortypIdSqlBinder = baseIdSqlBinder[AbotypId]
+  implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
+  implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
 
   /*rhythmusParameterBinder: ParameterBinder[Rhythmus] = new ParameterBinder[Rhythmus] {
      override def value: A = _v
