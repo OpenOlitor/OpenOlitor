@@ -38,7 +38,7 @@ object StammdatenUpdateService {
 }
 
 class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
+    extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
@@ -48,6 +48,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   self: StammdatenRepositoryComponent =>
 
   import StammdatenDB._
+  import StammdatenDBMappings._
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypUpdate) =>
@@ -60,7 +61,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   def updateAbotyp(id: AbotypId, update: AbotypUpdate) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(Abotyp, id) map { abotyp =>
+      writeRepository.getById(abotypMapping, id) map { abotyp =>
         //map to abotyp
         val copy = abotyp.copy(name = update.name, beschreibung = update.beschreibung, lieferrhythmus = update.lieferrhythmus,
           enddatum = update.enddatum, anzahlLieferungen = update.anzahlLieferungen, anzahlAbwesenheiten = update.anzahlAbwesenheiten,

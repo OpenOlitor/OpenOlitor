@@ -39,6 +39,7 @@ import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.EventStream
 import ch.openolitor.core.Boot
 import akka.actor.ActorSystem
+import StammdatenDBMappings._
 
 trait StammdatenReadRepository {
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
@@ -48,39 +49,39 @@ trait StammdatenReadRepository {
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging {
   import StammdatenDB._
 
-  lazy val aboTyp = Abotyp.syntax("t")
-  lazy val pl = Postlieferung.syntax("pl")
-  lazy val dl = Depotlieferung.syntax("dl")
-  lazy val d = Depot.syntax("d")
-  lazy val t = Tour.syntax("tr")
-  lazy val hl = Heimlieferung.syntax("hl")
+  lazy val aboTyp = abotypMapping.syntax("t")
+  lazy val pl = postlieferungMapping.syntax("pl")
+  lazy val dl = depotlieferungMapping.syntax("dl")
+  lazy val d = depotMapping.syntax("d")
+  lazy val t = tourMapping.syntax("tr")
+  lazy val hl = heimlieferungMapping.syntax("hl")
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
       select
-        .from(Abotyp as aboTyp)
+        .from(abotypMapping as aboTyp)
         .where.append(aboTyp.aktiv)
         .orderBy(aboTyp.name)
-    }.map(Abotyp(aboTyp)).list.future
+    }.map(abotypMapping(aboTyp)).list.future
   }
 
   override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {
     withSQL {
       select
-        .from(Abotyp as aboTyp)
-        .leftJoin(Postlieferung as pl).on(aboTyp.id, pl.abotypId)
-        .leftJoin(Heimlieferung as hl).on(aboTyp.id, hl.abotypId)
-        .leftJoin(Depotlieferung as dl).on(aboTyp.id, dl.abotypId)
-        .leftJoin(Depot as d).on(dl.depotId, d.id)
-        .leftJoin(Tour as t).on(hl.tourId, t.id)
+        .from(abotypMapping as aboTyp)
+        .leftJoin(postlieferungMapping as pl).on(aboTyp.id, pl.abotypId)
+        .leftJoin(heimlieferungMapping as hl).on(aboTyp.id, hl.abotypId)
+        .leftJoin(depotlieferungMapping as dl).on(aboTyp.id, dl.abotypId)
+        .leftJoin(depotMapping as d).on(dl.depotId, d.id)
+        .leftJoin(tourMapping as t).on(hl.tourId, t.id)
         .where.eq(aboTyp.id, parameter(id))
-    }.one(Abotyp(aboTyp))
+    }.one(abotypMapping(aboTyp))
       .toManies(
-        rs => Postlieferung.opt(pl)(rs),
-        rs => Heimlieferung.opt(hl)(rs),
-        rs => Depotlieferung.opt(dl)(rs),
-        rs => Depot.opt(d)(rs),
-        rs => Tour.opt(t)(rs))
+        rs => postlieferungMapping.opt(pl)(rs),
+        rs => heimlieferungMapping.opt(hl)(rs),
+        rs => depotlieferungMapping.opt(dl)(rs),
+        rs => depotMapping.opt(d)(rs),
+        rs => tourMapping.opt(t)(rs))
       .map({ (abotyp, pls, hms, dls, depot, tour) =>
         val vertriebsarten =
           pls.map(pl => PostlieferungDetail(pl.liefertage)) ++
@@ -118,29 +119,29 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     DB autoCommit { implicit session =>
       logger.debug(s"oo-system: cleanupDatabase - drop tables")
 
-      sql"drop table if exists ${Postlieferung.table}".execute.apply()
-      sql"drop table if exists ${Depotlieferung.table}".execute.apply()
-      sql"drop table if exists ${Heimlieferung.table}".execute.apply()
-      sql"drop table if exists ${Depot.table}".execute.apply()
-      sql"drop table if exists ${Tour.table}".execute.apply()
-      sql"drop table if exists ${Abotyp.table}".execute.apply()
+      sql"drop table if exists ${postlieferungMapping.table}".execute.apply()
+      sql"drop table if exists ${depotlieferungMapping.table}".execute.apply()
+      sql"drop table if exists ${heimlieferungMapping.table}".execute.apply()
+      sql"drop table if exists ${depotMapping.table}".execute.apply()
+      sql"drop table if exists ${tourMapping.table}".execute.apply()
+      sql"drop table if exists ${abotypMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables")
       //create tables
 
-      sql"create table ${Postlieferung.table}  (id varchar(36) not null, abotyp_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Depotlieferung.table} (id varchar(36) not null, abotyp_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Heimlieferung.table} (id varchar(36) not null, abotyp_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${Depot.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${Tour.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${Abotyp.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
+      sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
+      sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
+      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
     }
   }
 
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
-    binder: SqlBinder[I]): Option[E] = {
+                                                                                             binder: SqlBinder[I]): Option[E] = {
     val alias = syntax.syntax("x")
     withSQL {
       select
@@ -150,43 +151,42 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
   }
 
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
+    import StammdatenDBMappings._
     entity match {
       case abotyp: Abotyp =>
-        val params = Abotyp.unapply(abotyp).get
-        logger.debug(s"create Abotyp values:$abotyp")
-        withSQL(insertInto(Abotyp).values(parameters(params): _*)).update.apply()
+        processInsert(abotyp)
 
-        //publish event to stream
-        //TODO: fetch real user when security gets integrated 
-        publish(EntityCreated(Boot.systemUserId, entity))
       case depotlieferung: Depotlieferung =>
-        val params = Depotlieferung.unapply(depotlieferung).get
-        logger.debug(s"create Depotlieferung values:$depotlieferung")
-        withSQL(insertInto(Depotlieferung).values(parameters(params): _*)).update.apply()
+        processInsert(depotlieferung)
+    }
 
-        //publish event to stream
-        //TODO: fetch real user when security gets integrated 
-        publish(EntityCreated(Boot.systemUserId, entity))
+    def processInsert[E <: BaseEntity[_ <: BaseId]](entity: E)(implicit syntaxSupport: BaseEntitySQLSyntaxSupport[E]): Unit = {
+      import StammdatenDBMappings._
+      val params = syntaxSupport.parameterMappings(entity)
+      logger.debug(s"create entity with values:$entity")
+      withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
 
+      publish(EntityCreated(Boot.systemUserId, entity))
     }
   }
 
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
+
     entity match {
       case abotyp: Abotyp =>
         logger.debug(s"update abotyp:$abotyp")
-        withSQL(update(Abotyp).set(Abotyp.column.name -> parameter(abotyp.name),
-          Abotyp.column.beschreibung -> parameter(abotyp.beschreibung),
-          Abotyp.column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
-          Abotyp.column.enddatum -> parameter(abotyp.enddatum),
-          Abotyp.column.anzahlLieferungen -> parameter(abotyp.anzahlLieferungen),
-          Abotyp.column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
-          Abotyp.column.preis -> parameter(abotyp.preis),
-          Abotyp.column.preiseinheit -> parameter(abotyp.preiseinheit),
-          Abotyp.column.aktiv -> parameter(abotyp.aktiv),
-          Abotyp.column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
-          Abotyp.column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-          Abotyp.column.waehrung -> parameter(abotyp.waehrung)).where.eq(Abotyp.column.id, parameter(abotyp.id))).update.apply()
+        withSQL(update(abotypMapping).set(abotypMapping.column.name -> parameter(abotyp.name),
+          abotypMapping.column.beschreibung -> parameter(abotyp.beschreibung),
+          abotypMapping.column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
+          abotypMapping.column.enddatum -> parameter(abotyp.enddatum),
+          abotypMapping.column.anzahlLieferungen -> parameter(abotyp.anzahlLieferungen),
+          abotypMapping.column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
+          abotypMapping.column.preis -> parameter(abotyp.preis),
+          abotypMapping.column.preiseinheit -> parameter(abotyp.preiseinheit),
+          abotypMapping.column.aktiv -> parameter(abotyp.aktiv),
+          abotypMapping.column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
+          abotypMapping.column.letzteLieferung -> parameter(abotyp.letzteLieferung),
+          abotypMapping.column.waehrung -> parameter(abotyp.waehrung)).where.eq(abotypMapping.column.id, parameter(abotyp.id))).update.apply()
 
         //publish event to stream
         //TODO: fetch real user when security gets integrated 
@@ -198,8 +198,8 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     id match {
       case abotypId: AbotypId =>
         logger.debug(s"delete from abotypen:$id")
-        getById(Abotyp, abotypId) map { abotyp =>
-          withSQL(deleteFrom(Abotyp).where.eq(Abotyp.column.id, parameter(abotypId))).update.apply()
+        getById(abotypMapping, abotypId) map { abotyp =>
+          withSQL(deleteFrom(abotypMapping).where.eq(abotypMapping.column.id, parameter(abotypId))).update.apply()
 
           //publish event to stream
           //TODO: fetch real user when security gets integrated 

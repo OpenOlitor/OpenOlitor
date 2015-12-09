@@ -3,6 +3,7 @@
 
 # sbt specific
 .cache
+.cache-*
 .history
 .lib/
 dist/*
@@ -18,3 +19,4 @@ project/plugins/project/
 .classpath
 .project
 .settings
+/bin/

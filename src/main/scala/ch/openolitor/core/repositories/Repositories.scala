@@ -67,9 +67,20 @@ object BaseRepository extends LazyLogging {
 
     val products = entity.productIterator.toSeq
     products.map {
-      case p: ch.openolitor.stammdaten.AbotypId => parameter(p)(ch.openolitor.stammdaten.StammdatenDB.abortypIdSqlBinder)
+      case p: ch.openolitor.stammdaten.AbotypId => parameter(p)(ch.openolitor.stammdaten.StammdatenDB.abotypIdSqlBinder)
       case p                                    => parameter(p)
     }
+  }
+
+  def parameters[A, B, C, D](params: Tuple4[A, B, C, D])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D]) = {
+    Tuple4(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4)).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M](params: Tuple13[A, B, C, D, E, F, G, H, I, J, K, L, M])(
@@ -99,17 +110,6 @@ object BaseRepository extends LazyLogging {
       parameter(params._11),
       parameter(params._12),
       parameter(params._13)).productIterator.toSeq
-  }
-
-  def parameters[A, B, C, D](params: Tuple4[A, B, C, D])(
-    implicit binder0: SqlBinder[A],
-    binder1: SqlBinder[B],
-    binder2: SqlBinder[C],
-    binder3: SqlBinder[D]) = {
-    Tuple4(parameter(params._1),
-      parameter(params._2),
-      parameter(params._3),
-      parameter(params._4)).productIterator.toSeq
   }
 
   def parameter[V](value: V)(implicit binder: SqlBinder[V] = defaultSqlConversion): Any = binder.apply(value)
