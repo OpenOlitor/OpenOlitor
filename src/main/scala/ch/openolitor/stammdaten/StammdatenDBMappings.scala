@@ -31,15 +31,19 @@ import ch.openolitor.stammdaten.models._
 import scalikejdbc._
 import scalikejdbc.TypeBinder._
 import ch.openolitor.core.repositories.DBMappings
+import com.typesafe.scalalogging.LazyLogging
 
 //DB Model bindig
 
-trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] {
+trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging {
   //override def columnNames 
   def apply(p: SyntaxProvider[E])(rs: WrappedResultSet): E = apply(p.resultName)(rs)
 
-  def opt(e: SyntaxProvider[E])(rs: WrappedResultSet): Option[E] =
-    rs.longOpt(e.resultName.id).map(_ => apply(e)(rs))
+  def opt(e: SyntaxProvider[E])(rs: WrappedResultSet): Option[E] = try {
+    rs.stringOpt(e.resultName.id).map(_ => apply(e)(rs))
+  } catch {
+    case e: IllegalArgumentException => None
+  }
 
   def apply(rn: ResultName[E])(rs: WrappedResultSet): E
 
@@ -84,6 +88,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
+  implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
   implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
   implicit val personenTypSqlBinder = toStringSqlBinder[Personentyp]
@@ -146,7 +151,7 @@ trait StammdatenDBMappings extends DBMappings {
     def apply(rn: ResultName[Tour])(rs: WrappedResultSet): Tour =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Tour): Seq[Any] = ???
+    def parameterMappings(entity: Tour): Seq[Any] = parameters(Tour.unapply(entity).get)
   }
 
   implicit val depotMapping = new BaseEntitySQLSyntaxSupport[Depot] {
@@ -157,7 +162,7 @@ trait StammdatenDBMappings extends DBMappings {
     def apply(rn: ResultName[Depot])(rs: WrappedResultSet): Depot =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Depot): Seq[Any] = ???
+    def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)
   }
 
   implicit val heimlieferungMapping = new BaseEntitySQLSyntaxSupport[Heimlieferung] {
@@ -168,7 +173,7 @@ trait StammdatenDBMappings extends DBMappings {
     def apply(rn: ResultName[Heimlieferung])(rs: WrappedResultSet): Heimlieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Heimlieferung): Seq[Any] = ???
+    def parameterMappings(entity: Heimlieferung): Seq[Any] = parameters(Heimlieferung.unapply(entity).get)
   }
 
   implicit val depotlieferungMapping = new BaseEntitySQLSyntaxSupport[Depotlieferung] {
@@ -191,6 +196,6 @@ trait StammdatenDBMappings extends DBMappings {
     def apply(rn: ResultName[Postlieferung])(rs: WrappedResultSet): Postlieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Postlieferung): Seq[Any] = ???
+    def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
   }
 }

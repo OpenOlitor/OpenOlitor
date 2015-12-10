@@ -29,11 +29,12 @@ import org.joda.time._
 import org.joda.time.format._
 import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.stammdaten.models._
+import com.typesafe.scalalogging.LazyLogging
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten
  */
-object StammdatenJsonProtocol extends DefaultJsonProtocol {
+object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   import BaseJsonProtocol._
 
   //enum formats
@@ -51,9 +52,10 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
-      JsObject((obj match {
+      obj match {
         case w: Wochentag => w.toJson
-      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
+        case _ => JsObject()
+      }
 
     def read(json: JsValue): Lieferzeitpunkt =
       json.convertTo[Wochentag]

@@ -149,9 +149,9 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       logger.debug(s"oo-system: cleanupDatabase - create tables")
       //create tables
 
-      sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id int not null, depot_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id int not null, tour_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id varchar(36) not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, depot_id int not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, tour_id int not null, liefertage varchar(256))".execute.apply()
       sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
