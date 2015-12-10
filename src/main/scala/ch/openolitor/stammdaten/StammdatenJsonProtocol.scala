@@ -47,6 +47,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
   implicit val abotypIdFormat = baseIdFormat(AbotypId.apply)
   implicit val depotIdFormat = baseIdFormat(DepotId.apply)
   implicit val tourIdFormat = baseIdFormat(TourId.apply)
+  implicit val personIdFormat = baseIdFormat(PersonId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -89,4 +90,18 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
   implicit val abotypDetailFormat = jsonFormat14(AbotypDetail.apply)
   implicit val abotypCreateFormat = jsonFormat10(AbotypCreate.apply)
   implicit val abotypUpdateFormat = jsonFormat11(AbotypUpdate.apply)
+
+  implicit val personentypFormat = new JsonFormat[Personentyp] {
+    def write(obj: Personentyp): JsValue =
+      JsObject("typ" -> JsString(obj.productPrefix))
+
+    def read(json: JsValue): Personentyp =
+      json.asJsObject.getFields("typ") match {
+        case Seq(JsString("VEREINSMITGLIED")) => VEREINSMITGLIED
+        case Seq(JsString("GOENNER")) => GOENNER
+        case Seq(JsString("GENOSSENSCHAFTERIN")) => GENOSSENSCHAFTERIN
+      }
+  }
+
+  implicit val person = jsonFormat8(Person.apply)
 }

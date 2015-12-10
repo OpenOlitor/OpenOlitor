@@ -45,11 +45,14 @@ import ch.openolitor.stammdaten.models._
 trait StammdatenReadRepository {
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
+
+  def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
 
-  lazy val aboTyp = abotypMapping.syntax("t")
+  lazy val aboTyp = abotypMapping.syntax("atyp")
+  lazy val person = personMapping.syntax("pers")
   lazy val pl = postlieferungMapping.syntax("pl")
   lazy val dl = depotlieferungMapping.syntax("dl")
   lazy val d = depotMapping.syntax("d")
@@ -63,6 +66,14 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.append(aboTyp.aktiv)
         .orderBy(aboTyp.name)
     }.map(abotypMapping(aboTyp)).list.future
+  }
+
+  def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]] = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .orderBy(person.name)
+    }.map(personMapping(person)).list.future
   }
 
   override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {
@@ -124,6 +135,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"drop table if exists ${depotMapping.table}".execute.apply()
       sql"drop table if exists ${tourMapping.table}".execute.apply()
       sql"drop table if exists ${abotypMapping.table}".execute.apply()
+      sql"drop table if exists ${personMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables")
       //create tables
@@ -134,6 +146,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
+      sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, strasse varchar(50) not null, haus_nummer varchar(10), plz int not null, ort varchar(50) not null, typen varchar(200))".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
     }

@@ -63,6 +63,27 @@ trait DBMappings {
   implicit val optionDateTimeSqlBinder = optionSqlBinder[DateTime]
   implicit val optionIntSqlBinder = optionSqlBinder[Int]
 
+  def parameters[A](params: Tuple1[A])(
+    implicit binder0: SqlBinder[A]) = {
+    Tuple1(parameter(params._1)).productIterator.toSeq
+  }
+
+  def parameters[A, B](params: Tuple2[A, B])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B]) = {
+    Tuple2(parameter(params._1),
+      parameter(params._2)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C](params: Tuple3[A, B, C])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C]) = {
+    Tuple3(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3)).productIterator.toSeq
+  }
+
   def parameters[A, B, C, D](params: Tuple4[A, B, C, D])(
     implicit binder0: SqlBinder[A],
     binder1: SqlBinder[B],
@@ -72,6 +93,166 @@ trait DBMappings {
       parameter(params._2),
       parameter(params._3),
       parameter(params._4)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E](params: Tuple5[A, B, C, D, E])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E]) = {
+    Tuple5(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F](params: Tuple6[A, B, C, D, E, F])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F]) = {
+    Tuple6(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G](params: Tuple7[A, B, C, D, E, F, G])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G]) = {
+    Tuple7(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H](params: Tuple8[A, B, C, D, E, F, G, H])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H]) = {
+    Tuple8(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I](params: Tuple9[A, B, C, D, E, F, G, H, I])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I]) = {
+    Tuple9(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J](params: Tuple10[A, B, C, D, E, F, G, H, I, J])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J]) = {
+    Tuple10(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K](params: Tuple11[A, B, C, D, E, F, G, H, I, J, K])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K]) = {
+    Tuple11(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L](params: Tuple12[A, B, C, D, E, F, G, H, I, J, K, L])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L]) = {
+    Tuple12(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12)).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M](params: Tuple13[A, B, C, D, E, F, G, H, I, J, K, L, M])(

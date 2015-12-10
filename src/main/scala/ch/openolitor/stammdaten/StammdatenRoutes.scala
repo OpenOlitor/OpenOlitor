@@ -48,6 +48,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
 
   implicit val abotypIdParamConverter = string2BaseIdConverter[AbotypId](AbotypId.apply)
   implicit val abotypIdPath = string2BaseIdPathMatcher[AbotypId](AbotypId.apply)
+  implicit val personIdPath = string2BaseIdPathMatcher[PersonId](PersonId.apply)
 
   import StammdatenJsonProtocol._
   import EntityStore._
@@ -57,7 +58,34 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   //TODO: get real userid from login
   def userId: UserId = Boot.systemUserId
 
-  val stammdatenRoute =
+  lazy val stammdatenRoute = aboTypenRoute ~ personenRoute
+
+  lazy val personenRoute =
+    path("personen") {
+      get {
+        //fetch list of personen
+        onSuccess(readRepository.getPersonen) { personen =>
+          complete(personen)
+        }
+      } ~
+        post {
+          complete("")
+        }
+    } ~
+      path("personen" / personIdPath) { id =>
+        get {
+          //get detail of abotyp
+          complete("")
+        } ~
+          (put | post) {
+            complete("")
+          } ~
+          delete {
+            complete("")
+          }
+      }
+
+  lazy val aboTypenRoute =
     path("abotypen") {
       get {
         //fetch list of abotypen

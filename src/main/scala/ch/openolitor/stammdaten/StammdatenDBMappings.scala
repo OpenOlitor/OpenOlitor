@@ -49,24 +49,26 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
 trait StammdatenDBMappings extends DBMappings {
   import TypeBinder._
 
-  // DB type binders
+  // DB type binders for read operations
   implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder[TourId](TourId.apply _)
   implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder[DepotId](DepotId.apply _)
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder[AbotypId](AbotypId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder[VertriebsartId](VertriebsartId.apply _)
+  implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder[PersonId](PersonId.apply _)
 
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
+  implicit val personenTypBinder: TypeBinder[Option[Personentyp]] = string.map(Personentyp.apply)
+  implicit val personenTypSetBinder: TypeBinder[Set[Personentyp]] = string.map(s => s.split(",").map(Personentyp.apply).toSet.flatten)
 
   def baseIdTypeBinder[T <: BaseId](implicit f: UUID => T): TypeBinder[T] = string.map(s => f(UUID.fromString(s)))
 
   implicit val stammdatenParameterBinding: Map[Class[_], ParameterBinderMapping[_]] = Map()
 
-  //DB parameter binders
-
+  //DB parameter binders for write and query operations
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
@@ -75,6 +77,9 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
+  implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
+  implicit val personenTypSqlBinder = toStringSqlBinder[Personentyp]
+  implicit val personenTypSetSqlBinder = setSqlBinder[Personentyp]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -86,6 +91,18 @@ trait StammdatenDBMappings extends DBMappings {
 
     def parameterMappings(entity: Abotyp): Seq[Any] =
       parameters(Abotyp.unapply(entity).get)
+  }
+
+  implicit val personMapping = new BaseEntitySQLSyntaxSupport[Person] {
+    override val tableName = "Person"
+
+    override lazy val columns = autoColumns[Person]()
+
+    def apply(rn: ResultName[Person])(rs: WrappedResultSet): Person =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Person): Seq[Any] =
+      parameters(Person.unapply(entity).get)
   }
 
   implicit val tourMapping = new BaseEntitySQLSyntaxSupport[Tour] {

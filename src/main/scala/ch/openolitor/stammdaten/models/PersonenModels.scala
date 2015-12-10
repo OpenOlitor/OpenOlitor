@@ -25,10 +25,16 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 
-sealed trait Personentyp
+sealed trait Personentyp extends Product
 case object VEREINSMITGLIED extends Personentyp
 case object GOENNER extends Personentyp
 case object GENOSSENSCHAFTERIN extends Personentyp
+
+object Personentyp {
+  def apply(value: String): Option[Personentyp] = {
+    Vector(VEREINSMITGLIED, GOENNER, GENOSSENSCHAFTERIN).find(_.toString == value)
+  }
+}
 
 case class PersonId(id: UUID) extends BaseId
 case class Person(id: PersonId,
@@ -38,4 +44,4 @@ case class Person(id: PersonId,
   hausNummer: Option[String],
   plz: Int,
   ort: String,
-  typen: Set[Personentyp])
+  typen: Set[Personentyp]) extends BaseEntity[PersonId]
