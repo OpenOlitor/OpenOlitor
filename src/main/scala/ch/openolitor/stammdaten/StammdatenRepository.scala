@@ -43,10 +43,11 @@ import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models._
 
 trait StammdatenReadRepository {
-  def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
+  def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
 
   def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
+  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
@@ -63,7 +64,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     withSQL {
       select
         .from(abotypMapping as aboTyp)
-        .where.append(aboTyp.aktiv)
+        .where.eq(aboTyp.aktiv, true)
         .orderBy(aboTyp.name)
     }.map(abotypMapping(aboTyp)).list.future
   }
@@ -74,6 +75,14 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(personMapping as person)
         .orderBy(person.name)
     }.map(personMapping(person)).list.future
+  }
+
+  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]] = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .where.eq(person.id, id)
+    }.map(personMapping(person)).single.future
   }
 
   override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {

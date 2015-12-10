@@ -84,16 +84,20 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
     }
   }
 
+  def detail[R](f: => Future[Option[R]])(implicit tr: ToResponseMarshaller[R]) = {
+    //fetch detail of something
+    onSuccess(f) { result =>
+      result.map(complete(_)).getOrElse(complete(StatusCodes.NotFound))
+    }
+  }
+
   lazy val personenRoute =
     path("personen") {
       get(list(readRepository.getPersonen)) ~
         post(create[PersonCreate, PersonId](PersonId.apply _))
     } ~
       path("personen" / personIdPath) { id =>
-        get {
-          //get detail of abotyp
-          complete("")
-        } ~
+        get(detail(readRepository.getPersonDetail(id))) ~
           (put | post) {
             complete("")
           } ~
@@ -108,12 +112,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
         post(create[AbotypCreate, AbotypId](AbotypId.apply _))
     } ~
       path("abotypen" / abotypIdPath) { id =>
-        get {
-          //get detail of abotyp
-          onSuccess(readRepository.getAbotypDetail(id)) { abotyp =>
-            abotyp.map(a => complete(a)).getOrElse(complete(StatusCodes.NotFound))
-          }
-        } ~
+        get(detail(readRepository.getAbotypDetail(id))) ~
           (put | post) {
             entity(as[AbotypUpdate]) { abotyp =>
               //update abotyp
