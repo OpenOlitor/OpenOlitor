@@ -43,7 +43,15 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
 
   def apply(rn: ResultName[E])(rs: WrappedResultSet): E
 
+  /**
+   * Declare parameter mappings for all parameters used on insert
+   */
   def parameterMappings(entity: E): Seq[Any]
+
+  /**
+   * Declare update parameters for this entity used on update. Is by default an empty set
+   */
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq()
 }
 
 trait StammdatenDBMappings extends DBMappings {
@@ -91,6 +99,21 @@ trait StammdatenDBMappings extends DBMappings {
 
     def parameterMappings(entity: Abotyp): Seq[Any] =
       parameters(Abotyp.unapply(entity).get)
+
+    override def updateParameters(abotyp: Abotyp) = {
+      Seq(column.name -> parameter(abotyp.name),
+        column.beschreibung -> parameter(abotyp.beschreibung),
+        column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
+        column.enddatum -> parameter(abotyp.enddatum),
+        column.anzahlLieferungen -> parameter(abotyp.anzahlLieferungen),
+        column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
+        column.preis -> parameter(abotyp.preis),
+        column.preiseinheit -> parameter(abotyp.preiseinheit),
+        column.aktiv -> parameter(abotyp.aktiv),
+        column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
+        column.letzteLieferung -> parameter(abotyp.letzteLieferung),
+        column.waehrung -> parameter(abotyp.waehrung))
+    }
   }
 
   implicit val personMapping = new BaseEntitySQLSyntaxSupport[Person] {
@@ -103,6 +126,16 @@ trait StammdatenDBMappings extends DBMappings {
 
     def parameterMappings(entity: Person): Seq[Any] =
       parameters(Person.unapply(entity).get)
+
+    override def updateParameters(person: Person) = {
+      Seq(column.name -> parameter(person.name),
+        column.vorname -> parameter(person.vorname),
+        column.strasse -> parameter(person.strasse),
+        column.hausNummer -> parameter(person.hausNummer),
+        column.plz -> parameter(person.plz),
+        column.ort -> parameter(person.ort),
+        column.typen -> parameter(person.typen))
+    }
   }
 
   implicit val tourMapping = new BaseEntitySQLSyntaxSupport[Tour] {

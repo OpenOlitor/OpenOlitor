@@ -66,13 +66,24 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
     tr: ToResponseMarshaller[I]) = {
     entity(as[E]) { entity =>
-      //create abotyp
+      //create entity
       onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
         case event: EntityInsertedEvent =>
           //load entity          
           complete(idFactory(event.id))
         case x =>
           complete(StatusCodes.BadRequest, s"No id generated:$x")
+      }
+    }
+  }
+
+  def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I]) = {
+    entity(as[E]) { entity =>
+      //update entity
+      onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
+        //
+        complete("")
       }
     }
   }
@@ -94,13 +105,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   lazy val personenRoute =
     path("personen") {
       get(list(readRepository.getPersonen)) ~
-        post(create[PersonCreate, PersonId](PersonId.apply _))
+        post(create[PersonUpdateOrCreate, PersonId](PersonId.apply _))
     } ~
       path("personen" / personIdPath) { id =>
         get(detail(readRepository.getPersonDetail(id))) ~
-          (put | post) {
-            complete("")
-          } ~
+          (put | post)(update[PersonUpdateOrCreate, PersonId](id)) ~
           delete {
             complete("")
           }
@@ -113,17 +122,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
     } ~
       path("abotypen" / abotypIdPath) { id =>
         get(detail(readRepository.getAbotypDetail(id))) ~
-          (put | post) {
-            entity(as[AbotypUpdate]) { abotyp =>
-              //update abotyp
-              onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, abotyp)) { result =>
-                //refetch entity
-                onSuccess(readRepository.getAbotypDetail(id)) { abotyp =>
-                  complete(abotyp)
-                }
-              }
-            }
-          } ~
+          (put | post)(update[AbotypUpdate, AbotypId](id)) ~
           delete {
             onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
               complete("")

@@ -46,7 +46,7 @@ case class Person(id: PersonId,
   ort: String,
   typen: Set[Personentyp]) extends BaseEntity[PersonId]
 
-case class PersonCreate(
+case class PersonUpdateOrCreate(
   name: String,
   vorname: String,
   strasse: String,

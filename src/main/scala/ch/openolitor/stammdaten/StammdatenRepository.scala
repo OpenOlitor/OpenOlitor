@@ -161,30 +161,6 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     }
   }
 
-  def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
-
-    entity match {
-      case abotyp: Abotyp =>
-        logger.debug(s"update abotyp:$abotyp")
-        withSQL(update(abotypMapping).set(abotypMapping.column.name -> parameter(abotyp.name),
-          abotypMapping.column.beschreibung -> parameter(abotyp.beschreibung),
-          abotypMapping.column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
-          abotypMapping.column.enddatum -> parameter(abotyp.enddatum),
-          abotypMapping.column.anzahlLieferungen -> parameter(abotyp.anzahlLieferungen),
-          abotypMapping.column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
-          abotypMapping.column.preis -> parameter(abotyp.preis),
-          abotypMapping.column.preiseinheit -> parameter(abotyp.preiseinheit),
-          abotypMapping.column.aktiv -> parameter(abotyp.aktiv),
-          abotypMapping.column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
-          abotypMapping.column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-          abotypMapping.column.waehrung -> parameter(abotyp.waehrung)).where.eq(abotypMapping.column.id, parameter(abotyp.id))).update.apply()
-
-        //publish event to stream
-        //TODO: fetch real user when security gets integrated 
-        publish(EntityModified(Boot.systemUserId, entity))
-    }
-  }
-
   def deleteEntity(id: BaseId)(implicit session: DBSession) = {
     id match {
       case abotypId: AbotypId =>

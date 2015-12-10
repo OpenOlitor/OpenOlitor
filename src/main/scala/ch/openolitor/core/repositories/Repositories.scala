@@ -296,6 +296,7 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
     binder: SqlBinder[I]): Option[E] = {
     val alias = syntax.syntax("x")
+    val idx = alias.id
     withSQL {
       select
         .from(syntax as alias)
@@ -310,8 +311,21 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     logger.debug(s"create entity with values:$entity")
     withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
 
+    //publish event to stream
     publish(EntityCreated(user, entity))
   }
-  def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: UserId) = {
+    val alias = syntaxSupport.syntax("x")
+    val id = alias.id
+    val updateParams = syntaxSupport.updateParameters(entity)
+    withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(id, parameter(entity.id))).update.apply()
+
+    //publish event to stream
+    publish(EntityModified(user, entity))
+  }
+
   def deleteEntity(id: BaseId)(implicit session: DBSession)
 }

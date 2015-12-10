@@ -58,7 +58,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityInsertedEvent(meta, id, abotyp: AbotypCreate) =>
       createAbotyp(id, abotyp)
-    case EntityInsertedEvent(meta, id, person: PersonCreate) =>
+    case EntityInsertedEvent(meta, id, person: PersonUpdateOrCreate) =>
       createPerson(id, person)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
@@ -87,7 +87,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createPerson(id: UUID, create: PersonCreate) = {
+  def createPerson(id: UUID, create: PersonUpdateOrCreate) = {
     val person = Person(PersonId(id), create.name, create.vorname, create.strasse, create.hausNummer, create.plz, create.ort, create.typen)
     DB autoCommit { implicit session =>
       //create abotyp

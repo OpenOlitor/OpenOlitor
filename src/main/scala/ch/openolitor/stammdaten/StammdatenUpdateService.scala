@@ -48,9 +48,12 @@ class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val syste
 class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent] with LazyLogging with ConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
+  //TODO: replace with credentials of logged in user
+  implicit val userId = Boot.systemUserId
+
   val handle: Handle = {
-    case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypUpdate) =>
-      updateAbotyp(id, entity)
+    case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypUpdate) => updateAbotyp(id, entity)
+    case EntityUpdatedEvent(meta, id: PersonId, entity: PersonUpdateOrCreate) => updatePerson(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
@@ -60,13 +63,27 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   def updateAbotyp(id: AbotypId, update: AbotypUpdate) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(abotypMapping, id) map { abotyp =>
-        //map to abotyp
+        //map all updatable fields
         val copy = abotyp.copy(name = update.name, beschreibung = update.beschreibung, lieferrhythmus = update.lieferrhythmus,
           enddatum = update.enddatum, anzahlLieferungen = update.anzahlLieferungen, anzahlAbwesenheiten = update.anzahlAbwesenheiten,
           preis = update.preis, preiseinheit = update.preiseinheit, aktiv = update.aktiv, waehrung = update.waehrung)
-        writeRepository.updateEntity(copy)
+        writeRepository.updateEntity[Abotyp, AbotypId](copy)
 
         //TODO: update vertriebsarten mapping
+      }
+    }
+  }
+
+  def updatePerson(id: PersonId, update: PersonUpdateOrCreate) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(personMapping, id) map { person =>
+        //map all updatable fields
+        val copy = person.copy(name = update.name, vorname = update.vorname, strasse = update.strasse,
+          hausNummer = update.hausNummer, plz = update.plz,
+          ort = update.ort, typen = update.typen)
+
+        //map to abotyp
+        writeRepository.updateEntity[Person, PersonId](copy)
       }
     }
   }

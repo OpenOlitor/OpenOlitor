@@ -104,5 +104,5 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol {
   }
 
   implicit val person = jsonFormat8(Person.apply)
-  implicit val personCreate = jsonFormat7(PersonCreate.apply)
+  implicit val personUpdateOrCreate = jsonFormat7(PersonUpdateOrCreate.apply)
 }
