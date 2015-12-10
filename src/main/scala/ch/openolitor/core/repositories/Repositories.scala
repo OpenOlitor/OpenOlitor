@@ -327,5 +327,16 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     publish(EntityModified(user, entity))
   }
 
-  def deleteEntity(id: BaseId)(implicit session: DBSession)
+  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I)(implicit session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: UserId) = {
+    logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
+    getById(syntaxSupport, id) map { entity =>
+      withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, parameter(id))).update.apply()
+
+      //publish event to stream
+      publish(EntityDeleted(user, entity))
+    }
+  }
 }

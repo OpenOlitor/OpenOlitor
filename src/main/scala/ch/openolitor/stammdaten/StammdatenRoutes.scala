@@ -46,7 +46,7 @@ import spray.httpx.marshalling._
 import spray.httpx.unmarshalling._
 import scala.concurrent.Future
 
-trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {
+trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService {
   self: StammdatenRepositoryComponent =>
 
   implicit val abotypIdParamConverter = string2BaseIdConverter[AbotypId](AbotypId.apply)
@@ -56,51 +56,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   import StammdatenJsonProtocol._
   import EntityStore._
 
-  implicit val timeout = Timeout(5.seconds)
-
   //TODO: get real userid from login
-  def userId: UserId = Boot.systemUserId
+  override val userId: UserId = Boot.systemUserId
 
   lazy val stammdatenRoute = aboTypenRoute ~ personenRoute
-
-  def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I]) = {
-    entity(as[E]) { entity =>
-      //create entity
-      onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
-        case event: EntityInsertedEvent =>
-          //load entity          
-          complete(idFactory(event.id))
-        case x =>
-          complete(StatusCodes.BadRequest, s"No id generated:$x")
-      }
-    }
-  }
-
-  def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I]) = {
-    entity(as[E]) { entity =>
-      //update entity
-      onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
-        //
-        complete("")
-      }
-    }
-  }
-
-  def list[R](f: => Future[R])(implicit tr: ToResponseMarshaller[R]) = {
-    //fetch list of something
-    onSuccess(f) { result =>
-      complete(result)
-    }
-  }
-
-  def detail[R](f: => Future[Option[R]])(implicit tr: ToResponseMarshaller[R]) = {
-    //fetch detail of something
-    onSuccess(f) { result =>
-      result.map(complete(_)).getOrElse(complete(StatusCodes.NotFound))
-    }
-  }
 
   lazy val personenRoute =
     path("personen") {
@@ -110,9 +69,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("personen" / personIdPath) { id =>
         get(detail(readRepository.getPersonDetail(id))) ~
           (put | post)(update[PersonUpdateOrCreate, PersonId](id)) ~
-          delete {
-            complete("")
-          }
+          delete(remove(id))
       }
 
   lazy val aboTypenRoute =
@@ -123,10 +80,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("abotypen" / abotypIdPath) { id =>
         get(detail(readRepository.getAbotypDetail(id))) ~
           (put | post)(update[AbotypUpdate, AbotypId](id)) ~
-          delete {
-            onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
-              complete("")
-            }
-          }
+          delete(remove(id))
       }
 }

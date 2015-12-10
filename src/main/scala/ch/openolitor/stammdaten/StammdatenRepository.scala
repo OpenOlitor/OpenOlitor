@@ -160,21 +160,4 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       logger.debug(s"oo-system: cleanupDatabase - end")
     }
   }
-
-  def deleteEntity(id: BaseId)(implicit session: DBSession) = {
-    id match {
-      case abotypId: AbotypId =>
-        logger.debug(s"delete from abotypen:$id")
-        getById(abotypMapping, abotypId) map { abotyp =>
-          withSQL(deleteFrom(abotypMapping).where.eq(abotypMapping.column.id, parameter(abotypId))).update.apply()
-
-          //publish event to stream
-          //TODO: fetch real user when security gets integrated 
-          publish(EntityDeleted(Boot.systemUserId, abotyp))
-        }
-
-      case x =>
-        logger.warn(s"Can't delete requested  entity:$x")
-    }
-  }
 }

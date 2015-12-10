@@ -32,7 +32,7 @@ import ch.openolitor.stammdaten._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.stammdaten.models.AbotypId
+import ch.openolitor.stammdaten.models._
 
 object StammdatenDeleteService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig, system)
@@ -45,18 +45,34 @@ class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val syste
 /**
  * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
  */
-class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent] with LazyLogging with ConnectionPoolContextAware {
+class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent]
+  with LazyLogging with ConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 
-  val handle: Handle = {
-    case EntityDeletedEvent(meta, id: AbotypId) =>
-      logger.debug(s"delete abotyp:$id")
+  //TODO: replace with credentials of logged in user
+  implicit val userId = Boot.systemUserId
 
-      DB autoCommit { implicit session =>
-        writeRepository.deleteEntity(id)
-      }
+  val handle: Handle = {
+    case EntityDeletedEvent(meta, id: AbotypId) => deleteAbotyp(id)
+    case EntityDeletedEvent(meta, id: PersonId) => deletePerson(id)
     case e =>
       logger.warn(s"Unknown event:$e")
+  }
+
+  def deleteAbotyp(id: AbotypId) = {
+    DB autoCommit { implicit session =>
+      //TODO: check whether abotyp should get deleted or disabled
+
+      writeRepository.deleteEntity[Abotyp, AbotypId](id)
+    }
+  }
+
+  def deletePerson(id: PersonId) = {
+    DB autoCommit { implicit session =>
+      //TODO: check whether person should get deleted or disabled
+
+      writeRepository.deleteEntity[Person, PersonId](id)
+    }
   }
 }

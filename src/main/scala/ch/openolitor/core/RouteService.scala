@@ -31,6 +31,18 @@ import spray.routing.HttpService
 import ch.openolitor.stammdaten.DefaultStammdatenRepositoryComponent
 import ch.openolitor.core._
 import akka.actor.ActorSystem
+import ch.openolitor.core.models._
+import spray.httpx.marshalling._
+import spray.httpx.unmarshalling._
+import java.util.UUID
+import ch.openolitor.core.domain._
+import ch.openolitor.core.domain.EntityStore._
+import akka.pattern.ask
+import scala.concurrent.Future
+import akka.util.Timeout
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+import spray.http.StatusCodes
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
@@ -57,5 +69,53 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
 }
 
 // this trait defines our service behavior independently from the service actor
-trait DefaultRouteService extends HttpService {
+trait DefaultRouteService extends HttpService with ActorReferences {
+
+  val userId: UserId
+  implicit val timeout = Timeout(5.seconds)
+
+  def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I]) = {
+    entity(as[E]) { entity =>
+      //create entity
+      onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
+        case event: EntityInsertedEvent =>
+          //load entity          
+          complete(idFactory(event.id))
+        case x =>
+          complete(StatusCodes.BadRequest, s"No id generated:$x")
+      }
+    }
+  }
+
+  def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I]) = {
+    entity(as[E]) { entity =>
+      //update entity
+      onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
+        //
+        complete("")
+      }
+    }
+  }
+
+  def list[R](f: => Future[R])(implicit tr: ToResponseMarshaller[R]) = {
+    //fetch list of something
+    onSuccess(f) { result =>
+      complete(result)
+    }
+  }
+
+  def detail[R](f: => Future[Option[R]])(implicit tr: ToResponseMarshaller[R]) = {
+    //fetch detail of something
+    onSuccess(f) { result =>
+      result.map(complete(_)).getOrElse(complete(StatusCodes.NotFound))
+    }
+  }
+
+  def remove[I <: BaseId](id: I) = {
+    onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
+      complete("")
+    }
+  }
 }
