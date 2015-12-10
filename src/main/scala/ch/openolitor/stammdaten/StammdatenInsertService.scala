@@ -26,12 +26,16 @@ import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten._
-import ch.openolitor.stammdaten.dto._
+import ch.openolitor.stammdaten.models._
 import java.util.UUID
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
+import ch.openolitor.stammdaten.models.PostlieferungDetail
+import ch.openolitor.stammdaten.models.HeimlieferungDetail
+import ch.openolitor.stammdaten.models.DepotlieferungDetail
+import ch.openolitor.stammdaten.models.AbotypCreate
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)

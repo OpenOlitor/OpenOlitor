@@ -28,7 +28,7 @@ import java.util.UUID
 import org.joda.time._
 import org.joda.time.format._
 import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.dto._
+import ch.openolitor.stammdaten.models._
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten

@@ -25,8 +25,9 @@ package ch.openolitor.core
 import akka.actor._
 import ch.openolitor.core.models._
 import ch.openolitor.core.ws._
-import ch.openolitor.stammdaten._
 import spray.json._
+import ch.openolitor.stammdaten.StammdatenJsonProtocol
+import ch.openolitor.stammdaten.models._
 
 object DBEvent2UserMapping extends DefaultJsonProtocol {
   def props(): Props = Props(classOf[DBEvent2UserMapping])

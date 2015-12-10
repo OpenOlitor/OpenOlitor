@@ -40,7 +40,7 @@ import java.util.UUID
 import akka.pattern.ask
 import scala.concurrent.duration._
 import akka.util.Timeout
-import ch.openolitor.stammdaten.dto._
+import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.models.UserId
 
 trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {

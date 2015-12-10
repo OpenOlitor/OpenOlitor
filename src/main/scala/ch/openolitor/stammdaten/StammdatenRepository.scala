@@ -30,24 +30,24 @@ import scalikejdbc.async.FutureImplicits._
 import scala.concurrent.ExecutionContext
 import ch.openolitor.core.db._
 import ch.openolitor.core.db.OOAsyncDB._
+import ch.openolitor.core.repositories._
+import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
 import akka.event.Logging
-import ch.openolitor.stammdaten.dto._
+import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.EventStream
 import ch.openolitor.core.Boot
 import akka.actor.ActorSystem
-import StammdatenDBMappings._
+import ch.openolitor.stammdaten.models._
 
 trait StammdatenReadRepository {
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
 }
 
-class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging {
-  import StammdatenDB._
+class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
 
   lazy val aboTyp = abotypMapping.syntax("t")
   lazy val pl = postlieferungMapping.syntax("pl")
@@ -110,8 +110,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 }
 
-class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream {
-  import StammdatenDB._
+class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
 
@@ -141,7 +140,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
   }
 
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
-                                                                                             binder: SqlBinder[I]): Option[E] = {
+    binder: SqlBinder[I]): Option[E] = {
     val alias = syntax.syntax("x")
     withSQL {
       select
@@ -151,7 +150,6 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
   }
 
   def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
-    import StammdatenDBMappings._
     entity match {
       case abotyp: Abotyp =>
         processInsert(abotyp)
@@ -161,7 +159,6 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     }
 
     def processInsert[E <: BaseEntity[_ <: BaseId]](entity: E)(implicit syntaxSupport: BaseEntitySQLSyntaxSupport[E]): Unit = {
-      import StammdatenDBMappings._
       val params = syntaxSupport.parameterMappings(entity)
       logger.debug(s"create entity with values:$entity")
       withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()

@@ -20,43 +20,16 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.stammdaten.models
 
-import akka.persistence.PersistentView
-import akka.actor._
-import ch.openolitor.core._
-import ch.openolitor.core.db._
-import ch.openolitor.core.domain._
-import scala.concurrent.duration._
-import ch.openolitor.stammdaten._
-import scalikejdbc.DB
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.stammdaten.models.AbotypId
+sealed trait Waehrung
+case object CHF extends Waehrung
+case object EUR extends Waehrung
+case object USD extends Waehrung
 
-object StammdatenDeleteService {
-  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig, system)
-}
-
-class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
-}
-
-/**
- * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
- */
-class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent] with LazyLogging with ConnectionPoolContextAware {
-  self: StammdatenRepositoryComponent =>
-  import EntityStore._
-
-  val handle: Handle = {
-    case EntityDeletedEvent(meta, id: AbotypId) =>
-      logger.debug(s"delete abotyp:$id")
-
-      DB autoCommit { implicit session =>
-        writeRepository.deleteEntity(id)
-      }
-    case e =>
-      logger.warn(s"Unknown event:$e")
+object Waehrung {
+  def apply(value: String): Waehrung = {
+    Vector(CHF, EUR, USD).find(_.toString == value).getOrElse(CHF)
   }
 }
+

@@ -20,43 +20,18 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.stammdaten.models
 
-import akka.persistence.PersistentView
-import akka.actor._
-import ch.openolitor.core._
-import ch.openolitor.core.db._
-import ch.openolitor.core.domain._
-import scala.concurrent.duration._
-import ch.openolitor.stammdaten._
-import scalikejdbc.DB
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.stammdaten.models.AbotypId
+import java.util.UUID
+import ch.openolitor.core.models._
 
-object StammdatenDeleteService {
-  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig, system)
+sealed trait Vertriebskanal {
+  val name: String
+  val beschreibung: Option[String]
 }
 
-class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
-}
+case class DepotId(id: UUID) extends BaseId
+case class Depot(id: DepotId, name: String, beschreibung: Option[String]) extends BaseEntity[DepotId] with Vertriebskanal
 
-/**
- * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
- */
-class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent] with LazyLogging with ConnectionPoolContextAware {
-  self: StammdatenRepositoryComponent =>
-  import EntityStore._
-
-  val handle: Handle = {
-    case EntityDeletedEvent(meta, id: AbotypId) =>
-      logger.debug(s"delete abotyp:$id")
-
-      DB autoCommit { implicit session =>
-        writeRepository.deleteEntity(id)
-      }
-    case e =>
-      logger.warn(s"Unknown event:$e")
-  }
-}
+case class TourId(id: UUID) extends BaseId
+case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal

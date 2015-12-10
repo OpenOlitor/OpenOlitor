@@ -27,28 +27,26 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
-import ch.openolitor.stammdaten.dto._
+import ch.openolitor.stammdaten.models._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
+import ch.openolitor.stammdaten.models.AbotypUpdate
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
 }
 
 class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
+  extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
  */
-class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent] with LazyLogging with ConnectionPoolContextAware {
+class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent] with LazyLogging with ConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
-
-  import StammdatenDB._
-  import StammdatenDBMappings._
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypUpdate) =>
