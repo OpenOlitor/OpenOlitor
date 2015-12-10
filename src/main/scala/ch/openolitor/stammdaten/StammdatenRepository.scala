@@ -152,34 +152,6 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     }
   }
 
-  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
-    binder: SqlBinder[I]): Option[E] = {
-    val alias = syntax.syntax("x")
-    withSQL {
-      select
-        .from(syntax as alias)
-        .where.eq(alias.id, parameter(id))
-    }.map(syntax.apply(alias)).single.apply()
-  }
-
-  def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
-    entity match {
-      case abotyp: Abotyp =>
-        processInsert(abotyp)
-
-      case depotlieferung: Depotlieferung =>
-        processInsert(depotlieferung)
-    }
-
-    def processInsert[E <: BaseEntity[_ <: BaseId]](entity: E)(implicit syntaxSupport: BaseEntitySQLSyntaxSupport[E]): Unit = {
-      val params = syntaxSupport.parameterMappings(entity)
-      logger.debug(s"create entity with values:$entity")
-      withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
-
-      publish(EntityCreated(Boot.systemUserId, entity))
-    }
-  }
-
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession) = {
 
     entity match {

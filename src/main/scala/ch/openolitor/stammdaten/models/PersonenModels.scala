@@ -45,3 +45,12 @@ case class Person(id: PersonId,
   plz: Int,
   ort: String,
   typen: Set[Personentyp]) extends BaseEntity[PersonId]
+
+case class PersonCreate(
+  name: String,
+  vorname: String,
+  strasse: String,
+  hausNummer: Option[String],
+  plz: Int,
+  ort: String,
+  typen: Set[Personentyp]) extends Product

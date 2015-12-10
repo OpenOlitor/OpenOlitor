@@ -48,19 +48,25 @@ class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val syste
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
-class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent] with LazyLogging with ConnectionPoolContextAware {
+class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent] with LazyLogging with ConnectionPoolContextAware
+  with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
+
+  //TODO: replace with credentials of logged in user
+  implicit val userId = Boot.systemUserId
 
   val handle: Handle = {
     case EntityInsertedEvent(meta, id, abotyp: AbotypCreate) =>
-      insertAbotyp(id, abotyp)
+      createAbotyp(id, abotyp)
+    case EntityInsertedEvent(meta, id, person: PersonCreate) =>
+      createPerson(id, person)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
       logger.warn(s"Unknown event:$e")
   }
 
-  def insertAbotyp(id: UUID, abotyp: AbotypCreate) = {
+  def createAbotyp(id: UUID, abotyp: AbotypCreate) = {
     val typ = Abotyp(AbotypId(id), abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
       abotyp.preis, abotyp.preiseinheit, abotyp.aktiv, 0, None)
     DB autoCommit { implicit session =>
@@ -78,6 +84,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             writeRepository.insertEntity(Heimlieferung(VertriebsartId(), typ.id, hd.tour.id, hd.liefertage))
         }
       }
+    }
+  }
+
+  def createPerson(id: UUID, create: PersonCreate) = {
+    val person = Person(PersonId(id), create.name, create.vorname, create.strasse, create.hausNummer, create.plz, create.ort, create.typen)
+    DB autoCommit { implicit session =>
+      //create abotyp
+      writeRepository.insertEntity(person)
     }
   }
 }

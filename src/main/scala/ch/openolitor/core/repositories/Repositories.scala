@@ -28,6 +28,7 @@ import scalikejdbc._
 import ch.openolitor.stammdaten.BaseEntitySQLSyntaxSupport
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
+import ch.openolitor.core.EventStream
 
 case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
 
@@ -290,12 +291,27 @@ trait DBMappings {
 object BaseRepository extends LazyLogging {
 }
 
-trait BaseWriteRepository extends DBMappings {
+trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
 
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
-    binder: SqlBinder[I]): Option[E]
+    binder: SqlBinder[I]): Option[E] = {
+    val alias = syntax.syntax("x")
+    withSQL {
+      select
+        .from(syntax as alias)
+        .where.eq(alias.id, parameter(id))
+    }.map(syntax.apply(alias)).single.apply()
+  }
 
-  def insertEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
+  def insertEntity[E <: BaseEntity[_ <: BaseId]](entity: E)(implicit session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    user: UserId) = {
+    val params = syntaxSupport.parameterMappings(entity)
+    logger.debug(s"create entity with values:$entity")
+    withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
+
+    publish(EntityCreated(user, entity))
+  }
   def updateEntity(entity: BaseEntity[_ <: BaseId])(implicit session: DBSession)
   def deleteEntity(id: BaseId)(implicit session: DBSession)
 }

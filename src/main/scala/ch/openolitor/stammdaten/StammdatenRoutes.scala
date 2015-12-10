@@ -27,7 +27,7 @@ import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
 import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
+import spray.routing.Directive._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import ch.openolitor.core._
@@ -41,7 +41,10 @@ import akka.pattern.ask
 import scala.concurrent.duration._
 import akka.util.Timeout
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models._
+import spray.httpx.marshalling._
+import spray.httpx.unmarshalling._
+import scala.concurrent.Future
 
 trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers {
   self: StammdatenRepositoryComponent =>
@@ -60,17 +63,31 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
 
   lazy val stammdatenRoute = aboTypenRoute ~ personenRoute
 
+  def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I]) = {
+    entity(as[E]) { entity =>
+      //create abotyp
+      onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
+        case event: EntityInsertedEvent =>
+          //load entity          
+          complete(idFactory(event.id))
+        case x =>
+          complete(StatusCodes.BadRequest, s"No id generated:$x")
+      }
+    }
+  }
+
+  def list[R](f: => Future[R])(implicit tr: ToResponseMarshaller[R]) = {
+    //fetch list of something
+    onSuccess(f) { result =>
+      complete(result)
+    }
+  }
+
   lazy val personenRoute =
     path("personen") {
-      get {
-        //fetch list of personen
-        onSuccess(readRepository.getPersonen) { personen =>
-          complete(personen)
-        }
-      } ~
-        post {
-          complete("")
-        }
+      get(list(readRepository.getPersonen)) ~
+        post(create[PersonCreate, PersonId](PersonId.apply _))
     } ~
       path("personen" / personIdPath) { id =>
         get {
@@ -87,26 +104,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
 
   lazy val aboTypenRoute =
     path("abotypen") {
-      get {
-        //fetch list of abotypen
-        onSuccess(readRepository.getAbotypen) { abotypen =>
-          complete(abotypen)
-        }
-      } ~
-        post {
-          entity(as[AbotypCreate]) { abotyp =>
-            //create abotyp
-            onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, abotyp)) {
-              case event: EntityInsertedEvent =>
-                //load entity
-                onSuccess(readRepository.getAbotypDetail(AbotypId(event.id))) { abotyp =>
-                  complete(abotyp)
-                }
-              case x =>
-                complete(StatusCodes.BadRequest, s"No id generated:$x")
-            }
-          }
-        }
+      get(list(readRepository.getAbotypen)) ~
+        post(create[AbotypCreate, AbotypId](AbotypId.apply _))
     } ~
       path("abotypen" / abotypIdPath) { id =>
         get {
