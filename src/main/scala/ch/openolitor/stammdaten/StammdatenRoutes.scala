@@ -52,6 +52,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val abotypIdParamConverter = string2BaseIdConverter[AbotypId](AbotypId.apply)
   implicit val abotypIdPath = string2BaseIdPathMatcher[AbotypId](AbotypId.apply)
   implicit val personIdPath = string2BaseIdPathMatcher[PersonId](PersonId.apply)
+  implicit val depotIdPath = string2BaseIdPathMatcher[DepotId](DepotId.apply)
 
   import StammdatenJsonProtocol._
   import EntityStore._
@@ -59,7 +60,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  lazy val stammdatenRoute = aboTypenRoute ~ personenRoute
+  lazy val stammdatenRoute = aboTypenRoute ~ personenRoute ~ depotsRoute
 
   lazy val personenRoute =
     path("personen") {
@@ -80,6 +81,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("abotypen" / abotypIdPath) { id =>
         get(detail(readRepository.getAbotypDetail(id))) ~
           (put | post)(update[AbotypUpdate, AbotypId](id)) ~
+          delete(remove(id))
+      }
+
+  lazy val depotsRoute =
+    path("depots") {
+      get(list(readRepository.getDepots)) ~
+        post(create[DepotUpdateOrCreate, DepotId](DepotId.apply _))
+    } ~
+      path("depots" / depotIdPath) { id =>
+        get(detail(readRepository.getDepotDetail(id))) ~
+          (put | post)(update[DepotUpdateOrCreate, DepotId](id)) ~
           delete(remove(id))
       }
 }

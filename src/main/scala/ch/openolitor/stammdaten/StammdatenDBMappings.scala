@@ -163,6 +163,18 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)
+    
+    override def updateParameters(depot: Depot) = {
+      Seq(column.name -> parameter(depot.name),
+        column.apName -> parameter(depot.apName),
+        column.apVorname -> parameter(depot.apVorname),
+        column.vName -> parameter(depot.vName),
+        column.vVorname -> parameter(depot.vVorname),
+        column.vTelefon -> parameter(depot.vTelefon),
+        column.aktiv -> parameter(depot.aktiv),
+        column.anzahlAbonnenten -> parameter(depot.anzahlAbonnenten),
+        column.anzahlAbonnentenMax -> parameter(depot.anzahlAbonnentenMax))
+    }
   }
 
   implicit val heimlieferungMapping = new BaseEntitySQLSyntaxSupport[Heimlieferung] {

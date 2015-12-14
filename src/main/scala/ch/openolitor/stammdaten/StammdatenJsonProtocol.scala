@@ -66,6 +66,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val postlieferungFormat = jsonFormat3(Postlieferung.apply)
 
   implicit val depot = jsonFormat11(Depot.apply)
+  implicit val depotUpdateOrCreate = jsonFormat21(DepotUpdateOrCreate.apply)
   implicit val tour = jsonFormat3(Tour.apply)
 
   implicit val postlieferungDetailFormat = jsonFormat1(PostlieferungDetail.apply)

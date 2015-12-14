@@ -35,6 +35,20 @@ sealed trait VertriebskanalDetail extends Vertriebskanal {
 
 case class DepotId(id: UUID) extends BaseId
 
+trait IDepot {
+  val id: DepotId
+  val name: String
+  val apName: Option[String]
+  val apVorname: Option[String]
+  val apTelefon: Option[String]
+  val vName: Option[String]
+  val vVorname: Option[String]
+  val vTelefon: Option[String]
+  val aktiv: Boolean
+  val anzahlAbonnenten: Int
+  val anzahlAbonnentenMax: Int
+}
+
 @SerialVersionUID(111111)
 case class Depot(id: DepotId,
   name: String,
@@ -47,7 +61,7 @@ case class Depot(id: DepotId,
   aktiv: Boolean,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
-  anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with Vertriebskanal
+  anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with Vertriebskanal with IDepot
 
 @SerialVersionUID(111111)
 case class DepotDetail(id: DepotId,
@@ -71,7 +85,31 @@ case class DepotDetail(id: DepotId,
   beschreibung: Option[String],
   //Zusatzinformationen
   anzahlAbonnenten: Int,
-  anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with VertriebskanalDetail
+  anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with VertriebskanalDetail with IDepot
+
+@SerialVersionUID(111111)
+case class DepotUpdateOrCreate(id: DepotId,
+  name: String,
+  apName: Option[String],
+  apVorname: Option[String],
+  apTelefon: Option[String],
+  apMail: Option[String],
+  vName: Option[String],
+  vVorname: Option[String],
+  vTelefon: Option[String],
+  vMail: Option[String],
+  strasse: Option[String],
+  hausNummer: Option[String],
+  plz: Int,
+  ort: String,
+  aktiv: Boolean,
+  oeffnungszeiten: Option[String],
+  iban: Option[String], //maybe use dedicated type
+  bank: Option[String],
+  beschreibung: Option[String],
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  anzahlAbonnentenMax: Int) extends Product with IDepot
 
 case class TourId(id: UUID) extends BaseId
 case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal

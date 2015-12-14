@@ -48,6 +48,9 @@ trait StammdatenReadRepository {
 
   def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
   def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]]
+  
+  def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]]
+  def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
@@ -56,7 +59,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val person = personMapping.syntax("pers")
   lazy val pl = postlieferungMapping.syntax("pl")
   lazy val dl = depotlieferungMapping.syntax("dl")
-  lazy val d = depotMapping.syntax("d")
+  lazy val depot = depotMapping.syntax("d")
   lazy val t = tourMapping.syntax("tr")
   lazy val hl = heimlieferungMapping.syntax("hl")
 
@@ -92,7 +95,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .leftJoin(postlieferungMapping as pl).on(aboTyp.id, pl.abotypId)
         .leftJoin(heimlieferungMapping as hl).on(aboTyp.id, hl.abotypId)
         .leftJoin(depotlieferungMapping as dl).on(aboTyp.id, dl.abotypId)
-        .leftJoin(depotMapping as d).on(dl.depotId, d.id)
+        .leftJoin(depotMapping as depot).on(dl.depotId, depot.id)
         .leftJoin(tourMapping as t).on(hl.tourId, t.id)
         .where.eq(aboTyp.id, parameter(id))
     }.one(abotypMapping(aboTyp))
@@ -100,7 +103,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         rs => postlieferungMapping.opt(pl)(rs),
         rs => heimlieferungMapping.opt(hl)(rs),
         rs => depotlieferungMapping.opt(dl)(rs),
-        rs => depotMapping.opt(d)(rs),
+        rs => depotMapping.opt(depot)(rs),
         rs => tourMapping.opt(t)(rs))
       .map({ (abotyp, pls, hms, dls, depot, tour) =>
         val vertriebsarten =
@@ -124,6 +127,23 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       })
       .single.future
   }
+  
+  def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]] = {
+    withSQL {
+      select
+        .from(depotMapping as depot)
+        .orderBy(depot.name)
+    }.map(depotMapping(depot)).list.future
+  }
+  
+  def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]] = {
+    withSQL {
+      select
+        .from(depotMapping as depot)
+        .where.eq(depot.id, id)
+    }.map(depotMapping(depot)).single.future
+  }
+
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
