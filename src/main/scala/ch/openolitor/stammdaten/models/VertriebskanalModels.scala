@@ -27,11 +27,27 @@ import ch.openolitor.core.models._
 
 sealed trait Vertriebskanal {
   val name: String
+}
+
+sealed trait VertriebskanalDetail extends Vertriebskanal {
   val beschreibung: Option[String]
 }
 
 case class DepotId(id: UUID) extends BaseId
-case class Depot(id: DepotId, name: String, beschreibung: Option[String]) extends BaseEntity[DepotId] with Vertriebskanal
+
+@SerialVersionUID(111111)
+case class Depot(id: DepotId,
+  name: String,
+  apName: Option[String],
+  apVorname: Option[String],
+  apTelefon: Option[String],
+  vName: Option[String],
+  vVorname: Option[String],
+  vTelefon: Option[String],
+  aktiv: Boolean,
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with Vertriebskanal
 
 case class TourId(id: UUID) extends BaseId
 case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
