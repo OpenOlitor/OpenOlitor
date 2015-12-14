@@ -49,5 +49,29 @@ case class Depot(id: DepotId,
   anzahlAbonnenten: Int,
   anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with Vertriebskanal
 
+@SerialVersionUID(111111)
+case class DepotDetail(id: DepotId,
+  name: String,
+  apName: Option[String],
+  apVorname: Option[String],
+  apTelefon: Option[String],
+  apMail: Option[String],
+  vName: Option[String],
+  vVorname: Option[String],
+  vTelefon: Option[String],
+  vMail: Option[String],
+  strasse: Option[String],
+  hausNummer: Option[String],
+  plz: Int,
+  ort: String,
+  aktiv: Boolean,
+  oeffnungszeiten: Option[String],
+  iban: Option[String], //maybe use dedicated type
+  bank: Option[String],
+  beschreibung: Option[String],
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with VertriebskanalDetail
+
 case class TourId(id: UUID) extends BaseId
 case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
