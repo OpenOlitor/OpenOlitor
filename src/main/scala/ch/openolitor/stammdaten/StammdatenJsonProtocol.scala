@@ -54,7 +54,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
     def write(obj: Lieferzeitpunkt): JsValue =
       obj match {
         case w: Wochentag => w.toJson
-        case _ => JsObject()
+        case _            => JsObject()
       }
 
     def read(json: JsValue): Lieferzeitpunkt =
@@ -75,15 +75,15 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val vertriebsartDetailFormat = new JsonFormat[Vertriebsartdetail] {
     def write(obj: Vertriebsartdetail): JsValue =
       JsObject((obj match {
-        case p: PostlieferungDetail => p.toJson
-        case hl: HeimlieferungDetail => hl.toJson
+        case p: PostlieferungDetail   => p.toJson
+        case hl: HeimlieferungDetail  => hl.toJson
         case dl: DepotlieferungDetail => dl.toJson
       }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
 
     def read(json: JsValue): Vertriebsartdetail =
       json.asJsObject.getFields("typ") match {
-        case Seq(JsString("Postlieferung")) => json.convertTo[PostlieferungDetail]
-        case Seq(JsString("Heimlieferung")) => json.convertTo[HeimlieferungDetail]
+        case Seq(JsString("Postlieferung"))  => json.convertTo[PostlieferungDetail]
+        case Seq(JsString("Heimlieferung"))  => json.convertTo[HeimlieferungDetail]
         case Seq(JsString("Depotlieferung")) => json.convertTo[DepotlieferungDetail]
       }
   }
@@ -99,8 +99,8 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
 
     def read(json: JsValue): Personentyp =
       json.asJsObject.getFields("typ") match {
-        case Seq(JsString("VEREINSMITGLIED")) => VEREINSMITGLIED
-        case Seq(JsString("GOENNER")) => GOENNER
+        case Seq(JsString("VEREINSMITGLIED"))    => VEREINSMITGLIED
+        case Seq(JsString("GOENNER"))            => GOENNER
         case Seq(JsString("GENOSSENSCHAFTERIN")) => GENOSSENSCHAFTERIN
       }
   }

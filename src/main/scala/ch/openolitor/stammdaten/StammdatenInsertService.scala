@@ -42,14 +42,14 @@ object StammdatenInsertService {
 }
 
 class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
+    extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
 class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent] with LazyLogging with ConnectionPoolContextAware
-  with StammdatenDBMappings {
+    with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
   //TODO: replace with credentials of logged in user
@@ -79,7 +79,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           case pd: PostlieferungDetail =>
             writeRepository.insertEntity(Postlieferung(VertriebsartId(), typ.id, pd.liefertage))
           case dd: DepotlieferungDetail =>
-            writeRepository.insertEntity(Depotlieferung(VertriebsartId(), typ.id, dd.depot.id, dd.liefertage))
+            writeRepository.insertEntity(Depotlieferung(VertriebsartId(), typ.id, dd.depotId, dd.liefertage))
           case hd: HeimlieferungDetail =>
             writeRepository.insertEntity(Heimlieferung(VertriebsartId(), typ.id, hd.tour.id, hd.liefertage))
         }

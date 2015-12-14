@@ -106,7 +106,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         val vertriebsarten =
           pls.map(pl => PostlieferungDetail(pl.liefertage)) ++
             hms.map(hm => HeimlieferungDetail(tour.head, hm.liefertage)) ++
-            dls.map(dl => DepotlieferungDetail(depot.head, dl.liefertage))
+            dls.map(dl => DepotlieferungDetail(depot.head.id, dl.liefertage))
         logger.debug(s"getAbottyp:$id, abotyp:$abotyp:$vertriebsarten")
         AbotypDetail(abotyp.id,
           abotyp.name,

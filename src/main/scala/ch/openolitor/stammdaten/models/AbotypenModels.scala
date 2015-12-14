@@ -91,19 +91,19 @@ case class AbotypId(id: UUID) extends BaseId
 
 @SerialVersionUID(111111)
 case class Abotyp(id: AbotypId,
-  name: String,
-  beschreibung: Option[String],
-  lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
-  preis: BigDecimal,
-  preiseinheit: Preiseinheit,
-  aktiv: Boolean,
-  //Zusatzinformationen
-  anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
+                  name: String,
+                  beschreibung: Option[String],
+                  lieferrhythmus: Rhythmus,
+                  enddatum: Option[DateTime],
+                  anzahlLieferungen: Option[Int],
+                  anzahlAbwesenheiten: Option[Int],
+                  preis: BigDecimal,
+                  preiseinheit: Preiseinheit,
+                  aktiv: Boolean,
+                  //Zusatzinformationen
+                  anzahlAbonnenten: Int,
+                  letzteLieferung: Option[DateTime],
+                  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
 
 @SerialVersionUID(111111)
 case class AbotypCreate(
@@ -119,32 +119,32 @@ case class AbotypCreate(
   aktiv: Boolean) extends Product
 
 case class AbotypDetail(id: AbotypId,
-  name: String,
-  beschreibung: Option[String],
-  lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
-  preis: BigDecimal,
-  preiseinheit: Preiseinheit,
-  aktiv: Boolean,
-  vertriebsarten: Set[Vertriebsartdetail],
-  anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
+                        name: String,
+                        beschreibung: Option[String],
+                        lieferrhythmus: Rhythmus,
+                        enddatum: Option[DateTime],
+                        anzahlLieferungen: Option[Int],
+                        anzahlAbwesenheiten: Option[Int],
+                        preis: BigDecimal,
+                        preiseinheit: Preiseinheit,
+                        aktiv: Boolean,
+                        vertriebsarten: Set[Vertriebsartdetail],
+                        anzahlAbonnenten: Int,
+                        letzteLieferung: Option[DateTime],
+                        waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
 
 @SerialVersionUID(111111)
 case class AbotypUpdate(name: String,
-  beschreibung: Option[String],
-  lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
-  preis: BigDecimal,
-  preiseinheit: Preiseinheit,
-  aktiv: Boolean,
-  vertriebsarten: Set[Vertriebsartdetail],
-  waehrung: Waehrung = CHF) extends Product
+                        beschreibung: Option[String],
+                        lieferrhythmus: Rhythmus,
+                        enddatum: Option[DateTime],
+                        anzahlLieferungen: Option[Int],
+                        anzahlAbwesenheiten: Option[Int],
+                        preis: BigDecimal,
+                        preiseinheit: Preiseinheit,
+                        aktiv: Boolean,
+                        vertriebsarten: Set[Vertriebsartdetail],
+                        waehrung: Waehrung = CHF) extends Product
 
 case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
@@ -153,6 +153,6 @@ case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId,
 case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
 
 sealed trait Vertriebsartdetail extends Product
-case class DepotlieferungDetail(depot: Depot, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
+case class DepotlieferungDetail(depotId: DepotId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
 case class HeimlieferungDetail(tour: Tour, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
 case class PostlieferungDetail(liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
