@@ -40,7 +40,9 @@ trait SqlBinder[T] extends (T => Any) {
 }
 
 trait DBMappings {
+  import TypeBinder._
 
+  def baseIdTypeBinder[T <: BaseId](implicit f: UUID => T): TypeBinder[T] = string.map(s => f(UUID.fromString(s)))
   def toStringSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value.toString }
   def seqSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Seq[V]] { def apply(values: Seq[V]): Any = values map (binder) mkString (",") }
   def setSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Set[V]] { def apply(values: Set[V]): Any = values map (binder) mkString (",") }
@@ -283,6 +285,37 @@ trait DBMappings {
       parameter(params._11),
       parameter(params._12),
       parameter(params._13)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N](params: Tuple14[A, B, C, D, E, F, G, H, I, J, K, L, M, N])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N]) = {
+    Tuple14(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14)).productIterator.toSeq
   }
 
   def parameter[V](value: V)(implicit binder: SqlBinder[V] = defaultSqlConversion): Any = binder.apply(value)

@@ -48,7 +48,7 @@ trait StammdatenReadRepository {
 
   def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
   def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]]
-  
+
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]]
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
 }
@@ -84,7 +84,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     withSQL {
       select
         .from(personMapping as person)
-        .where.eq(person.id, id)
+        .where.eq(person.id, parameter(id))
     }.map(personMapping(person)).single.future
   }
 
@@ -127,7 +127,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       })
       .single.future
   }
-  
+
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]] = {
     withSQL {
       select
@@ -135,12 +135,12 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .orderBy(depot.name)
     }.map(depotMapping(depot)).list.future
   }
-  
+
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]] = {
     withSQL {
       select
         .from(depotMapping as depot)
-        .where.eq(depot.id, id)
+        .where.eq(depot.id, parameter(id))
     }.map(depotMapping(depot)).single.future
   }
 
@@ -175,7 +175,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
-      sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, strasse varchar(50) not null, haus_nummer varchar(10), plz int not null, ort varchar(50) not null, typen varchar(200))".execute.apply()
+      sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon varchar(50), telefon_alternative varchar(50), bemerkungen varchar(512), typen varchar(200))".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
     }

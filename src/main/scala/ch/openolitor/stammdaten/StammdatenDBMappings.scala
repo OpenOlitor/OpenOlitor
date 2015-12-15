@@ -76,10 +76,6 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val personenTypBinder: TypeBinder[Option[Personentyp]] = string.map(Personentyp.apply)
   implicit val personenTypSetBinder: TypeBinder[Set[Personentyp]] = string.map(s => s.split(",").map(Personentyp.apply).toSet.flatten)
 
-  def baseIdTypeBinder[T <: BaseId](implicit f: UUID => T): TypeBinder[T] = string.map(s => f(UUID.fromString(s)))
-
-  implicit val stammdatenParameterBinding: Map[Class[_], ParameterBinderMapping[_]] = Map()
-
   //DB parameter binders for write and query operations
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
@@ -139,7 +135,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.hausNummer -> parameter(person.hausNummer),
         column.plz -> parameter(person.plz),
         column.ort -> parameter(person.ort),
-        column.typen -> parameter(person.typen))
+        column.typen -> parameter(person.typen),
+        column.email -> parameter(person.email))
     }
   }
 
@@ -163,7 +160,7 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)
-    
+
     override def updateParameters(depot: Depot) = {
       Seq(column.name -> parameter(depot.name),
         column.apName -> parameter(depot.apName),

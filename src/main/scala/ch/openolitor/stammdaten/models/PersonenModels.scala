@@ -26,13 +26,13 @@ import java.util.UUID
 import ch.openolitor.core.models._
 
 sealed trait Personentyp extends Product
-case object VEREINSMITGLIED extends Personentyp
-case object GOENNER extends Personentyp
-case object GENOSSENSCHAFTERIN extends Personentyp
+case object Vereinsmitglied extends Personentyp
+case object Goenner extends Personentyp
+case object Genossenschafterin extends Personentyp
 
 object Personentyp {
   def apply(value: String): Option[Personentyp] = {
-    Vector(VEREINSMITGLIED, GOENNER, GENOSSENSCHAFTERIN).find(_.toString == value)
+    Vector(Vereinsmitglied, Goenner, Genossenschafterin).find(_.toString == value)
   }
 }
 
@@ -42,8 +42,14 @@ case class Person(id: PersonId,
   vorname: String,
   strasse: String,
   hausNummer: Option[String],
-  plz: Int,
+  adressZusatz: Option[String],
+  plz: String,
   ort: String,
+  email: String,
+  emailAlternative: Option[String],
+  telefon: Option[String],
+  telefonAlternative: Option[String],
+  bemerkungen: Option[String],
   typen: Set[Personentyp]) extends BaseEntity[PersonId]
 
 case class PersonUpdateOrCreate(
@@ -51,6 +57,12 @@ case class PersonUpdateOrCreate(
   vorname: String,
   strasse: String,
   hausNummer: Option[String],
-  plz: Int,
+  adressZusatz: Option[String],
+  plz: String,
   ort: String,
+  email: String,
+  emailAlternative: Option[String],
+  telefon: Option[String],
+  telefonAlternative: Option[String],
+  bemerkungen: Option[String],
   typen: Set[Personentyp]) extends Product
