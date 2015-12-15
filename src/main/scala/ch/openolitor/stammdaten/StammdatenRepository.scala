@@ -111,6 +111,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
             hms.map(hm => HeimlieferungDetail(tour.head, hm.liefertage)) ++
             dls.map(dl => DepotlieferungDetail(depot.head.id, dl.liefertage))
         logger.debug(s"getAbottyp:$id, abotyp:$abotyp:$vertriebsarten")
+
         AbotypDetail(abotyp.id,
           abotyp.name,
           abotyp.beschreibung,
@@ -172,7 +173,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id varchar(36) not null, liefertage varchar(256))".execute.apply()
       sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, depot_id int not null, liefertage varchar(256))".execute.apply()
       sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, tour_id int not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
+      sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), aktiv bit, anzahl_abonnenten int, anzahl_abonnenten_max int)".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
       sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon varchar(50), telefon_alternative varchar(50), bemerkungen varchar(512), typen varchar(200))".execute.apply()

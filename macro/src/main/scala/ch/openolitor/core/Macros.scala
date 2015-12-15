@@ -22,42 +22,38 @@
 \*                                                                           */
 package ch.openolitor.core
 
-import akka.actor._
-import scala.concurrent.duration._
-import akka.actor.SupervisorStrategy.Restart
-import scalikejdbc._
-import scalikejdbc.config._
-import ch.openolitor.core.db._
+import scala.reflect.macros.whitebox.Context
+import scala.language.experimental.macros
 
-object SystemActor {
-  case class Child(props: Props, name: String)
+object Macros {
 
-  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[SystemActor], sysConfig)
-}
+  def copyFrom[S, D](dest: S, from: D): S = macro copyFromImpl[S, D]
 
-/**
- * SystemActor wird benutzt, damit die Supervisor Strategy über alle child actors definiert werden kann
- */
-class SystemActor(sysConfig: SystemConfig) extends Actor with ActorLogging {
-  import SystemActor._
+  def copyFromImpl[S: c.WeakTypeTag, D : c.WeakTypeTag](c: Context)(
+    dest: c.Expr[S], from: c.Expr[D]): c.Expr[S] = {
+    import c.universe._
 
-  log.debug(s"oo-system:SystemActor initialization:$sysConfig")
+    val fromTree = reify(from.splice).tree
+    val tree = reify(dest.splice).tree
+    val copy = dest.actualType.member(TermName("copy"))
 
-  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
-    case e =>
-      log.warning(s"Child actor failed:$e")
-      Restart
-  }
+    val params = copy match {
+      case s: MethodSymbol if (s.paramLists.nonEmpty) => s.paramLists.head
+      case _ => c.abort(c.enclosingPosition, "No eligible copy method!")
+    }
 
-  def receive: Receive = {
-    case Child(props, name) =>
-      log.debug(s"oo-system:Request child actor for props:$props")
-      val actorRef = context.actorOf(props, name)
+    def isTermSymbol(s: Symbol): Boolean = {
+      s match {
+        case s: TermSymbol => true
+        case _ => false
+      }
+    }
 
-      //return created actor
-      sender ! actorRef
-    case e =>
-      log.debug(s"oo-system:Received unknown event:$e")
+    c.Expr[S](Apply(
+      Select(tree, copy),
+      params.map {
+        case p if isTermSymbol(from.actualType.decl(p.name)) => Select(fromTree, p.name)
+        case p => Select(tree, p.name)
+      }))
   }
 }
-

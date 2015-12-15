@@ -23,6 +23,7 @@
 package ch.openolitor.stammdaten
 
 import ch.openolitor.core._
+import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import scala.concurrent.duration._
@@ -33,6 +34,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models.AbotypUpdate
+import shapeless.LabelledGeneric
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -64,9 +66,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       writeRepository.getById(abotypMapping, id) map { abotyp =>
         //map all updatable fields
-        val copy = abotyp.copy(name = update.name, beschreibung = update.beschreibung, lieferrhythmus = update.lieferrhythmus,
-          enddatum = update.enddatum, anzahlLieferungen = update.anzahlLieferungen, anzahlAbwesenheiten = update.anzahlAbwesenheiten,
-          preis = update.preis, preiseinheit = update.preiseinheit, aktiv = update.aktiv, waehrung = update.waehrung)
+
+        val copy = copyFrom(abotyp, update)
         writeRepository.updateEntity[Abotyp, AbotypId](copy)
 
         //TODO: update vertriebsarten mapping
@@ -78,9 +79,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       writeRepository.getById(personMapping, id) map { person =>
         //map all updatable fields
-        val copy = person.copy(name = update.name, vorname = update.vorname, strasse = update.strasse,
-          hausNummer = update.hausNummer, plz = update.plz,
-          ort = update.ort, typen = update.typen)
+        val copy = copyFrom(person, update)
 
         //map to abotyp
         writeRepository.updateEntity[Person, PersonId](copy)
