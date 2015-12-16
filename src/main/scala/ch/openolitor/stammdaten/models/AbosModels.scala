@@ -28,11 +28,38 @@ import java.util.UUID
 
 case class AboId(id: UUID) extends BaseId
 
-case class Abo(id: AboId,
-  personId: PersonId,
-  personName: String,
-  personVorname: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  depotId: DepotId,
-  depotName: String) extends BaseEntity[AboId]
+sealed trait Abo extends BaseEntity[AboId]
+
+case class DepotlieferungAbo(id: AboId,
+                             personId: PersonId,
+                             personName: String,
+                             personVorname: String,
+                             abotypId: AbotypId,
+                             abotypName: String,
+                             depotId: DepotId,
+                             depotName: String,
+                             lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+
+case class DepotlieferungAboModify(personId: PersonId,
+                                   abotypId: AbotypId,
+                                   depotId: DepotId,
+                                   lieferzeitpunkt: Lieferzeitpunkt)
+
+case class HeimlieferungAbo(id: AboId,
+                            personId: PersonId,
+                            personName: String,
+                            personVorname: String,
+                            abotypId: AbotypId,
+                            abotypName: String,
+                            tourId: TourId,
+                            tourName: String,
+                            lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+
+case class PostlieferungAbo(id: AboId,
+                            personId: PersonId,
+                            personName: String,
+                            personVorname: String,
+                            abotypId: AbotypId,
+                            abotypName: String,
+                            lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+

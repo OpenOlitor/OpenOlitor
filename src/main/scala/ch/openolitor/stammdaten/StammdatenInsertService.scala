@@ -81,7 +81,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           case pd: PostlieferungDetail =>
             writeRepository.insertEntity(Postlieferung(VertriebsartId(), typ.id, pd.liefertage))
           case dd: DepotlieferungDetail =>
-            writeRepository.insertEntity(Depotlieferung(VertriebsartId(), typ.id, dd.depotId, dd.liefertage))
+            writeRepository.insertEntity(Depotlieferung(VertriebsartId(), typ.id, dd.depot.id, dd.liefertage))
           case hd: HeimlieferungDetail =>
             writeRepository.insertEntity(Heimlieferung(VertriebsartId(), typ.id, hd.tour.id, hd.liefertage))
         }

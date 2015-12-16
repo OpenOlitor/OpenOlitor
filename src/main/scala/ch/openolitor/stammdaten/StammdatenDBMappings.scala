@@ -67,6 +67,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder[AbotypId](AbotypId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder[VertriebsartId](VertriebsartId.apply _)
   implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder[PersonId](PersonId.apply _)
+  implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder[AboId](AboId.apply _)
 
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
@@ -89,6 +90,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
   implicit val personenTypSqlBinder = toStringSqlBinder[Personentyp]
   implicit val personenTypSetSqlBinder = setSqlBinder[Personentyp]
+  implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -218,4 +220,72 @@ trait StammdatenDBMappings extends DBMappings {
 
     def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
   }
+
+  implicit val depotlieferungAboMapping = new BaseEntitySQLSyntaxSupport[DepotlieferungAbo] {
+    override val tableName = "DepotlieferungAbo"
+
+    override lazy val columns = autoColumns[DepotlieferungAbo]()
+
+    def apply(rn: ResultName[DepotlieferungAbo])(rs: WrappedResultSet): DepotlieferungAbo =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: DepotlieferungAbo): Seq[Any] = parameters(DepotlieferungAbo.unapply(entity).get)
+
+    override def updateParameters(depotlieferungAbo: DepotlieferungAbo) = {
+      Seq(
+        column.personId -> parameter(depotlieferungAbo.personId),
+        column.personName -> parameter(depotlieferungAbo.personName),
+        column.personVorname -> parameter(depotlieferungAbo.personVorname),
+        column.abotypId -> parameter(depotlieferungAbo.abotypId),
+        column.abotypName -> parameter(depotlieferungAbo.abotypName),
+        column.depotId -> parameter(depotlieferungAbo.depotId),
+        column.depotName -> parameter(depotlieferungAbo.depotName),
+        column.lieferzeitpunkt -> parameter(depotlieferungAbo.lieferzeitpunkt))
+    }
+  }
+
+  implicit val heimlieferungAboMapping = new BaseEntitySQLSyntaxSupport[HeimlieferungAbo] {
+    override val tableName = "HeimlieferungAbo"
+
+    override lazy val columns = autoColumns[HeimlieferungAbo]()
+
+    def apply(rn: ResultName[HeimlieferungAbo])(rs: WrappedResultSet): HeimlieferungAbo =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: HeimlieferungAbo): Seq[Any] = parameters(HeimlieferungAbo.unapply(entity).get)
+
+    override def updateParameters(heimlieferungAbo: HeimlieferungAbo) = {
+      Seq(
+        column.personId -> parameter(heimlieferungAbo.personId),
+        column.personName -> parameter(heimlieferungAbo.personName),
+        column.personVorname -> parameter(heimlieferungAbo.personVorname),
+        column.abotypId -> parameter(heimlieferungAbo.abotypId),
+        column.abotypName -> parameter(heimlieferungAbo.abotypName),
+        column.tourId -> parameter(heimlieferungAbo.tourId),
+        column.tourName -> parameter(heimlieferungAbo.tourName),
+        column.lieferzeitpunkt -> parameter(heimlieferungAbo.lieferzeitpunkt))
+    }
+  }
+
+  implicit val postlieferungAboMapping = new BaseEntitySQLSyntaxSupport[PostlieferungAbo] {
+    override val tableName = "PostlieferungAbo"
+
+    override lazy val columns = autoColumns[PostlieferungAbo]()
+
+    def apply(rn: ResultName[PostlieferungAbo])(rs: WrappedResultSet): PostlieferungAbo =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: PostlieferungAbo): Seq[Any] = parameters(PostlieferungAbo.unapply(entity).get)
+
+    override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
+      Seq(
+        column.personId -> parameter(postlieferungAbo.personId),
+        column.personName -> parameter(postlieferungAbo.personName),
+        column.personVorname -> parameter(postlieferungAbo.personVorname),
+        column.abotypId -> parameter(postlieferungAbo.abotypId),
+        column.abotypName -> parameter(postlieferungAbo.abotypName),
+        column.lieferzeitpunkt -> parameter(postlieferungAbo.lieferzeitpunkt))
+    }
+  }
+
 }

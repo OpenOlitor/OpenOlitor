@@ -36,27 +36,27 @@ sealed trait VertriebskanalDetail extends Vertriebskanal {
 case class DepotId(id: UUID) extends BaseId
 
 case class Depot(id: DepotId,
-  name: String,
-  apName: Option[String],
-  apVorname: Option[String],
-  apTelefon: Option[String],
-  apEmail: Option[String],
-  vName: Option[String],
-  vVorname: Option[String],
-  vTelefon: Option[String],
-  vEmail: Option[String],
-  strasse: Option[String],
-  hausNummer: Option[String],
-  plz: String,
-  ort: String,
-  aktiv: Boolean,
-  oeffnungszeiten: Option[String],
-  iban: Option[String], //maybe use dedicated type
-  bank: Option[String],
-  beschreibung: Option[String],
-  //Zusatzinformationen
-  anzahlAbonnenten: Int,
-  anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with Vertriebskanal
+                 name: String,
+                 apName: Option[String],
+                 apVorname: Option[String],
+                 apTelefon: Option[String],
+                 apEmail: Option[String],
+                 vName: Option[String],
+                 vVorname: Option[String],
+                 vTelefon: Option[String],
+                 vEmail: Option[String],
+                 strasse: Option[String],
+                 hausNummer: Option[String],
+                 plz: String,
+                 ort: String,
+                 aktiv: Boolean,
+                 oeffnungszeiten: Option[String],
+                 iban: Option[String], //maybe use dedicated type
+                 bank: Option[String],
+                 beschreibung: Option[String],
+                 //Zusatzinformationen
+                 anzahlAbonnenten: Int,
+                 anzahlAbonnentenMax: Int) extends BaseEntity[DepotId] with Vertriebskanal
 
 case class DepotModify(
   name: String,
@@ -77,6 +77,10 @@ case class DepotModify(
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   beschreibung: Option[String]) extends Product
+
+case class DepotSummary(
+  id: DepotId,
+  name: String) extends Product
 
 case class TourId(id: UUID) extends BaseId
 case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
