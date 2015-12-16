@@ -51,5 +51,6 @@ object MacroBuild extends Build {
     lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
      libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
    ))
-   lazy val main = Project("main", file("."), settings = buildSettings) dependsOn(macroSub) aggregate(macroSub)
+   lazy val main = Project("main", file("."), settings = buildSettings) dependsOn(macroSub)
+   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate(macroSub, main)
 }
