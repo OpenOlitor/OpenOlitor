@@ -53,9 +53,9 @@ object Macros {
       copyParams))
   }
 
-  def copyTo[S, D](source: S, mapping: (String, Any)*): D = macro copyFromToImpl[S, D]
+  def copyTo[S, D](source: S, mapping: (String, Any)*): D = macro copyToImpl[S, D]
 
-  def copyTo[S: c.WeakTypeTag, D: c.WeakTypeTag](c: Context)(
+  def copyToImpl[S: c.WeakTypeTag, D: c.WeakTypeTag](c: Context)(
     source: c.Expr[S], mapping: c.Expr[(String, Any)]*): c.Expr[D] = {
     import c.universe._
 
