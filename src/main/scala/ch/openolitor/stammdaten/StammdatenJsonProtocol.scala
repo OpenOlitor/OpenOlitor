@@ -54,7 +54,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
     def write(obj: Lieferzeitpunkt): JsValue =
       obj match {
         case w: Wochentag => w.toJson
-        case _ => JsObject()
+        case _            => JsObject()
       }
 
     def read(json: JsValue): Lieferzeitpunkt =
@@ -65,8 +65,8 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val heimlieferungFormat = jsonFormat4(Heimlieferung.apply)
   implicit val postlieferungFormat = jsonFormat3(Postlieferung.apply)
 
-  implicit val depot = jsonFormat11(Depot.apply)
-  implicit val depotUpdateOrCreate = jsonFormat21(DepotUpdateOrCreate.apply)
+  implicit val depot = jsonFormat21(Depot.apply)
+  implicit val depotUpdateOrCreate = jsonFormat18(DepotUpdateOrCreate.apply)
   implicit val tour = jsonFormat3(Tour.apply)
 
   implicit val postlieferungDetailFormat = jsonFormat1(PostlieferungDetail.apply)
@@ -76,15 +76,15 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val vertriebsartDetailFormat = new JsonFormat[Vertriebsartdetail] {
     def write(obj: Vertriebsartdetail): JsValue =
       JsObject((obj match {
-        case p: PostlieferungDetail => p.toJson
-        case hl: HeimlieferungDetail => hl.toJson
+        case p: PostlieferungDetail   => p.toJson
+        case hl: HeimlieferungDetail  => hl.toJson
         case dl: DepotlieferungDetail => dl.toJson
       }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
 
     def read(json: JsValue): Vertriebsartdetail =
       json.asJsObject.getFields("typ") match {
-        case Seq(JsString("Postlieferung")) => json.convertTo[PostlieferungDetail]
-        case Seq(JsString("Heimlieferung")) => json.convertTo[HeimlieferungDetail]
+        case Seq(JsString("Postlieferung"))  => json.convertTo[PostlieferungDetail]
+        case Seq(JsString("Heimlieferung"))  => json.convertTo[HeimlieferungDetail]
         case Seq(JsString("Depotlieferung")) => json.convertTo[DepotlieferungDetail]
       }
   }
@@ -100,10 +100,10 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
 
     def read(json: JsValue): Personentyp =
       json match {
-        case JsString("Vereinsmitglied") => Vereinsmitglied
-        case JsString("Goenner") => Goenner
+        case JsString("Vereinsmitglied")    => Vereinsmitglied
+        case JsString("Goenner")            => Goenner
         case JsString("Genossenschafterin") => Genossenschafterin
-        case pt => sys.error(s"Unknown personentyp:$pt")
+        case pt                             => sys.error(s"Unknown personentyp:$pt")
       }
   }
 

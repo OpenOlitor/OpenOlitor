@@ -42,14 +42,14 @@ object StammdatenInsertService {
 }
 
 class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
+    extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
 class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent] with LazyLogging with ConnectionPoolContextAware
-  with StammdatenDBMappings {
+    with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
   //TODO: replace with credentials of logged in user
@@ -60,6 +60,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createAbotyp(id, abotyp)
     case EntityInsertedEvent(meta, id, person: PersonUpdateOrCreate) =>
       createPerson(id, person)
+    case EntityInsertedEvent(meta, id, depot: DepotUpdateOrCreate) =>
+      createDepot(id, depot)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
@@ -92,6 +94,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       //create abotyp
       writeRepository.insertEntity(person)
+    }
+  }
+
+  def createDepot(id: UUID, create: DepotUpdateOrCreate) = {
+    val depot = Depot(DepotId(id), create.name, create.apName, create.apVorname, create.apTelefon, create.apEmail, create.vName, create.vVorname, create.vTelefon, create.vEmail, create.strasse, create.hausNummer, create.plz, create.ort, create.aktiv, create.oeffnungszeiten, create.iban, create.bank, create.beschreibung, 0, 0)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(depot)
     }
   }
 }

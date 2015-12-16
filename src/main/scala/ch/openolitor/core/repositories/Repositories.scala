@@ -318,6 +318,326 @@ trait DBMappings {
       parameter(params._14)).productIterator.toSeq
   }
 
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O](params: Tuple15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O]) = {
+    Tuple15(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P](params: Tuple16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P]) = {
+    Tuple16(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q](params: Tuple17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P],
+    binder16: SqlBinder[Q]) = {
+    Tuple17(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16),
+      parameter(params._17)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R](params: Tuple18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P],
+    binder16: SqlBinder[Q],
+    binder17: SqlBinder[R]) = {
+    Tuple18(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16),
+      parameter(params._17),
+      parameter(params._18)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S](params: Tuple19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P],
+    binder16: SqlBinder[Q],
+    binder17: SqlBinder[R],
+    binder18: SqlBinder[S]) = {
+    Tuple19(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16),
+      parameter(params._17),
+      parameter(params._18),
+      parameter(params._19)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T](params: Tuple20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P],
+    binder16: SqlBinder[Q],
+    binder17: SqlBinder[R],
+    binder18: SqlBinder[S],
+    binder19: SqlBinder[T]) = {
+    Tuple20(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16),
+      parameter(params._17),
+      parameter(params._18),
+      parameter(params._19),
+      parameter(params._20)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U](params: Tuple21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P],
+    binder16: SqlBinder[Q],
+    binder17: SqlBinder[R],
+    binder18: SqlBinder[S],
+    binder19: SqlBinder[T],
+    binder20: SqlBinder[U]) = {
+    Tuple21(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16),
+      parameter(params._17),
+      parameter(params._18),
+      parameter(params._19),
+      parameter(params._20),
+      parameter(params._21)).productIterator.toSeq
+  }
+
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V](params: Tuple22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P],
+    binder16: SqlBinder[Q],
+    binder17: SqlBinder[R],
+    binder18: SqlBinder[S],
+    binder19: SqlBinder[T],
+    binder20: SqlBinder[U],
+    binder21: SqlBinder[V]) = {
+    Tuple22(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16),
+      parameter(params._17),
+      parameter(params._18),
+      parameter(params._19),
+      parameter(params._20),
+      parameter(params._21),
+      parameter(params._22)).productIterator.toSeq
+  }
+
   def parameter[V](value: V)(implicit binder: SqlBinder[V] = defaultSqlConversion): Any = binder.apply(value)
 }
 
@@ -327,7 +647,7 @@ object BaseRepository extends LazyLogging {
 trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
 
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
-    binder: SqlBinder[I]): Option[E] = {
+                                                                                             binder: SqlBinder[I]): Option[E] = {
     val alias = syntax.syntax("x")
     val idx = alias.id
     withSQL {
@@ -338,8 +658,8 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
   }
 
   def insertEntity[E <: BaseEntity[_ <: BaseId]](entity: E)(implicit session: DBSession,
-    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    user: UserId) = {
+                                                            syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+                                                            user: UserId) = {
     val params = syntaxSupport.parameterMappings(entity)
     logger.debug(s"create entity with values:$entity")
     withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
@@ -348,9 +668,9 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     publish(EntityCreated(user, entity))
   }
   def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit session: DBSession,
-    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
-    user: UserId) = {
+                                                               syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+                                                               binder: SqlBinder[I],
+                                                               user: UserId) = {
     val alias = syntaxSupport.syntax("x")
     val id = alias.id
     val updateParams = syntaxSupport.updateParameters(entity)
@@ -361,9 +681,9 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
   }
 
   def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I)(implicit session: DBSession,
-    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
-    user: UserId) = {
+                                                           syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+                                                           binder: SqlBinder[I],
+                                                           user: UserId) = {
     logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
     getById(syntaxSupport, id) map { entity =>
       withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, parameter(id))).update.apply()
