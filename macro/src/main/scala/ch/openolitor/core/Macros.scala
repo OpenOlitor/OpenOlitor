@@ -22,14 +22,15 @@
 \*                                                                           */
 package ch.openolitor.core
 
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.blackbox.Context
 import scala.language.experimental.macros
+import scalaz.IsEmpty
 
 object Macros {
 
   def copyFrom[S, D](dest: S, from: D): S = macro copyFromImpl[S, D]
 
-  def copyFromImpl[S: c.WeakTypeTag, D : c.WeakTypeTag](c: Context)(
+  def copyFromImpl[S: c.WeakTypeTag, D: c.WeakTypeTag](c: Context)(
     dest: c.Expr[S], from: c.Expr[D]): c.Expr[S] = {
     import c.universe._
 
@@ -42,18 +43,58 @@ object Macros {
       case _ => c.abort(c.enclosingPosition, "No eligible copy method!")
     }
 
-    def isTermSymbol(s: Symbol): Boolean = {
-      s match {
-        case s: TermSymbol => true
-        case _ => false
-      }
+    val copyParams = params.map {
+      case p if from.actualType.decl(p.name).isTerm => Select(fromTree, p.name)
+      case p => Select(tree, p.name)
     }
 
     c.Expr[S](Apply(
       Select(tree, copy),
-      params.map {
-        case p if isTermSymbol(from.actualType.decl(p.name)) => Select(fromTree, p.name)
-        case p => Select(tree, p.name)
-      }))
+      copyParams))
+  }
+
+  def copyTo[S, D](source: S, mapping: (String, Any)*): D = macro copyFromToImpl[S, D]
+
+  def copyTo[S: c.WeakTypeTag, D: c.WeakTypeTag](c: Context)(
+    source: c.Expr[S], mapping: c.Expr[(String, Any)]*): c.Expr[D] = {
+    import c.universe._
+
+    val sourceTree = reify(source.splice).tree
+
+    val companioned = weakTypeOf[D].typeSymbol
+    val companionObject = companioned.companion
+    val companionType = companionObject.typeSignature
+    val apply = companionType.decl(TermName("apply"))
+
+    val params = apply match {
+      case s: MethodSymbol if (s.paramLists.nonEmpty) => s.paramLists.head
+      case _ => c.abort(c.enclosingPosition, "No eligible apply method!")
+    }
+
+    val keys: Map[String, Tree] = mapping.map(_.tree).flatMap {
+      case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
+        c.info(c.enclosingPosition, s"Found mapping for key typ:$typ:${typ.getClass}, key $name, ${name.getClass}, valueTyp $valueTyp, ${valueTyp.getClass} and value $value, ${value.getClass}", false)
+        val Literal(Constant(key)) = name
+        Some(key.asInstanceOf[String], n)
+      case m =>
+        c.error(c.enclosingPosition, s"You must use ArrowAssoc values for extended mapping names. $m could not resolve at compile time.")
+        None
+    }.toMap
+
+    val applyParams = params.map {
+      case p if source.actualType.decl(p.name).isTerm => Select(sourceTree, p.name)
+      case p if keys.contains(p.name.decodedName.toString) =>
+        keys.get(p.name.decodedName.toString).map {
+          case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
+            //must by instance of typeapply
+            value.asInstanceOf[Ident]
+        }.getOrElse {
+          c.abort(c.enclosingPosition, s"No eligible param found $p!")
+        }
+      case p => c.abort(c.enclosingPosition, s"No eligible param found $p!")
+    }
+    c.info(c.enclosingPosition, s"CopyTo: $companionObject($applyParams)", false)
+
+    c.Expr[D] { q"$companionObject(..$applyParams)" }
   }
 }

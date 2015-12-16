@@ -41,6 +41,7 @@ import ch.openolitor.core.EventStream
 import ch.openolitor.core.Boot
 import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.Macros._
 
 trait StammdatenReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
@@ -112,19 +113,9 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
             dls.map(dl => DepotlieferungDetail(depot.head.id, dl.liefertage))
         logger.debug(s"getAbottyp:$id, abotyp:$abotyp:$vertriebsarten")
 
-        AbotypDetail(abotyp.id,
-          abotyp.name,
-          abotyp.beschreibung,
-          abotyp.lieferrhythmus,
-          abotyp.enddatum,
-          abotyp.anzahlLieferungen,
-          abotyp.anzahlAbwesenheiten,
-          abotyp.preis,
-          abotyp.preiseinheit,
-          abotyp.aktiv,
-          vertriebsarten.toSet,
-          abotyp.anzahlAbonnenten,
-          abotyp.letzteLieferung)
+        //must be cast to vertriebsartdetail without serializable extension
+        val set: Set[Vertriebsartdetail] = vertriebsarten.toSet
+        copyTo[Abotyp, AbotypDetail](abotyp, "vertriebsarten" -> set)
       })
       .single.future
   }

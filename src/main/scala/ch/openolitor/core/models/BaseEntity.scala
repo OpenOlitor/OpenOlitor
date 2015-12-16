@@ -24,6 +24,7 @@ package ch.openolitor.core.models
 
 import java.util.UUID
 import scalikejdbc.ParameterBinder
+import ch.openolitor.core.Macros
 
 trait BaseId {
   val id: UUID
