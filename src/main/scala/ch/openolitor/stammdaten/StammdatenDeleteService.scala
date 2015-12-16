@@ -39,14 +39,14 @@ object StammdatenDeleteService {
 }
 
 class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
+    extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
  */
 class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent]
-  with LazyLogging with ConnectionPoolContextAware with StammdatenDBMappings {
+    with LazyLogging with ConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 
@@ -56,6 +56,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: AbotypId) => deleteAbotyp(id)
     case EntityDeletedEvent(meta, id: PersonId) => deletePerson(id)
+    case EntityDeletedEvent(meta, id: DepotId)  => deleteDepot(id)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -73,6 +74,14 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       //TODO: check whether person should get deleted or disabled
 
       writeRepository.deleteEntity[Person, PersonId](id)
+    }
+  }
+
+  def deleteDepot(id: DepotId) = {
+    DB autoCommit { implicit session =>
+      //TODO: check whether a depot should be deleted or disabled
+
+      writeRepository.deleteEntity[Depot, DepotId](id)
     }
   }
 }
