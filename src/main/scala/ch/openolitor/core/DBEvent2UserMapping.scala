@@ -32,14 +32,10 @@ import ch.openolitor.stammdaten.models._
 object DBEvent2UserMapping extends DefaultJsonProtocol {
   def props(): Props = Props(classOf[DBEvent2UserMapping])
 
-  import StammdatenJsonProtocol._
-
-  def dbEventCreateWriter[E <: BaseEntity[_ <: BaseId]](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
+  implicit def dbEventCreateWriter[E <: BaseEntity[_ <: BaseId]](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
     def write(obj: DBEvent[E]): JsValue =
       JsObject("type" -> JsString(obj.productPrefix), obj.entity.productPrefix -> writer.write(obj.entity))
   }
-
-  implicit val abotypEventWriter = dbEventCreateWriter[Abotyp]
 }
 
 /**
@@ -48,6 +44,7 @@ object DBEvent2UserMapping extends DefaultJsonProtocol {
 class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
   import DBEvent2UserMapping._
   import BaseJsonProtocol._
+  import StammdatenJsonProtocol._
 
   override val system = context.system
 
@@ -64,16 +61,26 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
 
   val receive: Receive = {
     //TODO: resolve module based json formats of entities, maybe create module based sealed interfaces?
-    case e @ EntityModified(userId, entity: Abotyp) =>
-      log.debug(s"receive EntityModified $userId, $entity")
-      send(userId, e.asInstanceOf[DBEvent[Abotyp]])
-    case e @ EntityCreated(userId, entity: Abotyp) =>
-      log.debug(s"receive EntityCreated $userId, $entity")
-      send(userId, e.asInstanceOf[DBEvent[Abotyp]])
-    case e @ EntityDeleted(userId, entity: Abotyp) =>
-      log.debug(s"receive EntityDeleted $userId, $entity")
-      send(userId, e.asInstanceOf[DBEvent[Abotyp]])
-    case x =>
-      log.debug(s"receive unknown event $x")
+    case e @ EntityModified(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityCreated(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityDeleted(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+
+    case e @ EntityModified(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
+    case e @ EntityCreated(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
+    case e @ EntityDeleted(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
+
+    case e @ EntityModified(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
+    case e @ EntityCreated(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
+    case e @ EntityDeleted(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
+
+    case e @ EntityModified(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
+    case e @ EntityCreated(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
+    case e @ EntityDeleted(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
+
+    case e @ EntityModified(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
+    case e @ EntityCreated(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
+    case e @ EntityDeleted(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
+
+    case x => log.debug(s"receive unknown event $x")
   }
 }

@@ -25,6 +25,7 @@ package ch.openolitor.core.models
 import java.util.UUID
 import scalikejdbc.ParameterBinder
 import ch.openolitor.core.Macros
+import spray.json.DefaultJsonProtocol
 
 trait BaseId {
   val id: UUID

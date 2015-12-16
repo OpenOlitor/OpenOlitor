@@ -46,6 +46,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   //id formats
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId.apply)
   implicit val abotypIdFormat = baseIdFormat(AbotypId.apply)
+  implicit val aboIdFormat = baseIdFormat(AboId.apply)
   implicit val depotIdFormat = baseIdFormat(DepotId.apply)
   implicit val tourIdFormat = baseIdFormat(TourId.apply)
   implicit val personIdFormat = baseIdFormat(PersonId.apply)
@@ -108,4 +109,6 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
 
   implicit val person = jsonFormat14(Person.apply)
   implicit val personUpdateOrCreate = jsonFormat13(PersonModify.apply)
+
+  implicit val aboFormat = jsonFormat8(Abo.apply)
 }
