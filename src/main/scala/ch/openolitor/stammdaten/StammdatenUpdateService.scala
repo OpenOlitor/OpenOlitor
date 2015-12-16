@@ -33,7 +33,7 @@ import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
-import ch.openolitor.stammdaten.models.AbotypUpdate
+import ch.openolitor.stammdaten.models.AbotypModify
 import shapeless.LabelledGeneric
 
 object StammdatenUpdateService {
@@ -54,7 +54,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   implicit val userId = Boot.systemUserId
 
   val handle: Handle = {
-    case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypUpdate) => updateAbotyp(id, entity)
+    case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(id, entity)
     case EntityUpdatedEvent(meta, id: PersonId, entity: PersonUpdateOrCreate) => updatePerson(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
@@ -62,7 +62,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       logger.warn(s"Unknown event:$e")
   }
 
-  def updateAbotyp(id: AbotypId, update: AbotypUpdate) = {
+  def updateAbotyp(id: AbotypId, update: AbotypModify) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(abotypMapping, id) map { abotyp =>
         //map all updatable fields

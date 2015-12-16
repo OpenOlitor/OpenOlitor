@@ -72,24 +72,8 @@ object Preiseinheit {
   }
 }
 
-trait IAbotyp {
-  val id: AbotypId
-  val name: String
-  val beschreibung: Option[String]
-  val lieferrhythmus: Rhythmus
-  val enddatum: Option[DateTime]
-  val anzahlLieferungen: Option[Int]
-  val anzahlAbwesenheiten: Option[Int]
-  val preis: BigDecimal
-  val preiseinheit: Preiseinheit
-  val aktiv: Boolean
-  val waehrung: Waehrung
-}
-
-@SerialVersionUID(111111)
 case class AbotypId(id: UUID) extends BaseId
 
-@SerialVersionUID(111111)
 case class Abotyp(id: AbotypId,
   name: String,
   beschreibung: Option[String],
@@ -103,10 +87,9 @@ case class Abotyp(id: AbotypId,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
 
-@SerialVersionUID(111111)
-case class AbotypCreate(
+case class AbotypModify(
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
@@ -116,7 +99,8 @@ case class AbotypCreate(
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   vertriebsarten: Set[Vertriebsartdetail],
-  aktiv: Boolean) extends Product
+  aktiv: Boolean,
+  waehrung: Waehrung = CHF)
 
 case class AbotypDetail(id: AbotypId,
   name: String,
@@ -131,20 +115,7 @@ case class AbotypDetail(id: AbotypId,
   vertriebsarten: Set[Vertriebsartdetail],
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with IAbotyp
-
-@SerialVersionUID(111111)
-case class AbotypUpdate(name: String,
-  beschreibung: Option[String],
-  lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
-  preis: BigDecimal,
-  preiseinheit: Preiseinheit,
-  aktiv: Boolean,
-  vertriebsarten: Set[Vertriebsartdetail],
-  waehrung: Waehrung = CHF) extends Product
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
 
 case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]

@@ -76,11 +76,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   lazy val aboTypenRoute =
     path("abotypen") {
       get(list(readRepository.getAbotypen)) ~
-        post(create[AbotypCreate, AbotypId](AbotypId.apply _))
+        post(create[AbotypModify, AbotypId](AbotypId.apply _))
     } ~
       path("abotypen" / abotypIdPath) { id =>
         get(detail(readRepository.getAbotypDetail(id))) ~
-          (put | post)(update[AbotypUpdate, AbotypId](id)) ~
+          (put | post)(update[AbotypModify, AbotypId](id)) ~
           delete(remove(id))
       }
 

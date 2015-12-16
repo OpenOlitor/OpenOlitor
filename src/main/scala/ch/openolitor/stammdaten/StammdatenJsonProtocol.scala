@@ -91,8 +91,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
 
   implicit val abotypFormat = jsonFormat13(Abotyp.apply)
   implicit val abotypDetailFormat = jsonFormat14(AbotypDetail.apply)
-  implicit val abotypCreateFormat = jsonFormat10(AbotypCreate.apply)
-  implicit val abotypUpdateFormat = jsonFormat11(AbotypUpdate.apply)
+  implicit val abotypUpdateFormat = jsonFormat11(AbotypModify.apply)
 
   implicit val personentypFormat = new JsonFormat[Personentyp] {
     def write(obj: Personentyp): JsValue =

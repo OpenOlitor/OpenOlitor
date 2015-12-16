@@ -35,7 +35,7 @@ import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models.PostlieferungDetail
 import ch.openolitor.stammdaten.models.HeimlieferungDetail
 import ch.openolitor.stammdaten.models.DepotlieferungDetail
-import ch.openolitor.stammdaten.models.AbotypCreate
+import ch.openolitor.stammdaten.models.AbotypModify
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -56,7 +56,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   implicit val userId = Boot.systemUserId
 
   val handle: Handle = {
-    case EntityInsertedEvent(meta, id, abotyp: AbotypCreate) =>
+    case EntityInsertedEvent(meta, id, abotyp: AbotypModify) =>
       createAbotyp(id, abotyp)
     case EntityInsertedEvent(meta, id, person: PersonUpdateOrCreate) =>
       createPerson(id, person)
@@ -68,7 +68,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       logger.warn(s"Unknown event:$e")
   }
 
-  def createAbotyp(id: UUID, abotyp: AbotypCreate) = {
+  def createAbotyp(id: UUID, abotyp: AbotypModify) = {
     val typ = Abotyp(AbotypId(id), abotyp.name, abotyp.beschreibung, abotyp.lieferrhythmus, abotyp.enddatum, abotyp.anzahlLieferungen, abotyp.anzahlAbwesenheiten,
       abotyp.preis, abotyp.preiseinheit, abotyp.aktiv, 0, None)
     DB autoCommit { implicit session =>
