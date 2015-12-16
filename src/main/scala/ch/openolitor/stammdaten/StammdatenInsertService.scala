@@ -58,9 +58,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityInsertedEvent(meta, id, abotyp: AbotypModify) =>
       createAbotyp(id, abotyp)
-    case EntityInsertedEvent(meta, id, person: PersonUpdateOrCreate) =>
+    case EntityInsertedEvent(meta, id, person: PersonModify) =>
       createPerson(id, person)
-    case EntityInsertedEvent(meta, id, depot: DepotUpdateOrCreate) =>
+    case EntityInsertedEvent(meta, id, depot: DepotModify) =>
       createDepot(id, depot)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
@@ -89,7 +89,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createPerson(id: UUID, create: PersonUpdateOrCreate) = {
+  def createPerson(id: UUID, create: PersonModify) = {
     val person = Person(PersonId(id), create.name, create.vorname, create.strasse, create.hausNummer, create.adressZusatz, create.plz, create.ort, create.email, create.emailAlternative, create.telefon, create.telefonAlternative, create.bemerkungen, create.typen)
     DB autoCommit { implicit session =>
       //create abotyp
@@ -97,7 +97,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createDepot(id: UUID, create: DepotUpdateOrCreate) = {
+  def createDepot(id: UUID, create: DepotModify) = {
     val depot = Depot(DepotId(id), create.name, create.apName, create.apVorname, create.apTelefon, create.apEmail, create.vName, create.vVorname, create.vTelefon, create.vEmail, create.strasse, create.hausNummer, create.plz, create.ort, create.aktiv, create.oeffnungszeiten, create.iban, create.bank, create.beschreibung, 0, 0)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(depot)

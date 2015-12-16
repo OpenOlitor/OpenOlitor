@@ -52,7 +52,7 @@ case class Person(id: PersonId,
   bemerkungen: Option[String],
   typen: Set[Personentyp]) extends BaseEntity[PersonId]
 
-case class PersonUpdateOrCreate(
+case class PersonModify(
   name: String,
   vorname: String,
   strasse: String,

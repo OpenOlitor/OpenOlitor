@@ -55,7 +55,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(id, entity)
-    case EntityUpdatedEvent(meta, id: PersonId, entity: PersonUpdateOrCreate) => updatePerson(id, entity)
+    case EntityUpdatedEvent(meta, id: PersonId, entity: PersonModify) => updatePerson(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
@@ -75,7 +75,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def updatePerson(id: PersonId, update: PersonUpdateOrCreate) = {
+  def updatePerson(id: PersonId, update: PersonModify) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(personMapping, id) map { person =>
         //map all updatable fields

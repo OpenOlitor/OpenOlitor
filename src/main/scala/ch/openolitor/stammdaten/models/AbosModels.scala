@@ -26,15 +26,13 @@ import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
 import java.util.UUID
 
-@SerialVersionUID(111111)
 case class AboId(id: UUID) extends BaseId
 
-@SerialVersionUID(111111)
 case class Abo(id: AboId,
-               personId: PersonId,
-               personName: String,
-               personVorname: String,
-               abotypId: AbotypId,
-               abotypName: String,
-               depotId: DepotId,
-               depotName: String) extends BaseEntity[AboId]
+  personId: PersonId,
+  personName: String,
+  personVorname: String,
+  abotypId: AbotypId,
+  abotypName: String,
+  depotId: DepotId,
+  depotName: String) extends BaseEntity[AboId]
