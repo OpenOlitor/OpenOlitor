@@ -37,12 +37,12 @@ object ParseImportDataApp extends App {
       parser ! ParseSpreadsheet(file)
     }
 
-    def print[E: TypeTag, I <: BaseId](resultList: ImportResultList[E, I]): Unit = {
+    def print[E: TypeTag, I <: BaseId](resultList: List[ImportEntityResult[E, I]]): Unit = {
       val typ = typeOf[E]
       print("-----------------------------------------------------------------------------------------")
       print(typ.toString)
       print("-----------------------------------------------------------------------------------------")
-      resultList.list.map(x => print(x))
+      resultList.map(x => print(x))
     }
 
     def print[E: TypeTag, I <: BaseId](result: ImportEntityResult[E, I]): Unit = {
@@ -50,8 +50,9 @@ object ParseImportDataApp extends App {
     }
 
     def receive = {
-      case ImportResult(abotypen) =>
+      case ImportResult(personen, abotypen) =>
         print("Received import result")
+        print(personen)
         print(abotypen)
         print("Parsing finished")
         context.system.shutdown

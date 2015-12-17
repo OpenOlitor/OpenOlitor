@@ -38,8 +38,9 @@ object DataImportParser {
 
   case class ParseSpreadsheet(file: File)
   case class ImportEntityResult[E, I <: BaseId](id: I, entity: E)
-  case class ImportResultList[E, I <: BaseId](list: List[ImportEntityResult[E, I]])
-  case class ImportResult(abotypen: ImportResultList[AbotypModify, AbotypId])
+  case class ImportResult(
+    personen: List[ImportEntityResult[PersonModify, PersonId]],
+    abotypen: List[ImportEntityResult[AbotypModify, AbotypId]])
 
   def props(): Props = Props(classOf[DataImportParser])
 
@@ -79,12 +80,17 @@ object DataImportParser {
       self.getStringValue match { case null | "" => None; case s => Some(s) }
     }
   }
+
+  implicit class MyRow(self: Row) {
+    def value[T: TypeTag](index: Int): T = self.getCellByIndex(index).value[T]
+  }
 }
 
 class DataImportParser extends Actor with ActorLogging {
   import DataImportParser._
 
-  var abotypIdMapping: Map[Int, _ <: BaseId] = Map()
+  var abotypMapping: Map[Int, _ <: BaseId] = Map()
+  var personMapping: Map[Int, _ <: BaseId] = Map()
 
   val receive: Receive = {
     case ParseSpreadsheet(file) =>
@@ -96,62 +102,111 @@ class DataImportParser extends Actor with ActorLogging {
     val doc = SpreadsheetDocument.loadDocument(file)
 
     //parse all sections
+    val personen = doc.withSheet("Personen")(parsePersonen)
     val abotypen = doc.withSheet("Abotyp")(parseAbotypen)
 
-    ImportResult(abotypen)
+    ImportResult(personen, abotypen)
   }
 
-  def parseAbotypen(table: Table): ImportResultList[AbotypModify, AbotypId] = {
-    //reset id mapping
-    abotypIdMapping = Map()
+  def parsePersonen(table: Table) = {
+    log.debug("Parse personen")
+    //rest id mapping
+    personMapping = Map()
 
-    val rows = table.getRowList().toList
+    val rows = table.getRowList().toList.take(1000)
     val header = rows.head
     val data = rows.tail
 
     //match column indexes
-    val headerMap = headerMappings(header)
-    val indexId = headerMap.get("id").getOrElse(sys.error(s"Missing column 'id' in sheet 'Abotyp'"))
-    val indexName = headerMap.get("name").getOrElse(sys.error(s"Missing column 'name' in sheet 'Abotyp'"))
-    val indexBeschreibung = headerMap.get("beschreibung").getOrElse(sys.error(s"Missing column 'beschreibung' in sheet 'Abotyp'"))
-    val indexlieferrhytmus = headerMap.get("lieferrhythmus").getOrElse(sys.error(s"Missing column 'lieferrhythmus' in sheet 'Abotyp'"))
-    val indexPreis = headerMap.get("preis").getOrElse(sys.error(s"Missing column 'preis' in sheet 'Abotyp'"))
-    val indexPreiseinheit = headerMap.get("preiseinheit").getOrElse(sys.error(s"Missing column 'preiseinheit' in sheet 'Abotyp'"))
-    val indexAktiv = headerMap.get("aktiv").getOrElse(sys.error(s"Missing column 'aktiv' in sheet 'Abotyp'"))
+    val Seq(indexId, indexName, indexVorname, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexEmail, indexEmailAlternative, indexTelefon, indexTelefonAlternative, indexBemerkungen) =
+      columnIndexes(header, "Person", Seq("id", "name", "vorname", "strasse", "hausNummer", "plz", "ort", "email", "emailAlternative",
+        "telefon", "telefonAlternative", "bemerkungen"))
 
-    log.debug(s"Parse abotypen, expected rows:${data.length}")
+    log.debug(s"Parse personen, expected rows:${data.length}")
 
-    ImportResultList((for {
+    (for {
       row <- data
     } yield {
-      val stringId = row.getCellByIndex(indexId).value[Option[Int]]
-      stringId.map { id =>
+      val optId = row.value[Option[Int]](indexId)
+      optId.map { id =>
+        val personId = PersonId(UUID.randomUUID)
+        val person = PersonModify(
+          name = row.value(indexName),
+          vorname = row.value(indexVorname),
+          strasse = row.value(indexStrasse),
+          hausNummer = row.value(indexHausNummer),
+          adressZusatz = None,
+          plz = row.value(indexPlz),
+          ort = row.value(indexOrt),
+          email = row.value(indexEmail),
+          emailAlternative = row.value(indexEmailAlternative),
+          telefon = row.value(indexTelefon),
+          telefonAlternative = row.value(indexTelefonAlternative),
+          bemerkungen = row.value(indexBemerkungen),
+          //TODO: parse personentypen as well
+          typen = Set(Vereinsmitglied))
+        personMapping = personMapping + (id -> personId)
+        Some(ImportEntityResult(personId, person))
+      }.getOrElse(None)
+    }).flatten
+  }
+
+  def parseAbotypen(table: Table) = {
+    log.debug("Parse abotypen")
+    //reset id mapping
+    abotypMapping = Map()
+
+    val rows = table.getRowList().toList.take(100)
+    val header = rows.head
+    val data = rows.tail
+
+    //match column indexes
+    val Seq(indexId, indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktiv) =
+      columnIndexes(header, "Abotyp", Seq("id", "name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv"))
+    log.debug(s"Parse abotypen, expected rows:${data.length}")
+
+    (for {
+      row <- data
+    } yield {
+      val optId = row.value[Option[Int]](indexId)
+      optId.map { id =>
         val aboTypId = AbotypId(UUID.randomUUID)
         val abotyp = AbotypModify(
-          name = row.getCellByIndex(indexName).value,
-          beschreibung = row.getCellByIndex(indexBeschreibung).value,
-          lieferrhythmus = Rhythmus(row.getCellByIndex(indexlieferrhytmus).value),
+          name = row.value(indexName),
+          beschreibung = row.value(indexBeschreibung),
+          lieferrhythmus = Rhythmus(row.value(indexlieferrhytmus)),
           enddatum = None,
           anzahlLieferungen = None,
           anzahlAbwesenheiten = None,
-          preis = new BigDecimal(row.getCellByIndex(indexPreis).value),
-          preiseinheit = Preiseinheit(row.getCellByIndex(indexPreiseinheit).value),
-          aktiv = row.getCellByIndex(indexAktiv).value,
+          preis = new BigDecimal(row.value(indexPreis)),
+          preiseinheit = Preiseinheit(row.value(indexPreiseinheit)),
+          aktiv = row.value(indexAktiv),
           waehrung = CHF,
           //TODO: parse vertriebsarten as well
           vertriebsarten = Set())
-        abotypIdMapping = abotypIdMapping + (id -> aboTypId)
+        abotypMapping = abotypMapping + (id -> aboTypId)
         Some(ImportEntityResult(aboTypId, abotyp))
       }.getOrElse(None)
-    }).flatten)
+    }).flatten
   }
 
-  def headerMappings(header: Row, map: Map[String, Int] = Map()): Map[String, Int] = {
-    if (map.size < header.getCellCount()) {
+  def columnIndexes(header: Row, sheet: String, names: Seq[String], maxCols: Option[Int] = None) = {
+    val headerMap = headerMappings(header, maxCols.getOrElse(names.size * 2))
+    names.map { name =>
+      headerMap.get(name.toLowerCase.trim).getOrElse(sys.error(s"Missing column '$name' in sheet '$sheet'"))
+    }
+  }
+
+  def headerMappings(header: Row, maxCols: Int = 30, map: Map[String, Int] = Map()): Map[String, Int] = {
+    if (map.size < maxCols) {
       val index = map.size
       val cell = header.getCellByIndex(index)
       val name = cell.getStringValue().toLowerCase.trim
-      headerMappings(header, map + (name -> index))
+      name match {
+        case n if n.isEmpty => map //break if no column name was found anymore
+        case n =>
+          headerMappings(header, maxCols, map + (name -> index))
+      }
     } else {
       map
     }
