@@ -34,59 +34,6 @@ import akka.actor._
 import java.io.File
 import java.io.FileInputStream
 
-object DataImportParser {
-
-  case class ParseSpreadsheet(file: File)
-  case class ImportEntityResult[E, I <: BaseId](id: I, entity: E)
-  case class ImportResult(
-    personen: List[ImportEntityResult[PersonModify, PersonId]],
-    abotypen: List[ImportEntityResult[AbotypModify, AbotypId]],
-    depots: List[ImportEntityResult[DepotModify, DepotId]])
-
-  def props(): Props = Props(classOf[DataImportParser])
-
-  implicit class MySpreadsheet(self: SpreadsheetDocument) {
-    def sheet(name: String): Option[Table] = {
-      val sheet = self.getSheetByName(name)
-      if (sheet != null) {
-        Some(sheet)
-      } else {
-        None
-      }
-    }
-
-    def withSheet[R](name: String)(f: String => Table => R): R = {
-      sheet(name).map(t => f(name)(t)).getOrElse(sys.error(s"Missing sheet '$name'"))
-    }
-  }
-
-  implicit class MyCell(self: Cell) {
-    def value[T: TypeTag]: T = {
-      val typ = typeOf[T]
-      typ match {
-        case t if t =:= typeOf[Boolean] => self.getBooleanValue.asInstanceOf[T]
-        case t if t =:= typeOf[String] => self.getStringValue.asInstanceOf[T]
-        case t if t =:= typeOf[Option[String]] => self.getStringOptionValue.asInstanceOf[T]
-        case t if t =:= typeOf[Double] => self.getCurrencyValue.asInstanceOf[T]
-        case t if t =:= typeOf[Date] => self.getDateValue.asInstanceOf[T]
-        case t if t =:= typeOf[Int] => self.getStringValue.toInt.asInstanceOf[T]
-        case t if t =:= typeOf[Option[Int]] => self.getStringOptionValue.map(_.toInt).getOrElse(None).asInstanceOf[T]
-        case t if t =:= typeOf[Float] => self.getStringValue.toFloat.asInstanceOf[T]
-        case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat).getOrElse(None).asInstanceOf[T]
-        case _ => sys.error(s"Unsupported format:$typ")
-      }
-    }
-
-    def getStringOptionValue: Option[String] = {
-      self.getStringValue match { case null | "" => None; case s => Some(s) }
-    }
-  }
-
-  implicit class MyRow(self: Row) {
-    def value[T: TypeTag](index: Int): T = self.getCellByIndex(index).value[T]
-  }
-}
-
 class DataImportParser extends Actor with ActorLogging {
   import DataImportParser._
 
@@ -103,8 +50,9 @@ class DataImportParser extends Actor with ActorLogging {
     val (personen, personIdMapping) = doc.withSheet("Personen")(parsePersonen)
     val (abotypen, abotypIdMapping) = doc.withSheet("Abotyp")(parseAbotypen)
     val (depots, depotIdMapping) = doc.withSheet("Depot")(parseDepots)
+    val (abos, _) = doc.withSheet("Abos")(parseAbos(personIdMapping, abotypIdMapping, depotIdMapping))
 
-    ImportResult(personen, abotypen, depots)
+    ImportResult(personen, abotypen, depots, abos)
   }
 
   val parsePersonen = {
@@ -118,18 +66,18 @@ class DataImportParser extends Actor with ActorLogging {
 
           (PersonId(UUID.randomUUID),
             PersonModify(
-              name = row.value(indexName),
-              vorname = row.value(indexVorname),
-              strasse = row.value(indexStrasse),
-              hausNummer = row.value(indexHausNummer),
+              name = row.value[String](indexName),
+              vorname = row.value[String](indexVorname),
+              strasse = row.value[String](indexStrasse),
+              hausNummer = row.value[Option[String]](indexHausNummer),
               adressZusatz = None,
-              plz = row.value(indexPlz),
-              ort = row.value(indexOrt),
-              email = row.value(indexEmail),
-              emailAlternative = row.value(indexEmailAlternative),
-              telefon = row.value(indexTelefon),
-              telefonAlternative = row.value(indexTelefonAlternative),
-              bemerkungen = row.value(indexBemerkungen),
+              plz = row.value[String](indexPlz),
+              ort = row.value[String](indexOrt),
+              email = row.value[String](indexEmail),
+              emailAlternative = row.value[Option[String]](indexEmailAlternative),
+              telefon = row.value[Option[String]](indexTelefon),
+              telefonAlternative = row.value[Option[String]](indexTelefonAlternative),
+              bemerkungen = row.value[Option[String]](indexBemerkungen),
               //TODO: parse personentypen as well
               typen = Set(Vereinsmitglied)))
     }
@@ -144,7 +92,7 @@ class DataImportParser extends Actor with ActorLogging {
 
           (DepotId(UUID.randomUUID),
             DepotModify(
-              name = row.value(indexName),
+              name = row.value[String](indexName),
               apName = None,
               apVorname = None,
               apTelefon = None,
@@ -157,13 +105,12 @@ class DataImportParser extends Actor with ActorLogging {
               hausNummer = None,
               plz = "",
               ort = "",
-              aktiv = row.value(indexAktiv),
+              aktiv = row.value[Boolean](indexAktiv),
               oeffnungszeiten = None,
               iban = None,
               bank = None,
               beschreibung = None))
     }
-
   }
 
   val parseAbotypen = {
@@ -175,18 +122,41 @@ class DataImportParser extends Actor with ActorLogging {
 
           (AbotypId(UUID.randomUUID),
             AbotypModify(
-              name = row.value(indexName),
-              beschreibung = row.value(indexBeschreibung),
-              lieferrhythmus = Rhythmus(row.value(indexlieferrhytmus)),
+              name = row.value[String](indexName),
+              beschreibung = row.value[Option[String]](indexBeschreibung),
+              lieferrhythmus = Rhythmus(row.value[String](indexlieferrhytmus)),
               enddatum = None,
               anzahlLieferungen = None,
               anzahlAbwesenheiten = None,
-              preis = new BigDecimal(row.value(indexPreis)),
-              preiseinheit = Preiseinheit(row.value(indexPreiseinheit)),
-              aktiv = row.value(indexAktiv),
+              preis = row.value[BigDecimal](indexPreis),
+              preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
+              aktiv = row.value[Boolean](indexAktiv),
               waehrung = CHF,
               //TODO: parse vertriebsarten as well
               vertriebsarten = Set()))
+    }
+  }
+
+  def parseAbos(personIdMapping: Map[Int, PersonId], abotypIdMapping: Map[Int, AbotypId], depotIdMapping: Map[Int, DepotId]) = {
+    parse("personId", Seq("personId", "abotypId", "depotId")) {
+      indexes =>
+        row =>
+          //match column indexes
+          val Seq(personIdIndex, abotypIdIndex, depotIdIndex) = indexes
+
+          val personIdInt = row.value[Int](personIdIndex)
+          val abotypIdInt = row.value[Int](abotypIdIndex)
+          val depotIdOpt = row.value[Option[Int]](depotIdIndex)
+
+          val personId = personIdMapping.getOrElse(personIdInt, sys.error(s"Person id personIdInt referenced from abo not found"))
+          val abotypId = abotypIdMapping.getOrElse(abotypIdInt, sys.error(s"Abotyp id $abotypIdInt referenced from abo not found"))
+          depotIdOpt.map { depotIdInt =>
+            val depotId = depotIdMapping.getOrElse(depotIdInt, sys.error(s"Dept id $depotIdInt referenced from abo not found"))
+
+            //TODO: read lieferzeitpunkt
+            (AboId(UUID.randomUUID),
+              DepotlieferungAboModify(personId, abotypId, depotId, Montag).asInstanceOf[AboModify])
+          }.getOrElse(sys.error(s"Unknown abotyp: no depot specified"))
     }
   }
 
@@ -239,5 +209,66 @@ class DataImportParser extends Actor with ActorLogging {
     } else {
       map
     }
+  }
+}
+
+object DataImportParser {
+
+  case class ParseSpreadsheet(file: File)
+  case class ImportEntityResult[E, I <: BaseId](id: I, entity: E)
+  case class ImportResult(
+    personen: List[ImportEntityResult[PersonModify, PersonId]],
+    abotypen: List[ImportEntityResult[AbotypModify, AbotypId]],
+    depots: List[ImportEntityResult[DepotModify, DepotId]],
+    abos: List[ImportEntityResult[AboModify, AboId]])
+
+  def props(): Props = Props(classOf[DataImportParser])
+
+  implicit class MySpreadsheet(self: SpreadsheetDocument) {
+    def sheet(name: String): Option[Table] = {
+      val sheet = self.getSheetByName(name)
+      if (sheet != null) {
+        Some(sheet)
+      } else {
+        None
+      }
+    }
+
+    def withSheet[R](name: String)(f: String => Table => R): R = {
+      sheet(name).map(t => f(name)(t)).getOrElse(sys.error(s"Missing sheet '$name'"))
+    }
+  }
+
+  implicit class MyCell(self: Cell) {
+    def value[T: TypeTag]: T = {
+      val typ = typeOf[T]
+      (typ match {
+        case t if t =:= typeOf[Boolean] => self.getStringValue match {
+          case "true" | "1" | "x" | "X" => true
+          case "false" | "0" => false
+          case x => sys.error(s"Unsupported boolean format:$x")
+        }
+
+        case t if t =:= typeOf[String] => self.getStringValue
+        case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
+        case t if t =:= typeOf[Double] => self.getStringValue.toDouble
+        case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
+        case t if t =:= typeOf[Date] => self.getDateValue
+        case t if t =:= typeOf[Int] => self.getStringValue.toInt
+        case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
+        case t if t =:= typeOf[Float] => self.getStringValue.toFloat
+        case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
+        case _ =>
+          sys.error(s"Unsupported format:$typ")
+      }).asInstanceOf[T]
+    }
+
+    def getStringOptionValue: Option[String] = {
+      self.getStringValue match { case null | "" => None; case s => Some(s) }
+    }
+  }
+
+  implicit class MyRow(self: Row) {
+    def value[T: TypeTag](index: Int): T = self.getCellByIndex(index).value[T]
   }
 }
