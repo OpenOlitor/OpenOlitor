@@ -16,6 +16,7 @@ object BuildSettings {
     resolvers += "dnvriend at bintray" at "http://dl.bintray.com/dnvriend/maven",
     resolvers += "Spray" at "http://repo.spray.io",
     scalacOptions ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
+    mainClass in (Compile, run) := Some("ch.openolitor.core.Boot"),
     libraryDependencies ++= {	  
 	  Seq(
 	    "io.spray"            %%  "spray-can"     					 % sprayV,
@@ -47,12 +48,12 @@ object BuildSettings {
   )
 }
 
-object MacroBuild extends Build {
+object OpenOlitorBuild extends Build {
     import BuildSettings._ 
-  
+        
     lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
      libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
    ))
-   lazy val main = Project("main", file("."), settings = buildSettings) dependsOn(macroSub)
+   lazy val main = Project("main", file("."), settings = buildSettings ) dependsOn(macroSub)
    lazy val root = Project("root", file("root"), settings = buildSettings) aggregate(macroSub, main)
 }
