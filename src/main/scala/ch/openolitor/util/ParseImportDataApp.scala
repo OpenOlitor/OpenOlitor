@@ -50,10 +50,11 @@ object ParseImportDataApp extends App {
     }
 
     def receive = {
-      case ImportResult(personen, abotypen) =>
+      case ImportResult(personen, abotypen, depots) =>
         print("Received import result")
         print(personen)
         print(abotypen)
+        print(depots)
         print("Parsing finished")
         context.system.shutdown
       case Terminated(_) =>

@@ -40,7 +40,8 @@ object DataImportParser {
   case class ImportEntityResult[E, I <: BaseId](id: I, entity: E)
   case class ImportResult(
     personen: List[ImportEntityResult[PersonModify, PersonId]],
-    abotypen: List[ImportEntityResult[AbotypModify, AbotypId]])
+    abotypen: List[ImportEntityResult[AbotypModify, AbotypId]],
+    depots: List[ImportEntityResult[DepotModify, DepotId]])
 
   def props(): Props = Props(classOf[DataImportParser])
 
@@ -54,8 +55,8 @@ object DataImportParser {
       }
     }
 
-    def withSheet[R](name: String)(f: Table => R): R = {
-      sheet(name).map(f).getOrElse(sys.error(s"Missing sheet '$name'"))
+    def withSheet[R](name: String)(f: String => Table => R): R = {
+      sheet(name).map(t => f(name)(t)).getOrElse(sys.error(s"Missing sheet '$name'"))
     }
   }
 
@@ -89,9 +90,6 @@ object DataImportParser {
 class DataImportParser extends Actor with ActorLogging {
   import DataImportParser._
 
-  var abotypMapping: Map[Int, _ <: BaseId] = Map()
-  var personMapping: Map[Int, _ <: BaseId] = Map()
-
   val receive: Receive = {
     case ParseSpreadsheet(file) =>
       val rec = sender
@@ -102,92 +100,123 @@ class DataImportParser extends Actor with ActorLogging {
     val doc = SpreadsheetDocument.loadDocument(file)
 
     //parse all sections
-    val personen = doc.withSheet("Personen")(parsePersonen)
-    val abotypen = doc.withSheet("Abotyp")(parseAbotypen)
+    val (personen, personIdMapping) = doc.withSheet("Personen")(parsePersonen)
+    val (abotypen, abotypIdMapping) = doc.withSheet("Abotyp")(parseAbotypen)
+    val (depots, depotIdMapping) = doc.withSheet("Depot")(parseDepots)
 
-    ImportResult(personen, abotypen)
+    ImportResult(personen, abotypen, depots)
   }
 
-  def parsePersonen(table: Table) = {
-    log.debug("Parse personen")
-    //rest id mapping
-    personMapping = Map()
+  val parsePersonen = {
+    parse("id", Seq("name", "vorname", "strasse", "hausNummer", "plz", "ort", "email", "emailAlternative",
+      "telefon", "telefonAlternative", "bemerkungen")) {
+      indexes =>
+        row =>
+          //match column indexes
+          val Seq(indexName, indexVorname, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexEmail, indexEmailAlternative, indexTelefon, indexTelefonAlternative, indexBemerkungen) =
+            indexes
 
-    val rows = table.getRowList().toList.take(1000)
-    val header = rows.head
-    val data = rows.tail
-
-    //match column indexes
-    val Seq(indexId, indexName, indexVorname, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexEmail, indexEmailAlternative, indexTelefon, indexTelefonAlternative, indexBemerkungen) =
-      columnIndexes(header, "Person", Seq("id", "name", "vorname", "strasse", "hausNummer", "plz", "ort", "email", "emailAlternative",
-        "telefon", "telefonAlternative", "bemerkungen"))
-
-    log.debug(s"Parse personen, expected rows:${data.length}")
-
-    (for {
-      row <- data
-    } yield {
-      val optId = row.value[Option[Int]](indexId)
-      optId.map { id =>
-        val personId = PersonId(UUID.randomUUID)
-        val person = PersonModify(
-          name = row.value(indexName),
-          vorname = row.value(indexVorname),
-          strasse = row.value(indexStrasse),
-          hausNummer = row.value(indexHausNummer),
-          adressZusatz = None,
-          plz = row.value(indexPlz),
-          ort = row.value(indexOrt),
-          email = row.value(indexEmail),
-          emailAlternative = row.value(indexEmailAlternative),
-          telefon = row.value(indexTelefon),
-          telefonAlternative = row.value(indexTelefonAlternative),
-          bemerkungen = row.value(indexBemerkungen),
-          //TODO: parse personentypen as well
-          typen = Set(Vereinsmitglied))
-        personMapping = personMapping + (id -> personId)
-        Some(ImportEntityResult(personId, person))
-      }.getOrElse(None)
-    }).flatten
+          (PersonId(UUID.randomUUID),
+            PersonModify(
+              name = row.value(indexName),
+              vorname = row.value(indexVorname),
+              strasse = row.value(indexStrasse),
+              hausNummer = row.value(indexHausNummer),
+              adressZusatz = None,
+              plz = row.value(indexPlz),
+              ort = row.value(indexOrt),
+              email = row.value(indexEmail),
+              emailAlternative = row.value(indexEmailAlternative),
+              telefon = row.value(indexTelefon),
+              telefonAlternative = row.value(indexTelefonAlternative),
+              bemerkungen = row.value(indexBemerkungen),
+              //TODO: parse personentypen as well
+              typen = Set(Vereinsmitglied)))
+    }
   }
 
-  def parseAbotypen(table: Table) = {
-    log.debug("Parse abotypen")
-    //reset id mapping
-    abotypMapping = Map()
+  val parseDepots = {
+    parse("id", Seq("name", "aktiv")) {
+      indexes =>
+        row =>
+          //match column indexes
+          val Seq(indexName, indexAktiv) = indexes
 
-    val rows = table.getRowList().toList.take(100)
-    val header = rows.head
-    val data = rows.tail
+          (DepotId(UUID.randomUUID),
+            DepotModify(
+              name = row.value(indexName),
+              apName = None,
+              apVorname = None,
+              apTelefon = None,
+              apEmail = None,
+              vName = None,
+              vVorname = None,
+              vTelefon = None,
+              vEmail = None,
+              strasse = None,
+              hausNummer = None,
+              plz = "",
+              ort = "",
+              aktiv = row.value(indexAktiv),
+              oeffnungszeiten = None,
+              iban = None,
+              bank = None,
+              beschreibung = None))
+    }
 
-    //match column indexes
-    val Seq(indexId, indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktiv) =
-      columnIndexes(header, "Abotyp", Seq("id", "name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv"))
-    log.debug(s"Parse abotypen, expected rows:${data.length}")
+  }
 
-    (for {
-      row <- data
-    } yield {
-      val optId = row.value[Option[Int]](indexId)
-      optId.map { id =>
-        val aboTypId = AbotypId(UUID.randomUUID)
-        val abotyp = AbotypModify(
-          name = row.value(indexName),
-          beschreibung = row.value(indexBeschreibung),
-          lieferrhythmus = Rhythmus(row.value(indexlieferrhytmus)),
-          enddatum = None,
-          anzahlLieferungen = None,
-          anzahlAbwesenheiten = None,
-          preis = new BigDecimal(row.value(indexPreis)),
-          preiseinheit = Preiseinheit(row.value(indexPreiseinheit)),
-          aktiv = row.value(indexAktiv),
-          waehrung = CHF,
-          //TODO: parse vertriebsarten as well
-          vertriebsarten = Set())
-        abotypMapping = abotypMapping + (id -> aboTypId)
-        Some(ImportEntityResult(aboTypId, abotyp))
-      }.getOrElse(None)
-    }).flatten
+  val parseAbotypen = {
+    parse("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv")) {
+      indexes =>
+        row =>
+          //match column indexes
+          val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktiv) = indexes
+
+          (AbotypId(UUID.randomUUID),
+            AbotypModify(
+              name = row.value(indexName),
+              beschreibung = row.value(indexBeschreibung),
+              lieferrhythmus = Rhythmus(row.value(indexlieferrhytmus)),
+              enddatum = None,
+              anzahlLieferungen = None,
+              anzahlAbwesenheiten = None,
+              preis = new BigDecimal(row.value(indexPreis)),
+              preiseinheit = Preiseinheit(row.value(indexPreiseinheit)),
+              aktiv = row.value(indexAktiv),
+              waehrung = CHF,
+              //TODO: parse vertriebsarten as well
+              vertriebsarten = Set()))
+    }
+  }
+
+  def parse[E, I <: BaseId](idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => (I, E)) = {
+    name: String =>
+      table: Table =>
+        log.debug(s"Parse $name")
+        //rest id mapping
+        var idMapping = Map[Int, I]()
+
+        val rows = table.getRowList().toList.take(1000)
+        val header = rows.head
+        val data = rows.tail
+
+        //match column indexes
+        val indexes = columnIndexes(header, name, Seq(idCol) ++ colNames)
+        val indexId = indexes.head
+        val otherIndexes = indexes.tail
+
+        ((for {
+          row <- data
+        } yield {
+          val optId = row.value[Option[Int]](indexId)
+          optId.map { id =>
+            val (entityId, entity) = entityFactory(otherIndexes)(row)
+
+            idMapping = idMapping + (id -> entityId)
+            Some(ImportEntityResult(entityId, entity))
+          }.getOrElse(None)
+        }).flatten, idMapping)
   }
 
   def columnIndexes(header: Row, sheet: String, names: Seq[String], maxCols: Option[Int] = None) = {
