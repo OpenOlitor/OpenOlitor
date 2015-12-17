@@ -56,6 +56,10 @@ trait StammdatenReadRepository {
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
 }
 
+trait StammdatenWriteRepository extends BaseWriteRepository {
+  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
+}
+
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
 
   lazy val aboTyp = abotypMapping.syntax("atyp")
@@ -169,10 +173,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       p <- getPostlieferungAbos
     } yield d ::: h ::: p
   }
-}
-
-trait StammdatenWriteRepository extends BaseWriteRepository {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
