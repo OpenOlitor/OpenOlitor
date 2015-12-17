@@ -34,7 +34,9 @@ object DBEvent2UserMapping extends DefaultJsonProtocol {
 
   implicit def dbEventCreateWriter[E <: BaseEntity[_ <: BaseId]](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
     def write(obj: DBEvent[E]): JsValue =
-      JsObject("type" -> JsString(obj.productPrefix), obj.entity.productPrefix -> writer.write(obj.entity))
+      JsObject("type" -> JsString(obj.productPrefix),
+        "entity" -> JsString(obj.entity.productPrefix),
+        "data" -> writer.write(obj.entity))
   }
 }
 
