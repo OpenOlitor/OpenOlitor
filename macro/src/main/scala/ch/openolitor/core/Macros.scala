@@ -86,8 +86,16 @@ object Macros {
       case p if keys.contains(p.name.decodedName.toString) =>
         keys.get(p.name.decodedName.toString).map {
           case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
-            //must by instance of typeapply
-            value.asInstanceOf[Ident]
+            //convert to accordingly tree type
+            if (value.isInstanceOf[TypeApply]) {
+            	value.asInstanceOf[TypeApply]
+            }
+            else if(value.isInstanceOf[RefTree]){
+              value.asInstanceOf[RefTree]
+            } 
+            else {
+              c.abort(c.enclosingPosition, s"Unknown value type found for value $value -> ${value.getClass}!")
+            }
         }.getOrElse {
           c.abort(c.enclosingPosition, s"No eligible param found $p!")
         }
