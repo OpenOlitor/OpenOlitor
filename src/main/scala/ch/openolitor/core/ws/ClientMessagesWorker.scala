@@ -27,7 +27,9 @@ import akka.actor._
 import spray.can.websocket
 import spray.can.websocket.frame.{ BinaryFrame, TextFrame }
 import spray.http._
-import spray.can.websocket.FrameCommandFailed
+import spray.can.websocket._
+import spray.can.websocket.{ Send, SendStream, UpgradedToWebSocket }
+import akka.util.ByteString
 
 object ClientMessagesWorker {
   case class Push(msg: String)
@@ -35,26 +37,40 @@ object ClientMessagesWorker {
   def props(serverConnection: ActorRef) = Props(classOf[ClientMessagesWorker], serverConnection)
 }
 class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
-  override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
   import ClientMessagesWorker._
 
   def businessLogic: Receive = {
 
-    case Push(msg) => send(TextFrame(msg))
+    case Push(msg) =>
+      log.debug(s"Push to client:$msg")
+      send(TextFrame(msg))
     // just bounce frames back for Autobahn testsuite
-    case x @ (_: BinaryFrame | _: TextFrame) =>
-      sender() ! x
+    case x: BinaryFrame =>
+      log.debug(s"Got from binary data:$x")
+    case x: TextFrame =>
+      val msg = x.payload.decodeString("UTF-8")
+      log.debug(s"Got from client:$msg")
+    //TODO: handle client messages internally
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
 
     case x: HttpRequest => // do something
+      log.debug(s"Got http request:$x")
+    case x =>
+      log.debug(s"Got another message:$x")
+      send(TextFrame(s"""{
+          "type": "Upgraded", 
+          "time": ${System.currentTimeMillis}
+      }"""))
   }
 
   def businessLogicNoUpgrade: Receive = {
-    implicit val refFactory: ActorRefFactory = context
-    runRoute {
-      getFromResourceDirectory("/")
-    }
+    case x =>
+      log.debug(s"businessLogicNoUpgrade:$x")
+      implicit val refFactory: ActorRefFactory = context
+      runRoute {
+        getFromResourceDirectory("/")
+      }
   }
 }

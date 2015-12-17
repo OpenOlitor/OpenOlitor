@@ -80,14 +80,14 @@ class ClientMessagesServer extends Actor with ActorLogging {
   def receive = {
     // when a new connection comes in we register a WebSocketConnection actor as the per connection handler
     case Http.Connected(remoteAddress, localAddress) =>
+      log.debug(s"Connected to websocket:$remoteAddress, $localAddress")
       val serverConnection = sender()
 
       //...how to we get userid?
       val userId = Boot.systemUserId
 
-      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), actorName(userId))
+      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), actorName(userId) + "-" + System.currentTimeMillis)
       serverConnection ! Http.Register(conn)
-
     case SendToClient(senderUserId, msg, Nil) =>
       //broadcast to all      
       log.debug(s"Broadcast client message:$msg")
@@ -96,7 +96,10 @@ class ClientMessagesServer extends Actor with ActorLogging {
       //send to specific clients only
       log.debug(s"send client message:$msg:$receivers")
       receivers.map { receiver =>
-        context.child(actorName(receiver)).map(_ ! Push(msg))
+        val name = actorName(receiver)
+        context.children.filter(_.path.name.startsWith(name)).map(_ ! Push(msg))
       }
+    case x =>
+      log.debug(s"Received unkown event:$x")
   }
 }

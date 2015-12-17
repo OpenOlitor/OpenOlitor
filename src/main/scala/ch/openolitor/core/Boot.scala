@@ -27,6 +27,7 @@ import akka.actor.{ ActorSystem, Props, ActorRef }
 import akka.pattern.ask
 import akka.io.IO
 import spray.can.Http
+import spray.can.server.UHttp
 import akka.util.Timeout
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -127,11 +128,11 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler
-      IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.port)
+      IO(UHttp) ? Http.Bind(service, interface = cfg.interface, port = cfg.port)
       logger.debug(s"oo-system: configured listener on port ${cfg.port}")
 
       //start new websocket service
-      IO(Http) ? Http.Bind(service, interface = cfg.interface, port = cfg.wsPort)
+      IO(UHttp) ? Http.Bind(clientMessages, interface = cfg.interface, port = cfg.wsPort)
       logger.debug(s"oo-system: configured ws listener on port ${cfg.wsPort}")
     }
   }
