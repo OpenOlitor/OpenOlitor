@@ -62,6 +62,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createPerson(id, person)
     case EntityInsertedEvent(meta, id, depot: DepotModify) =>
       createDepot(id, depot)
+    case EntityInsertedEvent(meta, id, abo: AboModify) =>
+      createAbo(id, abo)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
@@ -101,6 +103,16 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val depot = Depot(DepotId(id), create.name, create.apName, create.apVorname, create.apTelefon, create.apEmail, create.vName, create.vVorname, create.vTelefon, create.vEmail, create.strasse, create.hausNummer, create.plz, create.ort, create.aktiv, create.oeffnungszeiten, create.iban, create.bank, create.beschreibung, 0, 0)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(depot)
+    }
+  }
+
+  def createAbo(id: UUID, create: AboModify) = {
+    val abo = create match {
+      case DepotlieferungAboModify(personId, personName, personVorname, abotypId, abotypName, depotId, depotName, lieferzeitpunkt) =>
+        DepotlieferungAbo(AboId(id), personId, personName, personVorname, abotypId, abotypName, depotId, depotName, lieferzeitpunkt)
+    }
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(abo)
     }
   }
 }

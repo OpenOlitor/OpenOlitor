@@ -53,6 +53,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val abotypIdPath = string2BaseIdPathMatcher[AbotypId](AbotypId.apply)
   implicit val personIdPath = string2BaseIdPathMatcher[PersonId](PersonId.apply)
   implicit val depotIdPath = string2BaseIdPathMatcher[DepotId](DepotId.apply)
+  implicit val aboIdPath = string2BaseIdPathMatcher[AboId](AboId.apply)
 
   import StammdatenJsonProtocol._
   import EntityStore._
@@ -73,7 +74,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           delete(remove(id))
       } ~
       path("personen" / personIdPath / "abos") { personId =>
-        post(create[DepotlieferungAboModify, AboId](AboId.apply _))
+        post(create[AboModify, AboId](AboId.apply _))
+      } ~
+      path("personen" / personIdPath / "abos" / aboIdPath) { (personId, aboId) =>
+        get(detail(readRepository.getAboDetail(aboId))) ~
+          delete(remove(aboId))
       }
 
   lazy val aboTypenRoute =

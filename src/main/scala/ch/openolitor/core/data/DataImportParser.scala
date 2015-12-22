@@ -138,15 +138,20 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseAbos(personIdMapping: Map[Int, PersonId], abotypIdMapping: Map[Int, AbotypId], depotIdMapping: Map[Int, DepotId]) = {
-    parse("personId", Seq("personId", "abotypId", "depotId")) {
+    parse("personId", Seq("personId", "personName", "personVorname", "abotypId", "abotypName", "depotId", "depotName")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(personIdIndex, abotypIdIndex, depotIdIndex) = indexes
+          val Seq(personIdIndex, personNameIndex, personVornameIndex, abotypIdIndex, abotypNameIndex, depotIdIndex, depotNameIndex) = indexes
 
           val personIdInt = row.value[Int](personIdIndex)
           val abotypIdInt = row.value[Int](abotypIdIndex)
           val depotIdOpt = row.value[Option[Int]](depotIdIndex)
+
+          val personName = row.value[String](personNameIndex)
+          val personVorname = row.value[String](personVornameIndex)
+          val abotypName = row.value[String](abotypNameIndex)
+          val depotName = row.value[String](abotypNameIndex)
 
           val personId = personIdMapping.getOrElse(personIdInt, sys.error(s"Person id personIdInt referenced from abo not found"))
           val abotypId = abotypIdMapping.getOrElse(abotypIdInt, sys.error(s"Abotyp id $abotypIdInt referenced from abo not found"))
@@ -155,7 +160,7 @@ class DataImportParser extends Actor with ActorLogging {
 
             //TODO: read lieferzeitpunkt
             (AboId(UUID.randomUUID),
-              DepotlieferungAboModify(personId, abotypId, depotId, Montag).asInstanceOf[AboModify])
+              DepotlieferungAboModify(personId, personName, personVorname, abotypId, abotypName, depotId, depotName, Montag).asInstanceOf[AboModify])
           }.getOrElse(sys.error(s"Unknown abotyp: no depot specified"))
     }
   }
@@ -245,19 +250,19 @@ object DataImportParser {
       (typ match {
         case t if t =:= typeOf[Boolean] => self.getStringValue match {
           case "true" | "1" | "x" | "X" => true
-          case "false" | "0" => false
-          case x => sys.error(s"Unsupported boolean format:$x")
+          case "false" | "0"            => false
+          case x                        => sys.error(s"Unsupported boolean format:$x")
         }
 
-        case t if t =:= typeOf[String] => self.getStringValue
+        case t if t =:= typeOf[String]         => self.getStringValue
         case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
-        case t if t =:= typeOf[Double] => self.getStringValue.toDouble
-        case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
-        case t if t =:= typeOf[Date] => self.getDateValue
-        case t if t =:= typeOf[Int] => self.getStringValue.toInt
-        case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
-        case t if t =:= typeOf[Float] => self.getStringValue.toFloat
-        case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
+        case t if t =:= typeOf[Double]         => self.getStringValue.toDouble
+        case t if t =:= typeOf[BigDecimal]     => BigDecimal(self.getStringValue.toDouble)
+        case t if t =:= typeOf[Date]           => self.getDateValue
+        case t if t =:= typeOf[Int]            => self.getStringValue.toInt
+        case t if t =:= typeOf[Option[Int]]    => getStringOptionValue.map(_.toInt)
+        case t if t =:= typeOf[Float]          => self.getStringValue.toFloat
+        case t if t =:= typeOf[Option[Float]]  => self.getStringOptionValue.map(_.toFloat)
         case _ =>
           sys.error(s"Unsupported format:$typ")
       }).asInstanceOf[T]

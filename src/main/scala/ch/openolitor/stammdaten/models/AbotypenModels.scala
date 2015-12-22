@@ -89,6 +89,8 @@ case class Abotyp(id: AbotypId,
                   letzteLieferung: Option[DateTime],
                   waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
 
+case class AbotypSummary(id: AbotypId, name: String) extends Product
+
 case class AbotypModify(
   name: String,
   beschreibung: Option[String],

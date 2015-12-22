@@ -94,6 +94,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val abotypFormat = jsonFormat13(Abotyp.apply)
   implicit val abotypDetailFormat = jsonFormat14(AbotypDetail.apply)
   implicit val abotypUpdateFormat = jsonFormat11(AbotypModify.apply)
+  implicit val abotypSummaryFormat = jsonFormat2(AbotypSummary.apply)
 
   implicit val personentypFormat = new JsonFormat[Personentyp] {
     def write(obj: Personentyp): JsValue =
@@ -108,18 +109,37 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       }
   }
 
-  implicit val person = jsonFormat14(Person.apply)
+  implicit val personFormat = jsonFormat14(Person.apply)
   implicit val personUpdateOrCreate = jsonFormat13(PersonModify.apply)
+  implicit val personSummaryFormat = jsonFormat3(PersonSummary.apply)
 
   implicit val depotaboFormat = jsonFormat9(DepotlieferungAbo.apply)
-  implicit val depotaboModifyFormat = jsonFormat4(DepotlieferungAboModify.apply)
+  implicit val depotaboModifyFormat = jsonFormat8(DepotlieferungAboModify.apply)
   implicit val heimlieferungAboFormat = jsonFormat9(HeimlieferungAbo.apply)
   implicit val postlieferungAboFormat = jsonFormat7(PostlieferungAbo.apply)
 
-  implicit val aboFormat = new JsonFormat[Abo] {
+  implicit val aboFormat = new RootJsonFormat[Abo] {
     def write(obj: Abo): JsValue =
-      JsString(obj.productPrefix)
+      obj match {
+        case d: DepotlieferungAbo => d.toJson
+        case h: HeimlieferungAbo  => h.toJson
+        case p: PostlieferungAbo  => p.toJson
+        case _                    => JsObject()
+      }
 
     def read(json: JsValue): Abo = ???
+  }
+
+  implicit val aboModifyFormat = new RootJsonFormat[AboModify] {
+    def write(obj: AboModify): JsValue =
+      JsString(obj.productPrefix)
+
+    def read(json: JsValue): AboModify = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[DepotlieferungAboModify]
+      } else {
+        sys.error(s"Unknown AboModify for: $json")
+      }
+    }
   }
 }

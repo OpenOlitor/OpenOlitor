@@ -29,38 +29,49 @@ import java.util.UUID
 case class AboId(id: UUID) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId]
-sealed trait AboModify
+
+sealed trait AboModify extends Product {
+  val personId: PersonId
+  val personName: String
+  val personVorname: String
+  val abotypId: AbotypId
+  val abotypName: String
+}
 
 case class DepotlieferungAbo(id: AboId,
-  personId: PersonId,
-  personName: String,
-  personVorname: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  depotId: DepotId,
-  depotName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+                             personId: PersonId,
+                             personName: String,
+                             personVorname: String,
+                             abotypId: AbotypId,
+                             abotypName: String,
+                             depotId: DepotId,
+                             depotName: String,
+                             lieferzeitpunkt: Lieferzeitpunkt) extends Abo
 
 case class DepotlieferungAboModify(personId: PersonId,
-  abotypId: AbotypId,
-  depotId: DepotId,
-  lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
+                                   personName: String,
+                                   personVorname: String,
+                                   abotypId: AbotypId,
+                                   abotypName: String,
+                                   depotId: DepotId,
+                                   depotName: String,
+                                   lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
 
 case class HeimlieferungAbo(id: AboId,
-  personId: PersonId,
-  personName: String,
-  personVorname: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  tourId: TourId,
-  tourName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+                            personId: PersonId,
+                            personName: String,
+                            personVorname: String,
+                            abotypId: AbotypId,
+                            abotypName: String,
+                            tourId: TourId,
+                            tourName: String,
+                            lieferzeitpunkt: Lieferzeitpunkt) extends Abo
 
 case class PostlieferungAbo(id: AboId,
-  personId: PersonId,
-  personName: String,
-  personVorname: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+                            personId: PersonId,
+                            personName: String,
+                            personVorname: String,
+                            abotypId: AbotypId,
+                            abotypName: String,
+                            lieferzeitpunkt: Lieferzeitpunkt) extends Abo
 

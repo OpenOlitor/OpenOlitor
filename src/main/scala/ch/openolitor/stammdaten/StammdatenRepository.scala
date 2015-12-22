@@ -54,6 +54,7 @@ trait StammdatenReadRepository {
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
+  def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]]
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
@@ -171,7 +172,41 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       d <- getDepotlieferungAbos
       h <- getHeimlieferungAbos
       p <- getPostlieferungAbos
-    } yield d ::: h ::: p
+    } yield {
+      d ::: h ::: p
+    }
+  }
+
+  def getDepotlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotlieferungAbo]] = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.eq(depotlieferungAbo.id, parameter(id))
+    }.map(depotlieferungAboMapping(depotlieferungAbo)).single.future
+  }
+
+  def getHeimlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[HeimlieferungAbo]] = {
+    withSQL {
+      select
+        .from(heimlieferungAboMapping as heimlieferungAbo)
+        .where.eq(heimlieferungAbo.id, parameter(id))
+    }.map(heimlieferungAboMapping(heimlieferungAbo)).single.future
+  }
+
+  def getPostlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostlieferungAbo]] = {
+    withSQL {
+      select
+        .from(postlieferungAboMapping as postlieferungAbo)
+        .where.eq(postlieferungAbo.id, parameter(id))
+    }.map(postlieferungAboMapping(postlieferungAbo)).single.future
+  }
+
+  def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]] = {
+    for {
+      d <- getDepotlieferungAbo(id)
+      h <- getHeimlieferungAbo(id)
+      p <- getPostlieferungAbo(id)
+    } yield (d orElse h orElse p)
   }
 }
 
