@@ -73,7 +73,7 @@ object Macros {
 
     val keys: Map[String, Tree] = mapping.map(_.tree).flatMap {
       case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
-        c.info(c.enclosingPosition, s"Found mapping for key typ:$typ:${typ.getClass}, key $name, ${name.getClass}, valueTyp $valueTyp, ${valueTyp.getClass} and value $value, ${value.getClass}", false)
+        c.echo(c.enclosingPosition, s"Found mapping for key typ:$typ:${typ.getClass}, key $name, ${name.getClass}, valueTyp $valueTyp, ${valueTyp.getClass} and value $value, ${value.getClass}")
         val Literal(Constant(key)) = name
         Some(key.asInstanceOf[String], n)
       case m =>
@@ -101,7 +101,7 @@ object Macros {
         }
       case p => c.abort(c.enclosingPosition, s"No eligible param found $p!")
     }
-    c.info(c.enclosingPosition, s"CopyTo: $companionObject($applyParams)", false)
+    c.echo(c.enclosingPosition, s"CopyTo: $companionObject($applyParams)")
 
     c.Expr[D] { q"$companionObject(..$applyParams)" }
   }

@@ -66,6 +66,15 @@ case class HeimlieferungAbo(id: AboId,
                             tourId: TourId,
                             tourName: String,
                             lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+                            
+case class HeimlieferungAboModify(personId: PersonId,
+                            personName: String,
+                            personVorname: String,
+                            abotypId: AbotypId,
+                            abotypName: String,
+                            tourId: TourId,
+                            tourName: String,
+                            lieferzeitpunkt: Lieferzeitpunkt) extends AboModify                            
 
 case class PostlieferungAbo(id: AboId,
                             personId: PersonId,
@@ -74,4 +83,11 @@ case class PostlieferungAbo(id: AboId,
                             abotypId: AbotypId,
                             abotypName: String,
                             lieferzeitpunkt: Lieferzeitpunkt) extends Abo
+                            
+case class PostlieferungAboModify(personId: PersonId,
+                            personName: String,
+                            personVorname: String,
+                            abotypId: AbotypId,
+                            abotypName: String,
+                            lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
 
