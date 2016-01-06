@@ -1,6 +1,6 @@
 #MariaDB (https://mariadb.org/)
 
-FROM phusion/baseimage:0.9.10
+FROM phusion/baseimage:0.9.18
 MAINTAINER me <me>
 
 # Ensure UTF-8
