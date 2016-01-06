@@ -23,6 +23,7 @@
 package ch.openolitor.stammdaten
 
 import ch.openolitor.core._
+
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
@@ -35,6 +36,7 @@ import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models.AbotypModify
 import shapeless.LabelledGeneric
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -71,7 +73,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         val copy = copyFrom(abotyp, update)
         writeRepository.updateEntity[Abotyp, AbotypId](copy)
 
-        //TODO: update vertriebsarten mapping
+        //remove all existing vertriebsarten
+        writeRepository.removeVertriebsarten(id)
+        
+        //reassign vertriebsarten
+        writeRepository.attachVertriebsarten(id, update.vertriebsarten)
       }
     }
   }

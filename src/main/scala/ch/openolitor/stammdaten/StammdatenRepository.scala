@@ -59,6 +59,21 @@ trait StammdatenReadRepository {
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
+  
+  /**
+   * Entfernt alle Betriebsarten welche zu einem Abotypen zugewiesen sind
+   */
+  def removeVertriebsarten(abotypId: AbotypId)(implicit session: DBSession)
+  
+  /**
+   * Fügt alle Vertriebsarten detail zu einem Abotypen hinzu
+   */
+   def attachVertriebsarten(abotypId: AbotypId, vertriebsarten:Set[Vertriebsartdetail])
+    (implicit session: DBSession, 
+        syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
+        syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
+        syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
+      user: UserId)
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
@@ -257,5 +272,30 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
 
       logger.debug(s"oo-system: cleanupDatabase - end")
     }
+  }
+  
+  def removeVertriebsarten(abotypId: AbotypId)(implicit session: DBSession) = {
+    withSQL {delete.from(depotlieferungMapping).where.eq(depotlieferungMapping.column.abotypId, abotypId)}.update.apply()
+    withSQL {delete.from(postlieferungMapping).where.eq(postlieferungMapping.column.abotypId, abotypId)}.update.apply()
+    withSQL {delete.from(heimlieferungMapping).where.eq(heimlieferungMapping.column.abotypId, abotypId)}.update.apply()
+  }
+  
+  def attachVertriebsarten(abotypId: AbotypId, vertriebsarten:Set[Vertriebsartdetail])
+    (implicit session: DBSession, 
+        syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
+        syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
+        syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
+      user: UserId) = {
+    //insert vertriebsarten
+      vertriebsarten.map {
+        _ match {
+          case pd: PostlieferungDetail =>
+            insertEntity(Postlieferung(VertriebsartId(), abotypId, pd.liefertage))
+          case dd: DepotlieferungDetail =>
+            insertEntity(Depotlieferung(VertriebsartId(), abotypId, dd.depot.id, dd.liefertage))
+          case hd: HeimlieferungDetail =>
+            insertEntity(Heimlieferung(VertriebsartId(), abotypId, hd.tour.id, hd.liefertage))
+        }
+      }
   }
 }
