@@ -48,7 +48,7 @@ trait StammdatenReadRepository {
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
 
   def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
-  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]]
+  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PersonDetail]]
 
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]]
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
@@ -91,12 +91,24 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(personMapping(person)).list.future
   }
 
-  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]] = {
+  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PersonDetail]] = {
     withSQL {
       select
         .from(personMapping as person)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(person.id, depotlieferungAbo.personId)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(person.id, heimlieferungAbo.personId)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(person.id, postlieferungAbo.personId)
         .where.eq(person.id, parameter(id))
-    }.map(personMapping(person)).single.future
+    }.one(personMapping(person))
+      .toManies(
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs))
+      .map({ (person, pl, hl, dl) =>
+        val abos = pl ++ hl ++ dl
+
+        copyTo[Person, PersonDetail](person, "abos" -> abos)
+      }).single.future
   }
 
   override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {

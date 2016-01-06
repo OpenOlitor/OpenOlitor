@@ -38,19 +38,35 @@ object Personentyp {
 
 case class PersonId(id: UUID) extends BaseId
 case class Person(id: PersonId,
-                  name: String,
-                  vorname: String,
-                  strasse: String,
-                  hausNummer: Option[String],
-                  adressZusatz: Option[String],
-                  plz: String,
-                  ort: String,
-                  email: String,
-                  emailAlternative: Option[String],
-                  telefon: Option[String],
-                  telefonAlternative: Option[String],
-                  bemerkungen: Option[String],
-                  typen: Set[Personentyp]) extends BaseEntity[PersonId]
+  name: String,
+  vorname: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  email: String,
+  emailAlternative: Option[String],
+  telefon: Option[String],
+  telefonAlternative: Option[String],
+  bemerkungen: Option[String],
+  typen: Set[Personentyp]) extends BaseEntity[PersonId]
+
+case class PersonDetail(id: PersonId,
+  name: String,
+  vorname: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  email: String,
+  emailAlternative: Option[String],
+  telefon: Option[String],
+  telefonAlternative: Option[String],
+  bemerkungen: Option[String],
+  typen: Set[Personentyp],
+  abos: Seq[Abo]) extends BaseEntity[PersonId]
 
 case class PersonSummary(id: PersonId, name: String, vorname: String) extends Product
 
