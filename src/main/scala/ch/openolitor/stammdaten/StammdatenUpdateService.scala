@@ -43,7 +43,7 @@ object StammdatenUpdateService {
 }
 
 class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
+  extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
@@ -58,7 +58,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(id, entity)
     case EntityUpdatedEvent(meta, id: PersonId, entity: PersonModify) => updatePerson(id, entity)
-    case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify)   => updateDepot(id, entity)
+    case EntityUpdatedEvent(meta, id: KundeId, entity: KundeModify) => updateKunde(id, entity)
+    case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
@@ -69,15 +70,24 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       writeRepository.getById(abotypMapping, id) map { abotyp =>
         //map all updatable fields
-
         val copy = copyFrom(abotyp, update)
         writeRepository.updateEntity[Abotyp, AbotypId](copy)
 
         //remove all existing vertriebsarten
         writeRepository.removeVertriebsarten(id)
-        
+
         //reassign vertriebsarten
         writeRepository.attachVertriebsarten(id, update.vertriebsarten)
+      }
+    }
+  }
+
+  def updateKunde(id: KundeId, update: KundeModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(kundeMapping, id) map { kunde =>
+        //map all updatable fields
+        val copy = copyFrom(kunde, update)
+        writeRepository.updateEntity[Kunde, KundeId](copy)
       }
     }
   }
@@ -87,20 +97,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       writeRepository.getById(personMapping, id) map { person =>
         //map all updatable fields
         val copy = copyFrom(person, update)
-
-        //map to abotyp
         writeRepository.updateEntity[Person, PersonId](copy)
       }
     }
   }
-  
+
   def updateDepot(id: DepotId, update: DepotModify) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(depotMapping, id) map { depot =>
         //map all updatable fields
         val copy = copyFrom(depot, update)
-
-        //map to abotyp
         writeRepository.updateEntity[Depot, DepotId](copy)
       }
     }

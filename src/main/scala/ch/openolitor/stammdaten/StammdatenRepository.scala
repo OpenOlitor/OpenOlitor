@@ -47,8 +47,10 @@ trait StammdatenReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
 
-  def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
-  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PersonDetail]]
+  def getKunden(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kunde]]
+  def getKundeDetail(id: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KundeDetail]]
+
+  def getPersonen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
 
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]]
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
@@ -79,6 +81,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 
   lazy val aboTyp = abotypMapping.syntax("atyp")
   lazy val person = personMapping.syntax("pers")
+  lazy val kunde = kundeMapping.syntax("kunde")
   lazy val pl = postlieferungMapping.syntax("pl")
   lazy val dl = depotlieferungMapping.syntax("dl")
   lazy val depot = depotMapping.syntax("d")
@@ -97,32 +100,43 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(abotypMapping(aboTyp)).list.future
   }
 
-  def getPersonen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]] = {
+  def getKunden(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kunde]] = {
     withSQL {
       select
-        .from(personMapping as person)
-        .orderBy(person.name)
-    }.map(personMapping(person)).list.future
+        .from(kundeMapping as kunde)
+        .orderBy(kunde.bezeichnung)
+    }.map(kundeMapping(kunde)).list.future
   }
 
-  def getPersonDetail(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PersonDetail]] = {
+  def getKundeDetail(id: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KundeDetail]] = {
     withSQL {
       select
-        .from(personMapping as person)
-        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(person.id, depotlieferungAbo.personId)
-        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(person.id, heimlieferungAbo.personId)
-        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(person.id, postlieferungAbo.personId)
+        .from(kundeMapping as kunde)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(kunde.id, depotlieferungAbo.kundeId)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(kunde.id, heimlieferungAbo.kundeId)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(kunde.id, postlieferungAbo.kundeId)
+        .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
         .where.eq(person.id, parameter(id))
-    }.one(personMapping(person))
+        .orderBy(person.sort)
+    }.one(kundeMapping(kunde))
       .toManies(
         rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
-        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs))
-      .map({ (person, pl, hl, dl) =>
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => personMapping.opt(person)(rs))
+      .map({ (kunde, pl, hl, dl, personen) =>
         val abos = pl ++ hl ++ dl
 
-        copyTo[Person, PersonDetail](person, "abos" -> abos)
+        copyTo[Kunde, KundeDetail](kunde, "abos" -> abos, "ansprechpersonen" -> personen)
       }).single.future
+  }
+
+  def getPersonen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]] = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .orderBy(person.sort)
+    }.map(personMapping(person)).list.future
   }
 
   override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {
@@ -250,6 +264,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"drop table if exists ${depotMapping.table}".execute.apply()
       sql"drop table if exists ${tourMapping.table}".execute.apply()
       sql"drop table if exists ${abotypMapping.table}".execute.apply()
+      sql"drop table if exists ${kundeMapping.table}".execute.apply()
       sql"drop table if exists ${personMapping.table}".execute.apply()
       sql"drop table if exists ${depotlieferungAboMapping.table}".execute.apply()
       sql"drop table if exists ${heimlieferungAboMapping.table}".execute.apply()
@@ -264,10 +279,11 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), ap_email varchar(100), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), v_email varchar(100), strasse varchar(50), haus_nummer varchar(10), plz varchar(4) not null, ort varchar(50) not null, aktiv bit, oeffnungszeiten varchar(200), iban varchar(30), bank varchar(50), beschreibung varchar(200), anzahl_abonnenten_max int, anzahl_abonnenten int not null)".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
-      sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon varchar(50), telefon_alternative varchar(50), bemerkungen varchar(512), typen varchar(200), anzahl_abos int not null)".execute.apply()
-      sql"create table ${depotlieferungAboMapping.table}  (id varchar(36) not null,person_id varchar(36) not null, person_name varchar(50), person_vorname varchar(50), abotyp_id varchar(36) not null, abotyp_name varchar(50), depot_id varchar(36), depot_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
-      sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,person_id varchar(36) not null, person_name varchar(50), person_vorname varchar(50), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
-      sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,person_id varchar(36) not null, person_name varchar(50), person_vorname varchar(50), abotyp_id varchar(36) not null, abotyp_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
+      sql"create table ${kundeMapping.table} (id varchar(36) not null, bezeichnung varchar(50), strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(512), typen varchar(200), anzahl_abos int not null, anzahl_personen int not null)".execute.apply()
+      sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon_mobil varchar(50), telefon_festnetz varchar(50), bemerkungen varchar(512))".execute.apply()
+      sql"create table ${depotlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), depot_id varchar(36), depot_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
+      sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
+      sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
     }

@@ -48,6 +48,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val abotypIdFormat = baseIdFormat(AbotypId.apply)
   implicit val depotIdFormat = baseIdFormat(DepotId.apply)
   implicit val tourIdFormat = baseIdFormat(TourId.apply)
+  implicit val kundeIdFormat = baseIdFormat(KundeId.apply)
   implicit val personIdFormat = baseIdFormat(PersonId.apply)
   implicit val aboIdFormat = baseIdFormat(AboId.apply)
 
@@ -96,11 +97,11 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val abotypUpdateFormat = jsonFormat10(AbotypModify.apply)
   implicit val abotypSummaryFormat = jsonFormat2(AbotypSummary.apply)
 
-  implicit val personentypFormat = new JsonFormat[Personentyp] {
-    def write(obj: Personentyp): JsValue =
+  implicit val personentypFormat = new JsonFormat[Kundentyp] {
+    def write(obj: Kundentyp): JsValue =
       JsString(obj.productPrefix)
 
-    def read(json: JsValue): Personentyp =
+    def read(json: JsValue): Kundentyp =
       json match {
         case JsString("Vereinsmitglied") => Vereinsmitglied
         case JsString("Goenner") => Goenner
@@ -109,10 +110,10 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       }
   }
 
-  implicit val depotaboFormat = jsonFormat9(DepotlieferungAbo.apply)
-  implicit val depotaboModifyFormat = jsonFormat8(DepotlieferungAboModify.apply)
-  implicit val heimlieferungAboFormat = jsonFormat9(HeimlieferungAbo.apply)
-  implicit val postlieferungAboFormat = jsonFormat7(PostlieferungAbo.apply)
+  implicit val depotaboFormat = jsonFormat8(DepotlieferungAbo.apply)
+  implicit val depotaboModifyFormat = jsonFormat7(DepotlieferungAboModify.apply)
+  implicit val heimlieferungAboFormat = jsonFormat8(HeimlieferungAbo.apply)
+  implicit val postlieferungAboFormat = jsonFormat6(PostlieferungAbo.apply)
 
   implicit val aboFormat = new RootJsonFormat[Abo] {
     def write(obj: Abo): JsValue =
@@ -139,8 +140,10 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
     }
   }
 
-  implicit val personFormat = jsonFormat15(Person.apply)
-  implicit val personDetailFormat = jsonFormat16(PersonDetail.apply)
-  implicit val personUpdateOrCreate = jsonFormat13(PersonModify.apply)
-  implicit val personSummaryFormat = jsonFormat3(PersonSummary.apply)
+  implicit val personFormat = jsonFormat10(Person.apply)
+  implicit val personModifyFormat = jsonFormat8(PersonModify.apply)
+  implicit val kundeFormat = jsonFormat11(Kunde.apply)
+  implicit val kundeDetailFormat = jsonFormat13(KundeDetail.apply)
+  implicit val kundeModifyFormat = jsonFormat8(KundeModify.apply)
+  implicit val kundeSummaryFormat = jsonFormat2(KundeSummary.apply)
 }

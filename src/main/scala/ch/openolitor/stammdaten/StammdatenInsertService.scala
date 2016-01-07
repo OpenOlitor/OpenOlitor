@@ -23,8 +23,7 @@
 package ch.openolitor.stammdaten
 
 import ch.openolitor.core._
-
-import ch.openolitor.core.db.ConnectionPoolContextAware
+import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
@@ -34,6 +33,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import ch.openolitor.core.Macros._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -46,7 +46,7 @@ class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val syste
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
-class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent] with LazyLogging with ConnectionPoolContextAware
+class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent] with LazyLogging with AsyncConnectionPoolContextAware
   with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
@@ -60,6 +60,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createAbotyp(id, abotyp)
     case EntityInsertedEvent(meta, id, person: PersonModify) =>
       createPerson(id, person)
+    case EntityInsertedEvent(meta, id, kunde: KundeModify) =>
+      createKunde(id, kunde)
     case EntityInsertedEvent(meta, id, depot: DepotModify) =>
       createDepot(id, depot)
     case EntityInsertedEvent(meta, id, abo: AboModify) =>
@@ -86,13 +88,26 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createPerson(id: UUID, create: PersonModify) = {
-    val person = copyTo[PersonModify, Person](create,
-      "id" -> PersonId(id).asInstanceOf[PersonId],
-      "anzahlAbos" -> ZERO)
+  def createKunde(id: UUID, create: KundeModify) = {
+    val kunde = copyTo[KundeModify, Kunde](create,
+      "id" -> KundeId(id).asInstanceOf[KundeId],
+      "anzahlAbos" -> ZERO,
+      "anzahlPersonen" -> ZERO)
     DB autoCommit { implicit session =>
       //create abotyp
-      writeRepository.insertEntity(person)
+      writeRepository.insertEntity(kunde)
+    }
+  }
+
+  def createPerson(id: UUID, create: PersonModify) = {
+    readRepository.getPersonen(create.kundeId) map { personen =>
+      val nextSort = personen.last.sort + 1
+      val person = copyTo[PersonModify, Person](create,
+        "id" -> PersonId(id).asInstanceOf[PersonId],
+        "sort" -> nextSort)
+      DB autoCommit { implicit session =>
+        writeRepository.insertEntity(person)
+      }
     }
   }
 

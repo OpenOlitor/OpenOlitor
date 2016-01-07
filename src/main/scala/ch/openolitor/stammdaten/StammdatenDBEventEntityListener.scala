@@ -88,9 +88,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       log.debug(s"Add abonnent to abotyp:${abotyp.id}")
       abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten + 1)
     })
-    modifyEntity[Person, PersonId](abo.personId, { person =>
-      log.debug(s"Add abonnent to person:${person.id}")
-      person.copy(anzahlAbos = person.anzahlAbos + 1)
+    modifyEntity[Kunde, KundeId](abo.kundeId, { kunde =>
+      log.debug(s"Add abonnent to kunde:${kunde.id}")
+      kunde.copy(anzahlAbos = kunde.anzahlAbos + 1)
     })
   }
 
@@ -99,9 +99,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       log.debug(s"Remove abonnent from abotyp:${abotyp.id}")
       abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten - 1)
     })
-    modifyEntity[Person, PersonId](abo.personId, { person =>
-      log.debug(s"Remove abonnent from person:${person.id}")
-      person.copy(anzahlAbos = person.anzahlAbos - 1)
+    modifyEntity[Kunde, KundeId](abo.kundeId, { kunde =>
+      log.debug(s"Remove abonnent from kunde:${kunde.id}")
+      kunde.copy(anzahlAbos = kunde.anzahlAbos - 1)
     })
   }
 

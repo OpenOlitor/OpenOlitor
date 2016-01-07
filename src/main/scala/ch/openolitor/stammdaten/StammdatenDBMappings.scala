@@ -66,6 +66,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder[DepotId](DepotId.apply _)
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder[AbotypId](AbotypId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder[VertriebsartId](VertriebsartId.apply _)
+  implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder[KundeId](KundeId.apply _)
   implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder[PersonId](PersonId.apply _)
   implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder[AboId](AboId.apply _)
 
@@ -74,8 +75,8 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
-  implicit val personenTypBinder: TypeBinder[Option[Personentyp]] = string.map(Personentyp.apply)
-  implicit val personenTypSetBinder: TypeBinder[Set[Personentyp]] = string.map(s => s.split(",").map(Personentyp.apply).toSet.flatten)
+  implicit val personenTypBinder: TypeBinder[Option[Kundentyp]] = string.map(Kundentyp.apply)
+  implicit val personenTypSetBinder: TypeBinder[Set[Kundentyp]] = string.map(s => s.split(",").map(Kundentyp.apply).toSet.flatten)
 
   //DB parameter binders for write and query operations
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
@@ -88,8 +89,9 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
   implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
-  implicit val personenTypSqlBinder = toStringSqlBinder[Personentyp]
-  implicit val personenTypSetSqlBinder = setSqlBinder[Personentyp]
+  implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
+  implicit val personenTypSqlBinder = toStringSqlBinder[Kundentyp]
+  implicit val personenTypSetSqlBinder = setSqlBinder[Kundentyp]
   implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
@@ -119,6 +121,30 @@ trait StammdatenDBMappings extends DBMappings {
     }
   }
 
+  implicit val kundeMapping = new BaseEntitySQLSyntaxSupport[Kunde] {
+    override val tableName = "Kunde"
+
+    override lazy val columns = autoColumns[Kunde]()
+
+    def apply(rn: ResultName[Kunde])(rs: WrappedResultSet): Kunde =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Kunde): Seq[Any] =
+      parameters(Kunde.unapply(entity).get)
+
+    override def updateParameters(kunde: Kunde) = {
+      Seq(column.bezeichnung -> parameter(kunde.bezeichnung),
+        column.strasse -> parameter(kunde.strasse),
+        column.hausNummer -> parameter(kunde.hausNummer),
+        column.plz -> parameter(kunde.plz),
+        column.ort -> parameter(kunde.ort),
+        column.typen -> parameter(kunde.typen),
+        column.bemerkungen -> parameter(kunde.bemerkungen),
+        column.anzahlAbos -> parameter(kunde.anzahlAbos),
+        column.anzahlPersonen -> parameter(kunde.anzahlPersonen))
+    }
+  }
+
   implicit val personMapping = new BaseEntitySQLSyntaxSupport[Person] {
     override val tableName = "Person"
 
@@ -133,13 +159,9 @@ trait StammdatenDBMappings extends DBMappings {
     override def updateParameters(person: Person) = {
       Seq(column.name -> parameter(person.name),
         column.vorname -> parameter(person.vorname),
-        column.strasse -> parameter(person.strasse),
-        column.hausNummer -> parameter(person.hausNummer),
-        column.plz -> parameter(person.plz),
-        column.ort -> parameter(person.ort),
-        column.typen -> parameter(person.typen),
         column.email -> parameter(person.email),
-        column.anzahlAbos -> parameter(person.anzahlAbos))
+        column.bemerkungen -> parameter(person.bemerkungen),
+        column.sort -> parameter(person.sort))
     }
   }
 
@@ -234,9 +256,8 @@ trait StammdatenDBMappings extends DBMappings {
 
     override def updateParameters(depotlieferungAbo: DepotlieferungAbo) = {
       Seq(
-        column.personId -> parameter(depotlieferungAbo.personId),
-        column.personName -> parameter(depotlieferungAbo.personName),
-        column.personVorname -> parameter(depotlieferungAbo.personVorname),
+        column.kundeId -> parameter(depotlieferungAbo.kundeId),
+        column.kunde -> parameter(depotlieferungAbo.kunde),
         column.abotypId -> parameter(depotlieferungAbo.abotypId),
         column.abotypName -> parameter(depotlieferungAbo.abotypName),
         column.depotId -> parameter(depotlieferungAbo.depotId),
@@ -257,9 +278,8 @@ trait StammdatenDBMappings extends DBMappings {
 
     override def updateParameters(heimlieferungAbo: HeimlieferungAbo) = {
       Seq(
-        column.personId -> parameter(heimlieferungAbo.personId),
-        column.personName -> parameter(heimlieferungAbo.personName),
-        column.personVorname -> parameter(heimlieferungAbo.personVorname),
+        column.kundeId -> parameter(heimlieferungAbo.kundeId),
+        column.kunde -> parameter(heimlieferungAbo.kunde),
         column.abotypId -> parameter(heimlieferungAbo.abotypId),
         column.abotypName -> parameter(heimlieferungAbo.abotypName),
         column.tourId -> parameter(heimlieferungAbo.tourId),
@@ -280,9 +300,8 @@ trait StammdatenDBMappings extends DBMappings {
 
     override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
       Seq(
-        column.personId -> parameter(postlieferungAbo.personId),
-        column.personName -> parameter(postlieferungAbo.personName),
-        column.personVorname -> parameter(postlieferungAbo.personVorname),
+        column.kundeId -> parameter(postlieferungAbo.kundeId),
+        column.kunde -> parameter(postlieferungAbo.kunde),
         column.abotypId -> parameter(postlieferungAbo.abotypId),
         column.abotypName -> parameter(postlieferungAbo.abotypName),
         column.lieferzeitpunkt -> parameter(postlieferungAbo.lieferzeitpunkt))

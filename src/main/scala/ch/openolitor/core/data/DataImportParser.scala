@@ -47,39 +47,59 @@ class DataImportParser extends Actor with ActorLogging {
     val doc = SpreadsheetDocument.loadDocument(file)
 
     //parse all sections
-    val (personen, personIdMapping) = doc.withSheet("Personen")(parsePersonen)
+    val (kunden, kundeIdMapping) = doc.withSheet("Kunden")(parseKunden)
+    val (personen, personIdMapping) = doc.withSheet("Personen")(parsePersonen(kundeIdMapping))
     val (abotypen, abotypIdMapping) = doc.withSheet("Abotyp")(parseAbotypen)
     val (depots, depotIdMapping) = doc.withSheet("Depot")(parseDepots)
-    val (abos, _) = doc.withSheet("Abos")(parseAbos(personIdMapping, abotypIdMapping, depotIdMapping))
+    val (abos, _) = doc.withSheet("Abos")(parseAbos(kundeIdMapping, abotypIdMapping, depotIdMapping))
 
-    ImportResult(personen, abotypen, depots, abos)
+    ImportResult(kunden, personen, abotypen, depots, abos)
   }
 
-  val parsePersonen = {
-    parse("id", Seq("name", "vorname", "strasse", "hausNummer", "plz", "ort", "email", "emailAlternative",
-      "telefon", "telefonAlternative", "bemerkungen")) {
+  val parseKunden = {
+    parse("id", Seq("bezeichnung", "strasse", "hausNummer", "plz", "ort", "bemerkungen")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexVorname, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexEmail, indexEmailAlternative, indexTelefon, indexTelefonAlternative, indexBemerkungen) =
+          val Seq(indexBezeichnung, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexBemerkungen) =
             indexes
 
-          (PersonId(UUID.randomUUID),
-            PersonModify(
-              name = row.value[String](indexName),
-              vorname = row.value[String](indexVorname),
+          (KundeId(UUID.randomUUID),
+            KundeModify(
+              bezeichnung = row.value[Option[String]](indexBezeichnung),
               strasse = row.value[String](indexStrasse),
               hausNummer = row.value[Option[String]](indexHausNummer),
               adressZusatz = None,
               plz = row.value[String](indexPlz),
               ort = row.value[String](indexOrt),
-              email = row.value[String](indexEmail),
-              emailAlternative = row.value[Option[String]](indexEmailAlternative),
-              telefon = row.value[Option[String]](indexTelefon),
-              telefonAlternative = row.value[Option[String]](indexTelefonAlternative),
               bemerkungen = row.value[Option[String]](indexBemerkungen),
               //TODO: parse personentypen as well
               typen = Set(Vereinsmitglied)))
+    }
+  }
+
+  def parsePersonen(kundeIdMapping: Map[Int, KundeId]) = {
+    parse("id", Seq("kundeId", "name", "vorname", "email", "emailAlternative",
+      "telefonMobil", "telefonFestnetz", "bemerkungen")) {
+      indexes =>
+        row =>
+          //match column indexes
+          val Seq(kundeIdIndex, indexName, indexVorname, indexEmail, indexEmailAlternative, indexTelefonMobil, indexTelefonFestnetz, indexBemerkungen) =
+            indexes
+
+          val kundeIdInt = row.value[Int](kundeIdIndex)
+          val kundeId = kundeIdMapping.getOrElse(kundeIdInt, sys.error(s"Kunde id $kundeIdInt referenced from abo not found"))
+
+          (PersonId(UUID.randomUUID),
+            PersonModify(
+              kundeId = kundeId,
+              name = row.value[String](indexName),
+              vorname = row.value[String](indexVorname),
+              email = row.value[String](indexEmail),
+              emailAlternative = row.value[Option[String]](indexEmailAlternative),
+              telefonMobil = row.value[Option[String]](indexTelefonMobil),
+              telefonFestnetz = row.value[Option[String]](indexTelefonFestnetz),
+              bemerkungen = row.value[Option[String]](indexBemerkungen)))
     }
   }
 
@@ -137,30 +157,29 @@ class DataImportParser extends Actor with ActorLogging {
     }
   }
 
-  def parseAbos(personIdMapping: Map[Int, PersonId], abotypIdMapping: Map[Int, AbotypId], depotIdMapping: Map[Int, DepotId]) = {
-    parse("personId", Seq("personId", "personName", "personVorname", "abotypId", "abotypName", "depotId", "depotName")) {
+  def parseAbos(kundeIdMapping: Map[Int, KundeId], abotypIdMapping: Map[Int, AbotypId], depotIdMapping: Map[Int, DepotId]) = {
+    parse("kundeId", Seq("kundeId", "kunde", "abotypId", "abotypName", "depotId", "depotName")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(personIdIndex, personNameIndex, personVornameIndex, abotypIdIndex, abotypNameIndex, depotIdIndex, depotNameIndex) = indexes
+          val Seq(kundeIdIndex, kundeIndex, abotypIdIndex, abotypNameIndex, depotIdIndex, depotNameIndex) = indexes
 
-          val personIdInt = row.value[Int](personIdIndex)
+          val kundeIdInt = row.value[Int](kundeIdIndex)
           val abotypIdInt = row.value[Int](abotypIdIndex)
           val depotIdOpt = row.value[Option[Int]](depotIdIndex)
 
-          val personName = row.value[String](personNameIndex)
-          val personVorname = row.value[String](personVornameIndex)
+          val kunde = row.value[String](kundeIndex)
           val abotypName = row.value[String](abotypNameIndex)
           val depotName = row.value[String](abotypNameIndex)
 
-          val personId = personIdMapping.getOrElse(personIdInt, sys.error(s"Person id personIdInt referenced from abo not found"))
+          val kundeId = kundeIdMapping.getOrElse(kundeIdInt, sys.error(s"Kunde id $kundeIdInt referenced from abo not found"))
           val abotypId = abotypIdMapping.getOrElse(abotypIdInt, sys.error(s"Abotyp id $abotypIdInt referenced from abo not found"))
           depotIdOpt.map { depotIdInt =>
             val depotId = depotIdMapping.getOrElse(depotIdInt, sys.error(s"Dept id $depotIdInt referenced from abo not found"))
 
             //TODO: read lieferzeitpunkt
             (AboId(UUID.randomUUID),
-              DepotlieferungAboModify(personId, personName, personVorname, abotypId, abotypName, depotId, depotName, Montag).asInstanceOf[AboModify])
+              DepotlieferungAboModify(kundeId, kunde, abotypId, abotypName, depotId, depotName, Montag).asInstanceOf[AboModify])
           }.getOrElse(sys.error(s"Unknown abotyp: no depot specified"))
     }
   }
@@ -222,6 +241,7 @@ object DataImportParser {
   case class ParseSpreadsheet(file: File)
   case class ImportEntityResult[E, I <: BaseId](id: I, entity: E)
   case class ImportResult(
+    kunden: List[ImportEntityResult[KundeModify, KundeId]],
     personen: List[ImportEntityResult[PersonModify, PersonId]],
     abotypen: List[ImportEntityResult[AbotypModify, AbotypId]],
     depots: List[ImportEntityResult[DepotModify, DepotId]],
