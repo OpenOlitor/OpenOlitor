@@ -109,7 +109,8 @@ class DataImportParser extends Actor with ActorLogging {
               oeffnungszeiten = None,
               iban = None,
               bank = None,
-              beschreibung = None))
+              beschreibung = None,
+              anzahlAbonnentenMax = None))
     }
   }
 
@@ -131,7 +132,6 @@ class DataImportParser extends Actor with ActorLogging {
               preis = row.value[BigDecimal](indexPreis),
               preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
               aktiv = row.value[Boolean](indexAktiv),
-              waehrung = CHF,
               //TODO: parse vertriebsarten as well
               vertriebsarten = Set()))
     }
@@ -250,19 +250,19 @@ object DataImportParser {
       (typ match {
         case t if t =:= typeOf[Boolean] => self.getStringValue match {
           case "true" | "1" | "x" | "X" => true
-          case "false" | "0"            => false
-          case x                        => sys.error(s"Unsupported boolean format:$x")
+          case "false" | "0" => false
+          case x => sys.error(s"Unsupported boolean format:$x")
         }
 
-        case t if t =:= typeOf[String]         => self.getStringValue
+        case t if t =:= typeOf[String] => self.getStringValue
         case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
-        case t if t =:= typeOf[Double]         => self.getStringValue.toDouble
-        case t if t =:= typeOf[BigDecimal]     => BigDecimal(self.getStringValue.toDouble)
-        case t if t =:= typeOf[Date]           => self.getDateValue
-        case t if t =:= typeOf[Int]            => self.getStringValue.toInt
-        case t if t =:= typeOf[Option[Int]]    => getStringOptionValue.map(_.toInt)
-        case t if t =:= typeOf[Float]          => self.getStringValue.toFloat
-        case t if t =:= typeOf[Option[Float]]  => self.getStringOptionValue.map(_.toFloat)
+        case t if t =:= typeOf[Double] => self.getStringValue.toDouble
+        case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
+        case t if t =:= typeOf[Date] => self.getDateValue
+        case t if t =:= typeOf[Int] => self.getStringValue.toInt
+        case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
+        case t if t =:= typeOf[Float] => self.getStringValue.toFloat
+        case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
         case _ =>
           sys.error(s"Unsupported format:$typ")
       }).asInstanceOf[T]

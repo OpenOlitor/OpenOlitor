@@ -38,7 +38,7 @@ import scalaz.Scalaz._
 import com.typesafe.config.Config
 import ch.openolitor.core._
 import ch.openolitor.core.domain._
-import ch.openolitor.stammdaten.StammdatenEntityStoreView
+import ch.openolitor.stammdaten._
 import scalikejdbc.ConnectionPoolContext
 import ch.openolitor.core.db._
 import org.slf4j.Logger
@@ -108,6 +108,9 @@ object Boot extends App with LazyLogging {
       val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props, "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
+
+      //start actor listening on dbevents to modify calculated fields
+      val stammdatenDBEventListener = Await.result(system ? SystemActor.Child(StammdatenDBEventEntityListener.props, "stammdaten-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
 
       //start websocket service
       val clientMessages = Await.result(system ? SystemActor.Child(ClientMessagesServer.props, "ws-client-messages"), duration).asInstanceOf[ActorRef]

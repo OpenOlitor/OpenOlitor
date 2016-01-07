@@ -75,19 +75,19 @@ object Preiseinheit {
 case class AbotypId(id: UUID) extends BaseId
 
 case class Abotyp(id: AbotypId,
-                  name: String,
-                  beschreibung: Option[String],
-                  lieferrhythmus: Rhythmus,
-                  enddatum: Option[DateTime],
-                  anzahlLieferungen: Option[Int],
-                  anzahlAbwesenheiten: Option[Int],
-                  preis: BigDecimal,
-                  preiseinheit: Preiseinheit,
-                  aktiv: Boolean,
-                  //Zusatzinformationen
-                  anzahlAbonnenten: Int,
-                  letzteLieferung: Option[DateTime],
-                  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
+  name: String,
+  beschreibung: Option[String],
+  lieferrhythmus: Rhythmus,
+  enddatum: Option[DateTime],
+  anzahlLieferungen: Option[Int],
+  anzahlAbwesenheiten: Option[Int],
+  preis: BigDecimal,
+  preiseinheit: Preiseinheit,
+  aktiv: Boolean,
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  letzteLieferung: Option[DateTime],
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
 
 case class AbotypSummary(id: AbotypId, name: String) extends Product
 
@@ -101,23 +101,22 @@ case class AbotypModify(
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   vertriebsarten: Set[Vertriebsartdetail],
-  aktiv: Boolean,
-  waehrung: Waehrung = CHF)
+  aktiv: Boolean)
 
 case class AbotypDetail(id: AbotypId,
-                        name: String,
-                        beschreibung: Option[String],
-                        lieferrhythmus: Rhythmus,
-                        enddatum: Option[DateTime],
-                        anzahlLieferungen: Option[Int],
-                        anzahlAbwesenheiten: Option[Int],
-                        preis: BigDecimal,
-                        preiseinheit: Preiseinheit,
-                        aktiv: Boolean,
-                        vertriebsarten: Set[Vertriebsartdetail],
-                        anzahlAbonnenten: Int,
-                        letzteLieferung: Option[DateTime],
-                        waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
+  name: String,
+  beschreibung: Option[String],
+  lieferrhythmus: Rhythmus,
+  enddatum: Option[DateTime],
+  anzahlLieferungen: Option[Int],
+  anzahlAbwesenheiten: Option[Int],
+  preis: BigDecimal,
+  preiseinheit: Preiseinheit,
+  aktiv: Boolean,
+  vertriebsarten: Set[Vertriebsartdetail],
+  anzahlAbonnenten: Int,
+  letzteLieferung: Option[DateTime],
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
 
 case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
