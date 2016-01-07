@@ -59,21 +59,20 @@ trait StammdatenReadRepository {
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-  
+
   /**
    * Entfernt alle Betriebsarten welche zu einem Abotypen zugewiesen sind
    */
   def removeVertriebsarten(abotypId: AbotypId)(implicit session: DBSession)
-  
+
   /**
    * Fügt alle Vertriebsarten detail zu einem Abotypen hinzu
    */
-   def attachVertriebsarten(abotypId: AbotypId, vertriebsarten:Set[Vertriebsartdetail])
-    (implicit session: DBSession, 
-        syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
-        syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
-        syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
-      user: UserId)
+  def attachVertriebsarten(abotypId: AbotypId, vertriebsarten: Set[Vertriebsartdetail])(implicit session: DBSession,
+    syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
+    syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
+    syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
+    user: UserId)
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
@@ -265,7 +264,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), ap_email varchar(100), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), v_email varchar(100), strasse varchar(50), haus_nummer varchar(10), plz varchar(4) not null, ort varchar(50) not null, aktiv bit, oeffnungszeiten varchar(200), iban varchar(30), bank varchar(50), beschreibung varchar(200), anzahl_abonnenten_max int, anzahl_abonnenten int not null)".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
       sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
-      sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon varchar(50), telefon_alternative varchar(50), bemerkungen varchar(512), typen varchar(200))".execute.apply()
+      sql"create table ${personMapping.table} (id varchar(36) not null, name varchar(50) not null, vorname varchar(50) not null, strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon varchar(50), telefon_alternative varchar(50), bemerkungen varchar(512), typen varchar(200), anzahl_abos int not null)".execute.apply()
       sql"create table ${depotlieferungAboMapping.table}  (id varchar(36) not null,person_id varchar(36) not null, person_name varchar(50), person_vorname varchar(50), abotyp_id varchar(36) not null, abotyp_name varchar(50), depot_id varchar(36), depot_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
       sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,person_id varchar(36) not null, person_name varchar(50), person_vorname varchar(50), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
       sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,person_id varchar(36) not null, person_name varchar(50), person_vorname varchar(50), abotyp_id varchar(36) not null, abotyp_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
@@ -273,29 +272,28 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       logger.debug(s"oo-system: cleanupDatabase - end")
     }
   }
-  
+
   def removeVertriebsarten(abotypId: AbotypId)(implicit session: DBSession) = {
-    withSQL {delete.from(depotlieferungMapping).where.eq(depotlieferungMapping.column.abotypId, abotypId)}.update.apply()
-    withSQL {delete.from(postlieferungMapping).where.eq(postlieferungMapping.column.abotypId, abotypId)}.update.apply()
-    withSQL {delete.from(heimlieferungMapping).where.eq(heimlieferungMapping.column.abotypId, abotypId)}.update.apply()
+    withSQL { delete.from(depotlieferungMapping).where.eq(depotlieferungMapping.column.abotypId, abotypId) }.update.apply()
+    withSQL { delete.from(postlieferungMapping).where.eq(postlieferungMapping.column.abotypId, abotypId) }.update.apply()
+    withSQL { delete.from(heimlieferungMapping).where.eq(heimlieferungMapping.column.abotypId, abotypId) }.update.apply()
   }
-  
-  def attachVertriebsarten(abotypId: AbotypId, vertriebsarten:Set[Vertriebsartdetail])
-    (implicit session: DBSession, 
-        syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
-        syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
-        syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
-      user: UserId) = {
+
+  def attachVertriebsarten(abotypId: AbotypId, vertriebsarten: Set[Vertriebsartdetail])(implicit session: DBSession,
+    syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
+    syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
+    syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
+    user: UserId) = {
     //insert vertriebsarten
-      vertriebsarten.map {
-        _ match {
-          case pd: PostlieferungDetail =>
-            insertEntity(Postlieferung(VertriebsartId(), abotypId, pd.liefertage))
-          case dd: DepotlieferungDetail =>
-            insertEntity(Depotlieferung(VertriebsartId(), abotypId, dd.depot.id, dd.liefertage))
-          case hd: HeimlieferungDetail =>
-            insertEntity(Heimlieferung(VertriebsartId(), abotypId, hd.tour.id, hd.liefertage))
-        }
+    vertriebsarten.map {
+      _ match {
+        case pd: PostlieferungDetail =>
+          insertEntity(Postlieferung(VertriebsartId(), abotypId, pd.liefertage))
+        case dd: DepotlieferungDetail =>
+          insertEntity(Depotlieferung(VertriebsartId(), abotypId, dd.depot.id, dd.liefertage))
+        case hd: HeimlieferungDetail =>
+          insertEntity(Heimlieferung(VertriebsartId(), abotypId, hd.tour.id, hd.liefertage))
       }
+    }
   }
 }

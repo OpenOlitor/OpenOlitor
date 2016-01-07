@@ -29,6 +29,7 @@ import ch.openolitor.stammdaten.BaseEntitySQLSyntaxSupport
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
+import scala.util._
 
 case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
 
@@ -646,8 +647,11 @@ object BaseRepository extends LazyLogging {
 
 trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
 
+  type Validator[E] = E => Boolean
+  val TrueValidator: Validator[Any] = x => true
+
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
-                                                                                             binder: SqlBinder[I]): Option[E] = {
+    binder: SqlBinder[I]): Option[E] = {
     val alias = syntax.syntax("x")
     val idx = alias.id
     withSQL {
@@ -658,8 +662,8 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
   }
 
   def insertEntity[E <: BaseEntity[_ <: BaseId]](entity: E)(implicit session: DBSession,
-                                                            syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-                                                            user: UserId) = {
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    user: UserId) = {
     val params = syntaxSupport.parameterMappings(entity)
     logger.debug(s"create entity with values:$entity")
     withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
@@ -668,9 +672,9 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     publish(EntityCreated(user, entity))
   }
   def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit session: DBSession,
-                                                               syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-                                                               binder: SqlBinder[I],
-                                                               user: UserId) = {
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: UserId) = {
     val alias = syntaxSupport.syntax("x")
     val id = alias.id
     val updateParams = syntaxSupport.updateParameters(entity)
@@ -680,16 +684,31 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     publish(EntityModified(user, entity))
   }
 
-  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I)(implicit session: DBSession,
-                                                           syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-                                                           binder: SqlBinder[I],
-                                                           user: UserId) = {
-    logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
-    getById(syntaxSupport, id) map { entity =>
-      withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, parameter(id))).update.apply()
+  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Validator[E])(implicit session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: UserId): Boolean = {
+    deleteEntity[E, I](id, Some(validator))
+  }
 
-      //publish event to stream
-      publish(EntityDeleted(user, entity))
-    }
+  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Option[Validator[E]] = None)(implicit session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: UserId): Boolean = {
+    logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
+    getById(syntaxSupport, id).map { entity =>
+      val validation = validator.getOrElse(TrueValidator)
+      validation(entity) match {
+        case true =>
+          withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, parameter(id))).update.apply()
+
+          //publish event to stream
+          publish(EntityDeleted(user, entity))
+          true
+        case false =>
+          logger.debug(s"Couldn't delete from ${syntaxSupport.tableName}: $id, validation didn't succeed")
+          false
+      }
+    }.getOrElse(false)
   }
 }

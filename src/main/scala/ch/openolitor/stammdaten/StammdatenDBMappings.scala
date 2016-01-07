@@ -138,7 +138,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.plz -> parameter(person.plz),
         column.ort -> parameter(person.ort),
         column.typen -> parameter(person.typen),
-        column.email -> parameter(person.email))
+        column.email -> parameter(person.email),
+        column.anzahlAbos -> parameter(person.anzahlAbos))
     }
   }
 

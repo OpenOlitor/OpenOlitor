@@ -53,6 +53,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   //TODO: replace with credentials of logged in user
   implicit val userId = Boot.systemUserId
 
+  val ZERO = 0
+
   val handle: Handle = {
     case EntityInsertedEvent(meta, id, abotyp: AbotypModify) =>
       createAbotyp(id, abotyp)
@@ -71,7 +73,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createAbotyp(id: UUID, abotyp: AbotypModify) = {
 
     val typ = copyTo[AbotypModify, Abotyp](abotyp, "id" -> AbotypId(id).asInstanceOf[AbotypId],
-      "anzahlAbonnenten" -> 0.asInstanceOf[Int],
+      "anzahlAbonnenten" -> ZERO,
       "letzteLieferung" -> None,
       "waehrung" -> CHF)
 
@@ -86,7 +88,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createPerson(id: UUID, create: PersonModify) = {
     val person = copyTo[PersonModify, Person](create,
-      "id" -> PersonId(id).asInstanceOf[PersonId])
+      "id" -> PersonId(id).asInstanceOf[PersonId],
+      "anzahlAbos" -> ZERO)
     DB autoCommit { implicit session =>
       //create abotyp
       writeRepository.insertEntity(person)
@@ -96,7 +99,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createDepot(id: UUID, create: DepotModify) = {
     val depot = copyTo[DepotModify, Depot](create,
       "id" -> DepotId(id).asInstanceOf[DepotId],
-      "anzahlAbonnenten" -> 0.asInstanceOf[Int])
+      "anzahlAbonnenten" -> ZERO)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(depot)
     }

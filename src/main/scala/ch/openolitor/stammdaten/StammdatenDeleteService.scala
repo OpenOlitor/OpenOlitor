@@ -64,25 +64,20 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteAbotyp(id: AbotypId) = {
     DB autoCommit { implicit session =>
-      //TODO: check whether abotyp should get deleted or disabled
 
-      writeRepository.deleteEntity[Abotyp, AbotypId](id)
+      writeRepository.deleteEntity[Abotyp, AbotypId](id, { abotyp: Abotyp => abotyp.anzahlAbonnenten == 0 })
     }
   }
 
   def deletePerson(id: PersonId) = {
     DB autoCommit { implicit session =>
-      //TODO: check whether person should get deleted or disabled
-
-      writeRepository.deleteEntity[Person, PersonId](id)
+      writeRepository.deleteEntity[Person, PersonId](id, { person: Person => person.anzahlAbos == 0 })
     }
   }
 
   def deleteDepot(id: DepotId) = {
     DB autoCommit { implicit session =>
-      //TODO: check whether a depot should be deleted or disabled
-
-      writeRepository.deleteEntity[Depot, DepotId](id)
+      writeRepository.deleteEntity[Depot, DepotId](id, { depot: Depot => depot.anzahlAbonnenten == 0 })
     }
   }
 

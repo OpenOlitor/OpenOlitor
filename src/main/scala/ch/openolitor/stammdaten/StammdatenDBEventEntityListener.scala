@@ -66,7 +66,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityCreated(userId, entity: Abo) => handleAboCreated(entity)(userId)
     case e @ EntityDeleted(userId, entity: Abo) => handleAboDeleted(entity)(userId)
 
-    case x => log.debug(s"receive unused event $x")
+    case x => //log.debug(s"receive unused event $x")
   }
 
   def handleDepotlieferungAboCreated(abo: DepotlieferungAbo)(implicit userId: UserId) = {
@@ -88,6 +88,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       log.debug(s"Add abonnent to abotyp:${abotyp.id}")
       abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten + 1)
     })
+    modifyEntity[Person, PersonId](abo.personId, { person =>
+      log.debug(s"Add abonnent to person:${person.id}")
+      person.copy(anzahlAbos = person.anzahlAbos + 1)
+    })
   }
 
   def handleAboDeleted(abo: Abo)(implicit userId: UserId) = {
@@ -95,13 +99,17 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       log.debug(s"Remove abonnent from abotyp:${abotyp.id}")
       abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten - 1)
     })
+    modifyEntity[Person, PersonId](abo.personId, { person =>
+      log.debug(s"Remove abonnent from person:${person.id}")
+      person.copy(anzahlAbos = person.anzahlAbos - 1)
+    })
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
-    id: I, inc: E => E)(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
+    id: I, mod: E => E)(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(syntax, id) map { result =>
-        val copy = inc(result)
+        val copy = mod(result)
         writeRepository.updateEntity[E, I](copy)
       }
     }

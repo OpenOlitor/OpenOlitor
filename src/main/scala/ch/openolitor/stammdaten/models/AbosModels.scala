@@ -30,6 +30,7 @@ case class AboId(id: UUID) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
   val abotypId: AbotypId
+  val personId: PersonId
 }
 
 sealed trait AboModify extends Product {

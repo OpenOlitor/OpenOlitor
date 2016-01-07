@@ -50,7 +50,9 @@ case class Person(id: PersonId,
   telefon: Option[String],
   telefonAlternative: Option[String],
   bemerkungen: Option[String],
-  typen: Set[Personentyp]) extends BaseEntity[PersonId]
+  typen: Set[Personentyp],
+  //Zusatzinformationen
+  anzahlAbos: Int) extends BaseEntity[PersonId]
 
 case class PersonDetail(id: PersonId,
   name: String,
@@ -66,6 +68,8 @@ case class PersonDetail(id: PersonId,
   telefonAlternative: Option[String],
   bemerkungen: Option[String],
   typen: Set[Personentyp],
+  //Zusatzinformationen
+  anzahlAbos: Int,
   abos: Seq[Abo]) extends BaseEntity[PersonId]
 
 case class PersonSummary(id: PersonId, name: String, vorname: String) extends Product
