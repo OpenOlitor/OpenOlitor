@@ -157,9 +157,13 @@ trait StammdatenDBMappings extends DBMappings {
       parameters(Person.unapply(entity).get)
 
     override def updateParameters(person: Person) = {
-      Seq(column.name -> parameter(person.name),
+      Seq(column.kundeId -> parameter(person.kundeId),
+        column.name -> parameter(person.name),
         column.vorname -> parameter(person.vorname),
         column.email -> parameter(person.email),
+        column.emailAlternative -> parameter(person.emailAlternative),
+        column.telefonMobil -> parameter(person.telefonMobil),
+        column.telefonFestnetz -> parameter(person.telefonFestnetz),
         column.bemerkungen -> parameter(person.bemerkungen),
         column.sort -> parameter(person.sort))
     }

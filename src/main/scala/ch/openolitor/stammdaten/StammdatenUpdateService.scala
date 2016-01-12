@@ -23,7 +23,6 @@
 package ch.openolitor.stammdaten
 
 import ch.openolitor.core._
-
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
@@ -37,6 +36,7 @@ import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models.AbotypModify
 import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
+import java.util.UUID
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -49,7 +49,7 @@ class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val syste
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
  */
-class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent] with LazyLogging with ConnectionPoolContextAware with StammdatenDBMappings {
+class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent] with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
   //TODO: replace with credentials of logged in user
@@ -57,7 +57,6 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(id, entity)
-    case EntityUpdatedEvent(meta, id: PersonId, entity: PersonModify) => updatePerson(id, entity)
     case EntityUpdatedEvent(meta, id: KundeId, entity: KundeModify) => updateKunde(id, entity)
     case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
@@ -82,22 +81,53 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def updateKunde(id: KundeId, update: KundeModify) = {
-    DB autoCommit { implicit session =>
-      writeRepository.getById(kundeMapping, id) map { kunde =>
-        //map all updatable fields
-        val copy = copyFrom(kunde, update)
-        writeRepository.updateEntity[Kunde, KundeId](copy)
+  def updateKunde(kundeId: KundeId, update: KundeModify) = {
+    if (update.ansprechpersonen == 0) {
+      //TODO: handle error
+    } else {
+      DB autoCommit { implicit session =>
+        writeRepository.getById(kundeMapping, kundeId) map { kunde =>
+          //map all updatable fields
+          val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
+          val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length)
+          writeRepository.updateEntity[Kunde, KundeId](copy)
+        }
       }
-    }
-  }
 
-  def updatePerson(id: PersonId, update: PersonModify) = {
-    DB autoCommit { implicit session =>
-      writeRepository.getById(personMapping, id) map { person =>
-        //map all updatable fields
-        val copy = copyFrom(person, update)
-        writeRepository.updateEntity[Person, PersonId](copy)
+      readRepository.getPersonen(kundeId) map { personen =>
+        DB autoCommit { implicit session =>
+          val updatedPersonen = update.ansprechpersonen.zipWithIndex.map {
+            case (updatePerson, index) =>
+              updatePerson.id.map { id =>
+                personen.filter(_.id == id).headOption.map { person =>
+                  logger.debug(s"Update person with id:$id, data -> $updatePerson")
+                  val copy = copyFrom(person, updatePerson, "id" -> id)
+
+                  writeRepository.updateEntity[Person, PersonId](copy)
+                  Some(id)
+                }.getOrElse {
+                  //id not associated with this customer, don't do anything
+                  logger.warn(s"Person with id:$id not found on Kunde $kundeId, ignore")
+                  None
+                }
+              }.getOrElse {
+                //create new person
+                val personId = PersonId(UUID.randomUUID)
+                val newPerson = copyTo[PersonModify, Person](updatePerson, "id" -> personId,
+                  "kundeId" -> kundeId,
+                  "sort" -> index)
+                logger.debug(s"Create new person on Kunde:$kundeId, data -> $newPerson")
+
+                writeRepository.insertEntity(newPerson)
+                Some(personId)
+              }
+          }.flatten
+
+          //delete personen which aren't longer bound to this customer
+          personen.filterNot(p => updatedPersonen.contains(p.id)) map { personToDelete =>
+            writeRepository.deleteEntity[Person, PersonId](personToDelete.id)
+          }
+        }
       }
     }
   }

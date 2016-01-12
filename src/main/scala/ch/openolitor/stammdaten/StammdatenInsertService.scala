@@ -58,8 +58,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityInsertedEvent(meta, id, abotyp: AbotypModify) =>
       createAbotyp(id, abotyp)
-    case EntityInsertedEvent(meta, id, person: PersonModify) =>
-      createPerson(id, person)
     case EntityInsertedEvent(meta, id, kunde: KundeModify) =>
       createKunde(id, kunde)
     case EntityInsertedEvent(meta, id, depot: DepotModify) =>
@@ -73,8 +71,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createAbotyp(id: UUID, abotyp: AbotypModify) = {
-
-    val typ = copyTo[AbotypModify, Abotyp](abotyp, "id" -> AbotypId(id).asInstanceOf[AbotypId],
+    val abotypId = AbotypId(id)
+    val typ = copyTo[AbotypModify, Abotyp](abotyp, "id" -> abotypId,
       "anzahlAbonnenten" -> ZERO,
       "letzteLieferung" -> None,
       "waehrung" -> CHF)
@@ -89,31 +87,45 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createKunde(id: UUID, create: KundeModify) = {
-    val kunde = copyTo[KundeModify, Kunde](create,
-      "id" -> KundeId(id).asInstanceOf[KundeId],
-      "anzahlAbos" -> ZERO,
-      "anzahlPersonen" -> ZERO)
-    DB autoCommit { implicit session =>
-      //create abotyp
-      writeRepository.insertEntity(kunde)
-    }
-  }
-
-  def createPerson(id: UUID, create: PersonModify) = {
-    readRepository.getPersonen(create.kundeId) map { personen =>
-      val nextSort = personen.last.sort + 1
-      val person = copyTo[PersonModify, Person](create,
-        "id" -> PersonId(id).asInstanceOf[PersonId],
-        "sort" -> nextSort)
+    if (create.ansprechpersonen.size == 0) {
+      //TODO: handle error
+    } else {
+      val kundeId = KundeId(id)
+      val bez = create.bezeichnung.getOrElse(create.ansprechpersonen.head.fullName)
+      val kunde = copyTo[KundeModify, Kunde](create,
+        "id" -> kundeId,
+        "bezeichnung" -> bez,
+        "anzahlPersonen" -> create.ansprechpersonen.length,
+        "anzahlAbos" -> ZERO)
       DB autoCommit { implicit session =>
-        writeRepository.insertEntity(person)
+        //create abotyp
+        writeRepository.insertEntity(kunde)
+      }
+
+      //create personen as well
+      create.ansprechpersonen.zipWithIndex.map {
+        case (person, index) =>
+          createPerson(UUID.randomUUID, person, kundeId, index)
       }
     }
   }
 
+  def createPerson(id: UUID, create: PersonModify, kundeId: KundeId, sort: Int) = {
+    val personId = PersonId(id)
+
+    val person = copyTo[PersonModify, Person](create, "id" -> personId,
+      "kundeId" -> kundeId,
+      "sort" -> sort)
+
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(person)
+    }
+  }
+
   def createDepot(id: UUID, create: DepotModify) = {
+    val depotId = DepotId(id)
     val depot = copyTo[DepotModify, Depot](create,
-      "id" -> DepotId(id).asInstanceOf[DepotId],
+      "id" -> depotId,
       "anzahlAbonnenten" -> ZERO)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(depot)
@@ -122,16 +134,17 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createAbo(id: UUID, create: AboModify) = {
     DB autoCommit { implicit session =>
+      val aboId = AboId(id)
       val abo = create match {
         case create: DepotlieferungAboModify =>
           writeRepository.insertEntity(copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
-            "id" -> AboId(id).asInstanceOf[AboId]))
+            "id" -> aboId))
         case create: HeimlieferungAboModify =>
           writeRepository.insertEntity(copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
-            "id" -> AboId(id).asInstanceOf[AboId]))
+            "id" -> aboId))
         case create: PostlieferungAboModify =>
           writeRepository.insertEntity(copyTo[PostlieferungAboModify, PostlieferungAbo](create,
-            "id" -> AboId(id).asInstanceOf[AboId]))
+            "id" -> aboId))
       }
     }
   }

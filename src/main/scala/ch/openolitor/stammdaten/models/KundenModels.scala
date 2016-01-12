@@ -39,7 +39,7 @@ object Kundentyp {
 case class KundeId(id: UUID) extends BaseId
 
 case class Kunde(id: KundeId,
-  bezeichnung: Option[String],
+  bezeichnung: String,
   strasse: String,
   hausNummer: Option[String],
   adressZusatz: Option[String],
@@ -52,7 +52,7 @@ case class Kunde(id: KundeId,
   anzahlPersonen: Int) extends BaseEntity[KundeId]
 
 case class KundeDetail(id: KundeId,
-  bezeichnung: Option[String],
+  bezeichnung: String,
   strasse: String,
   hausNummer: Option[String],
   adressZusatz: Option[String],
@@ -74,7 +74,8 @@ case class KundeModify(
   plz: String,
   ort: String,
   bemerkungen: Option[String],
-  typen: Set[Kundentyp]) extends Product
+  typen: Set[Kundentyp],
+  ansprechpersonen: Seq[PersonModify]) extends Product
 
 case class PersonId(id: UUID) extends BaseId
 case class Person(id: PersonId,
@@ -91,11 +92,13 @@ case class Person(id: PersonId,
 case class KundeSummary(id: KundeId, kunde: String) extends Product
 
 case class PersonModify(
-  kundeId: KundeId,
+  id: Option[PersonId],
   name: String,
   vorname: String,
   email: String,
   emailAlternative: Option[String],
   telefonMobil: Option[String],
   telefonFestnetz: Option[String],
-  bemerkungen: Option[String]) extends Product
+  bemerkungen: Option[String]) extends Product {
+  def fullName = vorname + ' ' + name
+}
