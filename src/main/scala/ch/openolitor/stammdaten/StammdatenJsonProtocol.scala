@@ -119,7 +119,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       }
   }
 
-  implicit val customKundentypFormat = jsonFormat3(CustomKundentyp.apply)
+  implicit val customKundentypFormat = jsonFormat4(CustomKundentyp.apply)
 
   implicit val kundentypFormat = new JsonFormat[Kundentyp] {
     def write(obj: Kundentyp): JsValue =

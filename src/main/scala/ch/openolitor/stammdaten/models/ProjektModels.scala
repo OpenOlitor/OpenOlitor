@@ -39,7 +39,10 @@ trait Kundentyp {
   def system: Boolean
 }
 
-case class CustomKundentyp(id: CustomKundentypId, override val kundentyp: KundentypId, override val beschreibung: Option[String]) extends BaseEntity[CustomKundentypId] with Kundentyp {
+case class CustomKundentyp(id: CustomKundentypId,
+  override val kundentyp: KundentypId,
+  override val beschreibung: Option[String],
+  anzahlVerknuepfungen: Int) extends BaseEntity[CustomKundentypId] with Kundentyp {
   override def system = false
 }
 
