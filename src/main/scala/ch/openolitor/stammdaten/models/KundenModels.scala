@@ -25,66 +25,80 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 
-sealed trait Personentyp extends Product
-case object Vereinsmitglied extends Personentyp
-case object Goenner extends Personentyp
-case object Genossenschafterin extends Personentyp
+sealed trait Kundentyp extends Product
+case object Vereinsmitglied extends Kundentyp
+case object Goenner extends Kundentyp
+case object Genossenschafterin extends Kundentyp
 
-object Personentyp {
-  def apply(value: String): Option[Personentyp] = {
+object Kundentyp {
+  def apply(value: String): Option[Kundentyp] = {
     Vector(Vereinsmitglied, Goenner, Genossenschafterin).find(_.toString == value)
   }
 }
 
-case class PersonId(id: UUID) extends BaseId
-case class Person(id: PersonId,
-  name: String,
-  vorname: String,
-  strasse: String,
-  hausNummer: Option[String],
-  adressZusatz: Option[String],
-  plz: String,
-  ort: String,
-  email: String,
-  emailAlternative: Option[String],
-  telefon: Option[String],
-  telefonAlternative: Option[String],
-  bemerkungen: Option[String],
-  typen: Set[Personentyp],
-  //Zusatzinformationen
-  anzahlAbos: Int) extends BaseEntity[PersonId]
+case class KundeId(id: UUID) extends BaseId
 
-case class PersonDetail(id: PersonId,
-  name: String,
-  vorname: String,
+case class Kunde(id: KundeId,
+  bezeichnung: String,
   strasse: String,
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: String,
   ort: String,
-  email: String,
-  emailAlternative: Option[String],
-  telefon: Option[String],
-  telefonAlternative: Option[String],
   bemerkungen: Option[String],
-  typen: Set[Personentyp],
+  typen: Set[Kundentyp],
   //Zusatzinformationen
   anzahlAbos: Int,
-  abos: Seq[Abo]) extends BaseEntity[PersonId]
+  anzahlPersonen: Int) extends BaseEntity[KundeId]
 
-case class PersonSummary(id: PersonId, name: String, vorname: String) extends Product
-
-case class PersonModify(
-  name: String,
-  vorname: String,
+case class KundeDetail(id: KundeId,
+  bezeichnung: String,
   strasse: String,
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: String,
   ort: String,
+  bemerkungen: Option[String],
+  typen: Set[Kundentyp],
+  //Zusatzinformationen
+  anzahlAbos: Int,
+  anzahlPersonen: Int,
+  abos: Seq[Abo],
+  ansprechpersonen: Seq[Person])
+
+case class KundeModify(
+  bezeichnung: Option[String],
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  typen: Set[Kundentyp],
+  ansprechpersonen: Seq[PersonModify]) extends Product
+
+case class PersonId(id: UUID) extends BaseId
+case class Person(id: PersonId,
+  kundeId: KundeId,
+  name: String,
+  vorname: String,
   email: String,
   emailAlternative: Option[String],
-  telefon: Option[String],
-  telefonAlternative: Option[String],
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
   bemerkungen: Option[String],
-  typen: Set[Personentyp]) extends Product
+  sort: Int) extends BaseEntity[PersonId]
+
+case class KundeSummary(id: KundeId, kunde: String) extends Product
+
+case class PersonModify(
+  id: Option[PersonId],
+  name: String,
+  vorname: String,
+  email: String,
+  emailAlternative: Option[String],
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
+  bemerkungen: Option[String]) extends Product {
+  def fullName = vorname + ' ' + name
+}

@@ -50,9 +50,9 @@ object ParseImportDataApp extends App {
     }
 
     def receive = {
-      case ImportResult(personen, abotypen, depots, abos) =>
+      case ImportResult(kunden, abotypen, depots, abos) =>
         print("Received import result")
-        print(personen)
+        print(kunden)
         print(abotypen)
         print(depots)
         print(abos)

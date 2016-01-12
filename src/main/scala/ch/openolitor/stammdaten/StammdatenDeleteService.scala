@@ -23,6 +23,7 @@
 package ch.openolitor.stammdaten
 
 import akka.persistence.PersistentView
+
 import akka.actor._
 import ch.openolitor.core._
 import ch.openolitor.core.db._
@@ -33,6 +34,7 @@ import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.stammdaten.models._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object StammdatenDeleteService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig, system)
@@ -46,7 +48,7 @@ class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val syste
  * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
  */
 class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent]
-  with LazyLogging with ConnectionPoolContextAware with StammdatenDBMappings {
+  with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 
@@ -56,6 +58,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: AbotypId) => deleteAbotyp(id)
     case EntityDeletedEvent(meta, id: PersonId) => deletePerson(id)
+    case EntityDeletedEvent(meta, id: KundeId) => deleteKunde(id)
     case EntityDeletedEvent(meta, id: DepotId) => deleteDepot(id)
     case EntityDeletedEvent(meta, id: AboId) => deleteAbo(id)
     case e =>
@@ -71,7 +74,19 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deletePerson(id: PersonId) = {
     DB autoCommit { implicit session =>
-      writeRepository.deleteEntity[Person, PersonId](id, { person: Person => person.anzahlAbos == 0 })
+      writeRepository.deleteEntity[Person, PersonId](id)
+    }
+  }
+
+  def deleteKunde(kundeId: KundeId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[Kunde, KundeId](kundeId, { kunde: Kunde => kunde.anzahlAbos == 0 }) match {
+        case true =>
+          //delete all personen as well
+          readRepository.getPersonen(kundeId).map(_.map(person => deletePerson(person.id)))
+        case false =>
+      }
+
     }
   }
 

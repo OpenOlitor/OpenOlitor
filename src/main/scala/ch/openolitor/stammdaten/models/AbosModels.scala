@@ -30,30 +30,28 @@ case class AboId(id: UUID) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
   val abotypId: AbotypId
-  val personId: PersonId
+  val kundeId: KundeId
+  val kunde: String
 }
 
 sealed trait AboModify extends Product {
-  val personId: PersonId
-  val personName: String
-  val personVorname: String
+  val kundeId: KundeId
+  val kunde: String
   val abotypId: AbotypId
   val abotypName: String
 }
 
 case class DepotlieferungAbo(id: AboId,
-  personId: PersonId,
-  personName: String,
-  personVorname: String,
+  kundeId: KundeId,
+  kunde: String,
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
   depotName: String,
   lieferzeitpunkt: Lieferzeitpunkt) extends Abo
 
-case class DepotlieferungAboModify(personId: PersonId,
-  personName: String,
-  personVorname: String,
+case class DepotlieferungAboModify(kundeId: KundeId,
+  kunde: String,
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
@@ -61,18 +59,16 @@ case class DepotlieferungAboModify(personId: PersonId,
   lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
 
 case class HeimlieferungAbo(id: AboId,
-  personId: PersonId,
-  personName: String,
-  personVorname: String,
+  kundeId: KundeId,
+  kunde: String,
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
   tourName: String,
   lieferzeitpunkt: Lieferzeitpunkt) extends Abo
 
-case class HeimlieferungAboModify(personId: PersonId,
-  personName: String,
-  personVorname: String,
+case class HeimlieferungAboModify(kundeId: KundeId,
+  kunde: String,
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
@@ -80,16 +76,14 @@ case class HeimlieferungAboModify(personId: PersonId,
   lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
 
 case class PostlieferungAbo(id: AboId,
-  personId: PersonId,
-  personName: String,
-  personVorname: String,
+  kundeId: KundeId,
+  kunde: String,
   abotypId: AbotypId,
   abotypName: String,
   lieferzeitpunkt: Lieferzeitpunkt) extends Abo
 
-case class PostlieferungAboModify(personId: PersonId,
-  personName: String,
-  personVorname: String,
+case class PostlieferungAboModify(kundeId: KundeId,
+  kunde: String,
   abotypId: AbotypId,
   abotypName: String,
   lieferzeitpunkt: Lieferzeitpunkt) extends AboModify

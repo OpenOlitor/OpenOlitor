@@ -28,10 +28,10 @@ import scalaz.IsEmpty
 
 object Macros {
 
-  def copyFrom[S, D](dest: S, from: D): S = macro copyFromImpl[S, D]
+  def copyFrom[S, D](dest: S, from: D, mapping: (String, Any)*): S = macro copyFromImpl[S, D]
 
   def copyFromImpl[S: c.WeakTypeTag, D: c.WeakTypeTag](c: Context)(
-    dest: c.Expr[S], from: c.Expr[D]): c.Expr[S] = {
+    dest: c.Expr[S], from: c.Expr[D], mapping: c.Expr[(String, Any)]*): c.Expr[S] = {
     import c.universe._
 
     val fromTree = reify(from.splice).tree
@@ -43,7 +43,31 @@ object Macros {
       case _ => c.abort(c.enclosingPosition, "No eligible copy method!")
     }
 
+    val keys: Map[String, Tree] = mapping.map(_.tree).flatMap {
+      case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
+        c.echo(c.enclosingPosition, s"Found mapping for key typ:$typ:${typ.getClass}, key $name, ${name.getClass}, valueTyp $valueTyp, ${valueTyp.getClass} and value $value, ${value.getClass}")
+        val Literal(Constant(key)) = name
+        Some(key.asInstanceOf[String], n)
+      case m =>
+        c.error(c.enclosingPosition, s"You must use ArrowAssoc values for extended mapping names. $m could not resolve at compile time.")
+        None
+    }.toMap
+
     val copyParams = params.map {
+      case p if keys.contains(p.name.decodedName.toString) =>
+        keys.get(p.name.decodedName.toString).map {
+          case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
+            //convert to accordingly tree type
+            if (value.isInstanceOf[TypeApply]) {
+              value.asInstanceOf[TypeApply]
+            } else if (value.isInstanceOf[RefTree]) {
+              value.asInstanceOf[RefTree]
+            } else {
+              c.abort(c.enclosingPosition, s"Unknown value type found for value $value -> ${value.getClass}!")
+            }
+        }.getOrElse {
+          c.abort(c.enclosingPosition, s"No eligible param found $p!")
+        }
       case p if from.actualType.decl(p.name).isTerm => Select(fromTree, p.name)
       case p => Select(tree, p.name)
     }
@@ -82,23 +106,21 @@ object Macros {
     }.toMap
 
     val applyParams = params.map {
-      case p if source.actualType.decl(p.name).isTerm => Select(sourceTree, p.name)
       case p if keys.contains(p.name.decodedName.toString) =>
         keys.get(p.name.decodedName.toString).map {
           case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
             //convert to accordingly tree type
             if (value.isInstanceOf[TypeApply]) {
-            	value.asInstanceOf[TypeApply]
-            }
-            else if(value.isInstanceOf[RefTree]){
+              value.asInstanceOf[TypeApply]
+            } else if (value.isInstanceOf[RefTree]) {
               value.asInstanceOf[RefTree]
-            } 
-            else {
+            } else {
               c.abort(c.enclosingPosition, s"Unknown value type found for value $value -> ${value.getClass}!")
             }
         }.getOrElse {
           c.abort(c.enclosingPosition, s"No eligible param found $p!")
         }
+      case p if source.actualType.decl(p.name).isTerm => Select(sourceTree, p.name)
       case p => c.abort(c.enclosingPosition, s"No eligible param found $p!")
     }
     c.echo(c.enclosingPosition, s"CopyTo: $companionObject($applyParams)")

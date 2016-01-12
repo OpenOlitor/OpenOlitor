@@ -51,6 +51,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
 
   implicit val abotypIdParamConverter = string2BaseIdConverter[AbotypId](AbotypId.apply)
   implicit val abotypIdPath = string2BaseIdPathMatcher[AbotypId](AbotypId.apply)
+  implicit val kundeIdPath = string2BaseIdPathMatcher[KundeId](KundeId.apply)
   implicit val personIdPath = string2BaseIdPathMatcher[PersonId](PersonId.apply)
   implicit val depotIdPath = string2BaseIdPathMatcher[DepotId](DepotId.apply)
   implicit val aboIdPath = string2BaseIdPathMatcher[AboId](AboId.apply)
@@ -61,22 +62,22 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  lazy val stammdatenRoute = aboTypenRoute ~ personenRoute ~ depotsRoute ~ aboRoute
+  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute
 
-  lazy val personenRoute =
-    path("personen") {
-      get(list(readRepository.getPersonen)) ~
-        post(create[PersonModify, PersonId](PersonId.apply _))
+  lazy val kundenRoute =
+    path("kunden") {
+      get(list(readRepository.getKunden)) ~
+        post(create[KundeModify, KundeId](KundeId.apply _))
     } ~
-      path("personen" / personIdPath) { id =>
-        get(detail(readRepository.getPersonDetail(id))) ~
-          (put | post)(update[PersonModify, PersonId](id)) ~
+      path("kunden" / kundeIdPath) { id =>
+        get(detail(readRepository.getKundeDetail(id))) ~
+          (put | post)(update[KundeModify, KundeId](id)) ~
           delete(remove(id))
       } ~
-      path("personen" / personIdPath / "abos") { personId =>
+      path("kunden" / kundeIdPath / "abos") { kundeId =>
         post(create[AboModify, AboId](AboId.apply _))
       } ~
-      path("personen" / personIdPath / "abos" / aboIdPath) { (personId, aboId) =>
+      path("kunden" / kundeIdPath / "abos" / aboIdPath) { (kundeId, aboId) =>
         get(detail(readRepository.getAboDetail(aboId))) ~
           delete(remove(aboId))
       }
