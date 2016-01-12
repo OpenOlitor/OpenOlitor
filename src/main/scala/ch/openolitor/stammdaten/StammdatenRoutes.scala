@@ -49,12 +49,13 @@ import scala.concurrent.Future
 trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService {
   self: StammdatenRepositoryComponent =>
 
-  implicit val abotypIdParamConverter = string2BaseIdConverter[AbotypId](AbotypId.apply)
-  implicit val abotypIdPath = string2BaseIdPathMatcher[AbotypId](AbotypId.apply)
-  implicit val kundeIdPath = string2BaseIdPathMatcher[KundeId](KundeId.apply)
-  implicit val personIdPath = string2BaseIdPathMatcher[PersonId](PersonId.apply)
-  implicit val depotIdPath = string2BaseIdPathMatcher[DepotId](DepotId.apply)
-  implicit val aboIdPath = string2BaseIdPathMatcher[AboId](AboId.apply)
+  implicit val abotypIdParamConverter = string2BaseIdConverter(AbotypId.apply)
+  implicit val abotypIdPath = string2BaseIdPathMatcher(AbotypId.apply)
+  implicit val kundeIdPath = string2BaseIdPathMatcher(KundeId.apply)
+  implicit val personIdPath = string2BaseIdPathMatcher(PersonId.apply)
+  implicit val kundentypIdPath = string2BaseIdPathMatcher(CustomKundentypId.apply)
+  implicit val depotIdPath = string2BaseIdPathMatcher(DepotId.apply)
+  implicit val aboIdPath = string2BaseIdPathMatcher(AboId.apply)
 
   import StammdatenJsonProtocol._
   import EntityStore._
@@ -62,7 +63,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute
+  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ kundentypenRoute
 
   lazy val kundenRoute =
     path("kunden") {
@@ -80,6 +81,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("kunden" / kundeIdPath / "abos" / aboIdPath) { (kundeId, aboId) =>
         get(detail(readRepository.getAboDetail(aboId))) ~
           delete(remove(aboId))
+      }
+
+  lazy val kundentypenRoute =
+    path("kundentypen") {
+      get(list(readRepository.getKundentypen)) ~
+        post(create[CustomKundentypModify, CustomKundentypId](CustomKundentypId.apply _))
+    } ~
+      path("kundentypen" / kundentypIdPath) { (kundentypId) =>
+        delete(remove(kundentypId))
       }
 
   lazy val aboTypenRoute =
