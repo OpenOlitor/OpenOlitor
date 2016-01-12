@@ -78,12 +78,12 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def deleteKunde(id: KundeId) = {
+  def deleteKunde(kundeId: KundeId) = {
     DB autoCommit { implicit session =>
-      writeRepository.deleteEntity[Kunde, KundeId](id, { kunde: Kunde => kunde.anzahlAbos == 0 }) match {
+      writeRepository.deleteEntity[Kunde, KundeId](kundeId, { kunde: Kunde => kunde.anzahlAbos == 0 }) match {
         case true =>
           //delete all personen as well
-          readRepository.getPersonen(id).map(_.map(person => deletePerson(person.id)))
+          readRepository.getPersonen(kundeId).map(_.map(person => deletePerson(person.id)))
         case false =>
       }
 

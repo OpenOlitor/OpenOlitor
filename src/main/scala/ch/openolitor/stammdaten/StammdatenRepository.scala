@@ -135,6 +135,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     withSQL {
       select
         .from(personMapping as person)
+        .where.eq(person.kundeId, parameter(kundeId))
         .orderBy(person.sort)
     }.map(personMapping(person)).list.future
   }
