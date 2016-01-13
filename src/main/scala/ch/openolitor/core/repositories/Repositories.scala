@@ -687,14 +687,14 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
   def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Validator[E])(implicit session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: UserId): Boolean = {
+    user: UserId): Option[E] = {
     deleteEntity[E, I](id, Some(validator))
   }
 
   def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Option[Validator[E]] = None)(implicit session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: UserId): Boolean = {
+    user: UserId): Option[E] = {
     logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
     getById(syntaxSupport, id).map { entity =>
       val validation = validator.getOrElse(TrueValidator)
@@ -704,11 +704,11 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
 
           //publish event to stream
           publish(EntityDeleted(user, entity))
-          true
+          Some(entity)
         case false =>
           logger.debug(s"Couldn't delete from ${syntaxSupport.tableName}: $id, validation didn't succeed")
-          false
+          None
       }
-    }.getOrElse(false)
+    }.getOrElse(None)
   }
 }

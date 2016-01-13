@@ -32,6 +32,7 @@ import scalikejdbc._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
+import scala.concurrent.ExecutionContext.Implicits.global;
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -42,7 +43,7 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 /**
  * Listen on DBEvents and adjust calculated fields within this module
  */
-class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with StammdatenDBMappings with ConnectionPoolContextAware {
+class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with StammdatenDBMappings with AsyncConnectionPoolContextAware {
   this: StammdatenRepositoryComponent =>
   import StammdatenDBEventEntityListener._
 
@@ -65,6 +66,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleAboDeleted(entity)(userId)
     case e @ EntityCreated(userId, entity: Abo) => handleAboCreated(entity)(userId)
     case e @ EntityDeleted(userId, entity: Abo) => handleAboDeleted(entity)(userId)
+    case e @ EntityModified(userId, entity: Kunde) => handleKundeModified(entity)(userId)
 
     case x => //log.debug(s"receive unused event $x")
   }
@@ -103,6 +105,37 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       log.debug(s"Remove abonnent from kunde:${kunde.id}")
       kunde.copy(anzahlAbos = kunde.anzahlAbos - 1)
     })
+  }
+
+  def handleKundeModified(kunde: Kunde)(implicit userId: UserId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(kundeMapping, kunde.id) map { orig =>
+        //compare typen
+        //find removed typen
+        val removed = orig.typen -- kunde.typen
+
+        //tag typen which where added
+        val added = kunde.typen -- orig.typen
+
+        readRepository.getKundentypen map { kundetypen =>
+          removed.map { kundetypId =>
+            kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
+              case customKundetyp: CustomKundentyp =>
+                val copy = customKundetyp.copy(anzahlVerknuepfungen = customKundetyp.anzahlVerknuepfungen - 1)
+                writeRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+            }
+          }
+
+          added.map { kundetypId =>
+            kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
+              case customKundetyp: CustomKundentyp =>
+                val copy = customKundetyp.copy(anzahlVerknuepfungen = customKundetyp.anzahlVerknuepfungen + 1)
+                writeRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+            }
+          }
+        }
+      }
+    }
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](

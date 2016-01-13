@@ -174,5 +174,6 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val kundeDetailFormat = jsonFormat13(KundeDetail.apply)
   implicit val kundeModifyFormat = jsonFormat9(KundeModify.apply)
   implicit val kundeSummaryFormat = jsonFormat2(KundeSummary.apply)
+  implicit val kundentypCreateFormat = jsonFormat2(CustomKundentypCreate.apply)
   implicit val kundentypModifyFormat = jsonFormat1(CustomKundentypModify.apply)
 }

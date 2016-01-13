@@ -47,6 +47,7 @@ case class CustomKundentyp(id: CustomKundentypId,
 }
 
 case class CustomKundentypModify(beschreibung: Option[String])
+case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String])
 
 sealed trait SystemKundentyp extends Kundentyp with Product {
   override def system = true

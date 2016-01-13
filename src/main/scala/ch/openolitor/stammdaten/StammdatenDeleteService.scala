@@ -61,6 +61,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     case EntityDeletedEvent(meta, id: KundeId) => deleteKunde(id)
     case EntityDeletedEvent(meta, id: DepotId) => deleteDepot(id)
     case EntityDeletedEvent(meta, id: AboId) => deleteAbo(id)
+    case EntityDeletedEvent(meta, id: CustomKundentypId) => deleteKundentyp(id)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -81,10 +82,10 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   def deleteKunde(kundeId: KundeId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Kunde, KundeId](kundeId, { kunde: Kunde => kunde.anzahlAbos == 0 }) match {
-        case true =>
+        case Some(kunde) =>
           //delete all personen as well
           readRepository.getPersonen(kundeId).map(_.map(person => deletePerson(person.id)))
-        case false =>
+        case None =>
       }
 
     }
@@ -101,6 +102,22 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       writeRepository.deleteEntity[DepotlieferungAbo, AboId](id)
       writeRepository.deleteEntity[HeimlieferungAbo, AboId](id)
       writeRepository.deleteEntity[PostlieferungAbo, AboId](id)
+    }
+  }
+
+  def deleteKundentyp(id: CustomKundentypId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[CustomKundentyp, CustomKundentypId](id) match {
+        case Some(kundentyp) =>
+          if (kundentyp.anzahlVerknuepfungen > 0) {
+            //remove kundentyp from kunden
+            readRepository.getKunden.map(_.filter(_.typen.contains(kundentyp.kundentyp)).map { kunde =>
+              val copy = kunde.copy(typen = kunde.typen - kundentyp.kundentyp)
+              writeRepository.updateEntity[Kunde, KundeId](copy)
+            })
+          }
+        case None =>
+      }
     }
   }
 }
