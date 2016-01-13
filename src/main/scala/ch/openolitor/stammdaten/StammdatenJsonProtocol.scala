@@ -51,6 +51,17 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val kundeIdFormat = baseIdFormat(KundeId.apply)
   implicit val personIdFormat = baseIdFormat(PersonId.apply)
   implicit val aboIdFormat = baseIdFormat(AboId.apply)
+  implicit val customKundentypIdFormat = baseIdFormat(CustomKundentypId.apply)
+  implicit val kundentypIdFormat = new JsonFormat[KundentypId] {
+    def write(obj: KundentypId): JsValue =
+      JsString(obj.id)
+
+    def read(json: JsValue): KundentypId =
+      json match {
+        case JsString(id) => KundentypId(id)
+        case kt => sys.error(s"Unknown KundentypId:$kt")
+      }
+  }
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -97,15 +108,32 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val abotypUpdateFormat = jsonFormat10(AbotypModify.apply)
   implicit val abotypSummaryFormat = jsonFormat2(AbotypSummary.apply)
 
-  implicit val personentypFormat = new JsonFormat[Kundentyp] {
-    def write(obj: Kundentyp): JsValue =
+  implicit val systemKundentypFormat = new JsonFormat[SystemKundentyp] {
+    def write(obj: SystemKundentyp): JsValue =
       JsString(obj.productPrefix)
+
+    def read(json: JsValue): SystemKundentyp =
+      json match {
+        case JsString(kundentyp) => SystemKundentyp.apply(kundentyp).getOrElse(sys.error(s"Unknown System-Kundentyp:$kundentyp"))
+        case pt => sys.error(s"Unknown personentyp:$pt")
+      }
+  }
+
+  implicit val customKundentypFormat = jsonFormat4(CustomKundentyp.apply)
+
+  implicit val kundentypFormat = new JsonFormat[Kundentyp] {
+    def write(obj: Kundentyp): JsValue =
+      obj match {
+        case s: SystemKundentyp =>
+          systemKundentypFormat.write(s)
+        case c: CustomKundentyp =>
+          customKundentypFormat.write(c)
+      }
 
     def read(json: JsValue): Kundentyp =
       json match {
-        case JsString("Vereinsmitglied") => Vereinsmitglied
-        case JsString("Goenner") => Goenner
-        case JsString("Genossenschafterin") => Genossenschafterin
+        case system: JsString => systemKundentypFormat.read(json)
+        case custom: JsObject => customKundentypFormat.read(json)
         case pt => sys.error(s"Unknown personentyp:$pt")
       }
   }
@@ -146,4 +174,6 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val kundeDetailFormat = jsonFormat13(KundeDetail.apply)
   implicit val kundeModifyFormat = jsonFormat9(KundeModify.apply)
   implicit val kundeSummaryFormat = jsonFormat2(KundeSummary.apply)
+  implicit val kundentypCreateFormat = jsonFormat2(CustomKundentypCreate.apply)
+  implicit val kundentypModifyFormat = jsonFormat1(CustomKundentypModify.apply)
 }

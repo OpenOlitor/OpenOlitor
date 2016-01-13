@@ -41,7 +41,7 @@ object BaseJsonProtocol extends DefaultJsonProtocol {
     def read(json: JsValue): E =
       json match {
         case (JsString(value)) => fromJson(value)
-        case value             => deserializationError(s"Unrecognized enum format:$value")
+        case value => deserializationError(s"Unrecognized enum format:$value")
       }
   }
 
@@ -51,7 +51,7 @@ object BaseJsonProtocol extends DefaultJsonProtocol {
     def read(json: JsValue): I =
       json match {
         case (JsString(value)) => fromJson(UUID.fromString(value))
-        case value             => deserializationError(s"Unrecognized baseId format:$value")
+        case value => deserializationError(s"Unrecognized baseId format:$value")
       }
   }
 
@@ -86,6 +86,6 @@ object BaseJsonProtocol extends DefaultJsonProtocol {
   implicit val userIdFormat = baseIdFormat(UserId.apply)
 
   case class IdResponse(id: String)
-  
+
   implicit val idResponseFormat = jsonFormat1(IdResponse)
 }

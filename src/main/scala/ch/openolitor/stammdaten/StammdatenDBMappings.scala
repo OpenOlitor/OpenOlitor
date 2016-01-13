@@ -32,6 +32,7 @@ import scalikejdbc._
 import scalikejdbc.TypeBinder._
 import ch.openolitor.core.repositories.DBMappings
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.repositories.SqlBinder
 
 //DB Model bindig
 
@@ -62,21 +63,22 @@ trait StammdatenDBMappings extends DBMappings {
   import TypeBinder._
 
   // DB type binders for read operations
-  implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder[TourId](TourId.apply _)
-  implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder[DepotId](DepotId.apply _)
-  implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder[AbotypId](AbotypId.apply _)
-  implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder[VertriebsartId](VertriebsartId.apply _)
-  implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder[KundeId](KundeId.apply _)
-  implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder[PersonId](PersonId.apply _)
-  implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder[AboId](AboId.apply _)
+  implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder(TourId.apply _)
+  implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder(DepotId.apply _)
+  implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder(AbotypId.apply _)
+  implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
+  implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
+  implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder(PersonId.apply _)
+  implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
+  implicit val customKundentypIdBinder: TypeBinder[CustomKundentypId] = baseIdTypeBinder(CustomKundentypId.apply _)
+  implicit val kundentypIdBinder: TypeBinder[KundentypId] = string.map(KundentypId)
 
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
-  implicit val personenTypBinder: TypeBinder[Option[Kundentyp]] = string.map(Kundentyp.apply)
-  implicit val personenTypSetBinder: TypeBinder[Set[Kundentyp]] = string.map(s => s.split(",").map(Kundentyp.apply).toSet.flatten)
+  implicit val kundenTypIdSetBinder: TypeBinder[Set[KundentypId]] = string.map(s => s.split(",").map(KundentypId.apply).toSet)
 
   //DB parameter binders for write and query operations
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
@@ -90,8 +92,9 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
   implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
   implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
-  implicit val personenTypSqlBinder = toStringSqlBinder[Kundentyp]
-  implicit val personenTypSetSqlBinder = setSqlBinder[Kundentyp]
+  implicit val customKundentypIdSqlBinder = baseIdSqlBinder[CustomKundentypId]
+  implicit val kundentypIdSqlBinder = new SqlBinder[KundentypId] { def apply(value: KundentypId): Any = value.id }
+  implicit val kundentypIdSetSqlBinder = setSqlBinder[KundentypId]
   implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
@@ -118,6 +121,24 @@ trait StammdatenDBMappings extends DBMappings {
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
         column.waehrung -> parameter(abotyp.waehrung))
+    }
+  }
+
+  implicit val customKundentypMapping = new BaseEntitySQLSyntaxSupport[CustomKundentyp] {
+    override val tableName = "Kundentyp"
+
+    override lazy val columns = autoColumns[CustomKundentyp]()
+
+    def apply(rn: ResultName[CustomKundentyp])(rs: WrappedResultSet): CustomKundentyp =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: CustomKundentyp): Seq[Any] =
+      parameters(CustomKundentyp.unapply(entity).get)
+
+    override def updateParameters(typ: CustomKundentyp) = {
+      Seq(column.kundentyp -> parameter(typ.kundentyp),
+        column.beschreibung -> parameter(typ.beschreibung),
+        column.anzahlVerknuepfungen -> parameter(typ.anzahlVerknuepfungen))
     }
   }
 
@@ -311,5 +332,4 @@ trait StammdatenDBMappings extends DBMappings {
         column.lieferzeitpunkt -> parameter(postlieferungAbo.lieferzeitpunkt))
     }
   }
-
 }

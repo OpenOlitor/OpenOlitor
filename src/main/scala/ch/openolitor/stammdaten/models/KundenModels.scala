@@ -25,17 +25,6 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 
-sealed trait Kundentyp extends Product
-case object Vereinsmitglied extends Kundentyp
-case object Goenner extends Kundentyp
-case object Genossenschafterin extends Kundentyp
-
-object Kundentyp {
-  def apply(value: String): Option[Kundentyp] = {
-    Vector(Vereinsmitglied, Goenner, Genossenschafterin).find(_.toString == value)
-  }
-}
-
 case class KundeId(id: UUID) extends BaseId
 
 case class Kunde(id: KundeId,
@@ -46,7 +35,7 @@ case class Kunde(id: KundeId,
   plz: String,
   ort: String,
   bemerkungen: Option[String],
-  typen: Set[Kundentyp],
+  typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
   anzahlPersonen: Int) extends BaseEntity[KundeId]
@@ -59,7 +48,7 @@ case class KundeDetail(id: KundeId,
   plz: String,
   ort: String,
   bemerkungen: Option[String],
-  typen: Set[Kundentyp],
+  typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
   anzahlPersonen: Int,
@@ -74,7 +63,7 @@ case class KundeModify(
   plz: String,
   ort: String,
   bemerkungen: Option[String],
-  typen: Set[Kundentyp],
+  typen: Set[KundentypId],
   ansprechpersonen: Seq[PersonModify]) extends Product
 
 case class PersonId(id: UUID) extends BaseId

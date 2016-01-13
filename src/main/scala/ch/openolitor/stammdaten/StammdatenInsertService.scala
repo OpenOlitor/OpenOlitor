@@ -64,6 +64,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createDepot(id, depot)
     case EntityInsertedEvent(meta, id, abo: AboModify) =>
       createAbo(id, abo)
+    case EntityInsertedEvent(meta, id, kundentyp: CustomKundentypCreate) =>
+      createKundentyp(id, kundentyp)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
@@ -146,6 +148,16 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           writeRepository.insertEntity(copyTo[PostlieferungAboModify, PostlieferungAbo](create,
             "id" -> aboId))
       }
+    }
+  }
+
+  def createKundentyp(id: UUID, create: CustomKundentypCreate) = {
+    val customKundentypId = CustomKundentypId(id)
+    val kundentyp = copyTo[CustomKundentypCreate, CustomKundentyp](create,
+      "id" -> customKundentypId,
+      "anzahlVerknuepfungen" -> ZERO)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(kundentyp)
     }
   }
 }

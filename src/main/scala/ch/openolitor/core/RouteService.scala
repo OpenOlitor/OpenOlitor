@@ -56,12 +56,12 @@ object RouteServiceActor {
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
 class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem)
-    extends Actor with ActorReferences
-    with DefaultRouteService
-    with HelloWorldRoutes
-    with StammdatenRoutes
-    with DefaultStammdatenRepositoryComponent
-    with CORSSupport {
+  extends Actor with ActorReferences
+  with DefaultRouteService
+  with HelloWorldRoutes
+  with StammdatenRoutes
+  with DefaultStammdatenRepositoryComponent
+  with CORSSupport {
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -78,9 +78,9 @@ trait DefaultRouteService extends HttpService with ActorReferences {
 
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
-  
+
   def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
-                                                   tr: ToResponseMarshaller[I]) = {
+    tr: ToResponseMarshaller[I]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         //create entity
@@ -99,7 +99,7 @@ trait DefaultRouteService extends HttpService with ActorReferences {
   }
 
   def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-                                    tr: ToResponseMarshaller[I]) = {
+    tr: ToResponseMarshaller[I]) = {
     entity(as[E]) { entity =>
       //update entity
       onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
