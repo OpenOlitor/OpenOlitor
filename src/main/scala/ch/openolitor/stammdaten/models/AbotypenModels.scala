@@ -63,12 +63,13 @@ object Rhythmus {
 sealed trait Preiseinheit
 case object Lieferung extends Preiseinheit
 case object Monat extends Preiseinheit
+case object Quartal extends Preiseinheit
 case object Jahr extends Preiseinheit
 case object Aboende extends Preiseinheit
 
 object Preiseinheit {
   def apply(value: String): Preiseinheit = {
-    Vector(Lieferung, Monat, Jahr, Aboende).find(_.toString == value).getOrElse(Jahr)
+    Vector(Lieferung, Monat, Quartal, Jahr, Aboende).find(_.toString == value).getOrElse(Jahr)
   }
 }
 
