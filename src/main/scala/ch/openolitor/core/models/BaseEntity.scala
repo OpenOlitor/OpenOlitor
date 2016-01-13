@@ -43,5 +43,5 @@ sealed trait DBEvent[E <: BaseEntity[_ <: BaseId]] extends Product {
 }
 //events raised by this aggregateroot
 case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
-case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
+case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E, orig: E) extends DBEvent[E]
 case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]

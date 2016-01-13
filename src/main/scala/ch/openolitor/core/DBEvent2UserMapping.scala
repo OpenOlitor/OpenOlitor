@@ -63,11 +63,11 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
 
   val receive: Receive = {
     //TODO: resolve module based json formats of entities, maybe create module based sealed interfaces?
-    case e @ EntityModified(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityModified(userId, entity: Abotyp, _) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
     case e @ EntityCreated(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
     case e @ EntityDeleted(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
 
-    case e @ EntityModified(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
+    case e @ EntityModified(userId, entity: Abo, _) => send(userId, e.asInstanceOf[DBEvent[Abo]])
     case e @ EntityCreated(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
     case e @ EntityDeleted(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
 
@@ -75,19 +75,19 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
     //    case e @ EntityCreated(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
     //    case e @ EntityDeleted(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
 
-    case e @ EntityModified(userId, entity: Kunde) => send(userId, e.asInstanceOf[DBEvent[Kunde]])
+    case e @ EntityModified(userId, entity: Kunde, _) => send(userId, e.asInstanceOf[DBEvent[Kunde]])
     case e @ EntityCreated(userId, entity: Kunde) => send(userId, e.asInstanceOf[DBEvent[Kunde]])
     case e @ EntityDeleted(userId, entity: Kunde) => send(userId, e.asInstanceOf[DBEvent[Kunde]])
 
-    case e @ EntityModified(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
+    case e @ EntityModified(userId, entity: Depot, _) => send(userId, e.asInstanceOf[DBEvent[Depot]])
     case e @ EntityCreated(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
     case e @ EntityDeleted(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
 
-    case e @ EntityModified(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
+    case e @ EntityModified(userId, entity: Tour, _) => send(userId, e.asInstanceOf[DBEvent[Tour]])
     case e @ EntityCreated(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
     case e @ EntityDeleted(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
 
-    case e @ EntityModified(userId, entity: CustomKundentyp) => send(userId, e.asInstanceOf[DBEvent[CustomKundentyp]])
+    case e @ EntityModified(userId, entity: CustomKundentyp, _) => send(userId, e.asInstanceOf[DBEvent[CustomKundentyp]])
     case e @ EntityCreated(userId, entity: CustomKundentyp) => send(userId, e.asInstanceOf[DBEvent[CustomKundentyp]])
     case e @ EntityDeleted(userId, entity: CustomKundentyp) => send(userId, e.asInstanceOf[DBEvent[CustomKundentyp]])
 

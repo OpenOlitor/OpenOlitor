@@ -137,7 +137,8 @@ trait StammdatenDBMappings extends DBMappings {
 
     override def updateParameters(typ: CustomKundentyp) = {
       Seq(column.kundentyp -> parameter(typ.kundentyp),
-        column.beschreibung -> parameter(typ.beschreibung))
+        column.beschreibung -> parameter(typ.beschreibung),
+        column.anzahlVerknuepfungen -> parameter(typ.anzahlVerknuepfungen))
     }
   }
 
