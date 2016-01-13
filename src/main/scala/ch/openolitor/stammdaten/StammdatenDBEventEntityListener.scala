@@ -66,6 +66,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleAboDeleted(entity)(userId)
     case e @ EntityCreated(userId, entity: Abo) => handleAboCreated(entity)(userId)
     case e @ EntityDeleted(userId, entity: Abo) => handleAboDeleted(entity)(userId)
+
+    case e @ EntityCreated(userId, entity: Kunde) => handleKundeCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Kunde) => handleKundeDeleted(entity)(userId)
     case e @ EntityModified(userId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(userId)
 
     case x => //log.debug(s"receive unused event $x")
@@ -117,6 +120,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     log.debug(s"Kunde ${kunde.bezeichnung} modified, handle CustomKundentypen. Orig: ${orig.typen} -> modified: ${kunde.typen}. Removed typen:${removed}, added typen:${added}")
 
+    handleKundentypenChanged(removed, added)
+  }
+
+  def handleKundeDeleted(kunde: Kunde)(implicit userId: UserId) = {
+    handleKundentypenChanged(kunde.typen, Set())
+  }
+
+  def handleKundeCreated(kunde: Kunde)(implicit userId: UserId) = {
+    handleKundentypenChanged(Set(), kunde.typen)
+  }
+
+  def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit userId: UserId) = {
     readRepository.getKundentypen map { kundetypen =>
       DB autoCommit { implicit session =>
         removed.map { kundetypId =>
@@ -138,6 +153,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         }
       }
     }
+
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
