@@ -73,18 +73,31 @@ object Preiseinheit {
   }
 }
 
+sealed trait Laufzeiteinheit
+case object Lieferungen extends Laufzeiteinheit
+case object Monate extends Laufzeiteinheit
+
+object Laufzeiteinheit {
+  def apply(value: String): Laufzeiteinheit = {
+    Vector(Lieferungen, Monate).find(_.toString == value).getOrElse(Lieferungen)
+  }
+}
+
 case class AbotypId(id: UUID) extends BaseId
 
 case class Abotyp(id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
+  aktivVon: Option[DateTime],
+  aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  aktiv: Boolean,
+  laufzeit: Int,
+  laufzeiteinheit: Laufzeiteinheit,
+  anzahlAbwesenheiten: Option[Int],
+  farbCode: String,
+  zielpreis: Option[BigDecimal],
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
@@ -96,24 +109,30 @@ case class AbotypModify(
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime] = None,
-  anzahlLieferungen: Option[Int] = None,
-  anzahlAbwesenheiten: Option[Int] = None,
+  aktivVon: Option[DateTime],
+  aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  vertriebsarten: Set[Vertriebsartdetail],
-  aktiv: Boolean)
+  laufzeit: Int,
+  laufzeiteinheit: Laufzeiteinheit,
+  anzahlAbwesenheiten: Option[Int],
+  farbCode: String,
+  zielpreis: Option[BigDecimal],
+  vertriebsarten: Set[Vertriebsartdetail])
 
 case class AbotypDetail(id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
+  aktivVon: Option[DateTime],
+  aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  aktiv: Boolean,
+  laufzeit: Int,
+  laufzeiteinheit: Laufzeiteinheit,
+  anzahlAbwesenheiten: Option[Int],
+  farbCode: String,
+  zielpreis: Option[BigDecimal],
   vertriebsarten: Set[Vertriebsartdetail],
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],

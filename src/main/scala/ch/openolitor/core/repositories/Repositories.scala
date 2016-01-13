@@ -66,6 +66,7 @@ trait DBMappings {
   implicit val optionStringSqlBinder = optionSqlBinder[String]
   implicit val optionDateTimeSqlBinder = optionSqlBinder[DateTime]
   implicit val optionIntSqlBinder = optionSqlBinder[Int]
+  implicit val optionBigDecimalSqlBinder = optionSqlBinder[BigDecimal]
 
   def parameters[A](params: Tuple1[A])(
     implicit binder0: SqlBinder[A]) = {
