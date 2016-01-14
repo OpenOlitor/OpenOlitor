@@ -83,6 +83,17 @@ object Laufzeiteinheit {
   }
 }
 
+trait AktivRange {
+  val aktivVon: Option[DateTime]
+  val aktivBis: Option[DateTime]
+
+  def aktiv = {
+    val now = DateTime.now();
+    aktivVon.map(_.isBefore(now)).getOrElse(true) &&
+      aktivBis.map(_.isAfter(now)).getOrElse(true)
+  }
+}
+
 case class AbotypId(id: UUID) extends BaseId
 
 case class Abotyp(id: AbotypId,
@@ -101,7 +112,7 @@ case class Abotyp(id: AbotypId,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange with Product
 
 case class AbotypSummary(id: AbotypId, name: String) extends Product
 
@@ -118,7 +129,7 @@ case class AbotypModify(
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
-  vertriebsarten: Set[Vertriebsartdetail])
+  vertriebsarten: Set[Vertriebsartdetail]) extends AktivRange
 
 case class AbotypDetail(id: AbotypId,
   name: String,
@@ -136,7 +147,7 @@ case class AbotypDetail(id: AbotypId,
   vertriebsarten: Set[Vertriebsartdetail],
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange
 
 case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
