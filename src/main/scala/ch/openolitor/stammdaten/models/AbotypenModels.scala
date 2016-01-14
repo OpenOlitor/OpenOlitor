@@ -63,12 +63,34 @@ object Rhythmus {
 sealed trait Preiseinheit
 case object Lieferung extends Preiseinheit
 case object Monat extends Preiseinheit
+case object Quartal extends Preiseinheit
 case object Jahr extends Preiseinheit
 case object Aboende extends Preiseinheit
 
 object Preiseinheit {
   def apply(value: String): Preiseinheit = {
-    Vector(Lieferung, Monat, Jahr, Aboende).find(_.toString == value).getOrElse(Jahr)
+    Vector(Lieferung, Monat, Quartal, Jahr, Aboende).find(_.toString == value).getOrElse(Jahr)
+  }
+}
+
+sealed trait Laufzeiteinheit
+case object Lieferungen extends Laufzeiteinheit
+case object Monate extends Laufzeiteinheit
+
+object Laufzeiteinheit {
+  def apply(value: String): Laufzeiteinheit = {
+    Vector(Lieferungen, Monate).find(_.toString == value).getOrElse(Lieferungen)
+  }
+}
+
+trait AktivRange {
+  val aktivVon: Option[DateTime]
+  val aktivBis: Option[DateTime]
+
+  def aktiv = {
+    val now = DateTime.now();
+    aktivVon.map(_.isBefore(now)).getOrElse(true) &&
+      aktivBis.map(_.isAfter(now)).getOrElse(true)
   }
 }
 
@@ -78,16 +100,19 @@ case class Abotyp(id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
+  aktivVon: Option[DateTime],
+  aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  aktiv: Boolean,
+  laufzeit: Int,
+  laufzeiteinheit: Laufzeiteinheit,
+  anzahlAbwesenheiten: Option[Int],
+  farbCode: String,
+  zielpreis: Option[BigDecimal],
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange with Product
 
 case class AbotypSummary(id: AbotypId, name: String) extends Product
 
@@ -95,28 +120,34 @@ case class AbotypModify(
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime] = None,
-  anzahlLieferungen: Option[Int] = None,
-  anzahlAbwesenheiten: Option[Int] = None,
+  aktivVon: Option[DateTime],
+  aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  vertriebsarten: Set[Vertriebsartdetail],
-  aktiv: Boolean)
+  laufzeit: Int,
+  laufzeiteinheit: Laufzeiteinheit,
+  anzahlAbwesenheiten: Option[Int],
+  farbCode: String,
+  zielpreis: Option[BigDecimal],
+  vertriebsarten: Set[Vertriebsartdetail]) extends AktivRange
 
 case class AbotypDetail(id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  enddatum: Option[DateTime],
-  anzahlLieferungen: Option[Int],
-  anzahlAbwesenheiten: Option[Int],
+  aktivVon: Option[DateTime],
+  aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  aktiv: Boolean,
+  laufzeit: Int,
+  laufzeiteinheit: Laufzeiteinheit,
+  anzahlAbwesenheiten: Option[Int],
+  farbCode: String,
+  zielpreis: Option[BigDecimal],
   vertriebsarten: Set[Vertriebsartdetail],
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId]
+  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange
 
 case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]

@@ -28,6 +28,7 @@ import org.joda.time._
 import org.joda.time.format._
 import ch.openolitor.core.models._
 import java.util.UUID
+import java.text.SimpleDateFormat
 
 /**
  * Basis JSON Formatter for spray-json serialisierung/deserialisierung
@@ -60,18 +61,19 @@ object BaseJsonProtocol extends DefaultJsonProtocol {
    */
   implicit val dateTimeFormat = new JsonFormat[DateTime] {
 
-    val formatter = ISODateTimeFormat.basicDateTimeNoMillis
+    val formatter = ISODateTimeFormat.dateTime
 
     def write(obj: DateTime): JsValue = {
       JsString(formatter.print(obj))
     }
 
     def read(json: JsValue): DateTime = json match {
-      case JsString(s) => try {
-        formatter.parseDateTime(s)
-      } catch {
-        case t: Throwable => error(s)
-      }
+      case JsString(s) =>
+        try {
+          formatter.parseDateTime(s)
+        } catch {
+          case t: Throwable => error(s)
+        }
       case _ =>
         error(json.toString())
     }

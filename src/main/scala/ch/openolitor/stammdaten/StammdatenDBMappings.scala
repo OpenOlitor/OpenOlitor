@@ -79,13 +79,15 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
   implicit val kundenTypIdSetBinder: TypeBinder[Set[KundentypId]] = string.map(s => s.split(",").map(KundentypId.apply).toSet)
+  implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
 
-  //DB parameter binders for write and query operations
+  //DB parameter binders for write and query operationsit
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
   implicit val lieferzeipunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
+  implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
@@ -112,12 +114,15 @@ trait StammdatenDBMappings extends DBMappings {
       Seq(column.name -> parameter(abotyp.name),
         column.beschreibung -> parameter(abotyp.beschreibung),
         column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
-        column.enddatum -> parameter(abotyp.enddatum),
-        column.anzahlLieferungen -> parameter(abotyp.anzahlLieferungen),
+        column.aktivVon -> parameter(abotyp.aktivVon),
+        column.aktivBis -> parameter(abotyp.aktivBis),
+        column.laufzeit -> parameter(abotyp.laufzeit),
+        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
         column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
         column.preis -> parameter(abotyp.preis),
         column.preiseinheit -> parameter(abotyp.preiseinheit),
-        column.aktiv -> parameter(abotyp.aktiv),
+        column.farbCode -> parameter(abotyp.farbCode),
+        column.zielpreis -> parameter(abotyp.zielpreis),
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
         column.waehrung -> parameter(abotyp.waehrung))

@@ -33,6 +33,8 @@ import java.util.Date
 import akka.actor._
 import java.io.File
 import java.io.FileInputStream
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
 class DataImportParser extends Actor with ActorLogging {
   import DataImportParser._
@@ -134,23 +136,28 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   val parseAbotypen = {
-    parse("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv")) {
+    parse("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
+      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktiv) = indexes
+          val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
+            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten) = indexes
 
           (AbotypId(UUID.randomUUID),
             AbotypModify(
               name = row.value[String](indexName),
               beschreibung = row.value[Option[String]](indexBeschreibung),
               lieferrhythmus = Rhythmus(row.value[String](indexlieferrhytmus)),
-              enddatum = None,
-              anzahlLieferungen = None,
-              anzahlAbwesenheiten = None,
+              aktivVon = row.value[Option[DateTime]](indexAktivVon),
+              aktivBis = row.value[Option[DateTime]](indexAktivBis),
               preis = row.value[BigDecimal](indexPreis),
               preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
-              aktiv = row.value[Boolean](indexAktiv),
+              laufzeit = row.value[Int](indexLaufzeit),
+              laufzeiteinheit = Laufzeiteinheit(row.value[String](indexLaufzeiteinheit)),
+              anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
+              farbCode = row.value[String](indexFarbCode),
+              zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
               //TODO: parse vertriebsarten as well
               vertriebsarten = Set()))
     }
@@ -235,23 +242,27 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def columnIndexes(header: Row, sheet: String, names: Seq[String], maxCols: Option[Int] = None) = {
-    val headerMap = headerMappings(header, maxCols.getOrElse(names.size * 2))
+    log.debug(s"columnIndexes for:$names")
+    val headerMap = headerMappings(header, names, maxCols.getOrElse(names.size * 2))
     names.map { name =>
       headerMap.get(name.toLowerCase.trim).getOrElse(sys.error(s"Missing column '$name' in sheet '$sheet'"))
     }
   }
 
-  def headerMappings(header: Row, maxCols: Int = 30, map: Map[String, Int] = Map()): Map[String, Int] = {
-    if (map.size < maxCols) {
-      val index = map.size
+  def headerMappings(header: Row, names: Seq[String], maxCols: Int = 30, map: Map[String, Int] = Map(), index: Int = 0): Map[String, Int] = {
+    if (map.size < maxCols && map.size < names.size) {
       val cell = header.getCellByIndex(index)
       val name = cell.getStringValue().toLowerCase.trim
       name match {
-        case n if n.isEmpty => map //break if no column name was found anymore
+        case n if n.isEmpty =>
+          log.debug(s"Found no cell value at:$index, result:$map")
+          map //break if no column name was found anymore
         case n =>
-          headerMappings(header, maxCols, map + (name -> index))
+          val newMap = names.find(_.toLowerCase.trim == name).map(x => map + (name -> index)).getOrElse(map)
+          headerMappings(header, names, maxCols, newMap, index + 1)
       }
     } else {
+      log.debug(s"Reached max:$map")
       map
     }
   }
@@ -285,6 +296,8 @@ object DataImportParser {
   }
 
   implicit class MyCell(self: Cell) {
+    val format = DateTimeFormat.forPattern("dd.MM.yyyy")
+
     def value[T: TypeTag]: T = {
       val typ = typeOf[T]
       (typ match {
@@ -298,7 +311,10 @@ object DataImportParser {
         case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
         case t if t =:= typeOf[Double] => self.getStringValue.toDouble
         case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
+        case t if t =:= typeOf[Option[BigDecimal]] => self.getStringOptionValue.map(s => BigDecimal(s.toDouble))
         case t if t =:= typeOf[Date] => self.getDateValue
+        case t if t =:= typeOf[DateTime] => DateTime.parse(self.getStringValue, format)
+        case t if t =:= typeOf[Option[DateTime]] => self.getStringOptionValue.map(s => DateTime.parse(s, format))
         case t if t =:= typeOf[Int] => self.getStringValue.toInt
         case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
         case t if t =:= typeOf[Float] => self.getStringValue.toFloat

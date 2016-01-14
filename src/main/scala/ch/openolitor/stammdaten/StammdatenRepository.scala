@@ -99,7 +99,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     withSQL {
       select
         .from(abotypMapping as aboTyp)
-        .where.eq(aboTyp.aktiv, true)
         .orderBy(aboTyp.name)
     }.map(abotypMapping(aboTyp)).list.future
   }
@@ -300,7 +299,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, tour_id varchar(36) not null, liefertage varchar(256))".execute.apply()
       sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), ap_email varchar(100), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), v_email varchar(100), strasse varchar(50), haus_nummer varchar(10), plz varchar(4) not null, ort varchar(50) not null, aktiv bit, oeffnungszeiten varchar(200), iban varchar(30), bank varchar(50), beschreibung varchar(200), anzahl_abonnenten_max int, anzahl_abonnenten int not null)".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), enddatum timestamp, anzahl_lieferungen int, anzahl_abwesenheiten int, preis NUMERIC not null, preiseinheit varchar(20) not null, aktiv bit, anzahl_abonnenten INT not null, letzte_lieferung timestamp, waehrung varchar(10))".execute.apply()
+      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), aktiv_von datetime default null, aktiv_bis datetime default null, preis NUMERIC not null, preiseinheit varchar(20) not null, laufzeit int, laufzeiteinheit varchar(50), anzahl_abwesenheiten int, farb_code varchar(20), zielpreis NUMERIC, anzahl_abonnenten INT not null, letzte_lieferung datetime default null, waehrung varchar(10))".execute.apply()
       sql"create table ${kundeMapping.table} (id varchar(36) not null, bezeichnung varchar(50), strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(512), typen varchar(200), anzahl_abos int not null, anzahl_personen int not null)".execute.apply()
       sql"create table ${customKundentypMapping.table} (id varchar(36) not null, kundentyp varchar(50) not null, beschreibung varchar(250), anzahl_verknuepfungen int not null)".execute.apply()
       sql"create table ${personMapping.table} (id varchar(36) not null, kunde_id varchar(50) not null, name varchar(50) not null, vorname varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon_mobil varchar(50), telefon_festnetz varchar(50), bemerkungen varchar(512), sort int not null)".execute.apply()

@@ -42,6 +42,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val rhythmusFormat = enumFormat(Rhythmus.apply)
   implicit val preiseinheitFormat = enumFormat(Preiseinheit.apply)
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
+  implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
 
   //id formats
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId.apply)
@@ -103,9 +104,16 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       }
   }
 
-  implicit val abotypFormat = jsonFormat13(Abotyp.apply)
-  implicit val abotypDetailFormat = jsonFormat14(AbotypDetail.apply)
-  implicit val abotypUpdateFormat = jsonFormat10(AbotypModify.apply)
+  // json formatter which adds calculated field aktiv
+  def enhanceWithAktivFlag[E <: AktivRange](defaultFormat: JsonFormat[E]): RootJsonFormat[E] = new RootJsonFormat[E] {
+    def write(obj: E): JsValue = JsObject(defaultFormat.write(obj).asJsObject.fields + ("aktiv" -> JsBoolean(obj.aktiv)))
+
+    def read(json: JsValue): E = defaultFormat.read(json)
+  }
+
+  implicit val abotypFormat = enhanceWithAktivFlag(jsonFormat16(Abotyp.apply))
+  implicit val abotypDetailFormat = enhanceWithAktivFlag(jsonFormat17(AbotypDetail.apply))
+  implicit val abotypUpdateFormat = jsonFormat13(AbotypModify.apply)
   implicit val abotypSummaryFormat = jsonFormat2(AbotypSummary.apply)
 
   implicit val systemKundentypFormat = new JsonFormat[SystemKundentyp] {
