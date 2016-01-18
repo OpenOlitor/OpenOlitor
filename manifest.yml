@@ -1,0 +1,9 @@
+---
+applications:
+- name: openolitor-server-test
+  memory: 256M
+  instances: 1
+  host: openolitortest
+  domain: applicationcloud.io
+  path: .
+  buildpack: https://github.com/heroku/heroku-buildpack-scala.git
