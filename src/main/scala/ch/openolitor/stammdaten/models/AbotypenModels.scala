@@ -61,21 +61,22 @@ object Rhythmus {
 }
 
 sealed trait Preiseinheit
-case object Lieferung extends Preiseinheit
-case object Monat extends Preiseinheit
-case object Quartal extends Preiseinheit
-case object Jahr extends Preiseinheit
-case object Aboende extends Preiseinheit
+case object ProLieferung extends Preiseinheit
+case object ProMonat extends Preiseinheit
+case object ProQuartal extends Preiseinheit
+case object ProJahr extends Preiseinheit
+case object ProAbo extends Preiseinheit
 
 object Preiseinheit {
   def apply(value: String): Preiseinheit = {
-    Vector(Lieferung, Monat, Quartal, Jahr, Aboende).find(_.toString == value).getOrElse(Jahr)
+    Vector(ProLieferung, ProMonat, ProMonat, ProJahr, ProAbo).find(_.toString == value).getOrElse(ProLieferung)
   }
 }
 
 sealed trait Laufzeiteinheit
 case object Lieferungen extends Laufzeiteinheit
 case object Monate extends Laufzeiteinheit
+case object Unbeschraenkt extends Laufzeiteinheit
 
 object Laufzeiteinheit {
   def apply(value: String): Laufzeiteinheit = {
@@ -109,6 +110,7 @@ case class Abotyp(id: AbotypId,
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
+  saldoMindestbestand: Int,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
@@ -129,6 +131,7 @@ case class AbotypModify(
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
+  saldoMindestbestand: Int,
   vertriebsarten: Set[Vertriebsartdetail]) extends AktivRange
 
 case class AbotypDetail(id: AbotypId,
@@ -144,6 +147,7 @@ case class AbotypDetail(id: AbotypId,
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
+  saldoMindestbestand: Int,
   vertriebsarten: Set[Vertriebsartdetail],
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],

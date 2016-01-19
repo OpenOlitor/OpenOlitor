@@ -70,11 +70,13 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
   implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder(PersonId.apply _)
   implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
+  implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
   implicit val customKundentypIdBinder: TypeBinder[CustomKundentypId] = baseIdTypeBinder(CustomKundentypId.apply _)
   implicit val kundentypIdBinder: TypeBinder[KundentypId] = string.map(KundentypId)
 
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
+  implicit val lieferungStatusTypeBinder: TypeBinder[LieferungStatus] = string.map(LieferungStatus.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
@@ -85,6 +87,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
+  implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
   implicit val lieferzeipunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
@@ -98,6 +101,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val kundentypIdSqlBinder = new SqlBinder[KundentypId] { def apply(value: KundentypId): Any = value.id }
   implicit val kundentypIdSetSqlBinder = setSqlBinder[KundentypId]
   implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
+  implicit val lieferungIdSqlBinder = baseIdSqlBinder[LieferungId]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -192,6 +196,21 @@ trait StammdatenDBMappings extends DBMappings {
         column.telefonFestnetz -> parameter(person.telefonFestnetz),
         column.bemerkungen -> parameter(person.bemerkungen),
         column.sort -> parameter(person.sort))
+    }
+  }
+
+  implicit val lieferungMapping = new BaseEntitySQLSyntaxSupport[Lieferung] {
+    override val tableName = "Lieferung"
+
+    override lazy val columns = autoColumns[Lieferung]()
+
+    def apply(rn: ResultName[Lieferung])(rs: WrappedResultSet): Lieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Lieferung): Seq[Any] = parameters(Lieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Lieferung) = {
+      Seq(column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten))
     }
   }
 
@@ -292,7 +311,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.abotypName -> parameter(depotlieferungAbo.abotypName),
         column.depotId -> parameter(depotlieferungAbo.depotId),
         column.depotName -> parameter(depotlieferungAbo.depotName),
-        column.lieferzeitpunkt -> parameter(depotlieferungAbo.lieferzeitpunkt))
+        column.lieferzeitpunkt -> parameter(depotlieferungAbo.lieferzeitpunkt),
+        column.saldo -> parameter(depotlieferungAbo.saldo))
     }
   }
 
@@ -314,7 +334,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.abotypName -> parameter(heimlieferungAbo.abotypName),
         column.tourId -> parameter(heimlieferungAbo.tourId),
         column.tourName -> parameter(heimlieferungAbo.tourName),
-        column.lieferzeitpunkt -> parameter(heimlieferungAbo.lieferzeitpunkt))
+        column.lieferzeitpunkt -> parameter(heimlieferungAbo.lieferzeitpunkt),
+        column.saldo -> parameter(heimlieferungAbo.saldo))
     }
   }
 

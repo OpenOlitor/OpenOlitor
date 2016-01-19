@@ -137,12 +137,12 @@ class DataImportParser extends Actor with ActorLogging {
 
   val parseAbotypen = {
     parse("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
-      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten")) {
+      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand")) {
       indexes =>
         row =>
           //match column indexes
           val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
-            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten) = indexes
+            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten, indexSaldoMindestbestand) = indexes
 
           (AbotypId(UUID.randomUUID),
             AbotypModify(
@@ -158,6 +158,7 @@ class DataImportParser extends Actor with ActorLogging {
               anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
               farbCode = row.value[String](indexFarbCode),
               zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
+              saldoMindestbestand = row.value[Int](indexSaldoMindestbestand),
               //TODO: parse vertriebsarten as well
               vertriebsarten = Set()))
     }

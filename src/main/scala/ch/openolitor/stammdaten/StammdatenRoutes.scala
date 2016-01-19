@@ -45,6 +45,7 @@ import ch.openolitor.core.models._
 import spray.httpx.marshalling._
 import spray.httpx.unmarshalling._
 import scala.concurrent.Future
+import ch.openolitor.core.Macros._
 
 trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService {
   self: StammdatenRepositoryComponent =>
@@ -56,6 +57,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val kundentypIdPath = string2BaseIdPathMatcher(CustomKundentypId.apply)
   implicit val depotIdPath = string2BaseIdPathMatcher(DepotId.apply)
   implicit val aboIdPath = string2BaseIdPathMatcher(AboId.apply)
+  implicit val lieferungIdPath = string2BaseIdPathMatcher(LieferungId.apply)
 
   import StammdatenJsonProtocol._
   import EntityStore._
@@ -102,6 +104,20 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
         get(detail(readRepository.getAbotypDetail(id))) ~
           (put | post)(update[AbotypModify, AbotypId](id)) ~
           delete(remove(id))
+      } ~
+      path("abotypen" / abotypIdPath / "lieferungen") { abotypId =>
+        get(list(readRepository.getOffeneLieferungen(abotypId))) ~
+          post {
+            requestInstance { request =>
+              entity(as[LieferungModify]) { entity =>
+                val lieferung = copyTo[LieferungModify, LieferungAbotypModify](entity, "abotypId" -> abotypId)
+                created(request)(lieferung)
+              }
+            }
+          }
+      } ~
+      path("abotypen" / abotypIdPath / "lieferungen" / lieferungIdPath) { (abotypId, lieferungId) =>
+        delete(remove(lieferungId))
       }
 
   lazy val depotsRoute =

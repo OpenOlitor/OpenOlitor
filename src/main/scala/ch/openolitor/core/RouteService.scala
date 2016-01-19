@@ -83,18 +83,22 @@ trait DefaultRouteService extends HttpService with ActorReferences {
     tr: ToResponseMarshaller[I]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
-        //create entity
-        onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
-          case event: EntityInsertedEvent =>
-            respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
-              respondWithStatus(StatusCodes.Created) {
-                complete(IdResponse(event.id.toString).toJson.compactPrint)
-              }
-            }
-          case x =>
-            complete(StatusCodes.BadRequest, s"No id generated:$x")
-        }
+        created(request)(entity)
       }
+    }
+  }
+
+  def created[E, I <: BaseId](request: HttpRequest)(entity: E) = {
+    //create entity
+    onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
+      case event: EntityInsertedEvent =>
+        respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
+          respondWithStatus(StatusCodes.Created) {
+            complete(IdResponse(event.id.toString).toJson.compactPrint)
+          }
+        }
+      case x =>
+        complete(StatusCodes.BadRequest, s"No id generated:$x")
     }
   }
 

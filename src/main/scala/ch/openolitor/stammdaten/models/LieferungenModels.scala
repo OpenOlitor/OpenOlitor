@@ -22,73 +22,30 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import ch.openolitor.stammdaten._
+import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import java.util.UUID
 
-case class AboId(id: UUID) extends BaseId
+sealed trait LieferungStatus extends Product
 
-sealed trait Abo extends BaseEntity[AboId] {
-  val abotypId: AbotypId
-  val kundeId: KundeId
-  val kunde: String
-  val saldo: Int
+case object Offen extends LieferungStatus
+case object InBearbeitung extends LieferungStatus
+case object Bearbeitet extends LieferungStatus
+
+object LieferungStatus {
+  def apply(value: String): LieferungStatus = {
+    Vector(Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
+  }
 }
 
-sealed trait AboModify extends Product {
-  val kundeId: KundeId
-  val kunde: String
-  val abotypId: AbotypId
-  val abotypName: String
-}
+case class LieferungId(id: UUID) extends BaseId
 
-case class DepotlieferungAbo(id: AboId,
-  kundeId: KundeId,
-  kunde: String,
+case class Lieferung(id: LieferungId,
   abotypId: AbotypId,
-  abotypName: String,
-  depotId: DepotId,
-  depotName: String,
-  lieferzeitpunkt: Lieferzeitpunkt,
-  saldo: Int = 0) extends Abo
+  datum: DateTime,
+  anzahlAbwesenheiten: Int,
+  status: LieferungStatus) extends BaseEntity[LieferungId]
 
-case class DepotlieferungAboModify(kundeId: KundeId,
-  kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  depotId: DepotId,
-  depotName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
+case class LieferungModify(datum: DateTime)
 
-case class HeimlieferungAbo(id: AboId,
-  kundeId: KundeId,
-  kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  tourId: TourId,
-  tourName: String,
-  lieferzeitpunkt: Lieferzeitpunkt,
-  saldo: Int = 0) extends Abo
-
-case class HeimlieferungAboModify(kundeId: KundeId,
-  kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  tourId: TourId,
-  tourName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
-
-case class PostlieferungAbo(id: AboId,
-  kundeId: KundeId,
-  kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  lieferzeitpunkt: Lieferzeitpunkt,
-  saldo: Int = 0) extends Abo
-
-case class PostlieferungAboModify(kundeId: KundeId,
-  kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
-
+case class LieferungAbotypModify(datum: DateTime, abotypId: AbotypId)

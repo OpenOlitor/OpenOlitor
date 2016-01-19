@@ -64,6 +64,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createDepot(id, depot)
     case EntityInsertedEvent(meta, id, abo: AboModify) =>
       createAbo(id, abo)
+    case EntityInsertedEvent(meta, id, lieferung: LieferungAbotypModify) =>
+      createLieferung(id, lieferung)
     case EntityInsertedEvent(meta, id, kundentyp: CustomKundentypCreate) =>
       createKundentyp(id, kundentyp)
     case EntityInsertedEvent(meta, id, entity) =>
@@ -85,6 +87,18 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
       //insert vertriebsarten
       writeRepository.attachVertriebsarten(typ.id, abotyp.vertriebsarten)
+    }
+  }
+
+  def createLieferung(id: UUID, lieferung: LieferungAbotypModify) = {
+    val lieferungId = LieferungId(id)
+    val insert = copyTo[LieferungAbotypModify, Lieferung](lieferung, "id" -> lieferungId,
+      "anzahlAbwesenheiten" -> ZERO,
+      "status" -> Offen)
+
+    DB autoCommit { implicit session =>
+      //create lieferung
+      writeRepository.insertEntity(insert)
     }
   }
 
@@ -140,13 +154,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       val abo = create match {
         case create: DepotlieferungAboModify =>
           writeRepository.insertEntity(copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
-            "id" -> aboId))
+            "id" -> aboId, "saldo" -> ZERO))
         case create: HeimlieferungAboModify =>
           writeRepository.insertEntity(copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
-            "id" -> aboId))
+            "id" -> aboId, "saldo" -> ZERO))
         case create: PostlieferungAboModify =>
           writeRepository.insertEntity(copyTo[PostlieferungAboModify, PostlieferungAbo](create,
-            "id" -> aboId))
+            "id" -> aboId, "saldo" -> ZERO))
       }
     }
   }
