@@ -129,7 +129,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.zielpreis -> parameter(abotyp.zielpreis),
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-        column.waehrung -> parameter(abotyp.waehrung))
+        column.waehrung -> parameter(abotyp.waehrung),
+        column.saldoMindestbestand -> parameter(abotyp.saldoMindestbestand))
     }
   }
 
