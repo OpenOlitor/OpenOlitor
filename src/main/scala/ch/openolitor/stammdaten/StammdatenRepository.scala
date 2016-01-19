@@ -197,7 +197,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     withSQL {
       select
         .from(lieferungMapping as lieferung)
-        .where.eq(lieferung.abotypId, abotypId).and.in(lieferung.status, Seq(Offen, InBearbeitung))
+        .where.eq(lieferung.abotypId, parameter(abotypId)).and.not.eq(lieferung.status, parameter(Bearbeitet))
         .orderBy(lieferung.datum)
     }.map(lieferungMapping(lieferung)).list.future
   }
@@ -319,7 +319,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${depotlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), depot_id varchar(36), depot_name varchar(50), lieferzeitpunkt varchar(10), saldo int)".execute.apply()
       sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), lieferzeitpunkt varchar(10), saldo int)".execute.apply()
       sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), lieferzeitpunkt varchar(10), saldo int)".execute.apply()
-      sql"create table ${lieferungMapping.table}  (id varchar(36) not null,abotyp_id varchar(36) not null, anzahl_abwesenheiten int not null,status varchar(50) not null)".execute.apply()
+      sql"create table ${lieferungMapping.table}  (id varchar(36) not null,abotyp_id varchar(36) not null, datum datetime not null, anzahl_abwesenheiten int not null,status varchar(50) not null)".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
     }

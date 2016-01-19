@@ -153,7 +153,7 @@ class DataImportParser extends Actor with ActorLogging {
               aktivBis = row.value[Option[DateTime]](indexAktivBis),
               preis = row.value[BigDecimal](indexPreis),
               preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
-              laufzeit = row.value[Int](indexLaufzeit),
+              laufzeit = row.value[Option[Int]](indexLaufzeit),
               laufzeiteinheit = Laufzeiteinheit(row.value[String](indexLaufzeiteinheit)),
               anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
               farbCode = row.value[String](indexFarbCode),
