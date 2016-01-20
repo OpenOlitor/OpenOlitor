@@ -57,6 +57,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: DepotlieferungAbotypModify) => updateVertriebsart(id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: HeimlieferungAbotypModify) => updateVertriebsart(id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: PostlieferungAbotypModify) => updateVertriebsart(id, entity)
     case EntityUpdatedEvent(meta, id: KundeId, entity: KundeModify) => updateKunde(id, entity)
     case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(id, entity)
     case EntityUpdatedEvent(meta, id: CustomKundentypId, entity: CustomKundentypModify) => updateKundentyp(id, entity)
@@ -72,12 +75,36 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
         writeRepository.updateEntity[Abotyp, AbotypId](copy)
+      }
+    }
+  }
 
-        //remove all existing vertriebsarten
-        writeRepository.removeVertriebsarten(id)
+  def updateVertriebsart(id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(depotlieferungMapping, id) map { depotlieferung =>
+        //map all updatable fields
+        val copy = copyFrom(depotlieferung, vertriebsart)
+        writeRepository.updateEntity[Depotlieferung, VertriebsartId](copy)
+      }
+    }
+  }
 
-        //reassign vertriebsarten
-        writeRepository.attachVertriebsarten(id, update.vertriebsarten)
+  def updateVertriebsart(id: VertriebsartId, vertriebsart: PostlieferungAbotypModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(postlieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, vertriebsart)
+        writeRepository.updateEntity[Postlieferung, VertriebsartId](copy)
+      }
+    }
+  }
+
+  def updateVertriebsart(id: VertriebsartId, vertriebsart: HeimlieferungAbotypModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(heimlieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, vertriebsart)
+        writeRepository.updateEntity[Heimlieferung, VertriebsartId](copy)
       }
     }
   }

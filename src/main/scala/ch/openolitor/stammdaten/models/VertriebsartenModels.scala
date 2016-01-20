@@ -22,31 +22,25 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import org.joda.time.DateTime
-import ch.openolitor.core.models._
 import java.util.UUID
+import ch.openolitor.core.models._
 
-sealed trait LieferungStatus extends Product
+case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
+sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
+case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt) extends Vertriebsart
+case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt) extends Vertriebsart
+case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt) extends Vertriebsart
 
-case object Offen extends LieferungStatus
-case object InBearbeitung extends LieferungStatus
-case object Bearbeitet extends LieferungStatus
+sealed trait VertriebsartDetail extends Product
+case class DepotlieferungDetail(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, depot: DepotSummary, liefertag: Lieferzeitpunkt) extends VertriebsartDetail
+case class HeimlieferungDetail(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, tour: Tour, liefertag: Lieferzeitpunkt) extends VertriebsartDetail
+case class PostlieferungDetail(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt) extends VertriebsartDetail
 
-object LieferungStatus {
-  def apply(value: String): LieferungStatus = {
-    Vector(Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
-  }
-}
+sealed trait VertriebsartModify extends Product
+case class DepotlieferungModify(depotId: DepotId, liefertag: Lieferzeitpunkt) extends VertriebsartModify
+case class HeimlieferungModify(tourId: TourId, liefertag: Lieferzeitpunkt) extends VertriebsartModify
+case class PostlieferungModify(liefertag: Lieferzeitpunkt) extends VertriebsartModify
 
-case class LieferungId(id: UUID) extends BaseId
-
-case class Lieferung(id: LieferungId,
-  abotypId: AbotypId,
-  vertriebsartId: VertriebsartId,
-  datum: DateTime,
-  anzahlAbwesenheiten: Int,
-  status: LieferungStatus) extends BaseEntity[LieferungId]
-
-case class LieferungModify(datum: DateTime)
-
-case class LieferungAbotypCreate(datum: DateTime, abotypId: AbotypId, vertriebsartId: VertriebsartId)
+case class DepotlieferungAbotypModify(abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt)
+case class HeimlieferungAbotypModify(abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt)
+case class PostlieferungAbotypModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt)

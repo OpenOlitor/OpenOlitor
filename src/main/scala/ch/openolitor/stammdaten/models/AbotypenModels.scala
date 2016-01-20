@@ -132,35 +132,4 @@ case class AbotypModify(
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
-  saldoMindestbestand: Int,
-  vertriebsarten: Set[Vertriebsartdetail]) extends AktivRange
-
-case class AbotypDetail(id: AbotypId,
-  name: String,
-  beschreibung: Option[String],
-  lieferrhythmus: Rhythmus,
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
-  preis: BigDecimal,
-  preiseinheit: Preiseinheit,
-  laufzeit: Option[Int],
-  laufzeiteinheit: Laufzeiteinheit,
-  anzahlAbwesenheiten: Option[Int],
-  farbCode: String,
-  zielpreis: Option[BigDecimal],
-  saldoMindestbestand: Int,
-  vertriebsarten: Set[Vertriebsartdetail],
-  anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange
-
-case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
-sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
-case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
-case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
-case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
-
-sealed trait Vertriebsartdetail extends Product
-case class DepotlieferungDetail(depot: DepotSummary, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class HeimlieferungDetail(tour: Tour, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class PostlieferungDetail(liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
+  saldoMindestbestand: Int) extends AktivRange

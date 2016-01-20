@@ -57,6 +57,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val kundentypIdPath = string2BaseIdPathMatcher(CustomKundentypId.apply)
   implicit val depotIdPath = string2BaseIdPathMatcher(DepotId.apply)
   implicit val aboIdPath = string2BaseIdPathMatcher(AboId.apply)
+  implicit val vertriebsartIdPath = string2BaseIdPathMatcher(VertriebsartId.apply)
   implicit val lieferungIdPath = string2BaseIdPathMatcher(LieferungId.apply)
 
   import StammdatenJsonProtocol._
@@ -105,18 +106,47 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           (put | post)(update[AbotypModify, AbotypId](id)) ~
           delete(remove(id))
       } ~
-      path("abotypen" / abotypIdPath / "lieferungen") { abotypId =>
-        get(list(readRepository.getOffeneLieferungen(abotypId))) ~
+      path("abotypen" / abotypIdPath / "vertriebsarten") { abotypId =>
+        get(list(readRepository.getVertriebsarten(abotypId))) ~
+          post {
+            requestInstance { request =>
+              entity(as[VertriebsartModify]) { entity =>
+                val vertriebsart = entity match {
+                  case dl: DepotlieferungModify => copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId)
+                  case hl: HeimlieferungModify => copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId)
+                  case pl: PostlieferungModify => copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId)
+                }
+                created(request)(vertriebsart)
+              }
+            }
+          }
+      } ~
+      path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath) { (abotypId, vertriebsartId) =>
+        get(detail(readRepository.getVertriebsart(vertriebsartId))) ~
+          (put | post) {
+            entity(as[VertriebsartModify]) { entity =>
+              val vertriebsart = entity match {
+                case dl: DepotlieferungModify => copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId)
+                case hl: HeimlieferungModify => copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId)
+                case pl: PostlieferungModify => copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId)
+              }
+              updated(vertriebsartId, vertriebsart)
+            }
+          } ~
+          delete(remove(vertriebsartId))
+      } ~
+      path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath / "lieferungen") { (abotypId, vertriebsartId) =>
+        get(list(readRepository.getOffeneLieferungen(abotypId, vertriebsartId))) ~
           post {
             requestInstance { request =>
               entity(as[LieferungModify]) { entity =>
-                val lieferung = copyTo[LieferungModify, LieferungAbotypModify](entity, "abotypId" -> abotypId)
+                val lieferung = copyTo[LieferungModify, LieferungAbotypCreate](entity, "abotypId" -> abotypId, "vertriebsartId" -> vertriebsartId)
                 created(request)(lieferung)
               }
             }
           }
       } ~
-      path("abotypen" / abotypIdPath / "lieferungen" / lieferungIdPath) { (abotypId, lieferungId) =>
+      path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath / "lieferungen" / lieferungIdPath) { (abotypId, vertriebsartId, lieferungId) =>
         delete(remove(lieferungId))
       }
 

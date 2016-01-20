@@ -104,11 +104,13 @@ trait DefaultRouteService extends HttpService with ActorReferences {
 
   def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
     tr: ToResponseMarshaller[I]) = {
-    entity(as[E]) { entity =>
-      //update entity
-      onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
-        complete(StatusCodes.Accepted, "")
-      }
+    entity(as[E]) { entity => updated(id, entity) }
+  }
+
+  def updated[E, I <: BaseId](id: I, entity: E) = {
+    //update entity
+    onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
+      complete(StatusCodes.Accepted, "")
     }
   }
 

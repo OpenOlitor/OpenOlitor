@@ -28,6 +28,7 @@ import ch.openolitor.core.ws._
 import spray.json._
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.StammdatenReadRepository
 
 object DBEvent2UserMapping extends DefaultJsonProtocol {
   def props(): Props = Props(classOf[DBEvent2UserMapping])
@@ -93,6 +94,18 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
 
     case e @ EntityCreated(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
     case e @ EntityDeleted(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
+
+    case e @ EntityCreated(userId, entity: Depotlieferung) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
+    case e @ EntityModified(userId, entity: Depotlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
+    case e @ EntityDeleted(userId, entity: Depotlieferung) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
+
+    case e @ EntityCreated(userId, entity: Heimlieferung) => send(userId, e.asInstanceOf[DBEvent[Heimlieferung]])
+    case e @ EntityModified(userId, entity: Heimlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Heimlieferung]])
+    case e @ EntityDeleted(userId, entity: Heimlieferung) => send(userId, e.asInstanceOf[DBEvent[Heimlieferung]])
+
+    case e @ EntityCreated(userId, entity: Postlieferung) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
+    case e @ EntityModified(userId, entity: Postlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
+    case e @ EntityDeleted(userId, entity: Postlieferung) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
 
     case x => log.debug(s"receive unknown event $x")
   }

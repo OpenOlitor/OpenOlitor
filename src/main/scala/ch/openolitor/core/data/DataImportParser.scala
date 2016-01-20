@@ -158,11 +158,11 @@ class DataImportParser extends Actor with ActorLogging {
               anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
               farbCode = row.value[String](indexFarbCode),
               zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
-              saldoMindestbestand = row.value[Int](indexSaldoMindestbestand),
-              //TODO: parse vertriebsarten as well
-              vertriebsarten = Set()))
+              saldoMindestbestand = row.value[Int](indexSaldoMindestbestand)))
     }
   }
+
+  //TODO: parse vertriebsarten
 
   def parseAbos(kundeIdMapping: Map[Int, KundeId], abotypIdMapping: Map[Int, AbotypId], depotIdMapping: Map[Int, DepotId]) = {
     parse("kundeId", Seq("kundeId", "kunde", "abotypId", "abotypName", "depotId", "depotName")) {

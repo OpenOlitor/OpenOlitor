@@ -49,7 +49,7 @@ case class DepotlieferungAbo(id: AboId,
   abotypName: String,
   depotId: DepotId,
   depotName: String,
-  lieferzeitpunkt: Lieferzeitpunkt,
+  liefertag: Lieferzeitpunkt,
   saldo: Int = 0) extends Abo
 
 case class DepotlieferungAboModify(kundeId: KundeId,
@@ -58,7 +58,7 @@ case class DepotlieferungAboModify(kundeId: KundeId,
   abotypName: String,
   depotId: DepotId,
   depotName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
+  liefertag: Lieferzeitpunkt) extends AboModify
 
 case class HeimlieferungAbo(id: AboId,
   kundeId: KundeId,
@@ -67,7 +67,7 @@ case class HeimlieferungAbo(id: AboId,
   abotypName: String,
   tourId: TourId,
   tourName: String,
-  lieferzeitpunkt: Lieferzeitpunkt,
+  liefertag: Lieferzeitpunkt,
   saldo: Int = 0) extends Abo
 
 case class HeimlieferungAboModify(kundeId: KundeId,
@@ -76,19 +76,19 @@ case class HeimlieferungAboModify(kundeId: KundeId,
   abotypName: String,
   tourId: TourId,
   tourName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
+  liefertag: Lieferzeitpunkt) extends AboModify
 
 case class PostlieferungAbo(id: AboId,
   kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
-  lieferzeitpunkt: Lieferzeitpunkt,
+  liefertag: Lieferzeitpunkt,
   saldo: Int = 0) extends Abo
 
 case class PostlieferungAboModify(kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
-  lieferzeitpunkt: Lieferzeitpunkt) extends AboModify
+  liefertag: Lieferzeitpunkt) extends AboModify
 

@@ -269,6 +269,11 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Heimlieferung): Seq[Any] = parameters(Heimlieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Heimlieferung) = {
+      Seq(column.liefertag -> parameter(lieferung.liefertag),
+        column.tourId -> parameter(lieferung.tourId))
+    }
   }
 
   implicit val depotlieferungMapping = new BaseEntitySQLSyntaxSupport[Depotlieferung] {
@@ -281,6 +286,11 @@ trait StammdatenDBMappings extends DBMappings {
 
     def parameterMappings(entity: Depotlieferung): Seq[Any] =
       parameters(Depotlieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Depotlieferung) = {
+      Seq(column.liefertag -> parameter(lieferung.liefertag),
+        column.depotId -> parameter(lieferung.depotId))
+    }
   }
 
   implicit val postlieferungMapping = new BaseEntitySQLSyntaxSupport[Postlieferung] {
@@ -292,6 +302,10 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Postlieferung) = {
+      Seq(column.liefertag -> parameter(lieferung.liefertag))
+    }
   }
 
   implicit val depotlieferungAboMapping = new BaseEntitySQLSyntaxSupport[DepotlieferungAbo] {
@@ -312,7 +326,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.abotypName -> parameter(depotlieferungAbo.abotypName),
         column.depotId -> parameter(depotlieferungAbo.depotId),
         column.depotName -> parameter(depotlieferungAbo.depotName),
-        column.lieferzeitpunkt -> parameter(depotlieferungAbo.lieferzeitpunkt),
+        column.liefertag -> parameter(depotlieferungAbo.liefertag),
         column.saldo -> parameter(depotlieferungAbo.saldo))
     }
   }
@@ -335,7 +349,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.abotypName -> parameter(heimlieferungAbo.abotypName),
         column.tourId -> parameter(heimlieferungAbo.tourId),
         column.tourName -> parameter(heimlieferungAbo.tourName),
-        column.lieferzeitpunkt -> parameter(heimlieferungAbo.lieferzeitpunkt),
+        column.liefertag -> parameter(heimlieferungAbo.liefertag),
         column.saldo -> parameter(heimlieferungAbo.saldo))
     }
   }
@@ -356,7 +370,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.kunde -> parameter(postlieferungAbo.kunde),
         column.abotypId -> parameter(postlieferungAbo.abotypId),
         column.abotypName -> parameter(postlieferungAbo.abotypName),
-        column.lieferzeitpunkt -> parameter(postlieferungAbo.lieferzeitpunkt))
+        column.liefertag -> parameter(postlieferungAbo.liefertag))
     }
   }
 }
