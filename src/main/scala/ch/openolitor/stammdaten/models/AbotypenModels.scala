@@ -53,10 +53,11 @@ sealed trait Rhythmus
 case object Woechentlich extends Rhythmus
 case object Zweiwoechentlich extends Rhythmus
 case object Monatlich extends Rhythmus
+case object Unregelmaessig extends Rhythmus
 
 object Rhythmus {
   def apply(value: String): Rhythmus = {
-    Vector(Woechentlich, Zweiwoechentlich, Monatlich).find(_.toString == value).getOrElse(Woechentlich)
+    Vector(Woechentlich, Zweiwoechentlich, Monatlich, Unregelmaessig).find(_.toString == value).getOrElse(Woechentlich)
   }
 }
 
