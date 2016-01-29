@@ -118,8 +118,44 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         writeRepository.getById(kundeMapping, kundeId) map { kunde =>
           //map all updatable fields
           val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
-          val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length)
+          val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length, 
+              "anzahlPendenzen" -> update.pendenzen.length)
           writeRepository.updateEntity[Kunde, KundeId](copy)
+        }
+      }
+      
+      readRepository.getPendenzen(kundeId) map { pendenzen =>
+        DB autoCommit { implicit session =>
+          val updatedPendenzen = update.pendenzen.zipWithIndex.map {
+            case (updatePendenz, index) =>
+              updatePendenz.id.map { id =>
+                pendenzen.filter(_.id == id).headOption.map { pendenz =>
+                  logger.debug(s"Update pendenz with id:$id, data -> $updatePendenz")
+                  val copy = copyFrom(pendenz, updatePendenz, "id" -> id)
+
+                  writeRepository.updateEntity[Pendenz, PendenzId](copy)
+                  Some(id)
+                }.getOrElse {
+                  //id not associated with this kunde, don't do anything
+                  logger.warn(s"Pendenz with id:$id not found on Kunde $kundeId, ignore")
+                  None
+                }
+              }.getOrElse {
+                //create new Pendenz
+                val pendenzId = PendenzId(UUID.randomUUID)
+                val newPendenz = copyTo[PendenzModify, Pendenz](updatePendenz, "id" -> pendenzId,
+                  "kundeId" -> kundeId)
+                logger.debug(s"Create new pendenz on Kunde:$kundeId, data -> $newPendenz")
+
+                writeRepository.insertEntity(newPendenz)
+                Some(pendenzId)
+              }
+          }.flatten
+
+          //delete pendenzen which aren't longer bound to this customer
+          pendenzen.filterNot(p => updatedPendenzen.contains(p.id)) map { pendenzToDelete =>
+            writeRepository.deleteEntity[Pendenz, PendenzId](pendenzToDelete.id)
+          }
         }
       }
 
@@ -165,7 +201,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       writeRepository.getById(pendenzMapping, id) map { pendenz =>
         //map all updatable fields
-        val copy = copyFrom(pendenz, update)
+        val copy = copyFrom(pendenz, update, "id" -> id)
         writeRepository.updateEntity[Pendenz, PendenzId](copy)
       }
     }

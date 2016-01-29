@@ -177,6 +177,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.typen -> parameter(kunde.typen),
         column.bemerkungen -> parameter(kunde.bemerkungen),
         column.anzahlAbos -> parameter(kunde.anzahlAbos),
+        column.anzahlPendenzen -> parameter(kunde.anzahlPendenzen),
         column.anzahlPersonen -> parameter(kunde.anzahlPersonen))
     }
   }

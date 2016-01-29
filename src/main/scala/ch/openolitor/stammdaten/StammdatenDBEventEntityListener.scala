@@ -135,7 +135,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
   
   def handlePendenzCreated(pendenz: Pendenz)(implicit userId: UserId) = {
-
+    modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
+      log.debug(s"Add pendenz count to kunde:${kunde.id}")
+      kunde.copy(anzahlAbos = kunde.anzahlPendenzen + 1)
+    })
   }
   
   def handlePendenzModified(pendenz: Pendenz, orig: Pendenz)(implicit userId: UserId) = {

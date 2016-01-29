@@ -174,4 +174,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
     path("abos") {
       get(list(readRepository.getAbos))
     }
+  
+  lazy val pendenzenRoute =
+    path("pendenzen") {
+      get(list(readRepository.getPendenzen))
+    }
 }

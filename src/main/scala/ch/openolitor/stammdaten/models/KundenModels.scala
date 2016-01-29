@@ -40,6 +40,7 @@ case class Kunde(id: KundeId,
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlPendenzen: Int,
   anzahlPersonen: Int) extends BaseEntity[KundeId]
 
 case class KundeDetail(id: KundeId,
@@ -53,8 +54,10 @@ case class KundeDetail(id: KundeId,
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlPendenzen: Int,
   anzahlPersonen: Int,
   abos: Seq[Abo],
+  pendenzen: Seq[Pendenz],
   ansprechpersonen: Seq[Person])
 
 case class KundeModify(
@@ -66,6 +69,7 @@ case class KundeModify(
   ort: String,
   bemerkungen: Option[String],
   typen: Set[KundentypId],
+  pendenzen: Seq[PendenzModify],
   ansprechpersonen: Seq[PersonModify]) extends Product
 
 case class PersonId(id: UUID) extends BaseId
@@ -113,8 +117,7 @@ case class Pendenz(id: PendenzId,
     bemerkung: Option[String],
     status: PendenzStatus) extends BaseEntity[PendenzId]
 
-case class PendenzModify(id: PendenzId,
-    kundeId: KundeId,
+case class PendenzModify(id: Option[PendenzId],
     datum: DateTime,
     bemerkung: Option[String],
     status: PendenzStatus) extends Product

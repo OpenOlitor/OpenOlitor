@@ -80,7 +80,8 @@ class DataImportParser extends Actor with ActorLogging {
               bemerkungen = row.value[Option[String]](indexBemerkungen),
               //TODO: parse personentypen as well
               typen = Set(Vereinsmitglied.kundentyp),
-              ansprechpersonen = personen))
+              ansprechpersonen = personen,
+              pendenzen = List.empty))
     }
   }
 
