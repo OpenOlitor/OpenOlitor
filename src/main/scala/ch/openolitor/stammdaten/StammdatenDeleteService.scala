@@ -87,6 +87,8 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
         case Some(kunde) =>
           //delete all personen as well
           readRepository.getPersonen(kundeId).map(_.map(person => deletePerson(person.id)))
+          //delete all pendenzen as well
+          readRepository.getPendenzen(kundeId).map(_.map(pendenz => deletePendenz(pendenz.id)))
         case None =>
       }
 
@@ -96,6 +98,12 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   def deleteDepot(id: DepotId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Depot, DepotId](id, { depot: Depot => depot.anzahlAbonnenten == 0 })
+    }
+  }
+  
+  def deletePendenz(id: PendenzId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[Pendenz, PendenzId](id)
     }
   }
 

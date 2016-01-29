@@ -24,6 +24,8 @@ package ch.openolitor.stammdaten.models
 
 import java.util.UUID
 import ch.openolitor.core.models._
+import java.util.Date
+import org.joda.time.DateTime
 
 case class KundeId(id: UUID) extends BaseId
 
@@ -38,6 +40,7 @@ case class Kunde(id: KundeId,
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlPendenzen: Int,
   anzahlPersonen: Int) extends BaseEntity[KundeId]
 
 case class KundeDetail(id: KundeId,
@@ -51,8 +54,10 @@ case class KundeDetail(id: KundeId,
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlPendenzen: Int,
   anzahlPersonen: Int,
   abos: Seq[Abo],
+  pendenzen: Seq[Pendenz],
   ansprechpersonen: Seq[Person])
 
 case class KundeModify(
@@ -64,6 +69,7 @@ case class KundeModify(
   ort: String,
   bemerkungen: Option[String],
   typen: Set[KundentypId],
+  pendenzen: Seq[PendenzModify],
   ansprechpersonen: Seq[PersonModify]) extends Product
 
 case class PersonId(id: UUID) extends BaseId
@@ -91,3 +97,27 @@ case class PersonModify(
   bemerkungen: Option[String]) extends Product {
   def fullName = vorname + ' ' + name
 }
+
+sealed trait PendenzStatus
+case object Ausstehend extends PendenzStatus
+case object Erledigt extends PendenzStatus
+case object NichtErledigt extends PendenzStatus
+
+object PendenzStatus {
+  def apply(value: String): PendenzStatus = {
+    Vector(Ausstehend, Erledigt, NichtErledigt).find(_.toString == value).getOrElse(Ausstehend)
+  }
+}
+
+case class PendenzId(id: UUID) extends BaseId
+
+case class Pendenz(id: PendenzId,
+    kundeId: KundeId,
+    datum: DateTime,
+    bemerkung: Option[String],
+    status: PendenzStatus) extends BaseEntity[PendenzId]
+
+case class PendenzModify(id: Option[PendenzId],
+    datum: DateTime,
+    bemerkung: Option[String],
+    status: PendenzStatus) extends Product

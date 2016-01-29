@@ -143,7 +143,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         "id" -> kundeId,
         "bezeichnung" -> bez,
         "anzahlPersonen" -> create.ansprechpersonen.length,
-        "anzahlAbos" -> ZERO)
+        "anzahlAbos" -> ZERO,
+        "anzahlPendenzen" -> ZERO)
       DB autoCommit { implicit session =>
         //create abotyp
         writeRepository.insertEntity(kunde)
@@ -166,6 +167,17 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(person)
+    }
+  }
+  
+  def createPendenz(id: UUID, create: PendenzModify, kundeId: KundeId) = {
+    val pendenzId = PendenzId(id)
+
+    val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> pendenzId,
+        "kundeId" -> kundeId)
+
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(pendenz)
     }
   }
 
