@@ -53,6 +53,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val abotypIdParamConverter = string2BaseIdConverter(AbotypId.apply)
   implicit val abotypIdPath = string2BaseIdPathMatcher(AbotypId.apply)
   implicit val kundeIdPath = string2BaseIdPathMatcher(KundeId.apply)
+  implicit val pendenzIdPath = string2BaseIdPathMatcher(PendenzId.apply)
   implicit val personIdPath = string2BaseIdPathMatcher(PersonId.apply)
   implicit val kundentypIdPath = string2BaseIdPathMatcher(CustomKundentypId.apply)
   implicit val depotIdPath = string2BaseIdPathMatcher(DepotId.apply)
@@ -84,6 +85,14 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("kunden" / kundeIdPath / "abos" / aboIdPath) { (kundeId, aboId) =>
         get(detail(readRepository.getAboDetail(aboId))) ~
           delete(remove(aboId))
+      } ~
+      path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
+        get(list(readRepository.getPendenzen(kundeId))) ~
+        	post(create[PendenzModify, PendenzId](PendenzId.apply _))
+      } ~
+      path("kunden" / kundeIdPath / "pendenzen" / pendenzIdPath) { (kundeId, pendenzId) =>
+        get(detail(readRepository.getPendenzDetail(pendenzId))) ~
+           (put | post)(update[PendenzModify, PendenzId](pendenzId))
       }
 
   lazy val kundentypenRoute =

@@ -65,6 +65,10 @@ trait StammdatenReadRepository {
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]]
+  
+  def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
+  def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
+  def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]]
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
@@ -77,6 +81,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val person = personMapping.syntax("pers")
   lazy val lieferung = lieferungMapping.syntax("lieferung")
   lazy val kunde = kundeMapping.syntax("kunde")
+  lazy val pendenz = pendenzMapping.syntax("pendenz")
   lazy val kundentyp = customKundentypMapping.syntax("kundentyp")
   lazy val postlieferung = postlieferungMapping.syntax("postlieferung")
   lazy val depotlieferung = depotlieferungMapping.syntax("depotlieferung")
@@ -333,6 +338,29 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       h <- getHeimlieferungAbo(id)
       p <- getPostlieferungAbo(id)
     } yield (d orElse h orElse p)
+  }
+  
+  def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
+    withSQL {
+      select
+        .from(pendenzMapping as pendenz)
+    }.map(pendenzMapping(pendenz)).list.future
+  }
+  
+  def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
+    withSQL {
+      select
+        .from(pendenzMapping as pendenz)
+        .where.eq(pendenz.kundeId, parameter(id))
+    }.map(pendenzMapping(pendenz)).list.future
+  }
+    
+  def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]] = {
+    withSQL {
+      select
+        .from(pendenzMapping as pendenz)
+        .where.eq(pendenz.id, parameter(id))
+    }.map(pendenzMapping(pendenz)).single.future
   }
 }
 

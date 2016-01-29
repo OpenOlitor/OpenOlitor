@@ -64,6 +64,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
+  implicit val pendenzStatusFormat = enumFormat(PendenzStatus.apply)
 
   //id formats
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId.apply)
@@ -71,6 +72,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val depotIdFormat = baseIdFormat(DepotId.apply)
   implicit val tourIdFormat = baseIdFormat(TourId.apply)
   implicit val kundeIdFormat = baseIdFormat(KundeId.apply)
+  implicit val pendenzIdFormat = baseIdFormat(PendenzId.apply)
   implicit val personIdFormat = baseIdFormat(PersonId.apply)
   implicit val aboIdFormat = baseIdFormat(AboId.apply)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId.apply)
@@ -220,6 +222,8 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val personFormat = jsonFormat10(Person.apply)
   implicit val personModifyFormat = jsonFormat8(PersonModify.apply)
   implicit val kundeFormat = jsonFormat11(Kunde.apply)
+  implicit val pendenzFormat = jsonFormat5(Pendenz.apply)
+  implicit val pendenzModifyFormat = jsonFormat5(PendenzModify.apply)
   implicit val kundeDetailFormat = jsonFormat13(KundeDetail.apply)
   implicit val kundeModifyFormat = jsonFormat9(KundeModify.apply)
   implicit val kundeSummaryFormat = jsonFormat2(KundeSummary.apply)

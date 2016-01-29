@@ -24,6 +24,8 @@ package ch.openolitor.stammdaten.models
 
 import java.util.UUID
 import ch.openolitor.core.models._
+import java.util.Date
+import org.joda.time.DateTime
 
 case class KundeId(id: UUID) extends BaseId
 
@@ -91,3 +93,28 @@ case class PersonModify(
   bemerkungen: Option[String]) extends Product {
   def fullName = vorname + ' ' + name
 }
+
+sealed trait PendenzStatus
+case object Ausstehend extends PendenzStatus
+case object Erledigt extends PendenzStatus
+case object NichtErledigt extends PendenzStatus
+
+object PendenzStatus {
+  def apply(value: String): PendenzStatus = {
+    Vector(Ausstehend, Erledigt, NichtErledigt).find(_.toString == value).getOrElse(Ausstehend)
+  }
+}
+
+case class PendenzId(id: UUID) extends BaseId
+
+case class Pendenz(id: PendenzId,
+    kundeId: KundeId,
+    datum: DateTime,
+    bemerkung: Option[String],
+    status: PendenzStatus) extends BaseEntity[PendenzId]
+
+case class PendenzModify(id: PendenzId,
+    kundeId: KundeId,
+    datum: DateTime,
+    bemerkung: Option[String],
+    status: PendenzStatus) extends Product

@@ -61,6 +61,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: HeimlieferungAbotypModify) => updateVertriebsart(id, entity)
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: PostlieferungAbotypModify) => updateVertriebsart(id, entity)
     case EntityUpdatedEvent(meta, id: KundeId, entity: KundeModify) => updateKunde(id, entity)
+    case EntityUpdatedEvent(meta, id: PendenzId, entity: PendenzModify) => updatePendenz(id, entity)
     case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(id, entity)
     case EntityUpdatedEvent(meta, id: CustomKundentypId, entity: CustomKundentypModify) => updateKundentyp(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
@@ -156,6 +157,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             writeRepository.deleteEntity[Person, PersonId](personToDelete.id)
           }
         }
+      }
+    }
+  }
+  
+  def updatePendenz(id: PendenzId, update: PendenzModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(pendenzMapping, id) map { pendenz =>
+        //map all updatable fields
+        val copy = copyFrom(pendenz, update)
+        writeRepository.updateEntity[Pendenz, PendenzId](copy)
       }
     }
   }

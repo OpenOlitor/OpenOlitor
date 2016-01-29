@@ -56,7 +56,7 @@ object Boot extends App with LazyLogging {
     val configKey = s"openolitor.${key}"
   }
 
-  val config = ConfigFactory.load()
+  val config = ConfigFactory.load(Option(System.getenv("VCAP_APPLICATION.application_name")).getOrElse("application"))
 
   //TODO: replace with real userid after login succeeded
   val systemUserId = UserId(UUID.randomUUID)
