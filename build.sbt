@@ -1,6 +1,9 @@
 scalaVersion := "2.11.7"
 
-enablePlugins(JavaAppPackaging)
+enablePlugins(JavaServerAppPackaging)
+
+name := "openolitor-server"
+mainClass in Compile := Some("ch.openolitor.core.Boot")
 
 assemblyJarName in assembly := "openolitor-server.jar"
 
