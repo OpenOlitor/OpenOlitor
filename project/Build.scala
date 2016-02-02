@@ -42,7 +42,8 @@ object BuildSettings {
 	    "ch.qos.logback"  	  %  "logback-classic"    		  		 % "1.1.3",
 	    "org.mariadb.jdbc"	  %  "mariadb-java-client"               % "1.3.2",
 	    // Libreoffice document API
-	    "org.apache.odftoolkit"	  %  "simple-odf"					 % "0.8.1-incubating"
+	    "org.apache.odftoolkit"	  %  "simple-odf"					 % "0.8.1-incubating",
+	    "com.jsuereth" %% "scala-arm" % "1.4"
 	  )
 	}
   )
