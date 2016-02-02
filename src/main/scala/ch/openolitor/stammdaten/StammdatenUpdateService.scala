@@ -62,6 +62,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: PostlieferungAbotypModify) => updateVertriebsart(id, entity)
     case EntityUpdatedEvent(meta, id: KundeId, entity: KundeModify) => updateKunde(id, entity)
     case EntityUpdatedEvent(meta, id: PendenzId, entity: PendenzModify) => updatePendenz(id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: HeimlieferungAboModify) => updateHeimlieferungAbo(id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: PostlieferungAboModify) => updatePostlieferungAbo(id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: DepotlieferungAboModify) => updateDepotlieferungAbo(id, entity)
     case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(id, entity)
     case EntityUpdatedEvent(meta, id: CustomKundentypId, entity: CustomKundentypModify) => updateKundentyp(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
@@ -131,7 +134,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
               updatePendenz.id.map { id =>
                 pendenzen.filter(_.id == id).headOption.map { pendenz =>
                   logger.debug(s"Update pendenz with id:$id, data -> $updatePendenz")
-                  val copy = copyFrom(pendenz, updatePendenz, "id" -> id)
+                  val copy = copyFrom(pendenz, updatePendenz, "id" -> id, "kundeBezeichnung" -> pendenz.kundeBezeichnung )
 
                   writeRepository.updateEntity[Pendenz, PendenzId](copy)
                   Some(id)
@@ -144,7 +147,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
                 //create new Pendenz
                 val pendenzId = PendenzId(UUID.randomUUID)
                 val newPendenz = copyTo[PendenzModify, Pendenz](updatePendenz, "id" -> pendenzId,
-                  "kundeId" -> kundeId)
+                  "kundeId" -> kundeId, "kundeBezeichnung" -> update.bezeichnung.get )
                 logger.debug(s"Create new pendenz on Kunde:$kundeId, data -> $newPendenz")
 
                 writeRepository.insertEntity(newPendenz)
@@ -203,6 +206,36 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(pendenz, update, "id" -> id)
         writeRepository.updateEntity[Pendenz, PendenzId](copy)
+      }
+    }
+  }
+  
+  def updateDepotlieferungAbo(id: AboId, update: DepotlieferungAboModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(depotlieferungAboMapping, id) map { abo =>
+        //map all updatable fields
+        val copy = copyFrom(abo, update)
+        writeRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+      }
+    }
+  }
+  
+  def updatePostlieferungAbo(id: AboId, update: PostlieferungAboModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(postlieferungAboMapping, id) map { abo =>
+        //map all updatable fields
+        val copy = copyFrom(abo, update)
+        writeRepository.updateEntity[PostlieferungAbo, AboId](copy)
+      }
+    }
+  }
+    
+  def updateHeimlieferungAbo(id: AboId, update: HeimlieferungAboModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(heimlieferungAboMapping, id) map { abo =>
+        //map all updatable fields
+        val copy = copyFrom(abo, update)
+        writeRepository.updateEntity[HeimlieferungAbo, AboId](copy)
       }
     }
   }

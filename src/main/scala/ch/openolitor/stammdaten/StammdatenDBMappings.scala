@@ -217,11 +217,12 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Pendenz): Seq[Any] =
       parameters(Pendenz.unapply(entity).get)
 
-    override def updateParameters(person: Pendenz) = {
-      Seq(column.kundeId -> parameter(person.kundeId),
-        column.datum -> parameter(person.datum),
-        column.bemerkung -> parameter(person.bemerkung),
-        column.status -> parameter(person.status))
+    override def updateParameters(pendenz: Pendenz) = {
+      Seq(column.kundeId -> parameter(pendenz.kundeId),
+        column.kundeBezeichnung -> parameter(pendenz.kundeBezeichnung),
+        column.datum -> parameter(pendenz.datum),
+        column.bemerkung -> parameter(pendenz.bemerkung),
+        column.status -> parameter(pendenz.status))
     }
   }
 

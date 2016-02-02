@@ -170,11 +170,11 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
   
-  def createPendenz(id: UUID, create: PendenzModify, kundeId: KundeId) = {
+  def createPendenz(id: UUID, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String) = {
     val pendenzId = PendenzId(id)
 
     val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> pendenzId,
-        "kundeId" -> kundeId)
+        "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung)
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(pendenz)

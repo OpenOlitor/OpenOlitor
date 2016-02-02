@@ -124,6 +124,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     log.debug(s"Kunde ${kunde.bezeichnung} modified, handle CustomKundentypen. Orig: ${orig.typen} -> modified: ${kunde.typen}. Removed typen:${removed}, added typen:${added}")
 
     handleKundentypenChanged(removed, added)
+    
+    //TODO Update kundeBezeichnung on attached Pendenzen
+//    modifyEntity[Pendenz, PendenzId](kunde.id, { pendenz =>
+//      log.debug(s"Update kundeBezeichnung on all Pendenzen:${pendenz.id}")
+//      pendenz.copy(kundeBezeichnung = kunde.bezeichnung)
+//    })
   }
 
   def handleKundeDeleted(kunde: Kunde)(implicit userId: UserId) = {
@@ -137,7 +143,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def handlePendenzCreated(pendenz: Pendenz)(implicit userId: UserId) = {
     modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
       log.debug(s"Add pendenz count to kunde:${kunde.id}")
-      kunde.copy(anzahlAbos = kunde.anzahlPendenzen + 1)
+      kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
     })
   }
   

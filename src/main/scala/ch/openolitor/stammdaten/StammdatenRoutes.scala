@@ -67,7 +67,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ kundentypenRoute
+  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ kundentypenRoute ~ pendenzenRoute
 
   lazy val kundenRoute =
     path("kunden") {
@@ -84,6 +84,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath) { (kundeId, aboId) =>
         get(detail(readRepository.getAboDetail(aboId))) ~
+          (put | post)(update[AboModify, AboId](aboId)) ~
           delete(remove(aboId))
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>

@@ -113,6 +113,7 @@ case class PendenzId(id: UUID) extends BaseId
 
 case class Pendenz(id: PendenzId,
     kundeId: KundeId,
+    kundeBezeichnung: String,
     datum: DateTime,
     bemerkung: Option[String],
     status: PendenzStatus) extends BaseEntity[PendenzId]
