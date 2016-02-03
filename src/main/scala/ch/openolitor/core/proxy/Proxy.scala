@@ -80,16 +80,18 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   log.debug(s"Configure proxy service for mandanten${routeMap.keySet}")
   
   val proxyRoute: Route = {
-    path(routeMap / "ws"){ mandant =>
-      log.debug(s"Return websocket address for mandant:$mandant => ${mandant.config.wsUri}")
-      complete(mandant.config.wsUri)
-    } ~
-    pathPrefix(routeMap){ mandant =>
+    cors{
+      path(routeMap / "ws"){ mandant =>
+        log.debug(s"Return websocket address for mandant:$mandant => ${mandant.config.wsUri}")
+        complete(mandant.config.wsUri)
+      } 
+    }~    
+    pathPrefix(routeMap){ mandant =>    
       log.debug(s"proxy service request of mandant:$mandant to ${mandant.config.uri}")
-      proxyToUnmatchedPath(mandant.config.uri)(mandant.system)
-    }    
+      proxyToUnmatchedPath(mandant.config.uri)(mandant.system)      
+    }
   }
 
-  def receive = runRoute(cors(proxyRoute))
+  def receive = runRoute(proxyRoute)
 }
 
