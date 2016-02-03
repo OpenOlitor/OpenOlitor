@@ -114,8 +114,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateKunde(kundeId: KundeId, update: KundeModify) = {
-    if (update.ansprechpersonen == 0) {
-      //TODO: handle error
+    logger.debug(s"Update Kunde $kundeId => $update")
+    if (update.ansprechpersonen.isEmpty) {
+      logger.error(s"Update kunde without ansprechperson:$kundeId, update:$update")
     } else {
       DB autoCommit { implicit session =>
         writeRepository.getById(kundeMapping, kundeId) map { kunde =>
@@ -129,70 +130,50 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       
       readRepository.getPendenzen(kundeId) map { pendenzen =>
         DB autoCommit { implicit session =>
-          val updatedPendenzen = update.pendenzen.zipWithIndex.map {
-            case (updatePendenz, index) =>
-              updatePendenz.id.map { id =>
-                pendenzen.filter(_.id == id).headOption.map { pendenz =>
-                  logger.debug(s"Update pendenz with id:$id, data -> $updatePendenz")
-                  val copy = copyFrom(pendenz, updatePendenz, "id" -> id, "kundeBezeichnung" -> pendenz.kundeBezeichnung )
+          //remove existing pendenzen
+          pendenzen.map {
+            pendenzToDelete =>
+              writeRepository.deleteEntity[Pendenz, PendenzId](pendenzToDelete.id)
+          }                          
+        }
+      } andThen { case x =>
+        DB autoCommit { implicit session =>
+        //recreate submitted pendenzen
+          update.pendenzen.map { updatePendenz =>
+            val pendenzId = PendenzId(UUID.randomUUID)
+            val kundeBezeichnung = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
+            val newPendenz = copyTo[PendenzModify, Pendenz](updatePendenz, "id" -> pendenzId,
+              "kundeId" -> kundeId, "kundeBezeichnung" ->  kundeBezeichnung)
+            logger.debug(s"Create new pendenz on Kunde:$kundeId, data -> $newPendenz")
 
-                  writeRepository.updateEntity[Pendenz, PendenzId](copy)
-                  Some(id)
-                }.getOrElse {
-                  //id not associated with this kunde, don't do anything
-                  logger.warn(s"Pendenz with id:$id not found on Kunde $kundeId, ignore")
-                  None
-                }
-              }.getOrElse {
-                //create new Pendenz
-                val pendenzId = PendenzId(UUID.randomUUID)
-                val newPendenz = copyTo[PendenzModify, Pendenz](updatePendenz, "id" -> pendenzId,
-                  "kundeId" -> kundeId, "kundeBezeichnung" -> update.bezeichnung.get )
-                logger.debug(s"Create new pendenz on Kunde:$kundeId, data -> $newPendenz")
-
-                writeRepository.insertEntity(newPendenz)
-                Some(pendenzId)
-              }
-          }.flatten
-
-          //delete pendenzen which aren't longer bound to this customer
-          pendenzen.filterNot(p => updatedPendenzen.contains(p.id)) map { pendenzToDelete =>
-            writeRepository.deleteEntity[Pendenz, PendenzId](pendenzToDelete.id)
+            writeRepository.insertEntity(newPendenz)
           }
         }
       }
 
       readRepository.getPersonen(kundeId) map { personen =>
         DB autoCommit { implicit session =>
-          val updatedPersonen = update.ansprechpersonen.zipWithIndex.map {
+          update.ansprechpersonen.zipWithIndex.map {
             case (updatePerson, index) =>
-              updatePerson.id.map { id =>
-                personen.filter(_.id == id).headOption.map { person =>
-                  logger.debug(s"Update person with id:$id, data -> $updatePerson")
-                  val copy = copyFrom(person, updatePerson, "id" -> id)
+                personen.filter(_.sort == index).headOption.map { person =>
+                  logger.debug(s"Update person with at index:$index, data -> $updatePerson")
+                  val copy = copyFrom(person, updatePerson, "id" -> person.id)
 
                   writeRepository.updateEntity[Person, PersonId](copy)
-                  Some(id)
                 }.getOrElse {
-                  //id not associated with this customer, don't do anything
-                  logger.warn(s"Person with id:$id not found on Kunde $kundeId, ignore")
-                  None
+                  //not found person for this index, remove
+                  val personId = PersonId(UUID.randomUUID)
+                  val newPerson = copyTo[PersonModify, Person](updatePerson, "id" -> personId,
+                    "kundeId" -> kundeId,
+                    "sort" -> index)
+                  logger.debug(s"Create new person on Kunde:$kundeId, data -> $newPerson")
+  
+                  writeRepository.insertEntity(newPerson)  
                 }
-              }.getOrElse {
-                //create new person
-                val personId = PersonId(UUID.randomUUID)
-                val newPerson = copyTo[PersonModify, Person](updatePerson, "id" -> personId,
-                  "kundeId" -> kundeId,
-                  "sort" -> index)
-                logger.debug(s"Create new person on Kunde:$kundeId, data -> $newPerson")
-
-                writeRepository.insertEntity(newPerson)
-                Some(personId)
-              }
-          }.flatten
+              }          
 
           //delete personen which aren't longer bound to this customer
-          personen.filterNot(p => updatedPersonen.contains(p.id)) map { personToDelete =>
+          personen.filter(p => p.sort > update.ansprechpersonen.size) map { personToDelete =>
             writeRepository.deleteEntity[Person, PersonId](personToDelete.id)
           }
         }

@@ -134,7 +134,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createKunde(id: UUID, create: KundeModify) = {
-    if (create.ansprechpersonen.size == 0) {
+    if (create.ansprechpersonen.isEmpty) {
       //TODO: handle error
     } else {
       val kundeId = KundeId(id)
