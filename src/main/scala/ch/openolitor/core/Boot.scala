@@ -87,7 +87,7 @@ object Boot extends App with LazyLogging {
   //configure default settings for scalikejdbc
   scalikejdbc.config.DBs.loadGlobalSettings()
   
-  lazy val rootPort = config.getIntOption("openolitor.port").getOrElse(9000)
+  lazy val rootPort = config.getIntOption("openolitor.port").getOrElse(sys.env("PORT").toInt)
   lazy val rootInterface = config.getStringOption("openolitor.interface").getOrElse("localhost")
   val proxyService = config.getBooleanOption("openolitor.run-proxy-service").getOrElse(false)
   //start proxy service 
