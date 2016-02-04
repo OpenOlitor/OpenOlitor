@@ -52,6 +52,7 @@ import resource._
 import java.net.ServerSocket
 import spray.http.Uri
 import ch.openolitor.core.proxy.ProxyServiceActor
+import util.Properties
 
 case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -73,8 +74,11 @@ object Boot extends App with LazyLogging {
       socket.getLocalPort()
     }.opt.getOrElse(sys.error(s"Couldn't aquire new free server port")) 
   }
-
-  val config = ConfigFactory.load(Option(System.getenv("VCAP_APPLICATION.application_name")).getOrElse("application"))
+  println(s"application_name: " + System.getenv("application_config"))
+  println(s"config-file java prop: " + System.getProperty("config-file"))
+  println(s"port: " + System.getenv("PORT"))
+  
+  val config = ConfigFactory.load
 
   //TODO: replace with real userid after login succeeded
   val systemUserId = UserId(UUID.randomUUID)
@@ -87,8 +91,13 @@ object Boot extends App with LazyLogging {
   //configure default settings for scalikejdbc
   scalikejdbc.config.DBs.loadGlobalSettings()
   
-  lazy val rootPort = config.getIntOption("openolitor.port").getOrElse(sys.env("PORT").toInt)
-  lazy val rootInterface = config.getStringOption("openolitor.interface").getOrElse("localhost")
+  val nonConfigPort = Option(System.getenv("PORT")).getOrElse("8080")
+  
+  lazy val rootPort = config.getStringOption("openolitor.port").getOrElse(nonConfigPort).toInt
+  
+  println(s"rootPort: " + rootPort)
+  
+  lazy val rootInterface = config.getStringOption("openolitor.interface").getOrElse("0.0.0.0")
   val proxyService = config.getBooleanOption("openolitor.run-proxy-service").getOrElse(false)
   //start proxy service 
   if (proxyService) {
