@@ -33,6 +33,10 @@ import ch.openolitor.core.ActorReferences
 import scalaz.NonEmptyList
 import ch.openolitor.core.Boot.MandantConfiguration
 import ch.openolitor.core.Boot.MandantSystem
+import org.jfarcand.wcs.WebSocket
+import spray.can.Http
+import spray.can.websocket._
+import spray.can.websocket.WebSocketServerWorker
 
 /**
  * Borrowed from: 
@@ -68,8 +72,8 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   extends Actor
   with ActorLogging
   with HttpService
-  with CORSSupport 
-  with Proxy {
+  with CORSSupport
+  with WebSocketServerWorker {
   
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -78,20 +82,20 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   val routeMap = mandanten.list.map(c => (c.config.key, c)).toMap
   
   log.debug(s"Configure proxy service for mandanten${routeMap.keySet}")
-  
-  val proxyRoute: Route = {
-    cors{
-      path(routeMap / "ws"){ mandant =>
-        log.debug(s"Return websocket address for mandant:$mandant => ${mandant.config.wsUri}")
-        complete(mandant.config.wsUri)
-      } 
-    }~    
-    pathPrefix(routeMap){ mandant =>    
-      log.debug(s"proxy service request of mandant:$mandant to ${mandant.config.uri}")
-      proxyToUnmatchedPath(mandant.config.uri)(mandant.system)      
-    }
+
+  def websocketReceive:Receive= {
+    case request: HttpRequest if HandshakeRequest.unapply(request) != None =>
+      //is a handshake request, 
   }
 
-  def receive = runRoute(proxyRoute)
+  def receive = {
+    // handle every new connection in an own handler
+    case Http.Connected(remoteAddress, localAddress) =>
+      log.debug(s"Connected:$remoteAddress, $localAddress")
+      val serverConnection = sender()
+
+      val conn = context.actorOf(ProxyWorker.props(serverConnection, routeMap))
+      serverConnection ! Http.Register(conn)
+  }
 }
 
