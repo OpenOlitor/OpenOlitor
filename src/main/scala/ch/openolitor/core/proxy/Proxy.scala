@@ -72,8 +72,7 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   extends Actor
   with ActorLogging
   with HttpService
-  with CORSSupport
-  with WebSocketServerWorker {
+  with CORSSupport {
   
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -83,12 +82,7 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   
   log.debug(s"Configure proxy service for mandanten${routeMap.keySet}")
 
-  def websocketReceive:Receive= {
-    case request: HttpRequest if HandshakeRequest.unapply(request) != None =>
-      //is a handshake request, 
-  }
-
-  def receive = {
+  override def receive = {
     // handle every new connection in an own handler
     case Http.Connected(remoteAddress, localAddress) =>
       log.debug(s"Connected:$remoteAddress, $localAddress")

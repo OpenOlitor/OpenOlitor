@@ -27,7 +27,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   with Proxy{
 
   import ProxyWorker._
-  var wsClient:WebSocket
+  var wsClient:WebSocket = WebSocket()
   
   override def receive = businessLogicNoUpgrade orElse closeLogic
   
@@ -40,7 +40,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   val proxyRoute: Route = {
     path(routeMap / "ws"){ mandant =>
       log.debug(s"Got request to websocket resource, create proxy client for $mandant to ${mandant.config.wsUri}")
-      wsClient = WebSocket().open(mandant.config.wsUri)
+      wsClient.open(mandant.config.wsUri)
       context become (handshaking orElse closeLogic)
       (handshaking orElse closeLogic)
     }~    
@@ -69,11 +69,11 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
     case x: HttpRequest => // do something
-      log.debug(s"Got http request:$x")
-    case x =>
+      log.debug(s"Got http request:$x")    
     case UpgradedToWebSocket => 
       log.debug("Upgradet to websocket, start listening")      
-      wsClient.listener(messageListener)      
+      wsClient.listener(messageListener)
+    case x =>
   }
 
   /**

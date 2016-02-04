@@ -5,9 +5,7 @@ object BuildSettings {
   val akkaV = "2.3.14"
   val sprayV = "1.3.3"
   val scalalikeV = "2.3.0"
-  
-  lazy val jfarcandWcs = RootProject(uri("https://github.com/jfarcand/WCS.git"))
-  
+ 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "ch.openolitor.scalamacros",
     version := "1.0.0",
@@ -45,7 +43,9 @@ object BuildSettings {
 	    "org.mariadb.jdbc"	  %  "mariadb-java-client"               % "1.3.2",
 	    // Libreoffice document API
 	    "org.apache.odftoolkit"	  %  "simple-odf"					 % "0.8.1-incubating",
-	    "com.jsuereth" %% "scala-arm" % "1.4"
+	    "com.jsuereth" %% "scala-arm" % "1.4",
+	    //simple websocket client
+	    "org.jfarcand" % "wcs" % "1.5"
 	  )
 	}
   )
@@ -57,6 +57,6 @@ object OpenOlitorBuild extends Build {
     lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
      libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
    ))
-   lazy val main = Project("main", file("."), settings = buildSettings ) dependsOn(jfarcandWcs) dependsOn(macroSub)
+   lazy val main = Project("main", file("."), settings = buildSettings ) dependsOn(macroSub)
    lazy val root = Project("root", file("root"), settings = buildSettings) aggregate(macroSub, main)
 }
