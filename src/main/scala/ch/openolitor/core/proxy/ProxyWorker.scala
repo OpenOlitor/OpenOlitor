@@ -28,7 +28,11 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   with Proxy{
 
   import ProxyWorker._
-  var wsClient:WebSocket = WebSocket()
+  val wsOptions = new Options
+  wsOptions.idleTimeout = 24 * 60 * 60000 // request timeout to whole day
+  var wsClient:WebSocket = WebSocket(wsOptions)
+  
+  var url:Option[String]=None
   
   override def receive = businessLogicNoUpgrade orElse closeLogic orElse other
     
@@ -76,6 +80,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
    	*/
     override def onClose {
       log.debug(s"messageListener:onClose")
+      openWsClient
     }
     
     /**
@@ -83,6 +88,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   	 */
     override def onClose(code: Int, reason : String) {
       log.debug(s"messageListener:onClose:$code -> $reason")
+      openWsClient
     }
     
     /**
@@ -90,6 +96,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   	 */
     override def onError(t: Throwable) {
       log.error(s"messageListener:onError", t)
+      openWsClient
     }
   }
   
@@ -132,7 +139,8 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   val proxyRoute: Route = {
     path(routeMap / "ws"){ mandant =>
       log.debug(s"Got request to websocket resource, create proxy client for $mandant to ${mandant.config.wsUri}")
-      wsClient = wsClient.open(mandant.config.wsUri)      
+      url = Some(mandant.config.wsUri)
+      openWsClient
       context become (handshaking orElse closeLogic)
       //grab request from already instanciated requestcontext to perform handshake
       requestContextHandshake      
@@ -141,6 +149,13 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
       log.debug(s"proxy service request of mandant:$mandant to ${mandant.config.uri}")
       proxyToUnmatchedPath(mandant.config.uri)(mandant.system)      
     }
+  }
+  
+  def openWsClient = {    
+    url.map{ url => 
+      log.debug("Reopen ws connection to server")
+      wsClient = wsClient.open(url)
+    }   
   }
 
   /**
@@ -166,7 +181,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
     case x: HttpRequest => // do something
-      log.debug(s"Got http request:$x")    
+      log.debug(s"Got http request:$x")      
     case UpgradedToWebSocket => 
       log.debug(s"Upgradet to websocket, start listening:${wsClient.isOpen}")      
       wsClient = wsClient.listener(textMessageListener).listener(binaryMessageListener)      

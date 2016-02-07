@@ -51,7 +51,7 @@ class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceAc
     case x: TextFrame =>
       val msg = x.payload.decodeString("UTF-8")
       log.debug(s"Got from client:$msg")
-      send(TextFrame("Hello"))
+      send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
     //TODO: handle client messages internally
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
