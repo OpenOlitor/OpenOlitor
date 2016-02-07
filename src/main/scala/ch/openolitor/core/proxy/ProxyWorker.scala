@@ -10,6 +10,10 @@ import spray.can.websocket.{ Send, SendStream, UpgradedToWebSocket }
 import akka.util.ByteString
 import ch.openolitor.core.Boot.MandantSystem
 import org.jfarcand.wcs._
+import com.ning.http.client._
+import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig
+import com.ning.http.client.ws.WebSocketListener
+import scala.collection.mutable.ListBuffer
 
 object ProxyWorker {
   case class Push(msg: String)
@@ -30,7 +34,36 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   import ProxyWorker._
   val wsOptions = new Options
   wsOptions.idleTimeout = 24 * 60 * 60000 // request timeout to whole day
-  var wsClient:WebSocket = WebSocket(wsOptions)
+  var wsClient:WebSocket = createWebsocket(wsOptions)
+    
+  def createWebsocket(o: Options): WebSocket = {
+    val nettyConfig: NettyAsyncHttpProviderConfig = new NettyAsyncHttpProviderConfig
+    var asyncHttpClient: AsyncHttpClient = null
+    val listeners: ListBuffer[WebSocketListener] = ListBuffer[WebSocketListener]()
+    var config = new AsyncHttpClientConfig.Builder
+    
+    if (o != null) {
+      nettyConfig.setWebSocketMaxBufferSize(o.maxMessageSize)
+      nettyConfig.setWebSocketMaxFrameSize(o.maxMessageSize)
+      config.setRequestTimeout(o.idleTimeout)
+        .setConnectTimeout(o.idleTimeout)
+        .setConnectionTTL(o.idleTimeout)
+        .setPooledConnectionIdleTimeout(o.idleTimeout)
+        .setReadTimeout(o.idleTimeout)
+        .setWebSocketTimeout(o.idleTimeout)
+        .setUserAgent(o.userAgent).setAsyncHttpClientProviderConfig(nettyConfig)
+    }
+
+    try {
+      config.setFollowRedirect(true)
+      asyncHttpClient = new AsyncHttpClient(config.build)
+    } catch {
+      case t: IllegalStateException => {
+        config = new AsyncHttpClientConfig.Builder
+      }
+    }
+    new WebSocket(o, None, false, asyncHttpClient, listeners)  
+  }
   
   var url:Option[String]=None
   
@@ -38,24 +71,15 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
     
   override def postStop() {
     log.debug(s"onPostStop")
-    wsClient.close
+    if (wsClient.isOpen){ 
+      wsClient.close
+    }
     super.postStop()
-  }
+  }  
   
   val other: Receive = {
-    case websocket.HandshakeRequest(state) =>
-      state match {
-        case wsFailure: websocket.HandshakeFailure => log.error(s"Websocket Handshake failure:$wsFailure:$context")
-        case wsContext: websocket.HandshakeContext => log.error(s"Websocker Handshake:$wsContext:$context")
-      }
-    case req: HttpRequest => 
-      val collector = HandshakeRequest.parseHeaders(req.headers)
-      log.error(s"Unmatched reuqest: $req:$collector")
-    case ctx: RequestContext =>      
-      val collector = HandshakeRequest.parseHeaders(ctx.request.headers)
-      log.error(s"Unmatched reuqest2: $ctx:$collector")
     case x =>      
-      log.error(s"Unmatched reuqest3: $context => $x")
+      log.error(s"Unmatched reuqest: $x")
   }
   
   val requestContextHandshake: Receive = {
@@ -151,11 +175,12 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
     }
   }
   
-  def openWsClient = {    
+  def openWsClient:Option[WebSocket] = {    
     url.map{ url => 
       log.debug("Reopen ws connection to server")
-      wsClient = wsClient.open(url)
-    }   
+      wsClient = wsClient.open(url).listener(textMessageListener).listener(binaryMessageListener)
+      wsClient
+    }  
   }
 
   /**
@@ -183,8 +208,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
     case x: HttpRequest => // do something
       log.debug(s"Got http request:$x")      
     case UpgradedToWebSocket => 
-      log.debug(s"Upgradet to websocket, start listening:${wsClient.isOpen}")      
-      wsClient = wsClient.listener(textMessageListener).listener(binaryMessageListener)      
+      log.debug(s"Upgradet to websocket,isOpen:${wsClient.isOpen}")
     case x =>
       log.warning(s"Got unmatched message:$x")
   }
