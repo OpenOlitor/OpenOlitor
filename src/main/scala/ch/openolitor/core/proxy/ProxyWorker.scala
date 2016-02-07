@@ -13,6 +13,7 @@ import org.jfarcand.wcs._
 
 object ProxyWorker {
   case class Push(msg: String)
+  case class BinaryPush(msg: Array[Byte])
 
   def props(serverConnection: ActorRef, routeMap:Map[String, MandantSystem]) = Props(classOf[ProxyWorker], serverConnection, routeMap)
 }
@@ -29,20 +30,112 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   import ProxyWorker._
   var wsClient:WebSocket = WebSocket()
   
-  override def receive = businessLogicNoUpgrade orElse closeLogic
+  override def receive = businessLogicNoUpgrade orElse closeLogic orElse other
+    
+  override def postStop() {
+    log.debug(s"onPostStop")
+    wsClient.close
+    super.postStop()
+  }
   
-  val messageListener = new MessageListener {
+  val other: Receive = {
+    case websocket.HandshakeRequest(state) =>
+      state match {
+        case wsFailure: websocket.HandshakeFailure => log.error(s"Websocket Handshake failure:$wsFailure:$context")
+        case wsContext: websocket.HandshakeContext => log.error(s"Websocker Handshake:$wsContext:$context")
+      }
+    case req: HttpRequest => 
+      val collector = HandshakeRequest.parseHeaders(req.headers)
+      log.error(s"Unmatched reuqest: $req:$collector")
+    case ctx: RequestContext =>      
+      val collector = HandshakeRequest.parseHeaders(ctx.request.headers)
+      log.error(s"Unmatched reuqest2: $ctx:$collector")
+    case x =>      
+      log.error(s"Unmatched reuqest3: $context => $x")
+  }
+  
+  val requestContextHandshake: Receive = {
+    case ctx: RequestContext =>
+      handshaking(ctx.request)    
+  }
+  
+  lazy val textMessageListener = new TextListener {
     override def onMessage(message: String) {
-        self ! Push(message)
+      log.debug(s"Got message from server, process locally:$message")
+      self ! Push(message)
+    }    
+     /**
+	   * Called when the {@link WebSocket} is opened
+  	 */
+    override def onOpen {
+      log.debug(s"messageListener:onOpen")
+    }
+    
+    /**
+	   * Called when the {@link WebSocket} is closed
+   	*/
+    override def onClose {
+      log.debug(s"messageListener:onClose")
+    }
+    
+    /**
+	   * Called when the {@link WebSocket} is closed with its assic
+  	 */
+    override def onClose(code: Int, reason : String) {
+      log.debug(s"messageListener:onClose:$code -> $reason")
+    }
+    
+    /**
+	   * Called when an unexpected error occurd on a {@link WebSocket}
+  	 */
+    override def onError(t: Throwable) {
+      log.error(s"messageListener:onError", t)
+    }
+  }
+  
+  lazy val binaryMessageListener = new BinaryListener {
+    
+    override def onMessage(message:Array[Byte]) {
+      log.debug(s"Got binary message from server, process locally:$message")     
+      self ! BinaryPush(message)
+    }
+    
+     /**
+	   * Called when the {@link WebSocket} is opened
+  	 */
+    override def onOpen {
+      log.debug(s"binaryMessageListener:onOpen")
+    }
+    
+    /**
+	   * Called when the {@link WebSocket} is closed
+   	*/
+    override def onClose {
+      log.debug(s"binaryMessageListener:onClose")
+    }
+    
+    /**
+	   * Called when the {@link WebSocket} is closed with its assic
+  	 */
+    override def onClose(code: Int, reason : String) {
+      log.debug(s"binaryMessageListener:onClose:$code -> $reason")
+    }
+    
+    /**
+	   * Called when an unexpected error occurd on a {@link WebSocket}
+  	 */
+    override def onError(t: Throwable) {
+      log.error(s"binaryMessageListener:onError", t)
     }
   }
   
   val proxyRoute: Route = {
     path(routeMap / "ws"){ mandant =>
       log.debug(s"Got request to websocket resource, create proxy client for $mandant to ${mandant.config.wsUri}")
-      wsClient.open(mandant.config.wsUri)
+      wsClient = wsClient.open(mandant.config.wsUri)      
       context become (handshaking orElse closeLogic)
-      (handshaking orElse closeLogic)
+      //grab request from already instanciated requestcontext to perform handshake
+      requestContextHandshake      
     }~    
     pathPrefix(routeMap){ mandant =>        
       log.debug(s"proxy service request of mandant:$mandant to ${mandant.config.uri}")
@@ -60,24 +153,29 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
       log.debug(s"Got message from websocket server, Push to client:$msg")
       send(TextFrame(msg))
       // just bounce frames back for Autobahn testsuite
+    case BinaryPush(msg) =>
+      log.debug(s"Got message from websocket server, Push to client:$msg")
+      send(BinaryFrame(ByteString(msg)))
+      // just bounce frames back for Autobahn testsuite
     case x: BinaryFrame =>
       log.debug(s"Got from binary data:$x")
     case x: TextFrame =>
       val msg = x.payload.decodeString("UTF-8")
-      log.debug(s"Got message from client, send to websocket servier:$x")
-      wsClient.send(x.payload.toString)
+      log.debug(s"Got message from client, send to websocket service:$msg -> $x")
+      wsClient.send(msg)
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
     case x: HttpRequest => // do something
       log.debug(s"Got http request:$x")    
     case UpgradedToWebSocket => 
-      log.debug("Upgradet to websocket, start listening")      
-      wsClient.listener(messageListener)
+      log.debug(s"Upgradet to websocket, start listening:${wsClient.isOpen}")      
+      wsClient = wsClient.listener(textMessageListener).listener(binaryMessageListener)      
     case x =>
+      log.warning(s"Got unmatched message:$x")
   }
 
   /**
    * In case we didn't get a websocket upgrade notification
    **/
-  def businessLogicNoUpgrade: Receive = runRoute(proxyRoute)
+  def businessLogicNoUpgrade: Receive = runRoute(proxyRoute) orElse other
 }
