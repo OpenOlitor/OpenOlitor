@@ -34,7 +34,7 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   import ProxyWorker._
   val wsOptions = new Options
   wsOptions.idleTimeout = 24 * 60 * 60000 // request timeout to whole day
-  var wsClient:WebSocket = createWebsocket(wsOptions)
+  var wsClient:WebSocket = createWebsocket(wsOptions) 
     
   def createWebsocket(o: Options): WebSocket = {
     val nettyConfig: NettyAsyncHttpProviderConfig = new NettyAsyncHttpProviderConfig
