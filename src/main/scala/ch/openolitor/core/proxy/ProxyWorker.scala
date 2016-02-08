@@ -14,58 +14,29 @@ import com.ning.http.client._
 import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig
 import com.ning.http.client.ws.WebSocketListener
 import scala.collection.mutable.ListBuffer
+import com.ning.http.client.providers.netty.handler.ConnectionStrategy
+import java.util.concurrent.Executors
 
 object ProxyWorker {
   case class Push(msg: String)
   case class BinaryPush(msg: Array[Byte])
 
-  def props(serverConnection: ActorRef, routeMap:Map[String, MandantSystem]) = Props(classOf[ProxyWorker], serverConnection, routeMap)
+  def props(serverConnection: ActorRef, routeMap:Map[String, MandantSystem], wsHandler: WebsocketHandler) = Props(classOf[ProxyWorker], serverConnection, routeMap, wsHandler)
 }
 
 /**
  * This Proxy Worker proxies either websocket messages to a websocket server or
  * normal httprequest to a httpserver
  **/
-class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, MandantSystem]) 
+class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, MandantSystem], val wsHandler:WebsocketHandler) 
   extends HttpServiceActor 
   with websocket.WebSocketServerWorker
   with Proxy{
-
-  import ProxyWorker._
-  val wsOptions = new Options
-  wsOptions.idleTimeout = 24 * 60 * 60000 // request timeout to whole day
-  var wsClient:WebSocket = createWebsocket(wsOptions) 
-    
-  def createWebsocket(o: Options): WebSocket = {
-    val nettyConfig: NettyAsyncHttpProviderConfig = new NettyAsyncHttpProviderConfig
-    var asyncHttpClient: AsyncHttpClient = null
-    val listeners: ListBuffer[WebSocketListener] = ListBuffer[WebSocketListener]()
-    var config = new AsyncHttpClientConfig.Builder
-    
-    if (o != null) {
-      nettyConfig.setWebSocketMaxBufferSize(o.maxMessageSize)
-      nettyConfig.setWebSocketMaxFrameSize(o.maxMessageSize)
-      config.setRequestTimeout(o.idleTimeout)
-        .setConnectTimeout(o.idleTimeout)
-        .setConnectionTTL(o.idleTimeout)
-        .setPooledConnectionIdleTimeout(o.idleTimeout)
-        .setReadTimeout(o.idleTimeout)
-        .setWebSocketTimeout(o.idleTimeout)
-        .setUserAgent(o.userAgent).setAsyncHttpClientProviderConfig(nettyConfig)
-    }
-
-    try {
-      config.setFollowRedirect(true)
-      asyncHttpClient = new AsyncHttpClient(config.build)
-    } catch {
-      case t: IllegalStateException => {
-        config = new AsyncHttpClientConfig.Builder
-      }
-    }
-    new WebSocket(o, None, false, asyncHttpClient, listeners)  
-  }
   
   var url:Option[String]=None
+  
+  import ProxyWorker._
+  var wsClient: WebSocket = wsHandler.wsClient
   
   override def receive = businessLogicNoUpgrade orElse closeLogic orElse other
     
@@ -104,7 +75,6 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
    	*/
     override def onClose {
       log.debug(s"messageListener:onClose")
-      openWsClient
     }
     
     /**
@@ -112,7 +82,6 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   	 */
     override def onClose(code: Int, reason : String) {
       log.debug(s"messageListener:onClose:$code -> $reason")
-      openWsClient
     }
     
     /**
@@ -120,7 +89,6 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   	 */
     override def onError(t: Throwable) {
       log.error(s"messageListener:onError", t)
-      openWsClient
     }
   }
   

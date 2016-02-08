@@ -65,12 +65,12 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
-  def actorRefFactory = context
+  val actorRefFactory = context
 
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  def receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
+  val receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
 }
 
 // this trait defines our service behavior independently from the service actor

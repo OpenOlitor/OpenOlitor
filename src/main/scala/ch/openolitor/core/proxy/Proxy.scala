@@ -76,11 +76,13 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
-  def actorRefFactory = context
+  val actorRefFactory = context
   
   val routeMap = mandanten.list.map(c => (c.config.key, c)).toMap
   
   log.debug(s"Configure proxy service for mandanten${routeMap.keySet}")
+  
+  val websocketHandler = new WebsocketHandler
 
   override def receive = {
     // handle every new connection in an own handler
@@ -88,7 +90,7 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
       log.debug(s"Connected:$remoteAddress, $localAddress")
       val serverConnection = sender()
 
-      val conn = context.actorOf(ProxyWorker.props(serverConnection, routeMap))
+      val conn = context.actorOf(ProxyWorker.props(serverConnection, routeMap, websocketHandler))
       serverConnection ! Http.Register(conn)
   }
 }
