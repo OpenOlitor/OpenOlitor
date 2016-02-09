@@ -16,6 +16,7 @@ import com.ning.http.client.ws.WebSocketListener
 import scala.collection.mutable.ListBuffer
 import com.ning.http.client.providers.netty.handler.ConnectionStrategy
 import java.util.concurrent.Executors
+import scala.concurrent.duration._
 
 object ProxyWorker {
   case class Push(msg: String)
@@ -32,25 +33,36 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   extends HttpServiceActor 
   with websocket.WebSocketServerWorker
   with Proxy{
+  //Use system's dispatcher as ExecutionContext
+  import context.dispatcher
   
   var url:Option[String]=None
   
   import ProxyWorker._
   var wsClient: WebSocket = wsHandler.wsClient
   
+  var cancellable: Option[Cancellable] = None
+  
   override def receive = businessLogicNoUpgrade orElse closeLogic orElse other
     
   override def postStop() {
     log.debug(s"onPostStop")
+    processCloseDown
+    super.postStop()
+  } 
+  
+  def processCloseDown = {
+    log.debug(s"processCloseDown")
     if (wsClient.isOpen){ 
       wsClient.close
     }
-    super.postStop()
-  }  
+    cancellable.map(c => if (!c.isCancelled)c.cancel)
+    cancellable = None
+  }
   
   val other: Receive = {
     case x =>      
-      log.error(s"Unmatched reuqest: $x")
+      log.error(s"Unmatched request: $x")
   }
   
   val requestContextHandshake: Receive = {
@@ -61,6 +73,12 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   lazy val textMessageListener = new TextListener {
     override def onMessage(message: String) {
       log.debug(s"Got message from server, process locally:$message")
+      message match {
+        case "Pong" => 
+          log.debug("Received Pong")
+          //send as well to client          
+        case msg => 
+      }
       self ! Push(message)
     }    
      /**
@@ -146,9 +164,18 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
   def openWsClient:Option[WebSocket] = {    
     url.map{ url => 
       log.debug("Reopen ws connection to server")
-      wsClient = wsClient.open(url).listener(textMessageListener).listener(binaryMessageListener)
-      wsClient
-    }  
+      wsClient = wsClient.open(url).listener(textMessageListener).listener(binaryMessageListener)      
+      
+      //start ping-poing to keep websocket connection alive
+      cancellable =
+        Some(context.system.scheduler.schedule(90 seconds,
+          90 seconds,
+          self,
+          "Ping"))
+          
+      wsClient          
+    }
+    
   }
 
   /**
@@ -156,7 +183,6 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
    * Websocket handling logic
    */
   def businessLogic: Receive = {
-
     case Push(msg) =>
       log.debug(s"Got message from websocket server, Push to client:$msg")
       send(TextFrame(msg))
@@ -171,14 +197,21 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
       val msg = x.payload.decodeString("UTF-8")
       log.debug(s"Got message from client, send to websocket service:$msg -> $x")
       wsClient.send(msg)
+    case "Ping" => 
+      log.debug("Send ping")
+      wsClient.send("Ping")
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
     case x: HttpRequest => // do something
       log.debug(s"Got http request:$x")      
     case UpgradedToWebSocket => 
       log.debug(s"Upgradet to websocket,isOpen:${wsClient.isOpen}")
+    case akka.io.Tcp.Closed => 
+      processCloseDown
+    case akka.io.Tcp.PeerClosed =>
+      processCloseDown
     case x =>
-      log.warning(s"Got unmatched message:$x")
+      log.warning(s"Got unmatched message:$x:"+x.getClass)
   }
 
   /**

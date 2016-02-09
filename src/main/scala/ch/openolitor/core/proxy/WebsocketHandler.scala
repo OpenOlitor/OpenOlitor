@@ -43,7 +43,7 @@ class WebsocketHandler {
   
   val wsOptions = new Options
   wsOptions.idleTimeout = 24 * 60 * 60000 // request timeout to whole day
-  var wsClient: WebSocket = createWebsocket(wsOptions)
+  val wsClient: WebSocket = createWebsocket(wsOptions)
 
   def createWebsocket(o: Options): WebSocket = {
     val nettyConfig: NettyAsyncHttpProviderConfig = new NettyAsyncHttpProviderConfig

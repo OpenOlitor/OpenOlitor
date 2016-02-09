@@ -39,6 +39,8 @@ object ClientMessagesWorker {
 class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
 
   import ClientMessagesWorker._
+  
+  val helloServerPattern = """(.*)("type:"HelloServer",)(.*)""".r
 
   def businessLogic: Receive = {
 
@@ -51,8 +53,15 @@ class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceAc
     case x: TextFrame =>
       val msg = x.payload.decodeString("UTF-8")
       log.debug(s"Got from client:$msg")
-      //send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
-    //TODO: handle client messages internally
+      
+      msg match {
+        case "Ping" => 
+          send(TextFrame("Pong"))
+        case helloServerPattern(_, _, _) =>
+          send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
+        case _ =>
+          //TODO: handle client messages internally   
+      }    
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
     case x: HttpRequest => // do something
