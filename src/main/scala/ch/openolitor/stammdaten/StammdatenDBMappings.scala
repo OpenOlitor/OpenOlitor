@@ -33,6 +33,7 @@ import scalikejdbc.TypeBinder._
 import ch.openolitor.core.repositories.DBMappings
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.repositories.SqlBinder
+import ch.openolitor.stammdaten.models.PendenzStatus
 
 //DB Model bindig
 
@@ -69,12 +70,16 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
   implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
   implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder(PersonId.apply _)
+  implicit val pendenzIdBinder: TypeBinder[PendenzId] = baseIdTypeBinder(PendenzId.apply _)
   implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
+  implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
   implicit val customKundentypIdBinder: TypeBinder[CustomKundentypId] = baseIdTypeBinder(CustomKundentypId.apply _)
   implicit val kundentypIdBinder: TypeBinder[KundentypId] = string.map(KundentypId)
 
+  implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
+  implicit val lieferungStatusTypeBinder: TypeBinder[LieferungStatus] = string.map(LieferungStatus.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
@@ -82,9 +87,11 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
 
   //DB parameter binders for write and query operationsit
+  implicit val pendenzStatusBinder = toStringSqlBinder[PendenzStatus]
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
+  implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
   implicit val lieferzeipunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
@@ -94,10 +101,12 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
   implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
   implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
+  implicit val pendenzIdSqlBinder = baseIdSqlBinder[PendenzId]
   implicit val customKundentypIdSqlBinder = baseIdSqlBinder[CustomKundentypId]
   implicit val kundentypIdSqlBinder = new SqlBinder[KundentypId] { def apply(value: KundentypId): Any = value.id }
   implicit val kundentypIdSetSqlBinder = setSqlBinder[KundentypId]
   implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
+  implicit val lieferungIdSqlBinder = baseIdSqlBinder[LieferungId]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -125,7 +134,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.zielpreis -> parameter(abotyp.zielpreis),
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-        column.waehrung -> parameter(abotyp.waehrung))
+        column.waehrung -> parameter(abotyp.waehrung),
+        column.saldoMindestbestand -> parameter(abotyp.saldoMindestbestand))
     }
   }
 
@@ -167,6 +177,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.typen -> parameter(kunde.typen),
         column.bemerkungen -> parameter(kunde.bemerkungen),
         column.anzahlAbos -> parameter(kunde.anzahlAbos),
+        column.anzahlPendenzen -> parameter(kunde.anzahlPendenzen),
         column.anzahlPersonen -> parameter(kunde.anzahlPersonen))
     }
   }
@@ -192,6 +203,41 @@ trait StammdatenDBMappings extends DBMappings {
         column.telefonFestnetz -> parameter(person.telefonFestnetz),
         column.bemerkungen -> parameter(person.bemerkungen),
         column.sort -> parameter(person.sort))
+    }
+  }
+  
+  implicit val pendenzMapping = new BaseEntitySQLSyntaxSupport[Pendenz] {
+    override val tableName = "Pendenz"
+
+    override lazy val columns = autoColumns[Pendenz]()
+
+    def apply(rn: ResultName[Pendenz])(rs: WrappedResultSet): Pendenz =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Pendenz): Seq[Any] =
+      parameters(Pendenz.unapply(entity).get)
+
+    override def updateParameters(pendenz: Pendenz) = {
+      Seq(column.kundeId -> parameter(pendenz.kundeId),
+        column.kundeBezeichnung -> parameter(pendenz.kundeBezeichnung),
+        column.datum -> parameter(pendenz.datum),
+        column.bemerkung -> parameter(pendenz.bemerkung),
+        column.status -> parameter(pendenz.status))
+    }
+  }
+
+  implicit val lieferungMapping = new BaseEntitySQLSyntaxSupport[Lieferung] {
+    override val tableName = "Lieferung"
+
+    override lazy val columns = autoColumns[Lieferung]()
+
+    def apply(rn: ResultName[Lieferung])(rs: WrappedResultSet): Lieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Lieferung): Seq[Any] = parameters(Lieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Lieferung) = {
+      Seq(column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten))
     }
   }
 
@@ -249,6 +295,11 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Heimlieferung): Seq[Any] = parameters(Heimlieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Heimlieferung) = {
+      Seq(column.liefertag -> parameter(lieferung.liefertag),
+        column.tourId -> parameter(lieferung.tourId))
+    }
   }
 
   implicit val depotlieferungMapping = new BaseEntitySQLSyntaxSupport[Depotlieferung] {
@@ -261,6 +312,11 @@ trait StammdatenDBMappings extends DBMappings {
 
     def parameterMappings(entity: Depotlieferung): Seq[Any] =
       parameters(Depotlieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Depotlieferung) = {
+      Seq(column.liefertag -> parameter(lieferung.liefertag),
+        column.depotId -> parameter(lieferung.depotId))
+    }
   }
 
   implicit val postlieferungMapping = new BaseEntitySQLSyntaxSupport[Postlieferung] {
@@ -272,6 +328,10 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
+
+    override def updateParameters(lieferung: Postlieferung) = {
+      Seq(column.liefertag -> parameter(lieferung.liefertag))
+    }
   }
 
   implicit val depotlieferungAboMapping = new BaseEntitySQLSyntaxSupport[DepotlieferungAbo] {
@@ -292,7 +352,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.abotypName -> parameter(depotlieferungAbo.abotypName),
         column.depotId -> parameter(depotlieferungAbo.depotId),
         column.depotName -> parameter(depotlieferungAbo.depotName),
-        column.lieferzeitpunkt -> parameter(depotlieferungAbo.lieferzeitpunkt))
+        column.liefertag -> parameter(depotlieferungAbo.liefertag),
+        column.saldo -> parameter(depotlieferungAbo.saldo))
     }
   }
 
@@ -314,7 +375,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.abotypName -> parameter(heimlieferungAbo.abotypName),
         column.tourId -> parameter(heimlieferungAbo.tourId),
         column.tourName -> parameter(heimlieferungAbo.tourName),
-        column.lieferzeitpunkt -> parameter(heimlieferungAbo.lieferzeitpunkt))
+        column.liefertag -> parameter(heimlieferungAbo.liefertag),
+        column.saldo -> parameter(heimlieferungAbo.saldo))
     }
   }
 
@@ -334,7 +396,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.kunde -> parameter(postlieferungAbo.kunde),
         column.abotypId -> parameter(postlieferungAbo.abotypId),
         column.abotypName -> parameter(postlieferungAbo.abotypName),
-        column.lieferzeitpunkt -> parameter(postlieferungAbo.lieferzeitpunkt))
+        column.liefertag -> parameter(postlieferungAbo.liefertag))
     }
   }
 }

@@ -80,7 +80,8 @@ class DataImportParser extends Actor with ActorLogging {
               bemerkungen = row.value[Option[String]](indexBemerkungen),
               //TODO: parse personentypen as well
               typen = Set(Vereinsmitglied.kundentyp),
-              ansprechpersonen = personen))
+              ansprechpersonen = personen,
+              pendenzen = List.empty))
     }
   }
 
@@ -137,12 +138,12 @@ class DataImportParser extends Actor with ActorLogging {
 
   val parseAbotypen = {
     parse("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
-      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten")) {
+      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand")) {
       indexes =>
         row =>
           //match column indexes
           val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
-            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten) = indexes
+            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten, indexSaldoMindestbestand) = indexes
 
           (AbotypId(UUID.randomUUID),
             AbotypModify(
@@ -153,15 +154,16 @@ class DataImportParser extends Actor with ActorLogging {
               aktivBis = row.value[Option[DateTime]](indexAktivBis),
               preis = row.value[BigDecimal](indexPreis),
               preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
-              laufzeit = row.value[Int](indexLaufzeit),
+              laufzeit = row.value[Option[Int]](indexLaufzeit),
               laufzeiteinheit = Laufzeiteinheit(row.value[String](indexLaufzeiteinheit)),
               anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
               farbCode = row.value[String](indexFarbCode),
               zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
-              //TODO: parse vertriebsarten as well
-              vertriebsarten = Set()))
+              saldoMindestbestand = row.value[Int](indexSaldoMindestbestand)))
     }
   }
+
+  //TODO: parse vertriebsarten
 
   def parseAbos(kundeIdMapping: Map[Int, KundeId], abotypIdMapping: Map[Int, AbotypId], depotIdMapping: Map[Int, DepotId]) = {
     parse("kundeId", Seq("kundeId", "kunde", "abotypId", "abotypName", "depotId", "depotName")) {

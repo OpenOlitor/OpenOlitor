@@ -38,6 +38,7 @@ import scalaz.Scalaz._
 import com.typesafe.config.Config
 import ch.openolitor.core._
 import ch.openolitor.core.domain._
+import ch.openolitor.util.ConfigUtil._
 import ch.openolitor.stammdaten._
 import scalikejdbc.ConnectionPoolContext
 import ch.openolitor.core.db._
@@ -47,16 +48,37 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.models.UserId
 import java.util.UUID
 import ch.openolitor.core.ws.ClientMessagesServer
+import resource._
+import java.net.ServerSocket
+import spray.http.Uri
+import ch.openolitor.core.proxy.ProxyServiceActor
+import util.Properties
 
 case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
 object Boot extends App with LazyLogging {
-
+  
+  
   case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer) {
     val configKey = s"openolitor.${key}"
+    
+    def wsUri = s"ws://$interface:$wsPort"
+    def uri = s"http://$interface:$port"
   }
-
-  val config = ConfigFactory.load()
+  
+  case class MandantSystem(config:MandantConfiguration, system:ActorSystem)
+  
+  def freePort:Int = synchronized{
+    managed(new ServerSocket(0)).map { socket => 
+      socket.setReuseAddress(true)
+      socket.getLocalPort()
+    }.opt.getOrElse(sys.error(s"Couldn't aquire new free server port")) 
+  }
+  println(s"application_name: " + System.getenv("application_config"))
+  println(s"config-file java prop: " + System.getProperty("config-file"))
+  println(s"port: " + System.getenv("PORT"))
+  
+  val config = ConfigFactory.load
 
   //TODO: replace with real userid after login succeeded
   val systemUserId = UserId(UUID.randomUUID)
@@ -64,38 +86,56 @@ object Boot extends App with LazyLogging {
   // instanciate actor system per mandant, with mandantenspecific configuration
   val configs = getMandantConfiguration(config)
   implicit val timeout = Timeout(5.seconds)
-  startServices(configs)
-
-  //TODO: start proxy service routing to mandant instances
-  val proxyService = Option(config.getBoolean("openolitor.run-proxy-service")).getOrElse(false)
+  val mandanten = startServices(configs)  
 
   //configure default settings for scalikejdbc
   scalikejdbc.config.DBs.loadGlobalSettings()
-
+  
+  val nonConfigPort = Option(System.getenv("PORT")).getOrElse("8080")
+  
+  lazy val rootPort = config.getStringOption("openolitor.port").getOrElse(nonConfigPort).toInt
+  
+  println(s"rootPort: " + rootPort)
+  
+  lazy val rootInterface = config.getStringOption("openolitor.interface").getOrElse("0.0.0.0")
+  val proxyService = config.getBooleanOption("openolitor.run-proxy-service").getOrElse(false)
+  //start proxy service 
+  if (proxyService) {
+    startProxyService(mandanten)
+  }
+  
   def getMandantConfiguration(config: Config): NonEmptyList[MandantConfiguration] = {
     val mandanten = config.getStringList("openolitor.mandanten").toList
     mandanten.toNel.map(_.zipWithIndex.map {
       case (mandant, index) =>
-        val ifc = Option(config.getString(s"openolitor.$mandant.interface")).getOrElse("localhost")
-        val port = Option(config.getInt(s"openolitor.$mandant.port")).getOrElse(9000 + index)
-        val wsPort = Option(config.getInt(s"openolitor.$mandant.webservicePort")).getOrElse(port + 1000)
-        val name = Option(config.getString(s"openolitor.$mandant.name")).getOrElse(mandant)
+        val ifc = config.getStringOption(s"openolitor.$mandant.interface").getOrElse(rootInterface)
+        val port = config.getIntOption(s"openolitor.$mandant.port").getOrElse(freePort)
+        val wsPort = config.getIntOption(s"openolitor.$mandant.webservicePort").getOrElse(freePort)
+        val name = config.getStringOption(s"openolitor.$mandant.name").getOrElse(mandant)
 
         MandantConfiguration(mandant, name, ifc, port, wsPort)
     }).getOrElse {
       //default if no list of mandanten is configured
-      val ifc = Option(config.getString("openolitor.interface")).getOrElse("localhost")
-      val port = Option(config.getInt("openolitor.port")).getOrElse(9000)
-      val wsPort = Option(config.getInt("openolitor.webservicePort")).getOrElse(9001)
+      val ifc = rootInterface
+      val port = rootPort
+      val wsPort = config.getIntOption("openolitor.webservicePort").getOrElse(9001)
 
       NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort))
     }
+  }
+  
+  def startProxyService(mandanten: NonEmptyList[MandantSystem]) = {
+    implicit val proxySystem = ActorSystem("oo-proxy")
+    
+    val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten), "oo-proxy-service")
+    IO(UHttp) ? Http.Bind(proxyService, interface = rootInterface, port = rootPort)
+    logger.debug(s"oo-proxy-system: configured proxy listener on port ${rootPort}")
   }
 
   /**
    * Jeder Mandant wird in einem eigenen Akka System gestartet.
    */
-  def startServices(configs: NonEmptyList[MandantConfiguration]): Unit = {
+  def startServices(configs: NonEmptyList[MandantConfiguration]): NonEmptyList[MandantSystem] = {
     configs.map { cfg =>
       implicit val app = ActorSystem(cfg.name, config.getConfig(cfg.configKey).withFallback(config))
 
@@ -137,6 +177,8 @@ object Boot extends App with LazyLogging {
       //start new websocket service
       IO(UHttp) ? Http.Bind(clientMessages, interface = cfg.interface, port = cfg.wsPort)
       logger.debug(s"oo-system: configured ws listener on port ${cfg.wsPort}")
+      
+      MandantSystem(cfg, app)
     }
   }
 

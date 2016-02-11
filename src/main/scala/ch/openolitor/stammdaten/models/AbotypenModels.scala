@@ -53,33 +53,35 @@ sealed trait Rhythmus
 case object Woechentlich extends Rhythmus
 case object Zweiwoechentlich extends Rhythmus
 case object Monatlich extends Rhythmus
+case object Unregelmaessig extends Rhythmus
 
 object Rhythmus {
   def apply(value: String): Rhythmus = {
-    Vector(Woechentlich, Zweiwoechentlich, Monatlich).find(_.toString == value).getOrElse(Woechentlich)
+    Vector(Woechentlich, Zweiwoechentlich, Monatlich, Unregelmaessig).find(_.toString == value).getOrElse(Woechentlich)
   }
 }
 
 sealed trait Preiseinheit
-case object Lieferung extends Preiseinheit
-case object Monat extends Preiseinheit
-case object Quartal extends Preiseinheit
-case object Jahr extends Preiseinheit
-case object Aboende extends Preiseinheit
+case object ProLieferung extends Preiseinheit
+case object ProMonat extends Preiseinheit
+case object ProQuartal extends Preiseinheit
+case object ProJahr extends Preiseinheit
+case object ProAbo extends Preiseinheit
 
 object Preiseinheit {
   def apply(value: String): Preiseinheit = {
-    Vector(Lieferung, Monat, Quartal, Jahr, Aboende).find(_.toString == value).getOrElse(Jahr)
+    Vector(ProLieferung, ProMonat, ProMonat, ProJahr, ProAbo).find(_.toString == value).getOrElse(ProLieferung)
   }
 }
 
 sealed trait Laufzeiteinheit
 case object Lieferungen extends Laufzeiteinheit
 case object Monate extends Laufzeiteinheit
+case object Unbeschraenkt extends Laufzeiteinheit
 
 object Laufzeiteinheit {
   def apply(value: String): Laufzeiteinheit = {
-    Vector(Lieferungen, Monate).find(_.toString == value).getOrElse(Lieferungen)
+    Vector(Unbeschraenkt, Lieferungen, Monate).find(_.toString == value).getOrElse(Lieferungen)
   }
 }
 
@@ -104,11 +106,12 @@ case class Abotyp(id: AbotypId,
   aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  laufzeit: Int,
+  laufzeit: Option[Int],
   laufzeiteinheit: Laufzeiteinheit,
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
+  saldoMindestbestand: Int,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
@@ -124,38 +127,9 @@ case class AbotypModify(
   aktivBis: Option[DateTime],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
-  laufzeit: Int,
+  laufzeit: Option[Int],
   laufzeiteinheit: Laufzeiteinheit,
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
-  vertriebsarten: Set[Vertriebsartdetail]) extends AktivRange
-
-case class AbotypDetail(id: AbotypId,
-  name: String,
-  beschreibung: Option[String],
-  lieferrhythmus: Rhythmus,
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
-  preis: BigDecimal,
-  preiseinheit: Preiseinheit,
-  laufzeit: Int,
-  laufzeiteinheit: Laufzeiteinheit,
-  anzahlAbwesenheiten: Option[Int],
-  farbCode: String,
-  zielpreis: Option[BigDecimal],
-  vertriebsarten: Set[Vertriebsartdetail],
-  anzahlAbonnenten: Int,
-  letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange
-
-case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
-sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
-case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
-case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
-case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsart
-
-sealed trait Vertriebsartdetail extends Product
-case class DepotlieferungDetail(depot: DepotSummary, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class HeimlieferungDetail(tour: Tour, liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
-case class PostlieferungDetail(liefertage: Set[Lieferzeitpunkt]) extends Vertriebsartdetail
+  saldoMindestbestand: Int) extends AktivRange

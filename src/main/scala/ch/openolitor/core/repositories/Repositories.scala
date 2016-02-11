@@ -37,7 +37,7 @@ trait ParameterBinderMapping[A] {
   def bind(value: A): ParameterBinder[A]
 }
 
-trait SqlBinder[T] extends (T => Any) {
+trait SqlBinder[-T] extends (T => Any) {
 }
 
 trait DBMappings {

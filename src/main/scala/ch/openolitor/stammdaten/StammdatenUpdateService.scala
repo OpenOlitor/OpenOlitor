@@ -57,7 +57,14 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: DepotlieferungAbotypModify) => updateVertriebsart(id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: HeimlieferungAbotypModify) => updateVertriebsart(id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: PostlieferungAbotypModify) => updateVertriebsart(id, entity)
     case EntityUpdatedEvent(meta, id: KundeId, entity: KundeModify) => updateKunde(id, entity)
+    case EntityUpdatedEvent(meta, id: PendenzId, entity: PendenzModify) => updatePendenz(id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: HeimlieferungAboModify) => updateHeimlieferungAbo(id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: PostlieferungAboModify) => updatePostlieferungAbo(id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: DepotlieferungAboModify) => updateDepotlieferungAbo(id, entity)
     case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(id, entity)
     case EntityUpdatedEvent(meta, id: CustomKundentypId, entity: CustomKundentypModify) => updateKundentyp(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
@@ -72,63 +79,144 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
         writeRepository.updateEntity[Abotyp, AbotypId](copy)
+      }
+    }
+  }
 
-        //remove all existing vertriebsarten
-        writeRepository.removeVertriebsarten(id)
+  def updateVertriebsart(id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(depotlieferungMapping, id) map { depotlieferung =>
+        //map all updatable fields
+        val copy = copyFrom(depotlieferung, vertriebsart)
+        writeRepository.updateEntity[Depotlieferung, VertriebsartId](copy)
+      }
+    }
+  }
 
-        //reassign vertriebsarten
-        writeRepository.attachVertriebsarten(id, update.vertriebsarten)
+  def updateVertriebsart(id: VertriebsartId, vertriebsart: PostlieferungAbotypModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(postlieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, vertriebsart)
+        writeRepository.updateEntity[Postlieferung, VertriebsartId](copy)
+      }
+    }
+  }
+
+  def updateVertriebsart(id: VertriebsartId, vertriebsart: HeimlieferungAbotypModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(heimlieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, vertriebsart)
+        writeRepository.updateEntity[Heimlieferung, VertriebsartId](copy)
       }
     }
   }
 
   def updateKunde(kundeId: KundeId, update: KundeModify) = {
-    if (update.ansprechpersonen == 0) {
-      //TODO: handle error
+    logger.debug(s"Update Kunde $kundeId => $update")
+    if (update.ansprechpersonen.isEmpty) {
+      logger.error(s"Update kunde without ansprechperson:$kundeId, update:$update")
     } else {
       DB autoCommit { implicit session =>
         writeRepository.getById(kundeMapping, kundeId) map { kunde =>
           //map all updatable fields
           val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
-          val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length)
+          val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length, 
+              "anzahlPendenzen" -> update.pendenzen.length)
           writeRepository.updateEntity[Kunde, KundeId](copy)
+        }
+      }
+      
+      readRepository.getPendenzen(kundeId) map { pendenzen =>
+        DB autoCommit { implicit session =>
+          //remove existing pendenzen
+          pendenzen.map {
+            pendenzToDelete =>
+              writeRepository.deleteEntity[Pendenz, PendenzId](pendenzToDelete.id)
+          }                          
+        }
+      } andThen { case x =>
+        DB autoCommit { implicit session =>
+        //recreate submitted pendenzen
+          update.pendenzen.map { updatePendenz =>
+            val pendenzId = PendenzId(UUID.randomUUID)
+            val kundeBezeichnung = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
+            val newPendenz = copyTo[PendenzModify, Pendenz](updatePendenz, "id" -> pendenzId,
+              "kundeId" -> kundeId, "kundeBezeichnung" ->  kundeBezeichnung)
+            logger.debug(s"Create new pendenz on Kunde:$kundeId, data -> $newPendenz")
+
+            writeRepository.insertEntity(newPendenz)
+          }
         }
       }
 
       readRepository.getPersonen(kundeId) map { personen =>
         DB autoCommit { implicit session =>
-          val updatedPersonen = update.ansprechpersonen.zipWithIndex.map {
+          update.ansprechpersonen.zipWithIndex.map {
             case (updatePerson, index) =>
-              updatePerson.id.map { id =>
-                personen.filter(_.id == id).headOption.map { person =>
-                  logger.debug(s"Update person with id:$id, data -> $updatePerson")
-                  val copy = copyFrom(person, updatePerson, "id" -> id)
+                personen.filter(_.sort == index).headOption.map { person =>
+                  logger.debug(s"Update person with at index:$index, data -> $updatePerson")
+                  val copy = copyFrom(person, updatePerson, "id" -> person.id)
 
                   writeRepository.updateEntity[Person, PersonId](copy)
-                  Some(id)
                 }.getOrElse {
-                  //id not associated with this customer, don't do anything
-                  logger.warn(s"Person with id:$id not found on Kunde $kundeId, ignore")
-                  None
+                  //not found person for this index, remove
+                  val personId = PersonId(UUID.randomUUID)
+                  val newPerson = copyTo[PersonModify, Person](updatePerson, "id" -> personId,
+                    "kundeId" -> kundeId,
+                    "sort" -> index)
+                  logger.debug(s"Create new person on Kunde:$kundeId, data -> $newPerson")
+  
+                  writeRepository.insertEntity(newPerson)  
                 }
-              }.getOrElse {
-                //create new person
-                val personId = PersonId(UUID.randomUUID)
-                val newPerson = copyTo[PersonModify, Person](updatePerson, "id" -> personId,
-                  "kundeId" -> kundeId,
-                  "sort" -> index)
-                logger.debug(s"Create new person on Kunde:$kundeId, data -> $newPerson")
-
-                writeRepository.insertEntity(newPerson)
-                Some(personId)
-              }
-          }.flatten
+              }          
 
           //delete personen which aren't longer bound to this customer
-          personen.filterNot(p => updatedPersonen.contains(p.id)) map { personToDelete =>
+          personen.filter(p => p.sort > update.ansprechpersonen.size) map { personToDelete =>
             writeRepository.deleteEntity[Person, PersonId](personToDelete.id)
           }
         }
+      }
+    }
+  }
+  
+  def updatePendenz(id: PendenzId, update: PendenzModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(pendenzMapping, id) map { pendenz =>
+        //map all updatable fields
+        val copy = copyFrom(pendenz, update, "id" -> id)
+        writeRepository.updateEntity[Pendenz, PendenzId](copy)
+      }
+    }
+  }
+  
+  def updateDepotlieferungAbo(id: AboId, update: DepotlieferungAboModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(depotlieferungAboMapping, id) map { abo =>
+        //map all updatable fields
+        val copy = copyFrom(abo, update)
+        writeRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+      }
+    }
+  }
+  
+  def updatePostlieferungAbo(id: AboId, update: PostlieferungAboModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(postlieferungAboMapping, id) map { abo =>
+        //map all updatable fields
+        val copy = copyFrom(abo, update)
+        writeRepository.updateEntity[PostlieferungAbo, AboId](copy)
+      }
+    }
+  }
+    
+  def updateHeimlieferungAbo(id: AboId, update: HeimlieferungAboModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(heimlieferungAboMapping, id) map { abo =>
+        //map all updatable fields
+        val copy = copyFrom(abo, update)
+        writeRepository.updateEntity[HeimlieferungAbo, AboId](copy)
       }
     }
   }

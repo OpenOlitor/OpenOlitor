@@ -20,7 +20,7 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.ws
+package ch.openolitor.core.proxy
 
 import spray.routing._
 import akka.actor._
@@ -30,52 +30,51 @@ import spray.http._
 import spray.can.websocket._
 import spray.can.websocket.{ Send, SendStream, UpgradedToWebSocket }
 import akka.util.ByteString
+import ch.openolitor.core.Boot.MandantSystem
+import org.jfarcand.wcs._
+import com.ning.http.client._
+import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig
+import com.ning.http.client.ws.WebSocketListener
+import scala.collection.mutable.ListBuffer
+import com.ning.http.client.providers.netty.handler.ConnectionStrategy
+import java.util.concurrent.Executors
 
-object ClientMessagesWorker {
-  case class Push(msg: String)
-
-  def props(serverConnection: ActorRef) = Props(classOf[ClientMessagesWorker], serverConnection)
-}
-class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
-
-  import ClientMessagesWorker._
+class WebsocketHandler {
   
-  val helloServerPattern = """(.*)("type:"HelloServer",)(.*)""".r
+  val wsOptions = new Options
+  wsOptions.idleTimeout = 24 * 60 * 60000 // request timeout to whole day
+  val wsClient: WebSocket = createWebsocket(wsOptions)
 
-  def businessLogic: Receive = {
+  def createWebsocket(o: Options): WebSocket = {
+    val nettyConfig: NettyAsyncHttpProviderConfig = new NettyAsyncHttpProviderConfig
+    var asyncHttpClient: AsyncHttpClient = null
+    val listeners: ListBuffer[WebSocketListener] = ListBuffer[WebSocketListener]()
+    var config = new AsyncHttpClientConfig.Builder
 
-    case Push(msg) =>
-      log.debug(s"Push to client:$msg")
-      send(TextFrame(msg))
-    // just bounce frames back for Autobahn testsuite
-    case x: BinaryFrame =>
-      log.debug(s"Got from binary data:$x")
-    case x: TextFrame =>
-      val msg = x.payload.decodeString("UTF-8")
-      log.debug(s"Got from client:$msg")
-      
-      msg match {
-        case "Ping" => 
-          send(TextFrame("Pong"))
-        case helloServerPattern(_, _, _) =>
-          send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
-        case _ =>
-          //TODO: handle client messages internally   
-      }    
-    case x: FrameCommandFailed =>
-      log.error("frame command failed", x)
-    case x: HttpRequest => // do something
-      log.debug(s"Got http request:$x")
-    case x =>
-      log.debug(s"Got another message:$x")
-  }
+    val executorService = Executors.newFixedThreadPool(3 * Runtime.getRuntime.availableProcessors())
 
-  def businessLogicNoUpgrade: Receive = {
-    case x =>
-      log.debug(s"businessLogicNoUpgrade:$x")
-      implicit val refFactory: ActorRefFactory = context
-      runRoute {
-        getFromResourceDirectory("/")
+    if (o != null) {
+      nettyConfig.setWebSocketMaxBufferSize(o.maxMessageSize)
+      nettyConfig.setWebSocketMaxFrameSize(o.maxMessageSize)
+      config.setExecutorService(executorService)
+        .setRequestTimeout(o.idleTimeout)
+        .setConnectTimeout(o.idleTimeout)
+        .setConnectionTTL(o.idleTimeout)
+        .setPooledConnectionIdleTimeout(o.idleTimeout)
+        .setReadTimeout(o.idleTimeout)
+        .setWebSocketTimeout(o.idleTimeout)
+        .setUserAgent(o.userAgent)
+        .setAsyncHttpClientProviderConfig(nettyConfig)
+    }
+
+    try {
+      config.setFollowRedirect(true)
+      asyncHttpClient = new AsyncHttpClient(config.build)
+    } catch {
+      case t: IllegalStateException => {
+        config = new AsyncHttpClientConfig.Builder
       }
+    }
+    new WebSocket(o, None, false, asyncHttpClient, listeners)
   }
 }

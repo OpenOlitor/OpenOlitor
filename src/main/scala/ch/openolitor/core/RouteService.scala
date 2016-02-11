@@ -65,12 +65,12 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
-  def actorRefFactory = context
+  val actorRefFactory = context
 
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  def receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
+  val receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
 }
 
 // this trait defines our service behavior independently from the service actor
@@ -83,28 +83,34 @@ trait DefaultRouteService extends HttpService with ActorReferences {
     tr: ToResponseMarshaller[I]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
-        //create entity
-        onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
-          case event: EntityInsertedEvent =>
-            respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
-              respondWithStatus(StatusCodes.Created) {
-                complete(IdResponse(event.id.toString).toJson.compactPrint)
-              }
-            }
-          case x =>
-            complete(StatusCodes.BadRequest, s"No id generated:$x")
-        }
+        created(request)(entity)
       }
+    }
+  }
+
+  def created[E, I <: BaseId](request: HttpRequest)(entity: E) = {
+    //create entity
+    onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
+      case event: EntityInsertedEvent =>
+        respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
+          respondWithStatus(StatusCodes.Created) {
+            complete(IdResponse(event.id.toString).toJson.compactPrint)
+          }
+        }
+      case x =>
+        complete(StatusCodes.BadRequest, s"No id generated:$x")
     }
   }
 
   def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
     tr: ToResponseMarshaller[I]) = {
-    entity(as[E]) { entity =>
-      //update entity
-      onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
-        complete(StatusCodes.Accepted, "")
-      }
+    entity(as[E]) { entity => updated(id, entity) }
+  }
+
+  def updated[E, I <: BaseId](id: I, entity: E) = {
+    //update entity
+    onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
+      complete(StatusCodes.Accepted, "")
     }
   }
 

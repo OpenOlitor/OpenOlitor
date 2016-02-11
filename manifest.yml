@@ -1,9 +1,15 @@
 ---
 applications:
 - name: openolitor-server-test
-  memory: 256M
+  memory: 1024M
   instances: 1
   host: openolitortest
   domain: applicationcloud.io
-  path: .
-  buildpack: https://github.com/heroku/heroku-buildpack-scala.git
+  path: target/universal/openolitor-server-1.0.0.zip
+  buildpack: https://github.com/cloudfoundry/java-buildpack.git
+  stack: cflinuxfs2
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: "{jre: { version: 1.7.0_+ }}"
+    application_config: openolitor-server-test
+    JAVA_OPTS: "-Dconfig.resource=openolitor-server-test.conf" 
+    

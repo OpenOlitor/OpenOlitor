@@ -61,6 +61,8 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     case EntityDeletedEvent(meta, id: KundeId) => deleteKunde(id)
     case EntityDeletedEvent(meta, id: DepotId) => deleteDepot(id)
     case EntityDeletedEvent(meta, id: AboId) => deleteAbo(id)
+    case EntityDeletedEvent(meta, id: VertriebsartId) => deleteVertriebsart(id)
+    case EntityDeletedEvent(meta, id: LieferungId) => deleteLieferung(id)
     case EntityDeletedEvent(meta, id: CustomKundentypId) => deleteKundentyp(id)
     case e =>
       logger.warn(s"Unknown event:$e")
@@ -85,6 +87,8 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
         case Some(kunde) =>
           //delete all personen as well
           readRepository.getPersonen(kundeId).map(_.map(person => deletePerson(person.id)))
+          //delete all pendenzen as well
+          readRepository.getPendenzen(kundeId).map(_.map(pendenz => deletePendenz(pendenz.id)))
         case None =>
       }
 
@@ -94,6 +98,12 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   def deleteDepot(id: DepotId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Depot, DepotId](id, { depot: Depot => depot.anzahlAbonnenten == 0 })
+    }
+  }
+  
+  def deletePendenz(id: PendenzId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[Pendenz, PendenzId](id)
     }
   }
 
@@ -118,6 +128,20 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
           }
         case None =>
       }
+    }
+  }
+
+  def deleteVertriebsart(id: VertriebsartId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[Depotlieferung, VertriebsartId](id)
+      writeRepository.deleteEntity[Heimlieferung, VertriebsartId](id)
+      writeRepository.deleteEntity[Postlieferung, VertriebsartId](id)
+    }
+  }
+
+  def deleteLieferung(id: LieferungId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[Lieferung, LieferungId](id, { lieferung: Lieferung => lieferung.status == Offen })
     }
   }
 }

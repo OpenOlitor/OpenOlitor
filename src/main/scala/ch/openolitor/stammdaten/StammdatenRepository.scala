@@ -45,7 +45,12 @@ import ch.openolitor.core.Macros._
 
 trait StammdatenReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
-  def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]]
+  def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
+
+  def getOffeneLieferungen(abotypId: AbotypId, vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+
+  def getVertriebsart(vertriebsartId: VertriebsartId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[VertriebsartDetail]]
+  def getVertriebsarten(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[VertriebsartDetail]]
 
   def getKunden(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kunde]]
   def getKundeDetail(id: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KundeDetail]]
@@ -60,37 +65,29 @@ trait StammdatenReadRepository {
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]]
+  
+  def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
+  def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
+  def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]]
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-
-  /**
-   * Entfernt alle Betriebsarten welche zu einem Abotypen zugewiesen sind
-   */
-  def removeVertriebsarten(abotypId: AbotypId)(implicit session: DBSession)
-
-  /**
-   * Fügt alle Vertriebsarten detail zu einem Abotypen hinzu
-   */
-  def attachVertriebsarten(abotypId: AbotypId, vertriebsarten: Set[Vertriebsartdetail])(implicit session: DBSession,
-    syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
-    syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
-    syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
-    user: UserId)
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
 
   lazy val aboTyp = abotypMapping.syntax("atyp")
   lazy val person = personMapping.syntax("pers")
+  lazy val lieferung = lieferungMapping.syntax("lieferung")
   lazy val kunde = kundeMapping.syntax("kunde")
+  lazy val pendenz = pendenzMapping.syntax("pendenz")
   lazy val kundentyp = customKundentypMapping.syntax("kundentyp")
-  lazy val pl = postlieferungMapping.syntax("pl")
-  lazy val dl = depotlieferungMapping.syntax("dl")
-  lazy val depot = depotMapping.syntax("d")
-  lazy val t = tourMapping.syntax("tr")
-  lazy val hl = heimlieferungMapping.syntax("hl")
+  lazy val postlieferung = postlieferungMapping.syntax("postlieferung")
+  lazy val depotlieferung = depotlieferungMapping.syntax("depotlieferung")
+  lazy val heimlieferung = heimlieferungMapping.syntax("heimlieferung")
+  lazy val depot = depotMapping.syntax("depot")
+  lazy val tour = tourMapping.syntax("tour")
   lazy val depotlieferungAbo = depotlieferungAboMapping.syntax("depotlieferungAbo")
   lazy val heimlieferungAbo = heimlieferungAboMapping.syntax("heimlieferungAbo")
   lazy val postlieferungAbo = postlieferungAboMapping.syntax("postlieferungAbo")
@@ -135,6 +132,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(kunde.id, heimlieferungAbo.kundeId)
         .leftJoin(postlieferungAboMapping as postlieferungAbo).on(kunde.id, postlieferungAbo.kundeId)
         .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
+        .leftJoin(pendenzMapping as pendenz).on(kunde.id, pendenz.kundeId)
         .where.eq(kunde.id, parameter(id))
         .orderBy(person.sort)
     }.one(kundeMapping(kunde))
@@ -142,11 +140,12 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
         rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
-        rs => personMapping.opt(person)(rs))
-      .map({ (kunde, pl, hl, dl, personen) =>
+        rs => personMapping.opt(person)(rs),
+        rs => pendenzMapping.opt(pendenz)(rs))
+      .map({ (kunde, pl, hl, dl, personen, pendenzen) =>
         val abos = pl ++ hl ++ dl
 
-        copyTo[Kunde, KundeDetail](kunde, "abos" -> abos, "ansprechpersonen" -> personen)
+        copyTo[Kunde, KundeDetail](kunde, "abos" -> abos, "pendenzen" -> pendenzen, "ansprechpersonen" -> personen)
       }).single.future
   }
 
@@ -159,35 +158,109 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(personMapping(person)).list.future
   }
 
-  override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AbotypDetail]] = {
+  override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]] = {
     withSQL {
       select
         .from(abotypMapping as aboTyp)
-        .leftJoin(postlieferungMapping as pl).on(aboTyp.id, pl.abotypId)
-        .leftJoin(heimlieferungMapping as hl).on(aboTyp.id, hl.abotypId)
-        .leftJoin(depotlieferungMapping as dl).on(aboTyp.id, dl.abotypId)
-        .leftJoin(depotMapping as depot).on(dl.depotId, depot.id)
-        .leftJoin(tourMapping as t).on(hl.tourId, t.id)
         .where.eq(aboTyp.id, parameter(id))
-    }.one(abotypMapping(aboTyp))
-      .toManies(
-        rs => postlieferungMapping.opt(pl)(rs),
-        rs => heimlieferungMapping.opt(hl)(rs),
-        rs => depotlieferungMapping.opt(dl)(rs),
-        rs => depotMapping.opt(depot)(rs),
-        rs => tourMapping.opt(t)(rs))
-      .map({ (abotyp, pls, hms, dls, depot, tour) =>
-        val vertriebsarten =
-          pls.map(pl => PostlieferungDetail(pl.liefertage)) ++
-            hms.map(hm => HeimlieferungDetail(tour.head, hm.liefertage)) ++
-            dls.map(dl => DepotlieferungDetail(DepotSummary(depot.head.id, depot.head.name), dl.liefertage))
-        logger.debug(s"getAbottyp:$id, abotyp:$abotyp:$vertriebsarten")
+    }.map(abotypMapping(aboTyp)).single.future
+  }
 
-        //must be cast to vertriebsartdetail without serializable extension
-        val set: Set[Vertriebsartdetail] = vertriebsarten.toSet
-        copyTo[Abotyp, AbotypDetail](abotyp, "vertriebsarten" -> set)
-      })
-      .single.future
+  def getVertriebsarten(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext) = {
+    for {
+      d <- getDepotlieferung(abotypId)
+      h <- getHeimlieferung(abotypId)
+      p <- getPostlieferung(abotypId)
+    } yield {
+      d ++ h ++ p
+    }
+  }
+
+  def getDepotlieferung(abotypId: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotlieferungDetail]] = {
+    withSQL {
+      select
+        .from(depotlieferungMapping as depotlieferung)
+        .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
+        .where.eq(depotlieferung.abotypId, parameter(abotypId))
+    }.one(depotlieferungMapping(depotlieferung)).toOne(depotMapping.opt(depot)).map { (vertriebsart, depot) =>
+      val depotSummary = DepotSummary(depot.head.id, depot.head.name)
+      copyTo[Depotlieferung, DepotlieferungDetail](vertriebsart, "depot" -> depotSummary)
+    }.list.future
+  }
+
+  def getHeimlieferung(abotypId: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[HeimlieferungDetail]] = {
+    withSQL {
+      select
+        .from(heimlieferungMapping as heimlieferung)
+        .leftJoin(tourMapping as tour).on(heimlieferung.tourId, tour.id)
+        .where.eq(heimlieferung.abotypId, parameter(abotypId))
+    }.one(heimlieferungMapping(heimlieferung)).toOne(tourMapping.opt(tour)).map { (vertriebsart, tour) =>
+      copyTo[Heimlieferung, HeimlieferungDetail](vertriebsart, "tour" -> tour.get)
+    }.list.future
+  }
+
+  def getPostlieferung(abotypId: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostlieferungDetail]] = {
+    withSQL {
+      select
+        .from(postlieferungMapping as postlieferung)
+        .where.eq(postlieferung.abotypId, parameter(abotypId))
+    }.map { rs =>
+      val pl = postlieferungMapping(postlieferung)(rs)
+      copyTo[Postlieferung, PostlieferungDetail](pl)
+    }.list.future
+  }
+
+  def getVertriebsart(vertriebsartId: VertriebsartId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext) = {
+    for {
+      d <- getDepotlieferung(vertriebsartId)
+      h <- getHeimlieferung(vertriebsartId)
+      p <- getPostlieferung(vertriebsartId)
+    } yield {
+      Seq(d, h, p).flatten.headOption
+    }
+  }
+
+  def getDepotlieferung(vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotlieferungDetail]] = {
+    withSQL {
+      select
+        .from(depotlieferungMapping as depotlieferung)
+        .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
+        .where.eq(depotlieferung.id, parameter(vertriebsartId))
+    }.one(depotlieferungMapping(depotlieferung)).toOne(depotMapping.opt(depot)).map { (vertriebsart, depot) =>
+      val depotSummary = DepotSummary(depot.head.id, depot.head.name)
+      copyTo[Depotlieferung, DepotlieferungDetail](vertriebsart, "depot" -> depotSummary)
+    }.single.future
+  }
+
+  def getHeimlieferung(vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[HeimlieferungDetail]] = {
+    withSQL {
+      select
+        .from(heimlieferungMapping as heimlieferung)
+        .leftJoin(tourMapping as tour).on(heimlieferung.tourId, tour.id)
+        .where.eq(heimlieferung.id, parameter(vertriebsartId))
+    }.one(heimlieferungMapping(heimlieferung)).toOne(tourMapping.opt(tour)).map { (vertriebsart, tour) =>
+      copyTo[Heimlieferung, HeimlieferungDetail](vertriebsart, "tour" -> tour.get)
+    }.single.future
+  }
+
+  def getPostlieferung(vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostlieferungDetail]] = {
+    withSQL {
+      select
+        .from(postlieferungMapping as postlieferung)
+        .where.eq(postlieferung.id, parameter(vertriebsartId))
+    }.map { rs =>
+      val pl = postlieferungMapping(postlieferung)(rs)
+      copyTo[Postlieferung, PostlieferungDetail](pl)
+    }.single.future
+  }
+
+  def getOffeneLieferungen(abotypId: AbotypId, vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .where.eq(lieferung.abotypId, parameter(abotypId)).and.eq(lieferung.vertriebsartId, parameter(vertriebsartId)).and.not.eq(lieferung.status, parameter(Bearbeitet))
+        .orderBy(lieferung.datum)
+    }.map(lieferungMapping(lieferung)).list.future
   }
 
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]] = {
@@ -268,6 +341,30 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       p <- getPostlieferungAbo(id)
     } yield (d orElse h orElse p)
   }
+  
+  def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
+    withSQL {
+      select
+        .from(pendenzMapping as pendenz)
+        .orderBy(pendenz.datum)
+    }.map(pendenzMapping(pendenz)).list.future
+  }
+  
+  def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
+    withSQL {
+      select
+        .from(pendenzMapping as pendenz)
+        .where.eq(pendenz.kundeId, parameter(id))
+    }.map(pendenzMapping(pendenz)).list.future
+  }
+    
+  def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]] = {
+    withSQL {
+      select
+        .from(pendenzMapping as pendenz)
+        .where.eq(pendenz.id, parameter(id))
+    }.map(pendenzMapping(pendenz)).single.future
+  }
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
@@ -285,53 +382,33 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"drop table if exists ${tourMapping.table}".execute.apply()
       sql"drop table if exists ${abotypMapping.table}".execute.apply()
       sql"drop table if exists ${kundeMapping.table}".execute.apply()
+      sql"drop table if exists ${pendenzMapping.table}".execute.apply()
       sql"drop table if exists ${customKundentypMapping.table}".execute.apply()
       sql"drop table if exists ${personMapping.table}".execute.apply()
       sql"drop table if exists ${depotlieferungAboMapping.table}".execute.apply()
       sql"drop table if exists ${heimlieferungAboMapping.table}".execute.apply()
       sql"drop table if exists ${postlieferungAboMapping.table}".execute.apply()
+      sql"drop table if exists ${lieferungMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables")
       //create tables
 
-      sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id varchar(36) not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, depot_id varchar(36) not null, liefertage varchar(256))".execute.apply()
-      sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, tour_id varchar(36) not null, liefertage varchar(256))".execute.apply()
+      sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id varchar(36) not null, liefertag varchar(10))".execute.apply()
+      sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, depot_id varchar(36) not null, liefertag varchar(10))".execute.apply()
+      sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, tour_id varchar(36) not null, liefertag varchar(10))".execute.apply()
       sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), ap_email varchar(100), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), v_email varchar(100), strasse varchar(50), haus_nummer varchar(10), plz varchar(4) not null, ort varchar(50) not null, aktiv bit, oeffnungszeiten varchar(200), iban varchar(30), bank varchar(50), beschreibung varchar(200), anzahl_abonnenten_max int, anzahl_abonnenten int not null)".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), aktiv_von datetime default null, aktiv_bis datetime default null, preis NUMERIC not null, preiseinheit varchar(20) not null, laufzeit int, laufzeiteinheit varchar(50), anzahl_abwesenheiten int, farb_code varchar(20), zielpreis NUMERIC, anzahl_abonnenten INT not null, letzte_lieferung datetime default null, waehrung varchar(10))".execute.apply()
-      sql"create table ${kundeMapping.table} (id varchar(36) not null, bezeichnung varchar(50), strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(512), typen varchar(200), anzahl_abos int not null, anzahl_personen int not null)".execute.apply()
+      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), aktiv_von datetime default null, aktiv_bis datetime default null, preis NUMERIC not null, preiseinheit varchar(20) not null, laufzeit int, laufzeiteinheit varchar(50), anzahl_abwesenheiten int, farb_code varchar(20), zielpreis NUMERIC, saldo_mindestbestand int, anzahl_abonnenten INT not null, letzte_lieferung datetime default null, waehrung varchar(10))".execute.apply()
+      sql"create table ${kundeMapping.table} (id varchar(36) not null, bezeichnung varchar(50), strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(512), typen varchar(200), anzahl_abos int not null, anzahl_pendenzen int not null, anzahl_personen int not null)".execute.apply()
+      sql"create table ${pendenzMapping.table} (id varchar(36) not null, kunde_id varchar(50) not null, kunde_bezeichnung varchar(50), datum datetime default null, bemerkung varchar(2000), status varchar(10))".execute.apply()
       sql"create table ${customKundentypMapping.table} (id varchar(36) not null, kundentyp varchar(50) not null, beschreibung varchar(250), anzahl_verknuepfungen int not null)".execute.apply()
       sql"create table ${personMapping.table} (id varchar(36) not null, kunde_id varchar(50) not null, name varchar(50) not null, vorname varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon_mobil varchar(50), telefon_festnetz varchar(50), bemerkungen varchar(512), sort int not null)".execute.apply()
-      sql"create table ${depotlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), depot_id varchar(36), depot_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
-      sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
-      sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), lieferzeitpunkt varchar(10))".execute.apply()
+      sql"create table ${depotlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), depot_id varchar(36), depot_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
+      sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
+      sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
+      sql"create table ${lieferungMapping.table}  (id varchar(36) not null,abotyp_id varchar(36) not null, vertriebsart_id varchar(36) not null,datum datetime not null, anzahl_abwesenheiten int not null,status varchar(50) not null)".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
-    }
-  }
-
-  def removeVertriebsarten(abotypId: AbotypId)(implicit session: DBSession) = {
-    withSQL { delete.from(depotlieferungMapping).where.eq(depotlieferungMapping.column.abotypId, abotypId) }.update.apply()
-    withSQL { delete.from(postlieferungMapping).where.eq(postlieferungMapping.column.abotypId, abotypId) }.update.apply()
-    withSQL { delete.from(heimlieferungMapping).where.eq(heimlieferungMapping.column.abotypId, abotypId) }.update.apply()
-  }
-
-  def attachVertriebsarten(abotypId: AbotypId, vertriebsarten: Set[Vertriebsartdetail])(implicit session: DBSession,
-    syntaxSupportPL: BaseEntitySQLSyntaxSupport[Postlieferung],
-    syntaxSupportDL: BaseEntitySQLSyntaxSupport[Depotlieferung],
-    syntaxSupportHL: BaseEntitySQLSyntaxSupport[Heimlieferung],
-    user: UserId) = {
-    //insert vertriebsarten
-    vertriebsarten.map {
-      _ match {
-        case pd: PostlieferungDetail =>
-          insertEntity(Postlieferung(VertriebsartId(), abotypId, pd.liefertage))
-        case dd: DepotlieferungDetail =>
-          insertEntity(Depotlieferung(VertriebsartId(), abotypId, dd.depot.id, dd.liefertage))
-        case hd: HeimlieferungDetail =>
-          insertEntity(Heimlieferung(VertriebsartId(), abotypId, hd.tour.id, hd.liefertage))
-      }
     }
   }
 }

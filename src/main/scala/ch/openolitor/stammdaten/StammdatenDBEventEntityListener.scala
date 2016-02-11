@@ -71,6 +71,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(userId, entity: Kunde) => handleKundeDeleted(entity)(userId)
     case e @ EntityModified(userId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(userId)
 
+    case e @ EntityCreated(userId, entity: Pendenz) => handlePendenzCreated(entity)(userId)
+    case e @ EntityModified(userId, entity: Pendenz, orig: Pendenz) => handlePendenzModified(entity, orig)(userId)
+    
     case x => //log.debug(s"receive unused event $x")
   }
 
@@ -121,6 +124,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     log.debug(s"Kunde ${kunde.bezeichnung} modified, handle CustomKundentypen. Orig: ${orig.typen} -> modified: ${kunde.typen}. Removed typen:${removed}, added typen:${added}")
 
     handleKundentypenChanged(removed, added)
+    
+    //TODO Update kundeBezeichnung on attached Pendenzen
+//    modifyEntity[Pendenz, PendenzId](kunde.id, { pendenz =>
+//      log.debug(s"Update kundeBezeichnung on all Pendenzen:${pendenz.id}")
+//      pendenz.copy(kundeBezeichnung = kunde.bezeichnung)
+//    })
   }
 
   def handleKundeDeleted(kunde: Kunde)(implicit userId: UserId) = {
@@ -130,6 +139,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def handleKundeCreated(kunde: Kunde)(implicit userId: UserId) = {
     handleKundentypenChanged(Set(), kunde.typen)
   }
+  
+  def handlePendenzCreated(pendenz: Pendenz)(implicit userId: UserId) = {
+    modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
+      log.debug(s"Add pendenz count to kunde:${kunde.id}")
+      kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
+    })
+  }
+  
+  def handlePendenzModified(pendenz: Pendenz, orig: Pendenz)(implicit userId: UserId) = {
+
+  }
+
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit userId: UserId) = {
     readRepository.getKundentypen map { kundetypen =>

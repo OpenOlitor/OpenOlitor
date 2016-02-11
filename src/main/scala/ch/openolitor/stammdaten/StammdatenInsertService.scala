@@ -34,6 +34,7 @@ import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import ch.openolitor.core.Macros._
 import scala.concurrent.ExecutionContext.Implicits.global
+import ch.openolitor.core.models._
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -64,6 +65,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createDepot(id, depot)
     case EntityInsertedEvent(meta, id, abo: AboModify) =>
       createAbo(id, abo)
+    case EntityInsertedEvent(meta, id, lieferung: LieferungAbotypCreate) =>
+      createLieferung(id, lieferung)
+    case EntityInsertedEvent(meta, id, lieferung: HeimlieferungAbotypModify) =>
+      createVertriebsart(id, lieferung)
+    case EntityInsertedEvent(meta, id, lieferung: PostlieferungAbotypModify) =>
+      createVertriebsart(id, lieferung)
+    case EntityInsertedEvent(meta, id, depotlieferung: DepotlieferungAbotypModify) =>
+      createVertriebsart(id, depotlieferung)
     case EntityInsertedEvent(meta, id, kundentyp: CustomKundentypCreate) =>
       createKundentyp(id, kundentyp)
     case EntityInsertedEvent(meta, id, entity) =>
@@ -82,14 +91,50 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       //create abotyp
       writeRepository.insertEntity(typ)
+    }
+  }
 
-      //insert vertriebsarten
-      writeRepository.attachVertriebsarten(typ.id, abotyp.vertriebsarten)
+  def createVertriebsart(id: UUID, vertriebsart: DepotlieferungAbotypModify) = {
+    val vertriebsartId = VertriebsartId(id)
+    val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> vertriebsartId)
+
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(insert)
+    }
+  }
+
+  def createVertriebsart(id: UUID, vertriebsart: HeimlieferungAbotypModify) = {
+    val vertriebsartId = VertriebsartId(id)
+    val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> vertriebsartId)
+
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(insert)
+    }
+  }
+
+  def createVertriebsart(id: UUID, vertriebsart: PostlieferungAbotypModify) = {
+    val vertriebsartId = VertriebsartId(id)
+    val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> vertriebsartId)
+
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(insert)
+    }
+  }
+
+  def createLieferung(id: UUID, lieferung: LieferungAbotypCreate) = {
+    val lieferungId = LieferungId(id)
+    val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> lieferungId,
+      "anzahlAbwesenheiten" -> ZERO,
+      "status" -> Offen)
+
+    DB autoCommit { implicit session =>
+      //create lieferung
+      writeRepository.insertEntity(insert)
     }
   }
 
   def createKunde(id: UUID, create: KundeModify) = {
-    if (create.ansprechpersonen.size == 0) {
+    if (create.ansprechpersonen.isEmpty) {
       //TODO: handle error
     } else {
       val kundeId = KundeId(id)
@@ -98,7 +143,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         "id" -> kundeId,
         "bezeichnung" -> bez,
         "anzahlPersonen" -> create.ansprechpersonen.length,
-        "anzahlAbos" -> ZERO)
+        "anzahlAbos" -> ZERO,
+        "anzahlPendenzen" -> ZERO)
       DB autoCommit { implicit session =>
         //create abotyp
         writeRepository.insertEntity(kunde)
@@ -123,6 +169,17 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity(person)
     }
   }
+  
+  def createPendenz(id: UUID, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String) = {
+    val pendenzId = PendenzId(id)
+
+    val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> pendenzId,
+        "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung)
+
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(pendenz)
+    }
+  }
 
   def createDepot(id: UUID, create: DepotModify) = {
     val depotId = DepotId(id)
@@ -140,13 +197,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       val abo = create match {
         case create: DepotlieferungAboModify =>
           writeRepository.insertEntity(copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
-            "id" -> aboId))
+            "id" -> aboId, "saldo" -> ZERO))
         case create: HeimlieferungAboModify =>
           writeRepository.insertEntity(copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
-            "id" -> aboId))
+            "id" -> aboId, "saldo" -> ZERO))
         case create: PostlieferungAboModify =>
           writeRepository.insertEntity(copyTo[PostlieferungAboModify, PostlieferungAbo](create,
-            "id" -> aboId))
+            "id" -> aboId, "saldo" -> ZERO))
       }
     }
   }
