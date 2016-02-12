@@ -172,14 +172,14 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       }
   }
 
-  // json formatter which adds calculated field aktiv
-  def enhanceWithAktivFlag[E <: AktivRange](defaultFormat: JsonFormat[E]): RootJsonFormat[E] = new RootJsonFormat[E] {
-    def write(obj: E): JsValue = JsObject(defaultFormat.write(obj).asJsObject.fields + ("aktiv" -> JsBoolean(obj.aktiv)))
+  // json formatter which adds calculated boolean field  
+  def enhanceWithBooleanFlag[E <: AktivRange](flag: String)(defaultFormat: JsonFormat[E]): RootJsonFormat[E] = new RootJsonFormat[E] {
+    def write(obj: E): JsValue = JsObject(defaultFormat.write(obj).asJsObject.fields + (flag -> JsBoolean(obj.aktiv)))
 
     def read(json: JsValue): E = defaultFormat.read(json)
   }
 
-  implicit val abotypFormat = enhanceWithAktivFlag(jsonFormat17(Abotyp.apply))
+  implicit val abotypFormat = enhanceWithBooleanFlag("aktiv")(jsonFormat17(Abotyp.apply))
   implicit val abotypUpdateFormat = jsonFormat13(AbotypModify.apply)
   implicit val abotypSummaryFormat = jsonFormat2(AbotypSummary.apply)
 

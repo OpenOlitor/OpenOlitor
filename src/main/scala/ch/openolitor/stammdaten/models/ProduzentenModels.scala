@@ -33,9 +33,9 @@ case class ProduzentId(id: UUID) extends BaseId
 
 case class Produzent(id: ProduzentId,
   name: String,
-  vorname: String,
+  vorname: Option[String],
   kurzzeichen: String,
-  strasse: String,
+  strasse: Option[String],
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: String,
@@ -53,9 +53,9 @@ case class Produzent(id: ProduzentId,
 
 case class ProduzentModify(
   name: String,
-  vorname: String,
+  vorname: Option[String],
   kurzzeichen: String,
-  strasse: String,
+  strasse: Option[String],
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: String,
