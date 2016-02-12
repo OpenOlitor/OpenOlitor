@@ -39,6 +39,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
 
   //enum formats
   implicit val wochentagFormat = enumFormat(x => Wochentag.apply(x).getOrElse(Montag))
+  implicit val monatFormat = enumFormat(x => Monat.apply(x).getOrElse(Januar))
   implicit val rhythmusFormat = enumFormat(Rhythmus.apply)
   implicit val preiseinheitFormat = new JsonFormat[Preiseinheit] {
     def write(obj: Preiseinheit): JsValue =
@@ -121,6 +122,17 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
 
     def read(json: JsValue): Lieferzeitpunkt =
       json.convertTo[Wochentag]
+  }
+  
+  implicit val liefersaisonFormat = new RootJsonFormat[Liefersaison] {
+    def write(obj: Liefersaison): JsValue =
+      obj match {
+        case m: Monat => m.toJson
+        case _ => JsObject()
+      }
+
+    def read(json: JsValue): Liefersaison =
+      json.convertTo[Monat]
   }
 
   implicit val depotlieferungFormat = jsonFormat4(Depotlieferung.apply)

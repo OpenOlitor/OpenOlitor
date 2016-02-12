@@ -26,6 +26,31 @@ import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
 import java.util.UUID
 
+sealed trait Liefersaison extends Product
+sealed trait Monat extends Liefersaison
+
+object Liefersaison {
+  def apply(value: String): Liefersaison = Monat.apply(value).get
+}
+
+case object Januar extends Monat
+case object Februar extends Monat
+case object Maerz extends Monat
+case object April extends Monat
+case object Mai extends Monat
+case object Juni extends Monat
+case object Juli extends Monat
+case object August extends Monat
+case object September extends Monat
+case object Oktober extends Monat
+case object November extends Monat
+case object Dezember extends Monat
+
+object Monat {
+  def apply(value: String): Option[Monat] = {
+    Vector(Januar, Februar, Maerz, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember).find(_.toString == value)
+  }
+}
 
 sealed trait Liefereinheit extends Product
 case object Stueck extends Liefereinheit
@@ -54,8 +79,8 @@ case class ProduktId(id: UUID) extends BaseId
 case class Produkt(
   id: ProduktId,
   name: String,
-  verfuegbarVon: Int,
-  verfuegbarBis: Int,
+  verfuegbarVon: Liefersaison,
+  verfuegbarBis: Liefersaison,
   kategorien: Set[BaseProduktekategorieId],
   einheit: Liefereinheit,
   preis: BigDecimal,
@@ -64,8 +89,8 @@ case class Produkt(
 
 case class ProduktModify(
   name: String,
-  verfuegbarVon: Int,
-  verfuegbarBis: Int,
+  verfuegbarVon: Liefersaison,
+  verfuegbarBis: Liefersaison,
   kategorien: Set[BaseProduktekategorieId],
   einheit: Liefereinheit,
   preis: BigDecimal,

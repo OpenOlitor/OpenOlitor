@@ -47,7 +47,7 @@ case class Produzent(id: ProduzentId,
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   mwst: Boolean,
-  mwstSatz: Option[Int],
+  mwstSatz: Option[BigDecimal],
   aktiv: Boolean
   ) extends BaseEntity[ProduzentId]
 
@@ -67,5 +67,5 @@ case class ProduzentModify(
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   mwst: Boolean,
-  mwstSatz: Option[Int],
+  mwstSatz: Option[BigDecimal],
   aktiv: Boolean) extends Product
