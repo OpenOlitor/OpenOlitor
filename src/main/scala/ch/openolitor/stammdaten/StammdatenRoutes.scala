@@ -191,7 +191,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       get(list(readRepository.getProdukte)) ~
         post(create[ProduktModify, ProduktId](ProduktId.apply _))
     } ~
-      path("produkt" / produktIdPath) { id =>
+      path("produkte" / produktIdPath) { id =>
           (put | post)(update[ProduktModify, ProduktId](id)) ~
           delete(remove(id))
       }
@@ -201,7 +201,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       get(list(readRepository.getProduktekategorien)) ~
         post(create[ProduktekategorieModify, ProduktekategorieId](ProduktekategorieId.apply _))
     } ~
-      path("produktekategorie" / produktekategorieIdPath) { id =>
+      path("produktekategorien" / produktekategorieIdPath) { id =>
           (put | post)(update[ProduktekategorieModify, ProduktekategorieId](id)) ~
           delete(remove(id))
       }
@@ -211,7 +211,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       get(list(readRepository.getProduzenten)) ~
         post(create[ProduzentModify, ProduzentId](ProduzentId.apply _))
     } ~
-      path("produzent" / produzentIdPath) { id =>
+      path("produzenten" / produzentIdPath) { id =>
         get(detail(readRepository.getProduzentDetail(id))) ~
           (put | post)(update[ProduzentModify, ProduzentId](id)) ~
           delete(remove(id))

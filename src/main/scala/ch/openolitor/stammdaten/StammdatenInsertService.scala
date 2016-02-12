@@ -75,6 +75,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createVertriebsart(id, depotlieferung)
     case EntityInsertedEvent(meta, id, kundentyp: CustomKundentypCreate) =>
       createKundentyp(id, kundentyp)
+    case EntityInsertedEvent(meta, id, produkt: ProduktModify) =>
+      createProdukt(id, produkt)
+    case EntityInsertedEvent(meta, id, produktekategorie: ProduktekategorieModify) =>
+      createProduktekategorie(id, produktekategorie)
+    case EntityInsertedEvent(meta, id, produzent: ProduzentModify) =>
+      createProduzent(id, produzent)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
@@ -215,6 +221,33 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "anzahlVerknuepfungen" -> ZERO)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(kundentyp)
+    }
+  }
+  
+  def createProdukt(id: UUID, create: ProduktModify) = {
+    val produktId = ProduktId(id)
+    val produkt = copyTo[ProduktModify, Produkt](create,
+      "id" -> produktId)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(produkt)
+    }
+  }
+  
+  def createProduktekategorie(id: UUID, create: ProduktekategorieModify) = {
+    val produktekategorieId = ProduktekategorieId(id)
+    val produktekategrie = copyTo[ProduktekategorieModify, Produktekategorie](create,
+      "id" -> produktekategorieId)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(produktekategrie)
+    }
+  }
+  
+  def createProduzent(id: UUID, create: ProduzentModify) = {
+    val produzentId = ProduzentId(id)
+    val produzent = copyTo[ProduzentModify, Produzent](create,
+      "id" -> produzentId)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(produzent)
     }
   }
 }

@@ -68,4 +68,4 @@ case class ProduzentModify(
   bank: Option[String],
   mwst: Boolean,
   mwstSatz: Option[Int],
-  isAktiv: Boolean) extends Product
+  aktiv: Boolean) extends Product

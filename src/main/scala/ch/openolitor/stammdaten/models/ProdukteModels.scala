@@ -66,9 +66,9 @@ case class ProduktModify(
   name: String,
   verfuegbarVon: Int,
   verfuegbarBis: Int,
-  kategorien: Set[ProduktekategorieId],
+  kategorien: Set[BaseProduktekategorieId],
   einheit: Liefereinheit,
   preis: BigDecimal,
-  produzenten: Set[ProduzentId]
+  produzenten: Set[BaseProduzentId]
 ) extends Product 
 
