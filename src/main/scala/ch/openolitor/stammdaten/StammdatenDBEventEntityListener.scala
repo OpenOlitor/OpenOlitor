@@ -72,7 +72,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(userId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(userId)
 
     case e @ EntityCreated(userId, entity: Pendenz) => handlePendenzCreated(entity)(userId)
-    case e @ EntityModified(userId, entity: Pendenz, orig: Pendenz) => handlePendenzModified(entity, orig)(userId)
     
     case x => //log.debug(s"receive unused event $x")
   }
@@ -146,11 +145,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
     })
   }
-  
-  def handlePendenzModified(pendenz: Pendenz, orig: Pendenz)(implicit userId: UserId) = {
-
-  }
-
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit userId: UserId) = {
     readRepository.getKundentypen map { kundetypen =>

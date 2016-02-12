@@ -65,6 +65,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
   implicit val pendenzStatusFormat = enumFormat(PendenzStatus.apply)
+  implicit val liefereinheitFormat = enumFormat(Liefereinheit.apply)
 
   //id formats
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId.apply)
@@ -85,6 +86,29 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       json match {
         case JsString(id) => KundentypId(id)
         case kt => sys.error(s"Unknown KundentypId:$kt")
+      }
+  }
+  implicit val produktIdFormat = baseIdFormat(ProduktId.apply)
+  implicit val produktekategorieIdFormat = baseIdFormat(ProduktekategorieId.apply)
+  implicit val baseProduktekategorieIdFormat = new JsonFormat[BaseProduktekategorieId] {
+    def write(obj: BaseProduktekategorieId): JsValue =
+      JsString(obj.id)
+
+    def read(json: JsValue): BaseProduktekategorieId =
+      json match {
+        case JsString(id) => BaseProduktekategorieId(id)
+        case kt => sys.error(s"Unknown BaseProduktekategorieId:$kt")
+      }
+  }
+  implicit val produzentIdFormat = baseIdFormat(ProduzentId.apply)
+  implicit val baseProduzentIdFormat = new JsonFormat[BaseProduzentId] {
+    def write(obj: BaseProduzentId): JsValue =
+      JsString(obj.id)
+
+    def read(json: JsValue): BaseProduzentId =
+      json match {
+        case JsString(id) => BaseProduzentId(id)
+        case kt => sys.error(s"Unknown BaseProduzentId:$kt")
       }
   }
 
@@ -232,4 +256,13 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
 
   implicit val lieferungFormat = jsonFormat6(Lieferung.apply)
   implicit val lieferungModifyFormat = jsonFormat1(LieferungModify.apply)
+  
+  implicit val produktekategorieFormat = jsonFormat2(Produktekategorie.apply)
+  implicit val pModifyFormat = jsonFormat1(ProduktekategorieModify.apply)
+  
+  implicit val produzentFormat = jsonFormat18(Produzent.apply)
+  implicit val produzentModifyFormat = jsonFormat17(ProduzentModify.apply)
+  
+  implicit val produktFormat = jsonFormat8(Produkt.apply)
+  implicit val produktModifyFormat = jsonFormat7(ProduktModify.apply)
 }
