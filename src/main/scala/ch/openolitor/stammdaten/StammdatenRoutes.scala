@@ -47,7 +47,9 @@ import spray.httpx.unmarshalling._
 import scala.concurrent.Future
 import ch.openolitor.core.Macros._
 
-trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService {
+trait StammdatenRoutes extends HttpService with ActorReferences 
+  with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService
+  with StammdatenJsonProtocol{
   self: StammdatenRepositoryComponent =>
 
   implicit val abotypIdParamConverter = string2BaseIdConverter(AbotypId.apply)
@@ -61,7 +63,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val vertriebsartIdPath = string2BaseIdPathMatcher(VertriebsartId.apply)
   implicit val lieferungIdPath = string2BaseIdPathMatcher(LieferungId.apply)
 
-  import StammdatenJsonProtocol._
   import EntityStore._
 
   //TODO: get real userid from login

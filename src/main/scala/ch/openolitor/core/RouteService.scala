@@ -47,7 +47,7 @@ import spray.http.StatusCodes
 import spray.http.HttpHeaders.RawHeader
 import spray.http.HttpHeaders.Location
 import spray.json._
-import ch.openolitor.core.BaseJsonProtocol._
+import ch.openolitor.core.BaseJsonProtocol.IdResponse
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
@@ -61,7 +61,8 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   with HelloWorldRoutes
   with StammdatenRoutes
   with DefaultStammdatenRepositoryComponent
-  with CORSSupport {
+  with CORSSupport
+  with BaseJsonProtocol{
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -74,7 +75,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
 }
 
 // this trait defines our service behavior independently from the service actor
-trait DefaultRouteService extends HttpService with ActorReferences {
+trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol {
 
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
@@ -91,7 +92,7 @@ trait DefaultRouteService extends HttpService with ActorReferences {
   def created[E, I <: BaseId](request: HttpRequest)(entity: E) = {
     //create entity
     onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
-      case event: EntityInsertedEvent =>
+      case event: EntityInsertedEvent[_] =>
         respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
           respondWithStatus(StatusCodes.Created) {
             complete(IdResponse(event.id.toString).toJson.compactPrint)

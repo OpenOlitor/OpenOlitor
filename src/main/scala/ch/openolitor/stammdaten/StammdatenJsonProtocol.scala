@@ -34,8 +34,7 @@ import com.typesafe.scalalogging.LazyLogging
 /**
  * JSON Format deklarationen für das Modul Stammdaten
  */
-object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
-  import BaseJsonProtocol._
+trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
 
   //enum formats
   implicit val wochentagFormat = enumFormat(x => Wochentag.apply(x).getOrElse(Montag))

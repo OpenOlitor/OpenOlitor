@@ -15,6 +15,7 @@ object BuildSettings {
     resolvers += Resolver.sonatypeRepo("releases"),
     resolvers += "dnvriend at bintray" at "http://dl.bintray.com/dnvriend/maven",
     resolvers += "Spray" at "http://repo.spray.io",
+    resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
     scalacOptions ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
     mainClass in (Compile, run) := Some("ch.openolitor.core.Boot"),
     libraryDependencies ++= {	  
@@ -46,7 +47,8 @@ object BuildSettings {
 	    "org.apache.odftoolkit"	  %  "simple-odf"					 % "0.8.1-incubating",
 	    "com.jsuereth" %% "scala-arm" % "1.4",
 	    //simple websocket client
-	    "org.jfarcand" % "wcs" % "1.5"
+	    "org.jfarcand" % "wcs" % "1.5",
+	    "com.scalapenos" %% "stamina-json" % "0.1.1-SNAPSHOT"
 	  )
 	}
   )

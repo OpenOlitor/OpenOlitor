@@ -44,10 +44,8 @@ object DBEvent2UserMapping extends DefaultJsonProtocol {
 /**
  * Redirect all dbevents to the client itself
  */
-class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
+class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver with StammdatenJsonProtocol {
   import DBEvent2UserMapping._
-  import BaseJsonProtocol._
-  import StammdatenJsonProtocol._
 
   override val system = context.system
 

@@ -75,11 +75,10 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap:Map[String, Manda
       log.debug(s"Got message from server, process locally:$message")
       message match {
         case "Pong" => 
-          log.debug("Received Pong")
-          //send as well to client          
-        case msg => 
-      }
-      self ! Push(message)
+          log.debug("Received Pong")          
+        case msg =>
+          self ! Push(message)
+      }      
     }    
      /**
 	   * Called when the {@link WebSocket} is opened

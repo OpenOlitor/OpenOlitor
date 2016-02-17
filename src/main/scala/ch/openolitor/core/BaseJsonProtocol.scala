@@ -33,9 +33,19 @@ import java.text.SimpleDateFormat
 /**
  * Basis JSON Formatter for spray-json serialisierung/deserialisierung
  */
-object BaseJsonProtocol extends DefaultJsonProtocol {
+trait BaseJsonProtocol extends DefaultJsonProtocol {
   val defaultConvert: Any => String = x => x.toString
 
+  implicit val uuidFormat = new RootJsonFormat[UUID] {
+    def write(obj: UUID): JsValue = JsString(obj.toString)
+
+    def read(json: JsValue): UUID =
+      json match {
+        case (JsString(value)) => UUID.fromString(value)
+        case value => deserializationError(s"Unrecognized UUID format:$value")
+      }
+  }
+  
   def enumFormat[E](implicit fromJson: String => E, toJson: E => String = defaultConvert) = new JsonFormat[E] {
     def write(obj: E): JsValue = JsString(toJson(obj))
 
@@ -86,8 +96,11 @@ object BaseJsonProtocol extends DefaultJsonProtocol {
 
   implicit val optionDateTimeFormat = new OptionFormat[DateTime]
   implicit val userIdFormat = baseIdFormat(UserId.apply)
+  
 
+  implicit val idResponseFormat = jsonFormat1(BaseJsonProtocol.IdResponse)
+}
+
+object BaseJsonProtocol {
   case class IdResponse(id: String)
-
-  implicit val idResponseFormat = jsonFormat1(IdResponse)
 }

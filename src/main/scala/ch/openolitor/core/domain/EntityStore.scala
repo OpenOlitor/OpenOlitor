@@ -28,8 +28,10 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
 import ch.openolitor.core.Boot
+import spray.json.DefaultJsonProtocol
+import ch.openolitor.core.BaseJsonProtocol
 
-/**
+/**_
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
  */
 object EntityStore {
@@ -43,17 +45,25 @@ object EntityStore {
   def props(): Props = Props(classOf[EntityStore])
 
   //base commands
-  case class InsertEntityCommand(originator: UserId, entity: Any) extends Command
-  case class UpdateEntityCommand(originator: UserId, id: BaseId, entity: Any) extends Command
+  case class InsertEntityCommand[E](originator: UserId, entity: E) extends Command
+  case class UpdateEntityCommand[E](originator: UserId, id: BaseId, entity: E) extends Command
   case class DeleteEntityCommand(originator: UserId, id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: Any) extends PersistetEvent
-  case class EntityUpdatedEvent(meta: EventMetadata, id: BaseId, entity: Any) extends PersistetEvent
+  case class EntityInsertedEvent[E](meta: EventMetadata, id: UUID, entity: E) extends PersistetEvent
+  case class EntityUpdatedEvent[E](meta: EventMetadata, id: BaseId, entity: E) extends PersistetEvent
   case class EntityDeletedEvent(meta: EventMetadata, id: BaseId) extends PersistetEvent
-
+   
   // other actor messages
+}
+
+//json protocol
+trait EntityStoreJsonProtocol extends BaseJsonProtocol {
+    import EntityStore._
+  
+    implicit val metadataFormat = jsonFormat5(EventMetadata)
+    implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)    
 }
 
 class EntityStore extends AggregateRoot {
