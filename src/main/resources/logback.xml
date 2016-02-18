@@ -25,11 +25,11 @@
         <appender-ref ref="STDOUT"/>
     </logger>
     
-    <logger name="a.p.j.s.MySQLAsyncWriteJournal" level="INFO">
+    <logger name="a.p.j.s.MySQLAsyncWriteJournal" level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </logger>
     
-    <logger name="s.async" level="INFO">
+    <logger name="s.async" level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </logger>
     

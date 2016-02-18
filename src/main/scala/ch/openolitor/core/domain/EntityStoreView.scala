@@ -41,8 +41,8 @@ trait EventService[E <: PersistetEvent] {
 trait EntityStoreViewComponent extends Actor {
   import EntityStore._
   val insertService: EventService[EntityInsertedEvent[_]]
-  val updateService: EventService[EntityUpdatedEvent[_]]
-  val deleteService: EventService[EntityDeletedEvent]
+  val updateService: EventService[EntityUpdatedEvent[_, _]]
+  val deleteService: EventService[EntityDeletedEvent[_]]
 
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
     case _: Exception => Restart
@@ -78,9 +78,9 @@ trait EntityStoreView extends PersistentView with ActorLogging {
       initializeEntityStoreView()
     case e: EntityInsertedEvent[_] =>
       insertService.handle(e)
-    case e: EntityUpdatedEvent[_] =>
+    case e: EntityUpdatedEvent[_, _] =>
       updateService.handle(e)
-    case e: EntityDeletedEvent =>
+    case e: EntityDeletedEvent[_] =>
       deleteService.handle(e)
     case Startup =>
       log.debug("Received startup command")

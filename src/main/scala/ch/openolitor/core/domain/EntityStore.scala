@@ -52,8 +52,8 @@ object EntityStore {
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
   case class EntityInsertedEvent[E](meta: EventMetadata, id: UUID, entity: E) extends PersistetEvent
-  case class EntityUpdatedEvent[E](meta: EventMetadata, id: BaseId, entity: E) extends PersistetEvent
-  case class EntityDeletedEvent(meta: EventMetadata, id: BaseId) extends PersistetEvent
+  case class EntityUpdatedEvent[I <: BaseId, E](meta: EventMetadata, id: I, entity: E) extends PersistetEvent
+  case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistetEvent
    
   // other actor messages
 }
