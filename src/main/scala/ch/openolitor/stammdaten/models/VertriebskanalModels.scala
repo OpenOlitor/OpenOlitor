@@ -37,6 +37,7 @@ case class DepotId(id: UUID) extends BaseId
 
 case class Depot(id: DepotId,
   name: String,
+  kurzzeichen: String,
   apName: Option[String],
   apVorname: Option[String],
   apTelefon: Option[String],
@@ -60,6 +61,7 @@ case class Depot(id: DepotId,
 
 case class DepotModify(
   name: String,
+  kurzzeichen: String,
   apName: Option[String],
   apVorname: Option[String],
   apTelefon: Option[String],

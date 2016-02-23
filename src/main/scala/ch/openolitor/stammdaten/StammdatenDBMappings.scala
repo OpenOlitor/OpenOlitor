@@ -284,6 +284,7 @@ trait StammdatenDBMappings extends DBMappings {
 
     override def updateParameters(depot: Depot) = {
       Seq(column.name -> parameter(depot.name),
+        column.kurzzeichen -> parameter(depot.kurzzeichen),
         column.apName -> parameter(depot.apName),
         column.apVorname -> parameter(depot.apVorname),
         column.apTelefon -> parameter(depot.apTelefon),
