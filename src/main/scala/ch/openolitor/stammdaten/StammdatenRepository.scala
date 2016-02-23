@@ -76,6 +76,8 @@ trait StammdatenReadRepository {
   
   def getProduzenten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produzent]]
   def getProduzentDetail(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
+  
+  def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]]
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
@@ -403,6 +405,13 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(produzentMapping as produzent)
         .where.eq(produzent.id, parameter(id))
     }.map(produzentMapping(produzent)).single.future
+  }
+  
+  def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]] = {
+    withSQL {
+      select
+        .from(tourMapping as tour)
+    }.map(tourMapping(tour)).list.future
   }
 }
 

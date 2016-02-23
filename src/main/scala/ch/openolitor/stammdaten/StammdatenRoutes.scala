@@ -64,6 +64,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val produktIdPath = string2BaseIdPathMatcher(ProduktId.apply)
   implicit val produktekategorieIdPath = string2BaseIdPathMatcher(ProduktekategorieId.apply)
   implicit val produzentIdPath = string2BaseIdPathMatcher(ProduzentId.apply)
+  implicit val tourIdPath = string2BaseIdPathMatcher(TourId.apply)
 
   import StammdatenJsonProtocol._
   import EntityStore._
@@ -72,7 +73,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   override val userId: UserId = Boot.systemUserId
 
   lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ 
-    kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~ produzentenRoute
+    kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~ 
+    produzentenRoute ~ tourenRoute
 
   lazy val kundenRoute =
     path("kunden") {
@@ -214,6 +216,16 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("produzenten" / produzentIdPath) { id =>
         get(detail(readRepository.getProduzentDetail(id))) ~
           (put | post)(update[ProduzentModify, ProduzentId](id)) ~
+          delete(remove(id))
+      }
+    
+  lazy val tourenRoute =
+    path("touren") {
+      get(list(readRepository.getTouren)) ~
+        post(create[TourModify, TourId](TourId.apply _))
+    } ~
+      path("touren" / tourIdPath) { id =>
+          (put | post)(update[TourModify, TourId](id)) ~
           delete(remove(id))
       }
 }

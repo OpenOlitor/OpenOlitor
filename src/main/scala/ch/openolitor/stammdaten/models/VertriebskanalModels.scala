@@ -86,4 +86,12 @@ case class DepotSummary(
   name: String) extends Product
 
 case class TourId(id: UUID) extends BaseId
-case class Tour(id: TourId, name: String, beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
+
+case class Tour(
+    id: TourId, 
+    name: String, 
+    beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
+    
+case class TourModify(
+    name: String, 
+    beschreibung: Option[String]) extends Product

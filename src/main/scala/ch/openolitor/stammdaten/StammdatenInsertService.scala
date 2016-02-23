@@ -81,6 +81,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createProduktekategorie(id, produktekategorie)
     case EntityInsertedEvent(meta, id, produzent: ProduzentModify) =>
       createProduzent(id, produzent)
+    case EntityInsertedEvent(meta, id, tour: TourModify) =>
+      createTour(id, tour)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
@@ -248,6 +250,15 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "id" -> produzentId)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(produzent)
+    }
+  }
+  
+  def createTour(id: UUID, create: TourModify) = {
+    val tourId = TourId(id)
+    val tour = copyTo[TourModify, Tour](create,
+      "id" -> tourId)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity(tour)
     }
   }
 }

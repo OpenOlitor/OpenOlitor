@@ -102,7 +102,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
   implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
-  implicit val lieferzeipunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
+  implicit val lieferzeitpunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
   implicit val liefereinheitSqlBinder = toStringSqlBinder[Liefereinheit]
@@ -275,6 +275,11 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Tour): Seq[Any] = parameters(Tour.unapply(entity).get)
+    
+    override def updateParameters(tour: Tour) = {
+    	Seq(column.name -> parameter(tour.name),
+        column.beschreibung -> parameter(tour.beschreibung))
+    }
   }
 
   implicit val depotMapping = new BaseEntitySQLSyntaxSupport[Depot] {
