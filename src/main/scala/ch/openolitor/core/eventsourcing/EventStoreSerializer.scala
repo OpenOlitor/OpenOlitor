@@ -11,10 +11,9 @@ import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.models.CustomKundentyp
 import ch.openolitor.stammdaten.models.CustomKundentypCreate
+import ch.openolitor.core.eventsourcing.events._
 
-class EventStoreSerializer extends StaminaAkkaSerializer(EventStoreSerializer.allPersisters) 
-with LazyLogging with StammdatenEventStoreSerializer {
-  val persisters = Persisters(EventStoreSerializer.allPersisters)
+class EventStoreSerializer extends StaminaAkkaSerializer(EventStoreSerializer.eventStorePersisters) with LazyLogging with StammdatenEventStoreSerializer {
   
   override def toBinary(obj: AnyRef): Array[Byte] = {
     logger.debug(s"EventStoreSerielizer: toBinary: $obj")
@@ -29,16 +28,19 @@ with LazyLogging with StammdatenEventStoreSerializer {
             logger.warn(s"Found persister:${persister.key}")
           }
         }
-        logger.warn(s"Try manually:${insertCustomKundetypPersister.persist(obj.asInstanceOf[EntityInsertedEvent[CustomKundentypCreate]])}")
-        null
+        throw e
     }
   }
 }
 
 object EventStoreSerializer extends EntityStoreJsonProtocol with StammdatenEventStoreSerializer { 
-  val entityStoreInitializedPersister = persister[EntityStoreInitialized]("entity-store-initialized")
   
-  val eventStorePersisters = List(entityStoreInitializedPersister)
+  val entityPersisters = Persisters(stammdatenPersisters)
   
-  val allPersisters = eventStorePersisters ++ stammdatenPersisters
+  val entityStoreInitializedPersister = persister[EntityStoreInitialized]("entity-store-initialized")  
+  val entityInsertEventPersister = new EntityInsertEventPersister[V1](entityPersisters)
+  val entityUpdatedEventPersister = new EntityUpdatedEventPersister[V1](entityPersisters)
+  val entityDeletedEventPersister = new EntityDeletedEventPersister[V1](entityPersisters)
+  
+  val eventStorePersisters = List(entityStoreInitializedPersister, entityInsertEventPersister, entityUpdatedEventPersister, entityDeletedEventPersister)  
 }

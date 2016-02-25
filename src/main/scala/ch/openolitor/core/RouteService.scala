@@ -82,8 +82,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
 
-  def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], persister:Persister[EntityInsertedEvent[E], _]) = {
+  def create[E <: AnyRef, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I], persister:Persister[E, _]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         created(request)(entity)
@@ -91,7 +91,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def created[E, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister:Persister[EntityInsertedEvent[E], _]) = {
+  def created[E <: AnyRef, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister:Persister[E, _]) = {
     //create entity
     onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
       case event: EntityInsertedEvent[_] =>
@@ -105,12 +105,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], persister:Persister[EntityUpdatedEvent[I,E], _]) = {
+  def update[E <: AnyRef, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I], idPersister:Persister[I, _], entityPersister: Persister[E, _]) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 
-  def updated[E, I <: BaseId](id: I, entity: E)(implicit persister:Persister[EntityUpdatedEvent[I, E], _]) = {
+  def updated[E <: AnyRef, I <: BaseId](id: I, entity: E)(implicit idPersister:Persister[I, _], entityPersister: Persister[E, _]) = {
     //update entity
     onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
       complete(StatusCodes.Accepted, "")
@@ -134,7 +134,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   /**
    * @persister declare format to ensure that format exists for persising purposes
    */
-  def remove[I <: BaseId](id: I)(implicit persister:Persister[EntityDeletedEvent[I], _]) = {
+  def remove[I <: BaseId](id: I)(implicit persister:Persister[I, _]) = {
     onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
       complete("")
     }

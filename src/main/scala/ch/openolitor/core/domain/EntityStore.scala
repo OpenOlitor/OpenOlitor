@@ -45,14 +45,14 @@ object EntityStore {
   def props(): Props = Props(classOf[EntityStore])
 
   //base commands
-  case class InsertEntityCommand[E](originator: UserId, entity: E) extends Command
-  case class UpdateEntityCommand[E](originator: UserId, id: BaseId, entity: E) extends Command
+  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends Command
+  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends Command
   case class DeleteEntityCommand(originator: UserId, id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent[E](meta: EventMetadata, id: UUID, entity: E) extends PersistetEvent
-  case class EntityUpdatedEvent[I <: BaseId, E](meta: EventMetadata, id: I, entity: E) extends PersistetEvent
+  case class EntityInsertedEvent[E <: AnyRef](meta: EventMetadata, id: UUID, entity: E) extends PersistetEvent
+  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent
   case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistetEvent
    
   // other actor messages
