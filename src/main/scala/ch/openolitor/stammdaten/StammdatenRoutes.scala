@@ -74,7 +74,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
 
   lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ 
     kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~ 
-    produzentenRoute ~ tourenRoute
+    produzentenRoute ~ tourenRoute ~ projektRoute
 
   lazy val kundenRoute =
     path("kunden") {
@@ -228,4 +228,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           (put | post)(update[TourModify, TourId](id)) ~
           delete(remove(id))
       }
+    
+  lazy val projektRoute =
+    path("projekt") {
+      get(detail(readRepository.getProjekt)) ~
+        post(create[ProjektModify, ProjektId](ProjektId.apply _))
+    }
 }

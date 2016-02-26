@@ -112,6 +112,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
         case kt => sys.error(s"Unknown BaseProduzentId:$kt")
       }
   }
+  implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -278,4 +279,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   
   implicit val produktFormat = jsonFormat8(Produkt.apply)
   implicit val produktModifyFormat = jsonFormat7(ProduktModify.apply)
+  
+  implicit val projektFormat = jsonFormat8(Projekt.apply)
+  implicit val projektModifyFormat = jsonFormat7(ProjektModify.apply)
 }

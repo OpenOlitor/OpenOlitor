@@ -71,13 +71,17 @@ trait StammdatenReadRepository {
   def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]]
   
   def getProdukte(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]]
+  def getProduktProduzenten(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduzent]]
   
   def getProduktekategorien(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produktekategorie]]
   
   def getProduzenten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produzent]]
   def getProduzentDetail(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
+  def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
   
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]]
+  
+  def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]]
 }
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
@@ -103,6 +107,9 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val produkt = produktMapping.syntax("produkt")
   lazy val produktekategorie = produktekategorieMapping.syntax("produktekategorie")
   lazy val produzent = produzentMapping.syntax("produzent")
+  lazy val projekt = projektMapping.syntax("projekt")
+  lazy val produktProduzent = produktProduzentMapping.syntax("produktProduzent")
+  
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
@@ -413,6 +420,29 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(tourMapping as tour)
     }.map(tourMapping(tour)).list.future
   }
+  
+  def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]] = {
+    withSQL {
+      select
+        .from(projektMapping as projekt)
+    }.map(projektMapping(projekt)).single.future
+  }
+  
+  def getProduktProduzenten(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduzent]] = {
+    withSQL {
+      select
+        .from(produktProduzentMapping as produktProduzent)
+        .where.eq(produktProduzent.produktId, parameter(id))
+    }.map(produktProduzentMapping(produktProduzent)).list.future
+  }
+  
+  def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]] = {
+    withSQL {
+      select
+        .from(produzentMapping as produzent)
+        .where.eq(produzent.kurzzeichen, parameter(kurzzeichen))
+    }.map(produzentMapping(produzent)).single.future
+  }
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
@@ -440,6 +470,8 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"drop table if exists ${produktMapping.table}".execute.apply()
       sql"drop table if exists ${produktekategorieMapping.table}".execute.apply()
       sql"drop table if exists ${produzentMapping.table}".execute.apply()
+      sql"drop table if exists ${projektMapping.table}".execute.apply()
+      sql"drop table if exists ${produktProduzentMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables")
       //create tables
@@ -461,7 +493,9 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${produktMapping.table}  (id varchar(36) not null, name varchar(50) not null, verfuegbar_von varchar(10) not null, verfuegbar_bis varchar(10) not null, kategorien varchar(300), einheit varchar(20) not null, preis DECIMAL(7,2) not null, produzenten varchar(300))".execute.apply()
       sql"create table ${produktekategorieMapping.table}  (id varchar(36) not null, beschreibung varchar(50) not null)".execute.apply()
       sql"create table ${produzentMapping.table}  (id varchar(36) not null, name varchar(50) not null, vorname varchar(50), kurzzeichen varchar(6) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(1000), email varchar(100) not null, telefon_mobil varchar(50), telefon_festnetz varchar(50), iban varchar(34), bank varchar(50), mwst bit, mwst_satz DECIMAL(4,2), aktiv bit)".execute.apply()
-
+      sql"create table ${projektMapping.table}  (id varchar(36) not null, bezeichnung varchar(50) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4), ort varchar(50), waehrung varchar(10) not null)".execute.apply()
+      sql"create table ${produktProduzentMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produzent_id varchar(36) not null)".execute.apply()
+      
       logger.debug(s"oo-system: cleanupDatabase - end")
     }
   }

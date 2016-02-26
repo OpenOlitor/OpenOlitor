@@ -81,19 +81,27 @@ case class Produkt(
   name: String,
   verfuegbarVon: Liefersaison,
   verfuegbarBis: Liefersaison,
-  kategorien: Set[BaseProduktekategorieId],
+  kategorien: Seq[String],
   einheit: Liefereinheit,
   preis: BigDecimal,
-  produzenten: Set[BaseProduzentId]
+  produzenten: Seq[String]
 ) extends BaseEntity[ProduktId]
 
 case class ProduktModify(
   name: String,
   verfuegbarVon: Liefersaison,
   verfuegbarBis: Liefersaison,
-  kategorien: Set[BaseProduktekategorieId],
+  kategorien: Seq[String],
   einheit: Liefereinheit,
   preis: BigDecimal,
-  produzenten: Set[BaseProduzentId]
+  produzenten: Seq[String]
 ) extends Product 
+
+case class ProduktProduzentId(id: UUID) extends BaseId
+
+case class ProduktProduzent(
+  id: ProduktProduzentId, 
+  produktId: ProduktId, 
+  produzentId: ProduzentId
+) extends BaseEntity[ProduktProduzentId]
 

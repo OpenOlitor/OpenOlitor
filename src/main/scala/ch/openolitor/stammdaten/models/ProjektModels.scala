@@ -25,9 +25,26 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 
-case class Projekt(id: UUID,
-  name: String,
-  waehrung: Waehrung)
+case class ProjektId(id: UUID) extends BaseId
+
+case class Projekt(id: ProjektId,
+  bezeichnung: String,
+  strasse: Option[String],
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: Option[String],
+  ort: Option[String],
+  waehrung: Waehrung) extends BaseEntity[ProjektId]
+
+case class ProjektModify(
+  bezeichnung: String,
+  strasse: Option[String],
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: Option[String],
+  ort: Option[String],
+  waehrung: Waehrung
+) extends Product 
 
 case class KundentypId(id: String)
 

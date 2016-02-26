@@ -80,6 +80,8 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val produktIdBinder: TypeBinder[ProduktId] = baseIdTypeBinder(ProduktId.apply _)
   implicit val produzentIdBinder: TypeBinder[ProduzentId] = baseIdTypeBinder(ProduzentId.apply _)
   implicit val baseProduzentIdBinder: TypeBinder[BaseProduzentId] = string.map(BaseProduzentId)
+  implicit val projektIdBinder: TypeBinder[ProjektId] = baseIdTypeBinder(ProjektId.apply _)
+  implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
   
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
@@ -95,6 +97,8 @@ trait StammdatenDBMappings extends DBMappings {
   
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
+  
+  implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
   
   //DB parameter binders for write and query operationsit
   implicit val pendenzStatusBinder = toStringSqlBinder[PendenzStatus]
@@ -127,6 +131,10 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val produzentIdSqlBinder = baseIdSqlBinder[ProduzentId]
   implicit val baseProduzentIdSqlBinder = new SqlBinder[BaseProduzentId] { def apply(value: BaseProduzentId): Any = value.id }
   implicit val baseProduzentIdSetSqlBinder = setSqlBinder[BaseProduzentId]
+  implicit val projektIdSqlBinder = baseIdSqlBinder[ProjektId]
+  implicit val produktProduzentIdIdSqlBinder = baseIdSqlBinder[ProduktProduzentId]
+  
+  implicit val stringSeqSqlBinder = seqSqlBinder[String]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -499,6 +507,45 @@ trait StammdatenDBMappings extends DBMappings {
     override def updateParameters(produktekategorie: Produktekategorie) = {
       Seq(
         column.beschreibung -> parameter(produktekategorie.beschreibung))
+    }
+  }
+  
+  implicit val projektMapping = new BaseEntitySQLSyntaxSupport[Projekt] {
+    override val tableName = "Projekt"
+
+    override lazy val columns = autoColumns[Projekt]()
+
+    def apply(rn: ResultName[Projekt])(rs: WrappedResultSet): Projekt =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Projekt): Seq[Any] = parameters(Projekt.unapply(entity).get)
+
+    override def updateParameters(projekt: Projekt) = {
+      Seq(
+        column.bezeichnung -> parameter(projekt.bezeichnung),
+        column.strasse -> parameter(projekt.strasse),
+        column.hausNummer -> parameter(projekt.hausNummer),
+        column.adressZusatz -> parameter(projekt.adressZusatz),
+        column.plz -> parameter(projekt.plz),
+        column.ort -> parameter(projekt.ort),
+        column.waehrung -> parameter(projekt.waehrung))
+    }
+  }
+  
+   implicit val produktProduzentMapping = new BaseEntitySQLSyntaxSupport[ProduktProduzent] {
+    override val tableName = "ProduktProduzent"
+
+    override lazy val columns = autoColumns[ProduktProduzent]()
+
+    def apply(rn: ResultName[ProduktProduzent])(rs: WrappedResultSet): ProduktProduzent =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ProduktProduzent): Seq[Any] = parameters(ProduktProduzent.unapply(entity).get)
+
+    override def updateParameters(projekt: ProduktProduzent) = {
+      Seq(
+        column.produktId -> parameter(projekt.produktId),
+        column.produzentId -> parameter(projekt.produzentId))
     }
   }
 }
