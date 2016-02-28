@@ -10,11 +10,12 @@ import java.util.UUID
 import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.models.BaseId
+import com.typesafe.scalalogging.LazyLogging
 
 package events {
   
   sealed abstract class PersistedEventPersister[T <: PersistetEvent : ClassTag, V <: Version: VersionInfo]
-    (key:String,  entityPersisters: Persisters) extends Persister[T, V](key) {
+    (key:String,  entityPersisters: Persisters) extends Persister[T, V](key) with LazyLogging {
     
     def persist(t: T): Persisted = {    
       Persisted(key, currentVersion, toBytes(t))
@@ -30,6 +31,7 @@ package events {
     def fromBytes(bytes:ByteString):T
     
     def persistEntity[E <: AnyRef](entity:E):JsValue = {
+      logger.debug(s"persistEntity:$entity")
       entityPersisters.canPersist(entity) match { 
         case true => 
           //build entity json
@@ -39,7 +41,7 @@ package events {
             "key" -> JsString(persisted.key),
             "version" -> JsNumber(persisted.version),
             "data" -> data
-          )        
+          )
         case _ => throw new IllegalArgumentException(s"No persister found for entity:${entity}")
       }
     }
@@ -62,7 +64,8 @@ package events {
   }
   
   class EntityInsertEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters) 
-    extends PersistedEventPersister[EntityInsertedEvent[AnyRef], V]("entity-inserted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+    extends PersistedEventPersister[EntityInsertedEvent[AnyRef], V]("entity-inserted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
+    with LazyLogging {
     
     def toBytes(t:EntityInsertedEvent[AnyRef]): ByteString = {
       //build custom json
@@ -85,15 +88,16 @@ package events {
             val meta = metadataFormat.read(metaJson)
             val uuid = uuidFormat.read(uuidJson)
             
-            val entity = unpersistEntity(entityJson)
-            EntityInsertedEvent(meta, uuid, entity)
+           val entity = unpersistEntity[AnyRef](entityJson)
+           EntityInsertedEvent(meta, uuid, entity)
           case x => throw new DeserializationException(s"EntityInsertedEvent data expected, received:$x")
       }
     }  
   }
     
   class EntityUpdatedEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters) 
-    extends PersistedEventPersister[EntityUpdatedEvent[BaseId, AnyRef], V]("entity-updated", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+    extends PersistedEventPersister[EntityUpdatedEvent[BaseId, AnyRef], V]("entity-updated", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
+    with LazyLogging {
     
     def toBytes(t:EntityUpdatedEvent[BaseId, AnyRef]): ByteString = {
       //build custom json
@@ -101,22 +105,24 @@ package events {
       val id = persistEntity(t.id)
       
       //lookup persister for entity
-      val entity = persistEntity(t.entity)
+      val entity = persistEntity[AnyRef](t.entity)
       
-      fromJson(JsObject(
+      logger.debug(s"Persist update:$meta, $id, $entity")
+      val json = JsObject(
         "meta" -> meta,
         "id" -> id,
         "entity" -> entity
-      ))
+      )
+      fromJson(json)
     }
     
     def fromBytes(bytes:ByteString):EntityUpdatedEvent[BaseId, AnyRef] = {
-      toJson(bytes).asJsObject.getFields("meta", "uuid", "entity") match {
+      toJson(bytes).asJsObject.getFields("meta", "id", "entity") match {
           case Seq(metaJson, idJson, entityJson) =>
             val meta = metadataFormat.read(metaJson)
             val id:BaseId = unpersistEntity(idJson)
             
-            val entity = unpersistEntity(entityJson)
+            val entity = unpersistEntity[AnyRef](entityJson)
             EntityUpdatedEvent(meta, id, entity)
           case x => throw new DeserializationException(s"EntityUpdatedEvent data expected, received:$x")
       }
@@ -138,8 +144,8 @@ package events {
     }
     
     def fromBytes(bytes:ByteString):EntityDeletedEvent[BaseId] = {
-      toJson(bytes).asJsObject.getFields("meta", "uuid", "entity") match {
-          case Seq(metaJson, idJson, entityJson) =>
+      toJson(bytes).asJsObject.getFields("meta", "id") match {
+          case Seq(metaJson, idJson) =>
             val meta = metadataFormat.read(metaJson)
             val id:BaseId = unpersistEntity(idJson)
             
