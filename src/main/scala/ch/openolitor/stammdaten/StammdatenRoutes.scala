@@ -65,6 +65,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val produktekategorieIdPath = string2BaseIdPathMatcher(ProduktekategorieId.apply)
   implicit val produzentIdPath = string2BaseIdPathMatcher(ProduzentId.apply)
   implicit val tourIdPath = string2BaseIdPathMatcher(TourId.apply)
+  implicit val projektIdPath = string2BaseIdPathMatcher(ProjektId.apply)
 
   import StammdatenJsonProtocol._
   import EntityStore._
@@ -233,5 +234,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
     path("projekt") {
       get(detail(readRepository.getProjekt)) ~
         post(create[ProjektModify, ProjektId](ProjektId.apply _))
-    }
+    } ~
+      path("projekt" / projektIdPath) { id =>
+        get(detail(readRepository.getProjekt)) ~
+          (put | post)(update[ProjektModify, ProjektId](id))
+      }
 }

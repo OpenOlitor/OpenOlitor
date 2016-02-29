@@ -121,6 +121,9 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver {
     case e @ EntityCreated(userId, entity: Produzent) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
     case e @ EntityModified(userId, entity: Produzent, _) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
     case e @ EntityDeleted(userId, entity: Produzent) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
+    
+    case e @ EntityCreated(userId, entity: Projekt) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
+    case e @ EntityModified(userId, entity: Projekt, _) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
 
     case x => log.debug(s"receive unknown event $x")
   }

@@ -71,6 +71,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: ProduktId, entity: ProduktModify)                     => updateProdukt(id, entity)
     case EntityUpdatedEvent(meta, id: ProduktekategorieId, entity: ProduktekategorieModify) => updateProduktekategorie(id, entity)
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify)                           => updateTour(id, entity)
+    case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify)                     => updateProjekt(id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
@@ -346,6 +347,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(tour, update)
         writeRepository.updateEntity[Tour, TourId](copy)
+      }
+    }
+  }
+  
+  def updateProjekt(id: ProjektId, update: ProjektModify) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(projektMapping, id) map { projekt =>
+        //map all updatable fields
+        val copy = copyFrom(projekt, update)
+        writeRepository.updateEntity[Projekt, ProjektId](copy)
       }
     }
   }

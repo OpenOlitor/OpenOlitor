@@ -561,10 +561,10 @@ trait StammdatenDBMappings extends DBMappings {
 
     def parameterMappings(entity: ProduktProduktekategorie): Seq[Any] = parameters(ProduktProduktekategorie.unapply(entity).get)
 
-    override def updateParameters(projekt: ProduktProduktekategorie) = {
+    override def updateParameters(produktkat: ProduktProduktekategorie) = {
       Seq(
-        column.produktId -> parameter(projekt.produktId),
-        column.produktekategorieId -> parameter(projekt.produktekategorieId))
+        column.produktId -> parameter(produktkat.produktId),
+        column.produktekategorieId -> parameter(produktkat.produktekategorieId))
     }
   }
 }
