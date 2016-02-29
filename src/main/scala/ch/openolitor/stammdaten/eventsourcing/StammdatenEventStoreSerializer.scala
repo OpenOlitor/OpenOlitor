@@ -1,6 +1,7 @@
 package ch.openolitor.stammdaten.eventsourcing
 
 import stamina._
+
 import stamina.json._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
@@ -36,6 +37,21 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferungAbotypCreatePersister = persister[LieferungAbotypCreate]("lieferung-abotyp-create")
   implicit val lieferungIdPersister = persister[LieferungId]("lieferung-id")
   
+  implicit val produktModifyPersister = persister[ProduktModify]("produkt-modify")
+  implicit val produktIdPersister = persister[ProduktId]("produkt-id")
+  
+  implicit val produktkategorieModifyPersister = persister[ProduktekategorieModify]("produktekategorie-modify")
+  implicit val produktkategorieIdPersister = persister[ProduktekategorieId]("produktekategorie-id")
+  
+  implicit val produzentModifyPersister = persister[ProduzentModify]("produzent-modify")
+  implicit val produzentIdPersister = persister[ProduzentId]("produzent-id")
+  
+  implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
+  implicit val tourIdPersister = persister[TourId]("tour-id")
+  
+  implicit val projektModifyPersiter = persister[ProjektModify]("projekt-modify")
+  implicit val projektIdPersister = persister[ProjektId]("projekt-id")
+  
   val stammdatenPersisters = List(
     depotModifyPersister,
     depotIdPersister,
@@ -55,6 +71,16 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     pendenzModifyPersister,
     pendenzIdPersister,
     lieferungAbotypCreatePersister,
-    lieferungIdPersister
+    lieferungIdPersister,
+    produktIdPersister,
+    produktModifyPersister,
+    produktkategorieModifyPersister,
+    produktkategorieIdPersister,
+    produzentModifyPersister,
+    produzentIdPersister,
+    tourModifyPersiter,
+    tourIdPersister,
+    projektModifyPersiter,
+    projektIdPersister
   )
 }
