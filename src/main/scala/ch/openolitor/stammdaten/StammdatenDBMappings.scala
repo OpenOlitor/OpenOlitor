@@ -75,7 +75,15 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
   implicit val customKundentypIdBinder: TypeBinder[CustomKundentypId] = baseIdTypeBinder(CustomKundentypId.apply _)
   implicit val kundentypIdBinder: TypeBinder[KundentypId] = string.map(KundentypId)
-
+  implicit val produktekategorieIdBinder: TypeBinder[ProduktekategorieId] = baseIdTypeBinder(ProduktekategorieId.apply _) 
+  implicit val baseProduktekategorieIdBinder: TypeBinder[BaseProduktekategorieId] = string.map(BaseProduktekategorieId)
+  implicit val produktIdBinder: TypeBinder[ProduktId] = baseIdTypeBinder(ProduktId.apply _)
+  implicit val produzentIdBinder: TypeBinder[ProduzentId] = baseIdTypeBinder(ProduzentId.apply _)
+  implicit val baseProduzentIdBinder: TypeBinder[BaseProduzentId] = string.map(BaseProduzentId)
+  implicit val projektIdBinder: TypeBinder[ProjektId] = baseIdTypeBinder(ProjektId.apply _)
+  implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
+  implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
+  
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.parse)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
@@ -84,17 +92,27 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.parse)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.parse).toSet)
   implicit val kundenTypIdSetBinder: TypeBinder[Set[KundentypId]] = string.map(s => s.split(",").map(KundentypId.apply).toSet)
-  implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.parse)
-
+  implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
+  implicit val liefereinheitypeBinder: TypeBinder[Liefereinheit] = string.map(Liefereinheit.apply)
+  implicit val liefersaisonTypeBinder: TypeBinder[Liefersaison] = string.map(Liefersaison.apply)
+  
+  implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
+  implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
+  
+  implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
+  
   //DB parameter binders for write and query operationsit
   implicit val pendenzStatusBinder = toStringSqlBinder[PendenzStatus]
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
   implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
-  implicit val lieferzeipunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
+  implicit val lieferzeitpunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
+  implicit val liefereinheitSqlBinder = toStringSqlBinder[Liefereinheit]
+  implicit val liefersaisonSqlBinder = toStringSqlBinder[Liefersaison]
+  
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
@@ -107,6 +125,18 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val kundentypIdSetSqlBinder = setSqlBinder[KundentypId]
   implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
   implicit val lieferungIdSqlBinder = baseIdSqlBinder[LieferungId]
+  implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
+  implicit val produktekategorieIdSqlBinder = baseIdSqlBinder[ProduktekategorieId]
+  implicit val baseProduktekategorieIdSqlBinder = new SqlBinder[BaseProduktekategorieId] { def apply(value: BaseProduktekategorieId): Any = value.id }
+  implicit val baseProduktekategorieIdSetSqlBinder = setSqlBinder[BaseProduktekategorieId]
+  implicit val produzentIdSqlBinder = baseIdSqlBinder[ProduzentId]
+  implicit val baseProduzentIdSqlBinder = new SqlBinder[BaseProduzentId] { def apply(value: BaseProduzentId): Any = value.id }
+  implicit val baseProduzentIdSetSqlBinder = setSqlBinder[BaseProduzentId]
+  implicit val projektIdSqlBinder = baseIdSqlBinder[ProjektId]
+  implicit val produktProduzentIdIdSqlBinder = baseIdSqlBinder[ProduktProduzentId]
+  implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
+  
+  implicit val stringSeqSqlBinder = seqSqlBinder[String]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -172,8 +202,13 @@ trait StammdatenDBMappings extends DBMappings {
       Seq(column.bezeichnung -> parameter(kunde.bezeichnung),
         column.strasse -> parameter(kunde.strasse),
         column.hausNummer -> parameter(kunde.hausNummer),
+        column.adressZusatz -> parameter(kunde.adressZusatz),
         column.plz -> parameter(kunde.plz),
         column.ort -> parameter(kunde.ort),
+        column.strasseLieferung -> parameter(kunde.strasseLieferung),
+        column.hausNummerLieferung -> parameter(kunde.hausNummerLieferung),
+        column.plzLieferung -> parameter(kunde.plzLieferung),
+        column.ortLieferung -> parameter(kunde.ortLieferung),
         column.typen -> parameter(kunde.typen),
         column.bemerkungen -> parameter(kunde.bemerkungen),
         column.anzahlAbos -> parameter(kunde.anzahlAbos),
@@ -250,6 +285,11 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Tour): Seq[Any] = parameters(Tour.unapply(entity).get)
+    
+    override def updateParameters(tour: Tour) = {
+    	Seq(column.name -> parameter(tour.name),
+        column.beschreibung -> parameter(tour.beschreibung))
+    }
   }
 
   implicit val depotMapping = new BaseEntitySQLSyntaxSupport[Depot] {
@@ -264,6 +304,7 @@ trait StammdatenDBMappings extends DBMappings {
 
     override def updateParameters(depot: Depot) = {
       Seq(column.name -> parameter(depot.name),
+        column.kurzzeichen -> parameter(depot.kurzzeichen),
         column.apName -> parameter(depot.apName),
         column.apVorname -> parameter(depot.apVorname),
         column.apTelefon -> parameter(depot.apTelefon),
@@ -397,6 +438,133 @@ trait StammdatenDBMappings extends DBMappings {
         column.abotypId -> parameter(postlieferungAbo.abotypId),
         column.abotypName -> parameter(postlieferungAbo.abotypName),
         column.liefertag -> parameter(postlieferungAbo.liefertag))
+    }
+  }
+  
+  implicit val produktMapping = new BaseEntitySQLSyntaxSupport[Produkt] {
+    override val tableName = "Produkt"
+
+    override lazy val columns = autoColumns[Produkt]()
+
+    def apply(rn: ResultName[Produkt])(rs: WrappedResultSet): Produkt =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Produkt): Seq[Any] = parameters(Produkt.unapply(entity).get)
+
+    override def updateParameters(produkt: Produkt) = {
+      Seq(
+        column.name -> parameter(produkt.name),
+        column.verfuegbarVon -> parameter(produkt.verfuegbarVon),
+        column.verfuegbarBis -> parameter(produkt.verfuegbarBis),
+        column.kategorien -> parameter(produkt.kategorien),
+        column.einheit -> parameter(produkt.einheit),
+        column.preis -> parameter(produkt.preis),
+        column.produzenten -> parameter(produkt.produzenten)
+      )
+    }
+  }
+  
+  implicit val produzentMapping = new BaseEntitySQLSyntaxSupport[Produzent] {
+    override val tableName = "Produzent"
+
+    override lazy val columns = autoColumns[Produzent]()
+
+    def apply(rn: ResultName[Produzent])(rs: WrappedResultSet): Produzent =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Produzent): Seq[Any] = parameters(Produzent.unapply(entity).get)
+
+    override def updateParameters(produzent: Produzent) = {
+      Seq(
+        column.name -> parameter(produzent.name),
+        column.vorname -> parameter(produzent.vorname),
+        column.kurzzeichen -> parameter(produzent.kurzzeichen),
+        column.strasse -> parameter(produzent.strasse),
+        column.hausNummer -> parameter(produzent.hausNummer),
+        column.adressZusatz -> parameter(produzent.adressZusatz),
+        column.plz -> parameter(produzent.plz),
+        column.ort -> parameter(produzent.ort),
+        column.bemerkungen -> parameter(produzent.bemerkungen),
+        column.email -> parameter(produzent.email),
+        column.telefonMobil -> parameter(produzent.telefonMobil),
+        column.telefonFestnetz -> parameter(produzent.telefonFestnetz),
+        column.iban -> parameter(produzent.iban),
+        column.bank -> parameter(produzent.bank),
+        column.mwst -> parameter(produzent.mwst),
+        column.mwstSatz -> parameter(produzent.mwstSatz),
+        column.aktiv -> parameter(produzent.aktiv))
+    }
+  }
+  
+  implicit val produktekategorieMapping = new BaseEntitySQLSyntaxSupport[Produktekategorie] {
+    override val tableName = "Produktekategorie"
+
+    override lazy val columns = autoColumns[Produktekategorie]()
+
+    def apply(rn: ResultName[Produktekategorie])(rs: WrappedResultSet): Produktekategorie =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Produktekategorie): Seq[Any] = parameters(Produktekategorie.unapply(entity).get)
+
+    override def updateParameters(produktekategorie: Produktekategorie) = {
+      Seq(
+        column.beschreibung -> parameter(produktekategorie.beschreibung))
+    }
+  }
+  
+  implicit val projektMapping = new BaseEntitySQLSyntaxSupport[Projekt] {
+    override val tableName = "Projekt"
+
+    override lazy val columns = autoColumns[Projekt]()
+
+    def apply(rn: ResultName[Projekt])(rs: WrappedResultSet): Projekt =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Projekt): Seq[Any] = parameters(Projekt.unapply(entity).get)
+
+    override def updateParameters(projekt: Projekt) = {
+      Seq(
+        column.bezeichnung -> parameter(projekt.bezeichnung),
+        column.strasse -> parameter(projekt.strasse),
+        column.hausNummer -> parameter(projekt.hausNummer),
+        column.adressZusatz -> parameter(projekt.adressZusatz),
+        column.plz -> parameter(projekt.plz),
+        column.ort -> parameter(projekt.ort),
+        column.waehrung -> parameter(projekt.waehrung))
+    }
+  }
+  
+  implicit val produktProduzentMapping = new BaseEntitySQLSyntaxSupport[ProduktProduzent] {
+    override val tableName = "ProduktProduzent"
+
+    override lazy val columns = autoColumns[ProduktProduzent]()
+
+    def apply(rn: ResultName[ProduktProduzent])(rs: WrappedResultSet): ProduktProduzent =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ProduktProduzent): Seq[Any] = parameters(ProduktProduzent.unapply(entity).get)
+
+    override def updateParameters(projekt: ProduktProduzent) = {
+      Seq(
+        column.produktId -> parameter(projekt.produktId),
+        column.produzentId -> parameter(projekt.produzentId))
+    }
+  }
+  
+  implicit val produktProduktekategorieMapping = new BaseEntitySQLSyntaxSupport[ProduktProduktekategorie] {
+    override val tableName = "ProduktProduktekategorie"
+
+    override lazy val columns = autoColumns[ProduktProduktekategorie]()
+
+    def apply(rn: ResultName[ProduktProduktekategorie])(rs: WrappedResultSet): ProduktProduktekategorie =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ProduktProduktekategorie): Seq[Any] = parameters(ProduktProduktekategorie.unapply(entity).get)
+
+    override def updateParameters(produktkat: ProduktProduktekategorie) = {
+      Seq(
+        column.produktId -> parameter(produktkat.produktId),
+        column.produktekategorieId -> parameter(produktkat.produktekategorieId))
     }
   }
 }

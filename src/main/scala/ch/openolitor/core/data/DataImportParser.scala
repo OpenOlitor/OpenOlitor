@@ -78,6 +78,11 @@ class DataImportParser extends Actor with ActorLogging {
               plz = row.value[String](indexPlz),
               ort = row.value[String](indexOrt),
               bemerkungen = row.value[Option[String]](indexBemerkungen),
+              strasseLieferung = None,
+              hausNummerLieferung = None,
+              adressZusatzLieferung = None,
+              plzLieferung = None,
+              ortLieferung = None,
               //TODO: parse personentypen as well
               typen = Set(Vereinsmitglied.kundentyp),
               ansprechpersonen = personen,
@@ -106,15 +111,16 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   val parseDepots = {
-    parse("id", Seq("name", "aktiv")) {
+    parse("id", Seq("name", "kurzzeichen", "aktiv")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexAktiv) = indexes
+          val Seq(indexName, indexKurzzeichen, indexAktiv) = indexes
 
           (DepotId(UUID.randomUUID),
             DepotModify(
               name = row.value[String](indexName),
+              kurzzeichen = row.value[String](indexKurzzeichen),
               apName = None,
               apVorname = None,
               apTelefon = None,

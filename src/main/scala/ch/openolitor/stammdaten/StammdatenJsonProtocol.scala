@@ -37,8 +37,9 @@ import com.typesafe.scalalogging.LazyLogging
 trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
 
   //enum formats
-  implicit val wochentagFormat = enumFormat(x => Wochentag.parse(x).getOrElse(Montag))
-  implicit val rhythmusFormat = enumFormat(Rhythmus.parse)
+  implicit val wochentagFormat = enumFormat(x => Wochentag.apply(x).getOrElse(Montag))
+  implicit val monatFormat = enumFormat(x => Monat.apply(x).getOrElse(Januar))
+  implicit val rhythmusFormat = enumFormat(Rhythmus.apply)
   implicit val preiseinheitFormat = new JsonFormat[Preiseinheit] {
     def write(obj: Preiseinheit): JsValue =
       obj match {
@@ -61,9 +62,10 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
   }
 
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
-  implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.parse)
+  implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
   implicit val pendenzStatusFormat = enumFormat(PendenzStatus.apply)
+  implicit val liefereinheitFormat = enumFormat(Liefereinheit.apply)
 
   //id formats
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId)
@@ -86,6 +88,30 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
         case kt => sys.error(s"Unknown KundentypId:$kt")
       }
   }
+  implicit val produktIdFormat = baseIdFormat(ProduktId.apply)
+  implicit val produktekategorieIdFormat = baseIdFormat(ProduktekategorieId.apply)
+  implicit val baseProduktekategorieIdFormat = new JsonFormat[BaseProduktekategorieId] {
+    def write(obj: BaseProduktekategorieId): JsValue =
+      JsString(obj.id)
+
+    def read(json: JsValue): BaseProduktekategorieId =
+      json match {
+        case JsString(id) => BaseProduktekategorieId(id)
+        case kt => sys.error(s"Unknown BaseProduktekategorieId:$kt")
+      }
+  }
+  implicit val produzentIdFormat = baseIdFormat(ProduzentId.apply)
+  implicit val baseProduzentIdFormat = new JsonFormat[BaseProduzentId] {
+    def write(obj: BaseProduzentId): JsValue =
+      JsString(obj.id)
+
+    def read(json: JsValue): BaseProduzentId =
+      json match {
+        case JsString(id) => BaseProduzentId(id)
+        case kt => sys.error(s"Unknown BaseProduzentId:$kt")
+      }
+  }
+  implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -97,15 +123,27 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
     def read(json: JsValue): Lieferzeitpunkt =
       json.convertTo[Wochentag]
   }
+  
+  implicit val liefersaisonFormat = new RootJsonFormat[Liefersaison] {
+    def write(obj: Liefersaison): JsValue =
+      obj match {
+        case m: Monat => m.toJson
+        case _ => JsObject()
+      }
+
+    def read(json: JsValue): Liefersaison =
+      json.convertTo[Monat]
+  }
 
   implicit val depotlieferungFormat = jsonFormat4(Depotlieferung)
   implicit val heimlieferungFormat = jsonFormat4(Heimlieferung)
   implicit val postlieferungFormat = jsonFormat3(Postlieferung)
 
-  implicit val depot = jsonFormat21(Depot)
-  implicit val depotModify = jsonFormat19(DepotModify)
-  implicit val depotSummary = jsonFormat2(DepotSummary)
-  implicit val tour = jsonFormat3(Tour)
+  implicit val depotFormat = jsonFormat22(Depot)
+  implicit val depotModifyFormat = jsonFormat20(DepotModify)
+  implicit val depotSummaryFormat = jsonFormat2(DepotSummary)
+  implicit val tourFormat = jsonFormat3(Tour)
+  implicit val tourModifyFormat = jsonFormat2(TourModify)
 
   implicit val postlieferungDetailFormat = jsonFormat3(PostlieferungDetail)
   implicit val depotlieferungDetailFormat = jsonFormat5(DepotlieferungDetail)
@@ -167,14 +205,14 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
       }
   }
 
-  // json formatter which adds calculated field aktiv
-  def enhanceWithAktivFlag[E <: AktivRange](defaultFormat: JsonFormat[E]): RootJsonFormat[E] = new RootJsonFormat[E] {
-    def write(obj: E): JsValue = JsObject(defaultFormat.write(obj).asJsObject.fields + ("aktiv" -> JsBoolean(obj.aktiv)))
+  // json formatter which adds calculated boolean field  
+  def enhanceWithBooleanFlag[E <: AktivRange](flag: String)(defaultFormat: JsonFormat[E]): RootJsonFormat[E] = new RootJsonFormat[E] {
+    def write(obj: E): JsValue = JsObject(defaultFormat.write(obj).asJsObject.fields + (flag -> JsBoolean(obj.aktiv)))
 
     def read(json: JsValue): E = defaultFormat.read(json)
   }
 
-  implicit val abotypFormat = enhanceWithAktivFlag(jsonFormat17(Abotyp))
+  implicit val abotypFormat = enhanceWithBooleanFlag("aktiv")(jsonFormat17(Abotyp))
   implicit val abotypUpdateFormat = jsonFormat13(AbotypModify)
   implicit val abotypSummaryFormat = jsonFormat2(AbotypSummary)
 
@@ -240,11 +278,11 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
 
   implicit val personFormat = jsonFormat10(Person)
   implicit val personModifyFormat = jsonFormat8(PersonModify)
-  implicit val kundeFormat = jsonFormat12(Kunde)
+  implicit val kundeFormat = jsonFormat17(Kunde)
   implicit val pendenzFormat = jsonFormat6(Pendenz)
   implicit val pendenzModifyFormat = jsonFormat4(PendenzModify)
-  implicit val kundeDetailFormat = jsonFormat15(KundeDetail)
-  implicit val kundeModifyFormat = jsonFormat10(KundeModify)
+  implicit val kundeDetailFormat = jsonFormat20(KundeDetail)
+  implicit val kundeModifyFormat = jsonFormat15(KundeModify)
   implicit val kundeSummaryFormat = jsonFormat2(KundeSummary)
   implicit val kundentypCreateFormat = jsonFormat2(CustomKundentypCreate)
   implicit val kundentypModifyFormat = jsonFormat1(CustomKundentypModify)
@@ -252,4 +290,16 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
   implicit val lieferungFormat = jsonFormat6(Lieferung)
   implicit val lieferungAbotypCreateFormat = jsonFormat3(LieferungAbotypCreate)
   implicit val lieferungModifyFormat = jsonFormat1(LieferungModify)
+  
+  implicit val produktekategorieFormat = jsonFormat2(Produktekategorie)
+  implicit val pModifyFormat = jsonFormat1(ProduktekategorieModify)
+  
+  implicit val produzentFormat = jsonFormat18(Produzent)
+  implicit val produzentModifyFormat = jsonFormat17(ProduzentModify)
+  
+  implicit val produktFormat = jsonFormat8(Produkt)
+  implicit val produktModifyFormat = jsonFormat7(ProduktModify)
+  
+  implicit val projektFormat = jsonFormat8(Projekt)
+  implicit val projektModifyFormat = jsonFormat7(ProjektModify)
 }

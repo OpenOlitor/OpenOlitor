@@ -20,37 +20,52 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.data
+package ch.openolitor.stammdaten.models
 
-import akka.actor._
-import ch.openolitor.stammdaten._
-import org.odftoolkit.simple._
-import org.odftoolkit.simple.table._
-import java.util.Date
-import ch.openolitor.stammdaten.models._
 import java.util.UUID
 import ch.openolitor.core.models._
-import ch.openolitor.core.domain.EventService
-import java.io.File
+import java.util.Date
+import org.joda.time.DateTime
 
-object DataImportService {
-  case class ImportData(document: File)
+case class BaseProduzentId(id: String)
 
-  def props(): Props = Props(classOf[DataImportService])
-}
+case class ProduzentId(id: UUID) extends BaseId
 
-trait DataImportServiceComponent {
-  val stammdaten: StammdatenEntityStoreViewComponent
-}
+case class Produzent(id: ProduzentId,
+  name: String,
+  vorname: Option[String],
+  kurzzeichen: String,
+  strasse: Option[String],
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  email: String,
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
+  iban: Option[String], //maybe use dedicated type
+  bank: Option[String],
+  mwst: Boolean,
+  mwstSatz: Option[BigDecimal],
+  aktiv: Boolean
+  ) extends BaseEntity[ProduzentId]
 
-trait DataImportService extends Actor with ActorLogging {
-  self: DataImportServiceComponent =>
-
-  import DataImportService._
-
-  val receive: Receive = {
-    case ImportData(file) =>
-      //importData(file)
-  }
-
-}
+case class ProduzentModify(
+  name: String,
+  vorname: Option[String],
+  kurzzeichen: String,
+  strasse: Option[String],
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  email: String,
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
+  iban: Option[String], //maybe use dedicated type
+  bank: Option[String],
+  mwst: Boolean,
+  mwstSatz: Option[BigDecimal],
+  aktiv: Boolean) extends Product

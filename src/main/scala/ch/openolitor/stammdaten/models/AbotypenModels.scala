@@ -32,7 +32,7 @@ sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
 
 object Lieferzeitpunkt {
-  def parse(value: String): Lieferzeitpunkt = Wochentag.parse(value).get
+  def apply(value: String): Lieferzeitpunkt = Wochentag.apply(value).get
 }
 
 case object Montag extends Wochentag
@@ -44,7 +44,7 @@ case object Samstag extends Wochentag
 case object Sonntag extends Wochentag
 
 object Wochentag {
-  def parse(value: String): Option[Wochentag] = {
+  def apply(value: String): Option[Wochentag] = {
     Vector(Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag, Sonntag).find(_.toString == value)
   }
 }
@@ -56,7 +56,7 @@ case object Monatlich extends Rhythmus
 case object Unregelmaessig extends Rhythmus
 
 object Rhythmus {
-  def parse(value: String): Rhythmus = {
+  def apply(value: String): Rhythmus = {
     Vector(Woechentlich, Zweiwoechentlich, Monatlich, Unregelmaessig).find(_.toString == value).getOrElse(Woechentlich)
   }
 }
@@ -69,7 +69,7 @@ case object ProJahr extends Preiseinheit
 case object ProAbo extends Preiseinheit
 
 object Preiseinheit {
-  def parse(value: String): Preiseinheit = {
+  def apply(value: String): Preiseinheit = {
     Vector(ProLieferung, ProMonat, ProMonat, ProJahr, ProAbo).find(_.toString == value).getOrElse(ProLieferung)
   }
 }
@@ -80,7 +80,7 @@ case object Monate extends Laufzeiteinheit
 case object Unbeschraenkt extends Laufzeiteinheit
 
 object Laufzeiteinheit {
-  def parse(value: String): Laufzeiteinheit = {
+  def apply(value: String): Laufzeiteinheit = {
     Vector(Unbeschraenkt, Lieferungen, Monate).find(_.toString == value).getOrElse(Lieferungen)
   }
 }

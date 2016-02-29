@@ -107,6 +107,21 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver wi
     case e @ EntityCreated(userId, entity: Postlieferung) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
     case e @ EntityModified(userId, entity: Postlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
     case e @ EntityDeleted(userId, entity: Postlieferung) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
+    
+    case e @ EntityCreated(userId, entity: Produkt) => send(userId, e.asInstanceOf[DBEvent[Produkt]])
+    case e @ EntityModified(userId, entity: Produkt, _) => send(userId, e.asInstanceOf[DBEvent[Produkt]])
+    case e @ EntityDeleted(userId, entity: Produkt) => send(userId, e.asInstanceOf[DBEvent[Produkt]])
+    
+    case e @ EntityCreated(userId, entity: Produktekategorie) => send(userId, e.asInstanceOf[DBEvent[Produktekategorie]])
+    case e @ EntityModified(userId, entity: Produktekategorie, _) => send(userId, e.asInstanceOf[DBEvent[Produktekategorie]])
+    case e @ EntityDeleted(userId, entity: Produktekategorie) => send(userId, e.asInstanceOf[DBEvent[Produktekategorie]])
+    
+    case e @ EntityCreated(userId, entity: Produzent) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
+    case e @ EntityModified(userId, entity: Produzent, _) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
+    case e @ EntityDeleted(userId, entity: Produzent) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
+    
+    case e @ EntityCreated(userId, entity: Projekt) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
+    case e @ EntityModified(userId, entity: Projekt, _) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
 
     case x => log.debug(s"receive unknown event $x")
   }

@@ -48,6 +48,7 @@ import scala.concurrent.Future
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import stamina.Persister
+import ch.openolitor.stammdaten.models._
 
 trait StammdatenRoutes extends HttpService with ActorReferences 
   with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService
@@ -65,13 +66,20 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val aboIdPath = string2BaseIdPathMatcher(AboId.apply)
   implicit val vertriebsartIdPath = string2BaseIdPathMatcher(VertriebsartId.apply)
   implicit val lieferungIdPath = string2BaseIdPathMatcher(LieferungId.apply)
+  implicit val produktIdPath = string2BaseIdPathMatcher(ProduktId.apply)
+  implicit val produktekategorieIdPath = string2BaseIdPathMatcher(ProduktekategorieId.apply)
+  implicit val produzentIdPath = string2BaseIdPathMatcher(ProduzentId.apply)
+  implicit val tourIdPath = string2BaseIdPathMatcher(TourId.apply)
+  implicit val projektIdPath = string2BaseIdPathMatcher(ProjektId.apply)
 
   import EntityStore._
 
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ kundentypenRoute ~ pendenzenRoute
+  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ 
+    kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~ 
+    produzentenRoute ~ tourenRoute ~ projektRoute
 
   lazy val kundenRoute =
     path("kunden") {
@@ -184,4 +192,55 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     path("pendenzen") {
       get(list(readRepository.getPendenzen))
     }
+  
+  lazy val produkteRoute =
+    path("produkte") {
+      get(list(readRepository.getProdukte)) ~
+        post(create[ProduktModify, ProduktId](ProduktId.apply _))
+    } ~
+      path("produkte" / produktIdPath) { id =>
+          (put | post)(update[ProduktModify, ProduktId](id)) ~
+          delete(remove(id))
+      }
+    
+  lazy val produktekategorienRoute =
+    path("produktekategorien") {
+      get(list(readRepository.getProduktekategorien)) ~
+        post(create[ProduktekategorieModify, ProduktekategorieId](ProduktekategorieId.apply _))
+    } ~
+      path("produktekategorien" / produktekategorieIdPath) { id =>
+          (put | post)(update[ProduktekategorieModify, ProduktekategorieId](id)) ~
+          delete(remove(id))
+      }
+    
+  lazy val produzentenRoute =
+    path("produzenten") {
+      get(list(readRepository.getProduzenten)) ~
+        post(create[ProduzentModify, ProduzentId](ProduzentId.apply _))
+    } ~
+      path("produzenten" / produzentIdPath) { id =>
+        get(detail(readRepository.getProduzentDetail(id))) ~
+          (put | post)(update[ProduzentModify, ProduzentId](id)) ~
+          delete(remove(id))
+      }
+    
+  lazy val tourenRoute =
+    path("touren") {
+      get(list(readRepository.getTouren)) ~
+        post(create[TourModify, TourId](TourId.apply _))
+    } ~
+      path("touren" / tourIdPath) { id =>
+          (put | post)(update[TourModify, TourId](id)) ~
+          delete(remove(id))
+      }
+    
+  lazy val projektRoute =
+    path("projekt") {
+      get(detail(readRepository.getProjekt)) ~
+        post(create[ProjektModify, ProjektId](ProjektId.apply _))
+    } ~
+      path("projekt" / projektIdPath) { id =>
+        get(detail(readRepository.getProjekt)) ~
+          (put | post)(update[ProjektModify, ProjektId](id))
+      }
 }
