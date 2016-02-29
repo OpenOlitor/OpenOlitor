@@ -277,16 +277,39 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       case x =>
         DB autoCommit { implicit session =>
           //recreate new ProduktProduzent-Mappings
-          update.produzenten.map { updateProduzent =>
+          update.produzenten.map { updateProduzentKurzzeichen =>
             val produktProduzentId = ProduktProduzentId(UUID.randomUUID)
-            readRepository.getProduzentDetailByKurzzeichen(updateProduzent) map { produzent =>
-              produzent match {
-                case Some(prod) => 
-                  val newProduktProduzent = ProduktProduzent(produktProduzentId, id, prod.id)
-                  logger.debug(s"Create new produktProduzent :$produktProduzentId, data -> $newProduktProduzent")
-                  writeRepository.insertEntity(newProduktProduzent)
-                case None => logger.debug(s"Produzent was not found with kurzzeichen :$updateProduzent")
-              }
+            readRepository.getProduzentDetailByKurzzeichen(updateProduzentKurzzeichen) map {
+              case Some(prod) => 
+                val newProduktProduzent = ProduktProduzent(produktProduzentId, id, prod.id)
+                logger.debug(s"Create new ProduktProduzent :$produktProduzentId, data -> $newProduktProduzent")
+                writeRepository.insertEntity(newProduktProduzent)
+              case None => logger.debug(s"Produzent was not found with kurzzeichen :$updateProduzentKurzzeichen")
+            }
+          }
+        }
+    }
+    
+    readRepository.getProduktProduktekategorien(id) map { produktProduktekategorien =>
+      DB autoCommit { implicit session =>
+        //remove all ProduktProduktekategorie-Mappings
+        produktProduktekategorien.map {
+          produktProduktekategorieToDelete =>
+            writeRepository.deleteEntity[ProduktProduktekategorie, ProduktProduktekategorieId](produktProduktekategorieToDelete.id)
+        }
+      }
+    } andThen {
+      case x =>
+        DB autoCommit { implicit session =>
+          //recreate new ProduktProduktekategorie-Mappings
+          update.kategorien.map { updateKategorieBezeichnung =>
+            val produktProduktekategorieId = ProduktProduktekategorieId(UUID.randomUUID)
+            readRepository.getProduktekategorieByBezeichnung(updateKategorieBezeichnung) map {
+              case Some(kat) => 
+                val newProduktProduktekategorie = ProduktProduktekategorie(produktProduktekategorieId, id, kat.id)
+                logger.debug(s"Create new ProduktProduktekategorie :produktProduktekategorieId, data -> newProduktProduktekategorie")
+                writeRepository.insertEntity(newProduktProduktekategorie)
+              case None => logger.debug(s"Produktekategorie was not found with bezeichnung :$updateKategorieBezeichnung")
             }
           }
         }
@@ -296,6 +319,20 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   def updateProduktekategorie(id: ProduktekategorieId, update: ProduktekategorieModify) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(produktekategorieMapping, id) map { produktekategorie =>
+
+        readRepository.getProdukteByProduktekategorieBezeichnung(produktekategorie.beschreibung) map { 
+          produkte => produkte map {
+            produkt => 
+              //update Produktekategorie-String on Produkt
+              val newKategorien = produkt.kategorien map { 
+                case produktekategorie.beschreibung => update.beschreibung
+                case x => x
+              }
+              val copyProdukt = copyTo[Produkt, Produkt](produkt, "kategorien" -> newKategorien)
+              writeRepository.updateEntity[Produkt, ProduktId](copyProdukt)
+            }
+          }
+        
         //map all updatable fields
         val copy = copyFrom(produktekategorie, update)
         writeRepository.updateEntity[Produktekategorie, ProduktekategorieId](copy)

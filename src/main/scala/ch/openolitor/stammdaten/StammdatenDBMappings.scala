@@ -82,6 +82,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val baseProduzentIdBinder: TypeBinder[BaseProduzentId] = string.map(BaseProduzentId)
   implicit val projektIdBinder: TypeBinder[ProjektId] = baseIdTypeBinder(ProjektId.apply _)
   implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
+  implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
   
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
@@ -133,6 +134,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val baseProduzentIdSetSqlBinder = setSqlBinder[BaseProduzentId]
   implicit val projektIdSqlBinder = baseIdSqlBinder[ProjektId]
   implicit val produktProduzentIdIdSqlBinder = baseIdSqlBinder[ProduktProduzentId]
+  implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
   
   implicit val stringSeqSqlBinder = seqSqlBinder[String]
 
@@ -532,7 +534,7 @@ trait StammdatenDBMappings extends DBMappings {
     }
   }
   
-   implicit val produktProduzentMapping = new BaseEntitySQLSyntaxSupport[ProduktProduzent] {
+  implicit val produktProduzentMapping = new BaseEntitySQLSyntaxSupport[ProduktProduzent] {
     override val tableName = "ProduktProduzent"
 
     override lazy val columns = autoColumns[ProduktProduzent]()
@@ -546,6 +548,23 @@ trait StammdatenDBMappings extends DBMappings {
       Seq(
         column.produktId -> parameter(projekt.produktId),
         column.produzentId -> parameter(projekt.produzentId))
+    }
+  }
+  
+  implicit val produktProduktekategorieMapping = new BaseEntitySQLSyntaxSupport[ProduktProduktekategorie] {
+    override val tableName = "ProduktProduktekategorie"
+
+    override lazy val columns = autoColumns[ProduktProduktekategorie]()
+
+    def apply(rn: ResultName[ProduktProduktekategorie])(rs: WrappedResultSet): ProduktProduktekategorie =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ProduktProduktekategorie): Seq[Any] = parameters(ProduktProduktekategorie.unapply(entity).get)
+
+    override def updateParameters(projekt: ProduktProduktekategorie) = {
+      Seq(
+        column.produktId -> parameter(projekt.produktId),
+        column.produktekategorieId -> parameter(projekt.produktekategorieId))
     }
   }
 }

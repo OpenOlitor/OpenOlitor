@@ -69,10 +69,10 @@ case class BaseProduktekategorieId(id: String)
 case class ProduktekategorieId(id: UUID) extends BaseId
 
 case class Produktekategorie(id: ProduktekategorieId,
-  val beschreibung: Option[String]) extends BaseEntity[ProduktekategorieId]  {
+  val beschreibung: String) extends BaseEntity[ProduktekategorieId]  {
 }
 
-case class ProduktekategorieModify(beschreibung: Option[String]) extends Product 
+case class ProduktekategorieModify(beschreibung: String) extends Product 
 
 case class ProduktId(id: UUID) extends BaseId
 
@@ -104,4 +104,12 @@ case class ProduktProduzent(
   produktId: ProduktId, 
   produzentId: ProduzentId
 ) extends BaseEntity[ProduktProduzentId]
+
+case class ProduktProduktekategorieId(id: UUID) extends BaseId
+
+case class ProduktProduktekategorie(
+  id: ProduktProduktekategorieId, 
+  produktId: ProduktId, 
+  produktekategorieId: ProduktekategorieId
+) extends BaseEntity[ProduktProduktekategorieId]
 

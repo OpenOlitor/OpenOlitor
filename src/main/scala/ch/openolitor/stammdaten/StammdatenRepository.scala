@@ -71,13 +71,16 @@ trait StammdatenReadRepository {
   def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]]
   
   def getProdukte(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]]
+  def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]]
   def getProduktProduzenten(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduzent]]
+  def getProduktProduktekategorien(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduktekategorie]]
   
   def getProduktekategorien(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produktekategorie]]
   
   def getProduzenten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produzent]]
   def getProduzentDetail(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
+  def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]]
   
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]]
   
@@ -109,6 +112,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val produzent = produzentMapping.syntax("produzent")
   lazy val projekt = projektMapping.syntax("projekt")
   lazy val produktProduzent = produktProduzentMapping.syntax("produktProduzent")
+  lazy val produktProduktekategorie = produktProduktekategorieMapping.syntax("produktProduktekategorie")
   
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
@@ -436,6 +440,14 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(produktProduzentMapping(produktProduzent)).list.future
   }
   
+  def getProduktProduktekategorien(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduktekategorie]] = {
+    withSQL {
+      select
+        .from(produktProduktekategorieMapping as produktProduktekategorie)
+        .where.eq(produktProduktekategorie.produktId, parameter(id))
+    }.map(produktProduktekategorieMapping(produktProduktekategorie)).list.future
+  }
+  
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]] = {
     withSQL {
       select
@@ -443,6 +455,23 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produzent.kurzzeichen, parameter(kurzzeichen))
     }.map(produzentMapping(produzent)).single.future
   }
+  
+  def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]] = {
+    withSQL {
+      select
+        .from(produktekategorieMapping as produktekategorie)
+        .where.eq(produktekategorie.beschreibung, parameter(bezeichnung))
+    }.map(produktekategorieMapping(produktekategorie)).single.future
+  }
+  
+  def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]] = {
+    withSQL {
+      select
+        .from(produktMapping as produkt)
+        .where.like(produkt.kategorien, '%' + bezeichnung + '%')
+    }.map(produktMapping(produkt)).list.future
+  }
+  
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
@@ -472,6 +501,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"drop table if exists ${produzentMapping.table}".execute.apply()
       sql"drop table if exists ${projektMapping.table}".execute.apply()
       sql"drop table if exists ${produktProduzentMapping.table}".execute.apply()
+      sql"drop table if exists ${produktProduktekategorieMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables")
       //create tables
@@ -495,6 +525,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${produzentMapping.table}  (id varchar(36) not null, name varchar(50) not null, vorname varchar(50), kurzzeichen varchar(6) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(1000), email varchar(100) not null, telefon_mobil varchar(50), telefon_festnetz varchar(50), iban varchar(34), bank varchar(50), mwst bit, mwst_satz DECIMAL(4,2), aktiv bit)".execute.apply()
       sql"create table ${projektMapping.table}  (id varchar(36) not null, bezeichnung varchar(50) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4), ort varchar(50), waehrung varchar(10) not null)".execute.apply()
       sql"create table ${produktProduzentMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produzent_id varchar(36) not null)".execute.apply()
+      sql"create table ${produktProduktekategorieMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produktekategorie_id varchar(36) not null)".execute.apply()
       
       logger.debug(s"oo-system: cleanupDatabase - end")
     }
