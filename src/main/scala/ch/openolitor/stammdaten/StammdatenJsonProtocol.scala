@@ -259,6 +259,7 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       JsString(obj.productPrefix)
 
     def read(json: JsValue): AboModify = {
+      logger.debug("Got new AboModify")
       if (!json.asJsObject.getFields("depotId").isEmpty) {
         json.convertTo[DepotlieferungAboModify]
       } else if (!json.asJsObject.getFields("tourId").isEmpty) {
