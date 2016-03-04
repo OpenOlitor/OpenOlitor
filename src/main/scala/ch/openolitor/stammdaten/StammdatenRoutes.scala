@@ -47,8 +47,9 @@ import spray.httpx.unmarshalling._
 import scala.concurrent.Future
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models._
+import com.typesafe.scalalogging.LazyLogging
 
-trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService {
+trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging {
   self: StammdatenRepositoryComponent =>
 
   implicit val abotypIdParamConverter = string2BaseIdConverter(AbotypId.apply)
@@ -88,7 +89,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
           delete(remove(id))
       } ~
       path("kunden" / kundeIdPath / "abos") { kundeId =>
-        post(create[AboModify, AboId](AboId.apply _))
+        //post(create[AboModify, AboId](AboId.apply _))
+        post {
+            requestInstance { request =>
+              entity(as[AboModify]) { entity =>
+                logger.debug(s"Got Abo to store:$entity")
+                created(request)(entity)
+              }
+            }
+          }
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath) { (kundeId, aboId) =>
         get(detail(readRepository.getAboDetail(aboId))) ~

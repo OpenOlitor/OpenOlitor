@@ -227,10 +227,12 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
       }
   }
 
-  implicit val depotaboFormat = jsonFormat9(DepotlieferungAbo.apply)
-  implicit val depotaboModifyFormat = jsonFormat7(DepotlieferungAboModify.apply)
+  implicit val depotAboFormat = jsonFormat9(DepotlieferungAbo.apply)
+  implicit val depotAboModifyFormat = jsonFormat7(DepotlieferungAboModify.apply)
   implicit val heimlieferungAboFormat = jsonFormat9(HeimlieferungAbo.apply)
+  implicit val heimlieferungAboModifyFormat = jsonFormat7(HeimlieferungAboModify.apply)
   implicit val postlieferungAboFormat = jsonFormat7(PostlieferungAbo.apply)
+  implicit val postlieferungAboModifyFormat = jsonFormat5(PostlieferungAboModify.apply)
 
   implicit val aboFormat = new RootJsonFormat[Abo] {
     def write(obj: Abo): JsValue =
@@ -241,7 +243,15 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
         case _ => JsObject()
       }
 
-    def read(json: JsValue): Abo = ???
+    def read(json: JsValue): Abo = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[DepotlieferungAbo]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[HeimlieferungAbo]
+      } else {
+        json.convertTo[PostlieferungAbo]
+      } 
+    }
   }
 
   implicit val aboModifyFormat = new RootJsonFormat[AboModify] {
@@ -251,9 +261,11 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
     def read(json: JsValue): AboModify = {
       if (!json.asJsObject.getFields("depotId").isEmpty) {
         json.convertTo[DepotlieferungAboModify]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[HeimlieferungAboModify]
       } else {
-        sys.error(s"Unknown AboModify for: $json")
-      }
+        json.convertTo[PostlieferungAboModify]
+      } 
     }
   }
 
