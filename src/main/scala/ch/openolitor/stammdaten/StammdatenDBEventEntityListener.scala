@@ -33,6 +33,7 @@ import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
 import scala.concurrent.ExecutionContext.Implicits.global;
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)

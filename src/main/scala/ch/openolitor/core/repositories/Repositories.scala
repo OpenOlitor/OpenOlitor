@@ -23,15 +23,38 @@
 package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
+
 import java.util.UUID
 import scalikejdbc._
-import ch.openolitor.stammdaten.BaseEntitySQLSyntaxSupport
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
 import scala.util._
 
 case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
+
+trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging {
+  //override def columnNames 
+  def apply(p: SyntaxProvider[E])(rs: WrappedResultSet): E = apply(p.resultName)(rs)
+
+  def opt(e: SyntaxProvider[E])(rs: WrappedResultSet): Option[E] = try {
+    rs.stringOpt(e.resultName.id).map(_ => apply(e)(rs))
+  } catch {
+    case e: IllegalArgumentException => None
+  }
+
+  def apply(rn: ResultName[E])(rs: WrappedResultSet): E
+
+  /**
+   * Declare parameter mappings for all parameters used on insert
+   */
+  def parameterMappings(entity: E): Seq[Any]
+
+  /**
+   * Declare update parameters for this entity used on update. Is by default an empty set
+   */
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq()
+}
 
 trait ParameterBinderMapping[A] {
   def bind(value: A): ParameterBinder[A]
