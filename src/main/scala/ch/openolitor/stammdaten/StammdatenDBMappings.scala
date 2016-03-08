@@ -457,6 +457,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.verfuegbarVon -> parameter(produkt.verfuegbarVon),
         column.verfuegbarBis -> parameter(produkt.verfuegbarBis),
         column.kategorien -> parameter(produkt.kategorien),
+        column.standardmenge -> parameter(produkt.standardmenge),
         column.einheit -> parameter(produkt.einheit),
         column.preis -> parameter(produkt.preis),
         column.produzenten -> parameter(produkt.produzenten)

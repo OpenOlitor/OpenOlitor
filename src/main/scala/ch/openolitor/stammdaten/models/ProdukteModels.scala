@@ -82,6 +82,7 @@ case class Produkt(
   verfuegbarVon: Liefersaison,
   verfuegbarBis: Liefersaison,
   kategorien: Seq[String],
+  standardmenge: Option[BigDecimal],
   einheit: Liefereinheit,
   preis: BigDecimal,
   produzenten: Seq[String]
@@ -92,6 +93,7 @@ case class ProduktModify(
   verfuegbarVon: Liefersaison,
   verfuegbarBis: Liefersaison,
   kategorien: Seq[String],
+  standardmenge: Option[BigDecimal],
   einheit: Liefereinheit,
   preis: BigDecimal,
   produzenten: Seq[String]
