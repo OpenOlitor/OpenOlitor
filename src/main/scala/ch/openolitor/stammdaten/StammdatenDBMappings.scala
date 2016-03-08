@@ -493,6 +493,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.bank -> parameter(produzent.bank),
         column.mwst -> parameter(produzent.mwst),
         column.mwstSatz -> parameter(produzent.mwstSatz),
+        column.mwstNr -> parameter(produzent.mwstNr),
         column.aktiv -> parameter(produzent.aktiv))
     }
   }

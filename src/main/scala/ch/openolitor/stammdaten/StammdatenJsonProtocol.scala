@@ -287,8 +287,8 @@ object StammdatenJsonProtocol extends DefaultJsonProtocol with LazyLogging {
   implicit val produktekategorieFormat = jsonFormat2(Produktekategorie.apply)
   implicit val pModifyFormat = jsonFormat1(ProduktekategorieModify.apply)
   
-  implicit val produzentFormat = jsonFormat18(Produzent.apply)
-  implicit val produzentModifyFormat = jsonFormat17(ProduzentModify.apply)
+  implicit val produzentFormat = jsonFormat19(Produzent.apply)
+  implicit val produzentModifyFormat = jsonFormat18(ProduzentModify.apply)
   
   implicit val produktFormat = jsonFormat9(Produkt.apply)
   implicit val produktModifyFormat = jsonFormat8(ProduktModify.apply)
