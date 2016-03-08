@@ -532,6 +532,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.adressZusatz -> parameter(projekt.adressZusatz),
         column.plz -> parameter(projekt.plz),
         column.ort -> parameter(projekt.ort),
+        column.preiseSichtbar -> parameter(projekt.preiseSichtbar),
+        column.preiseEditierbar -> parameter(projekt.preiseEditierbar),
         column.waehrung -> parameter(projekt.waehrung))
     }
   }
