@@ -93,20 +93,33 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       } ~
       path("kunden" / kundeIdPath / "abos") { kundeId =>
-        //post(create[AboModify, AboId](AboId.apply _))
+
         post {
             requestInstance { request =>
-              entity(as[AboModify]) { entity =>
-                logger.debug(s"Got Abo to store:$entity")
-                created(request)(entity)
+              entity(as[AboModify]) { 
+                case dl: DepotlieferungAboModify => 
+                  created(request)(dl)
+                case hl: HeimlieferungAboModify => 
+                  created(request)(hl)
+                case pl: PostlieferungAboModify => 
+                  created(request)(pl)                
               }
             }
           }
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath) { (kundeId, aboId) =>
         get(detail(readRepository.getAboDetail(aboId))) ~
-          (put | post)(update[AboModify, AboId](aboId)) ~
-          delete(remove(aboId))
+          (put | post) {
+            entity(as[AboModify]) { 
+              case dl: DepotlieferungAboModify => 
+                updated(aboId, dl)
+              case hl: HeimlieferungAboModify => 
+                updated(aboId, hl)
+              case pl: PostlieferungAboModify => 
+                updated(aboId, pl)
+            }
+        } ~
+        delete(remove(aboId))
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(readRepository.getPendenzen(kundeId))) ~

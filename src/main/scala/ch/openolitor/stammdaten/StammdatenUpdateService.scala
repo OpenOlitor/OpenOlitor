@@ -241,7 +241,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       writeRepository.getById(customKundentypMapping, id) map { kundentyp =>
         //map all updatable fields
-        val copy = copyFrom(kundentyp, update)
+        val copy = copyFrom(kundentyp, update, "farbCode" -> "")
         writeRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
       }
     }

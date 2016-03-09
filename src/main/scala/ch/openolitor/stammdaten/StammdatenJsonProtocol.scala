@@ -171,18 +171,17 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
 
   implicit val vertriebsartModifyFormat = new RootJsonFormat[VertriebsartModify] {
     def write(obj: VertriebsartModify): JsValue =
-      JsObject((obj match {
-        case p: PostlieferungModify => p.toJson
-        case hl: HeimlieferungModify => hl.toJson
-        case dl: DepotlieferungModify => dl.toJson
-      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix.replaceAll("Modify", ""))))
+      JsString(obj.productPrefix)
 
-    def read(json: JsValue): VertriebsartModify =
-      json.asJsObject.getFields("typ") match {
-        case Seq(JsString("Postlieferung")) => json.convertTo[PostlieferungModify]
-        case Seq(JsString("Heimlieferung")) => json.convertTo[HeimlieferungModify]
-        case Seq(JsString("Depotlieferung")) => json.convertTo[DepotlieferungModify]
-      }
+    def read(json: JsValue): VertriebsartModify = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[HeimlieferungModify]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[HeimlieferungModify]
+      } else {
+        json.convertTo[PostlieferungModify]
+      } 
+    }
   }
   
   implicit val postlieferungAbotypModifyFormat = jsonFormat2(PostlieferungAbotypModify)
@@ -191,18 +190,17 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
 
   implicit val vertriebsartAbotypModifyFormat = new RootJsonFormat[VertriebsartAbotypModify] {
     def write(obj: VertriebsartAbotypModify): JsValue =
-      JsObject((obj match {
-        case p: PostlieferungAbotypModify => p.toJson
-        case hl: HeimlieferungAbotypModify => hl.toJson
-        case dl: DepotlieferungAbotypModify => dl.toJson
-      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix.replaceAll("Modify", ""))))
+      JsString(obj.productPrefix)
 
-    def read(json: JsValue): VertriebsartAbotypModify =
-      json.asJsObject.getFields("typ") match {
-        case Seq(JsString("Postlieferung")) => json.convertTo[PostlieferungAbotypModify]
-        case Seq(JsString("Heimlieferung")) => json.convertTo[HeimlieferungAbotypModify]
-        case Seq(JsString("Depotlieferung")) => json.convertTo[DepotlieferungAbotypModify]
-      }
+    def read(json: JsValue): VertriebsartAbotypModify = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[DepotlieferungAbotypModify]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[HeimlieferungAbotypModify]
+      } else {
+        json.convertTo[PostlieferungAbotypModify]
+      } 
+    }
   }
 
   // json formatter which adds calculated boolean field  
@@ -278,7 +276,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
       JsString(obj.productPrefix)
 
     def read(json: JsValue): AboModify = {
-      logger.debug("Got new AboModify")
+      logger.debug("Got new AboModify" + json.compactPrint)
       if (!json.asJsObject.getFields("depotId").isEmpty) {
         json.convertTo[DepotlieferungAboModify]
       } else if (!json.asJsObject.getFields("tourId").isEmpty) {

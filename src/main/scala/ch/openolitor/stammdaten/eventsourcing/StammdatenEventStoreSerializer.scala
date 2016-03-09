@@ -13,7 +13,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val depotModifyPersister = persister[DepotModify]("depot-modify")
   implicit val depotIdPersister = persister[DepotId]("depot-id")
   
-  implicit val aboModifyPersister = persister[AboModify]("abo-modify")
   implicit val aboIdPersister = persister[AboId]("abo-id")
   
   implicit val abotypModifyPersister = persister[AbotypModify]("abotyp-modify")
@@ -22,10 +21,18 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val kundeModifyPersister = persister[KundeModify]("kunde-modify")
   implicit val kundeIdPersister = persister[KundeId]("kunde-id")
   
-  implicit val vertriebsartDLPersister = persister[DepotlieferungAbotypModify]("depotlieferung-modify")
-  implicit val vertriebsartPLPersister = persister[PostlieferungAbotypModify]("postlieferung-modify")
-  implicit val vertriebsartHLPersister = persister[HeimlieferungAbotypModify]("heimlieferung-modify")  
+  implicit val vertriebsartDLAbotypPersister = persister[DepotlieferungAbotypModify]("depotlieferungabotyp-modify")
+  implicit val vertriebsartPLAbotypPersister = persister[PostlieferungAbotypModify]("postlieferungabotyp-modify")
+  implicit val vertriebsartHLAbotypPersister = persister[HeimlieferungAbotypModify]("heimlieferungabotyp-modify")  
   implicit val vertriebsartIdPersister = persister[VertriebsartId]("vertriebsart-id")
+  
+  implicit val vertriebsartDLPersister = persister[DepotlieferungModify]("depotlieferung-modify")
+  implicit val vertriebsartPLPersister = persister[PostlieferungModify]("postlieferung-modify")
+  implicit val vertriebsartHLPersister = persister[HeimlieferungModify]("heimlieferung-modify")
+  
+  implicit val aboDLPersister = persister[DepotlieferungAboModify]("depotlieferungabo-modify")
+  implicit val aboPLPersister = persister[PostlieferungAboModify]("postlieferungabo-modify")
+  implicit val aboHLPersister = persister[HeimlieferungAboModify]("heimlieferungabo-modify")  
   
   implicit val customKundetypCreatePersister = persister[CustomKundentypCreate]("custom-kundetyp-create")
   implicit val customKundetypModifyPersister = persister[CustomKundentypModify]("custom-kundetyp-modify")
@@ -55,7 +62,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   val stammdatenPersisters = List(
     depotModifyPersister,
     depotIdPersister,
-    aboModifyPersister,
     aboIdPersister,
     abotypModifyPersister,
     abotypIdPersister,
@@ -65,6 +71,12 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     vertriebsartPLPersister,
     vertriebsartHLPersister,  
     vertriebsartIdPersister,
+    vertriebsartDLAbotypPersister,
+    vertriebsartPLAbotypPersister,
+    vertriebsartHLAbotypPersister,
+    aboDLPersister,
+    aboPLPersister,
+    aboHLPersister,
     customKundetypCreatePersister,
     customKundetypModifyPersister,
     customKundetypIdPersister,
