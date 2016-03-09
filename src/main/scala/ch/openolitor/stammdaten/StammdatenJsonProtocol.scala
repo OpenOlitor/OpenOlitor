@@ -140,7 +140,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
   implicit val postlieferungFormat = jsonFormat3(Postlieferung)
 
   implicit val depotFormat = jsonFormat22(Depot)
-  implicit val depotModifyFormat = jsonFormat20(DepotModify)
+  implicit val depotModifyFormat = jsonFormat21(DepotModify)
   implicit val depotSummaryFormat = jsonFormat2(DepotSummary)
   implicit val tourFormat = jsonFormat3(Tour)
   implicit val tourModifyFormat = jsonFormat2(TourModify)

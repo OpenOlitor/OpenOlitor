@@ -111,11 +111,11 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   val parseDepots = {
-    parse("id", Seq("name", "kurzzeichen", "aktiv")) {
+    parse("id", Seq("name", "kurzzeichen", "aktiv", "farbCode")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexKurzzeichen, indexAktiv) = indexes
+          val Seq(indexName, indexKurzzeichen, indexAktiv, indexFarbCode) = indexes
 
           (DepotId(UUID.randomUUID),
             DepotModify(
@@ -135,6 +135,7 @@ class DataImportParser extends Actor with ActorLogging {
               ort = "",
               aktiv = row.value[Boolean](indexAktiv),
               oeffnungszeiten = None,
+              farbCode = row.value[String](indexFarbCode),
               iban = None,
               bank = None,
               beschreibung = None,

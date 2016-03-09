@@ -319,6 +319,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.ort -> parameter(depot.ort),
         column.aktiv -> parameter(depot.aktiv),
         column.oeffnungszeiten -> parameter(depot.oeffnungszeiten),
+        //column.farbCode -> parameter(depot.farbCode),
         column.iban -> parameter(depot.iban),
         column.bank -> parameter(depot.bank),
         column.beschreibung -> parameter(depot.beschreibung),
