@@ -50,6 +50,7 @@ import spray.json._
 import ch.openolitor.core.BaseJsonProtocol.IdResponse
 import stamina.Persister
 import stamina.json.JsonPersister
+import ch.openolitor.status.StatusRoutes
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
@@ -61,6 +62,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   extends Actor with ActorReferences
   with DefaultRouteService
   with HelloWorldRoutes
+  with StatusRoutes
   with StammdatenRoutes
   with DefaultStammdatenRepositoryComponent
   with CORSSupport
@@ -73,7 +75,11 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  val receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
+  val receive = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute))
+  
+  def getSysConfig() = {
+    sysConfig
+  }
 }
 
 // this trait defines our service behavior independently from the service actor

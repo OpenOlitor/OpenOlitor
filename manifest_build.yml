@@ -12,5 +12,5 @@ applications:
     JBP_CONFIG_OPEN_JDK_JRE: "{jre: { version: 1.8.0_+ }}"
     application_config: openolitor-server-test
     JAVA_OPTS: "-Dconfig.resource=openolitor-server-test.conf"
-    application_buildnr: "local-snapshot" 
+    application_buildnr: "${env.BUILD_NUMBER?notDefined}"
     
