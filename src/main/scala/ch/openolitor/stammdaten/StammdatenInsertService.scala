@@ -195,6 +195,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val depotId = DepotId(id)
     val depot = copyTo[DepotModify, Depot](create,
       "id" -> depotId,
+      "farbCode" -> "",
       "anzahlAbonnenten" -> ZERO)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity(depot)

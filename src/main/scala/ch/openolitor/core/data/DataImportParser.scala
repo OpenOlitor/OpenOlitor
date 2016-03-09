@@ -135,7 +135,7 @@ class DataImportParser extends Actor with ActorLogging {
               ort = "",
               aktiv = row.value[Boolean](indexAktiv),
               oeffnungszeiten = None,
-              farbCode = row.value[String](indexFarbCode),
+              farbCode = row.value[Option[String]](indexFarbCode),
               iban = None,
               bank = None,
               beschreibung = None,
