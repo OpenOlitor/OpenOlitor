@@ -20,20 +20,41 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.core.db.evolution
 
-import java.util.UUID
-import org.joda.time.DateTime
+import org.specs2.mutable._
+import scalikejdbc._
+import scala.util._
+import org.specs2.mock.Mockito
+import ch.openolitor.core.db.TestDB
+import scalikejdbc.specs2.mutable.AutoRollback
 
-sealed trait EvolutionStatus
-case object Applying extends EvolutionStatus
-case object Done extends EvolutionStatus
+class EvolutionSpec extends Specification with Mockito with TestDB with Before {
 
-object EvolutionStatus {
-  val AllStatus = Vector(Applying, Done)
+  val script1 = mock[Script]
+  val script2 = mock[Script]
   
-  def apply(value: String): EvolutionStatus = AllStatus.find(_.toString == value).getOrElse(Applying) 
-}
-
-case class DBSchemaId(id: UUID = UUID.randomUUID) extends BaseId
-case class DBSchema(id: DBSchemaId, revision:Int, status: EvolutionStatus, executionDate: DateTime = DateTime.now) extends BaseEntity[DBSchemaId]
+  def before: Any = {
+    //initialize database
+    DB autoCommit { implicit session =>
+      sql"create table dbschema(id varchar(36) NOT NULL, revision BIGINT NOT NULL, status varchar(50) NOT NULL, execution_date TIMESTAMP NOT NULL, PRIMARY KEY (id));".execute.apply()
+    }
+  }
+   
+   "Evolution" should {
+     "apply all scripts when they return with success" in new AutoRollback { 
+       script1.execute(any[DBSession]) returns Success(true)
+       script2.execute(any[DBSession]) returns Success(true)
+       
+       val scripts = Seq(script1, script2)
+       val evolution = new Evolution(Seq())
+           
+       val result = evolution.evolve(scripts, 0)
+       
+       result === Success(2)
+       
+       there was one (script1).execute(any[DBSession])
+       there was one (script2).execute(any[DBSession])
+     }  
+  }
+ }

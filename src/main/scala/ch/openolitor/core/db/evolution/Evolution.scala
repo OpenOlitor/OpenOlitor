@@ -1,3 +1,25 @@
+/*                                                                           *\
+*    ____                   ____  ___ __                                      *
+*   / __ \____  ___  ____  / __ \/ (_) /_____  _____                          *
+*  / / / / __ \/ _ \/ __ \/ / / / / / __/ __ \/ ___/   OpenOlitor             *
+* / /_/ / /_/ /  __/ / / / /_/ / / / /_/ /_/ / /       contributed by tegonal *
+* \____/ .___/\___/_/ /_/\____/_/_/\__/\____/_/        http://openolitor.ch   *
+*     /_/                                                                     *
+*                                                                             *
+* This program is free software: you can redistribute it and/or modify it     *
+* under the terms of the GNU General Public License as published by           *
+* the Free Software Foundation, either version 3 of the License,              *
+* or (at your option) any later version.                                      *
+*                                                                             *
+* This program is distributed in the hope that it will be useful, but         *
+* WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY  *
+* or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for *
+* more details.                                                               *
+*                                                                             *
+* You should have received a copy of the GNU General Public License along     *
+* with this program. If not, see http://www.gnu.org/licenses/                 *
+*                                                                             *
+\*                                                                           */
 package ch.openolitor.core.db.evolution
 
 import scalikejdbc._
@@ -20,9 +42,11 @@ object Evolution extends Evolution(V1Scripts.scripts)
  * Base evolution class to evolve database from a specific revision to another
  */
 class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {  
-  def evolveDatabase(fromRevision: Int)(implicit cpContext: ConnectionPoolContext): Try[Int] = {    
-    val scriptsToApply = scripts.take(scripts.length - fromRevision)
-    evolve(scriptsToApply, fromRevision)
+  def evolveDatabase(fromRevision: Int=0)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
+    val currentDBRevision = currentRevision
+    val revision = Math.max(fromRevision, currentDBRevision)
+    val scriptsToApply = scripts.take(scripts.length - revision)
+    evolve(scriptsToApply, revision)
   }
 
   def evolve(scripts:Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
@@ -62,9 +86,9 @@ class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {
   lazy val schema = dbSchemaMapping.syntax("db_schema")
   
   /**
-   * load current version
+   * load current revision from database schema
    */
-  def currentVersion(implicit cpContext: ConnectionPoolContext): Int = {
+  def currentRevision(implicit cpContext: ConnectionPoolContext): Int = {
     DB autoCommit { implicit session =>
       withSQL {
         select(max(schema.revision))
@@ -73,5 +97,4 @@ class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {
       }.map(_.int(1)).single.apply().get
     }
   }
-
 }

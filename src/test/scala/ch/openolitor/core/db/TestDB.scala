@@ -20,20 +20,14 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.core.db
 
-import java.util.UUID
-import org.joda.time.DateTime
+import org.specs2.execute._
+import scalikejdbc._
 
-sealed trait EvolutionStatus
-case object Applying extends EvolutionStatus
-case object Done extends EvolutionStatus
-
-object EvolutionStatus {
-  val AllStatus = Vector(Applying, Done)
+trait TestDB {
+  val url = "jdbc:h2:mem:test"
   
-  def apply(value: String): EvolutionStatus = AllStatus.find(_.toString == value).getOrElse(Applying) 
+  ConnectionPool.singleton(url, "", "")
+  implicit val ctx = MultipleConnectionPoolContext(ConnectionPool.DEFAULT_NAME -> ConnectionPool())
 }
-
-case class DBSchemaId(id: UUID = UUID.randomUUID) extends BaseId
-case class DBSchema(id: DBSchemaId, revision:Int, status: EvolutionStatus, executionDate: DateTime = DateTime.now) extends BaseEntity[DBSchemaId]
