@@ -46,10 +46,15 @@ import spray.httpx.marshalling._
 import spray.httpx.unmarshalling._
 import scala.concurrent.Future
 import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
+import stamina.Persister
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 
-trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging {
+trait StammdatenRoutes extends HttpService with ActorReferences 
+  with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
+  with StammdatenJsonProtocol
+  with StammdatenEventStoreSerializer{
   self: StammdatenRepositoryComponent =>
 
   implicit val abotypIdParamConverter = string2BaseIdConverter(AbotypId.apply)
@@ -68,7 +73,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
   implicit val tourIdPath = string2BaseIdPathMatcher(TourId.apply)
   implicit val projektIdPath = string2BaseIdPathMatcher(ProjektId.apply)
 
-  import StammdatenJsonProtocol._
   import EntityStore._
 
   //TODO: get real userid from login
@@ -122,7 +126,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
         (put | post)(update[CustomKundentypModify, CustomKundentypId](kundentypId)) ~
           delete(remove(kundentypId))
       }
-
+ 
   lazy val aboTypenRoute =
     path("abotypen") {
       get(list(readRepository.getAbotypen)) ~
@@ -137,13 +141,13 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
         get(list(readRepository.getVertriebsarten(abotypId))) ~
           post {
             requestInstance { request =>
-              entity(as[VertriebsartModify]) { entity =>
-                val vertriebsart = entity match {
-                  case dl: DepotlieferungModify => copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId)
-                  case hl: HeimlieferungModify => copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId)
-                  case pl: PostlieferungModify => copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId)
-                }
-                created(request)(vertriebsart)
+              entity(as[VertriebsartModify]) { 
+                case dl: DepotlieferungModify => 
+                  created(request)(copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId))
+                case hl: HeimlieferungModify => 
+                  created(request)(copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId))
+                case pl: PostlieferungModify => 
+                  created(request)(copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId))                
               }
             }
           }
@@ -151,14 +155,14 @@ trait StammdatenRoutes extends HttpService with ActorReferences with AsyncConnec
       path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath) { (abotypId, vertriebsartId) =>
         get(detail(readRepository.getVertriebsart(vertriebsartId))) ~
           (put | post) {
-            entity(as[VertriebsartModify]) { entity =>
-              val vertriebsart = entity match {
-                case dl: DepotlieferungModify => copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId)
-                case hl: HeimlieferungModify => copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId)
-                case pl: PostlieferungModify => copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId)
-              }
-              updated(vertriebsartId, vertriebsart)
-            }
+            entity(as[VertriebsartModify]) { 
+              case dl: DepotlieferungModify => 
+                updated(vertriebsartId, copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId))
+              case hl: HeimlieferungModify => 
+                updated(vertriebsartId, copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId))
+              case pl: PostlieferungModify => 
+                updated(vertriebsartId, copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId))
+            }            
           } ~
           delete(remove(vertriebsartId))
       } ~

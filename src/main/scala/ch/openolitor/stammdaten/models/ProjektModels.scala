@@ -78,7 +78,7 @@ object SystemKundentyp {
 
   val ALL = Vector(Vereinsmitglied, Goenner, Genossenschafterin)
 
-  def apply(value: String): Option[SystemKundentyp] = {
+  def parse(value: String): Option[SystemKundentyp] = {
     ALL.find(_.toString == value)
   }
 }

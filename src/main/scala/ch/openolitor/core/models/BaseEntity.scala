@@ -27,7 +27,7 @@ import scalikejdbc.ParameterBinder
 import ch.openolitor.core.Macros
 import spray.json.DefaultJsonProtocol
 
-trait BaseId {
+trait BaseId extends AnyRef {
   val id: UUID
 }
 
