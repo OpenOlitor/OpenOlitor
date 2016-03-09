@@ -32,6 +32,7 @@ import spray.routing.Directive.pimpApply
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import ch.openolitor.core._
+import scala.util.Properties
 
 case class Status(buildNr: String)
 
@@ -54,7 +55,7 @@ trait StatusRoutes extends HttpService with DefaultRouteService {
         get {
           respondWithMediaType(`application/json`) {
             complete {
-              Status(System.getenv("application_buildnr"))
+              Status(Properties.envOrElse("application_buildnr", "dev" ))
             }
           }
         }
