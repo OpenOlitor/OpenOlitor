@@ -2,7 +2,7 @@
 Administrationsplattform für Vertragslandwirtschaftsprojekte
 Plateforme d'administration pour des projets d’agriculture contractuelle de proximité
 
-[Informations en français](#But du projet)
+[Informations en français](#but-du-projet)
 
 ## Ziel dieses Projektes
 Vertragslandwirtschaft gewinnt zunehmend an Popularität in der Schweizer Landwirtschaft. Sowohl Konsumentinnen und Konsumenten als auch Produzentinnen und Produzenten erkennen die Vorteile einer regionalen Vernetzung, schätzen den direkten Kontakt, die Qualität der Produkte sowie die Abnahmegarantien der RVL-Initativen. Gegenwärtig entstehen laufend neue Projekte unterschiedlichster Ausprägung.
