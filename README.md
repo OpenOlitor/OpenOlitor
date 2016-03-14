@@ -22,10 +22,10 @@ Der Vereinszweck wurde wie folgt definiert:
 „Der Verein bezweckt die Erarbeitung und Weiterentwicklung der Open Source-Softwareplattform OpenOlitor zur Förderung der regionalen Vertragslandwirtschaft und anderen Formen der Vermarktung von landwirtschaftlichen Produkten.“
 
 ## Mitwirken
-Im OpenOlitor-Wiki wird im Detail beschrieben, wie aktiv bei OpenOlitor mitgewirkt werden kann.
+Im [OpenOlitor-Wiki](https://github.com/OpenOlitor/OpenOlitor/wiki/Mitwirken-_-Passer-%C3%A0-l'action) wird im Detail beschrieben, wie aktiv bei OpenOlitor mitgewirkt werden kann.
 
 ## Demo
-Der aktuelle Entwicklungsstand wird jeweils automatisch publiziert und kann getestet werden: wwwtest.openolitor.ch.
+Der aktuelle Entwicklungsstand wird jeweils automatisch publiziert und kann getestet werden: [wwwtest.openolitor.ch](http://wwwtest.openolitor.ch).
 Hier stehen die jeweils neusten, auf GitHub publizierten Änderungen zur Verfügung. Eingegebene Daten werden ohne Vorwarnung gelöscht oder verändert.
 
 ## Roadmap
@@ -55,10 +55,10 @@ Le but de l'association a été définit comme suit:
 « L'association vise l'etablissement, le développement et la maintenance de la plateforme d'administraiton Open Source Open-Olitor qui permet la promotion de l'agriculture contractuelle de proximité ainsi que d'autres moyens de marchandisation de produits agricoles. »
 
 ## Passer à l'action
-Une description détaillé pour comment passer à l'action se trouve sur le wiki du projet OpenOlitor.
+Une description détaillé pour comment passer à l'action se trouve sur le [wiki du projet OpenOlitor](https://github.com/OpenOlitor/OpenOlitor/wiki/Mitwirken-_-Passer-%C3%A0-l'action).
 
 ## Version démo
-La version du code publié sur GitHub est automatiquement installé sur le site suivant : wwwtest.openolitor.ch.
+La version du code publié sur GitHub est automatiquement installé sur le site suivant : [wwwtest.openolitor.ch](http://wwwtest.openolitor.ch).
 
 Les données entré sur cette page peuvent être effacées et/ou modifiée en tout moment sans avertissement.
 
