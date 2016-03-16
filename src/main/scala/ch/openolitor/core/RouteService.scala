@@ -54,12 +54,12 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
+  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system, sysConfig.mandant, ConfigFactory.load)
 }
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem)
+class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem, override val mandant: String, override val config: Config)
     extends Actor with ActorReferences
     with DefaultRouteService
     with HelloWorldRoutes
@@ -69,9 +69,6 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
     with DefaultFileStoreComponent
     with CORSSupport {
 
-  val mandant = sysConfig.mandant
-  val config = ConfigFactory.load
-
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   val actorRefFactory = context
@@ -79,7 +76,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  val receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
+  val receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute ~ fileStoreRoute))
 }
 
 // this trait defines our service behavior independently from the service actor

@@ -38,18 +38,22 @@ trait FileStore {
 
   def createBuckets: Future[Either[FileStoreError, FileStoreSuccess]]
 
-  def bucketName(bucket: FileStoreBucket) = s"${mandant}_${bucket.toString}"
+  def bucketName(bucket: FileStoreBucket) = {
+    s"${mandant}_${bucket.toString}"
+  }
 }
 
 class S3FileStore(override val mandant: String, config: Config, actorSystem: ActorSystem) extends FileStore {
-  def props = S3ClientProps(config.getString("AWS_ACCESS_KEY_ID"), config.getString("AWS_SECRET_ACCESS_KEY"), Timeout(30 seconds), actorSystem, actorSystem, config.getString("AWS_ENDPOINT"))
+  lazy val createSystem = ActorSystem(mandant)
+
+  def props = S3ClientProps(config.getString("AWS_ACCESS_KEY_ID"), config.getString("AWS_SECRET_ACCESS_KEY"), Timeout(30 seconds), createSystem, createSystem)
 
   val client = new S3Client(props)
 
   def generateId = UUID.randomUUID.toString
 
   def transform(metadata: Map[String, String]): FileStoreFileMetadata = {
-    val fileType = FileType.AllFileTypes.find(_.getClass.getSimpleName == metadata.get("fileType").getOrElse("")).getOrElse(UnknownFileType)
+    val fileType = FileType(metadata.get("fileType").get.toLowerCase)
     FileStoreFileMetadata(metadata.get("name").getOrElse(""), fileType)
   }
 
@@ -65,7 +69,7 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
     listRequest.setBucketName(bucketName(bucket))
     client.listObjects(listRequest) map {
       _.fold(
-        e => Left(FileStoreError("Could not get file.")),
+        e => Left(FileStoreError("Could not get file ids.")),
         ol => Right(ol.getObjectSummaries.toList.map(s => FileStoreFileId(s.getKey))))
     }
   }
