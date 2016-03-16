@@ -48,6 +48,10 @@ import spray.http.HttpHeaders.RawHeader
 import spray.http.HttpHeaders.Location
 import spray.json._
 import ch.openolitor.core.BaseJsonProtocol._
+import ch.openolitor.stammdaten.FileStoreRoutes
+import ch.openolitor.core.filestore.DefaultFileStoreComponent
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
@@ -56,12 +60,17 @@ object RouteServiceActor {
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
 class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem)
-  extends Actor with ActorReferences
-  with DefaultRouteService
-  with HelloWorldRoutes
-  with StammdatenRoutes
-  with DefaultStammdatenRepositoryComponent
-  with CORSSupport {
+    extends Actor with ActorReferences
+    with DefaultRouteService
+    with HelloWorldRoutes
+    with StammdatenRoutes
+    with DefaultStammdatenRepositoryComponent
+    with FileStoreRoutes
+    with DefaultFileStoreComponent
+    with CORSSupport {
+
+  val mandant = sysConfig.mandant
+  val config = ConfigFactory.load
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -80,7 +89,7 @@ trait DefaultRouteService extends HttpService with ActorReferences {
   implicit val timeout = Timeout(5.seconds)
 
   def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I]) = {
+                                                   tr: ToResponseMarshaller[I]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         created(request)(entity)
@@ -103,7 +112,7 @@ trait DefaultRouteService extends HttpService with ActorReferences {
   }
 
   def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I]) = {
+                                    tr: ToResponseMarshaller[I]) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 

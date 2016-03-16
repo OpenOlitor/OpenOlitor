@@ -16,15 +16,19 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConversions._
 import com.amazonaws.services.s3.model.CreateBucketRequest
+import com.amazonaws.services.s3.model.ListObjectsRequest
 
 case class FileStoreError(message: String)
 case class FileStoreSuccess()
 
 case class FileStoreFileMetadata(name: String, fileType: FileType)
 case class FileStoreFile(metaData: FileStoreFileMetadata, file: InputStream)
+case class FileStoreFileId(id: String)
 
 trait FileStore {
   val mandant: String
+
+  def getFileIds(bucket: FileStoreBucket): Future[Either[FileStoreError, List[FileStoreFileId]]]
 
   def getFile(bucket: FileStoreBucket, id: String): Future[Either[FileStoreError, FileStoreFile]]
 
@@ -54,6 +58,16 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
     result.addUserMetadata("name", metadata.name)
     result.addUserMetadata("fileType", metadata.fileType.getClass.getSimpleName)
     result
+  }
+
+  def getFileIds(bucket: FileStoreBucket): Future[Either[FileStoreError, List[FileStoreFileId]]] = {
+    val listRequest = new ListObjectsRequest()
+    listRequest.setBucketName(bucketName(bucket))
+    client.listObjects(listRequest) map {
+      _.fold(
+        e => Left(FileStoreError("Could not get file.")),
+        ol => Right(ol.getObjectSummaries.toList.map(s => FileStoreFileId(s.getKey))))
+    }
   }
 
   def getFile(bucket: FileStoreBucket, id: String): Future[Either[FileStoreError, FileStoreFile]] = {

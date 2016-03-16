@@ -20,4 +20,8 @@ case object UnknownFileType extends FileType { val bucket = null }
 
 object FileType {
   val AllFileTypes = SealedEnumeration.values[FileType]
+
+  def apply(value: String): FileType = {
+    AllFileTypes.find(_.toString == value).getOrElse(UnknownFileType)
+  }
 }
