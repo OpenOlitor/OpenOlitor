@@ -50,6 +50,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.filestore.FileType
 import ch.openolitor.core.filestore.FileStoreFileMetadata
 import ch.openolitor.core.filestore.FileStoreComponent
+import java.io.ByteArrayInputStream
 
 trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeserializers with DefaultRouteService {
   self: FileStoreComponent =>
@@ -63,26 +64,40 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
     }
 
   lazy val fileStoreFileTypeRoute: Route =
-    path(Segment) { fileTypeName =>
+    pathPrefix(Segment) { fileTypeName =>
       val fileType = FileType(fileTypeName)
-      get {
-        onSuccess(fileStore.getFileIds(fileType.bucket)) {
-          case Left(e)     => complete(StatusCodes.InternalServerError, s"Could not list objects for the given fileType: ${fileType}")
-          case Right(list) => complete(s"Result list: $list")
+      pathEnd {
+        get {
+          onSuccess(fileStore.getFileIds(fileType.bucket)) {
+            case Left(e)     => complete(StatusCodes.InternalServerError, s"Could not list objects for the given fileType: ${fileType}")
+            case Right(list) => complete(s"Result list: $list")
+          }
         }
       } ~
         path(Segment) { id =>
           get {
             onSuccess(fileStore.getFile(fileType.bucket, id)) {
-              case Left(e)     => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found.")
+              case Left(e)     => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found. Error: ${e}")
               case Right(file) => complete(s"Result list: $file")
             }
           } ~
-            put {
-              parameters('name.as[Option[String]]) { name =>
-                onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(name.getOrElse(""), fileType), null)) {
-                  case Left(e)         => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored.")
-                  case Right(metadata) => complete(s"Resulting metadata: $metadata")
+            (put | post) {
+              entity(as[MultipartFormData]) { formData =>
+                val details = formData.fields.collectFirst {
+                  case BodyPart(entity, headers) =>
+                    val content = new ByteArrayInputStream(entity.data.toByteArray)
+                    val fileName = headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
+                    (content, fileName)
+                }
+
+                details.map {
+                  case (content, fileName) =>
+                    onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
+                      case Left(e)         => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}")
+                      case Right(metadata) => complete(s"Resulting metadata: $metadata")
+                    }
+                } getOrElse {
+                  complete(StatusCodes.BadRequest, "File has to be submitted using multipart formdata")
                 }
               }
             }

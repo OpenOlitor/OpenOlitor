@@ -77,7 +77,7 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
   def getFile(bucket: FileStoreBucket, id: String): Future[Either[FileStoreError, FileStoreFile]] = {
     client.getObject(new GetObjectRequest(bucketName(bucket), id)) map {
       _.fold(
-        e => Left(FileStoreError("Could not get file.")),
+        e => Left(FileStoreError(s"Could not get file. ${e}")),
         o => Right(FileStoreFile(transform(o.getObjectMetadata.getUserMetadata.toMap), o.getObjectContent)))
     }
   }
@@ -85,7 +85,7 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
   def putFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: InputStream): Future[Either[FileStoreError, FileStoreFileMetadata]] = {
     client.putObject(new PutObjectRequest(bucketName(bucket), id.getOrElse(generateId), file, transform(metadata))) map {
       _.fold(
-        e => Left(FileStoreError("Could not put file.")),
+        e => Left(FileStoreError(s"Could not put file. ${e}")),
         o => Right(metadata))
     }
   }
