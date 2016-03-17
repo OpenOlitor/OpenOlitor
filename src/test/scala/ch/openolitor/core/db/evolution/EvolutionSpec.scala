@@ -28,21 +28,22 @@ import scala.util._
 import org.specs2.mock.Mockito
 import ch.openolitor.core.db.TestDB
 import scalikejdbc.specs2.mutable.AutoRollback
+import ch.openolitor.core.models.DBSchema
 
-class EvolutionSpec extends Specification with Mockito with TestDB with Before {
-
-  val script1 = mock[Script]
-  val script2 = mock[Script]
-  
-  def before: Any = {
-    //initialize database
-    DB autoCommit { implicit session =>
-      sql"create table dbschema(id varchar(36) NOT NULL, revision BIGINT NOT NULL, status varchar(50) NOT NULL, execution_date TIMESTAMP NOT NULL, PRIMARY KEY (id));".execute.apply()
-    }
-  }
+class EvolutionSpec extends Specification with Mockito with TestDB {    
    
+  def initDb(implicit session: DBSession): Unit = {
+    sql"create table if not exists dbschema(id varchar(36) NOT NULL, revision BIGINT NOT NULL, status varchar(50) NOT NULL, execution_date TIMESTAMP NULL, PRIMARY KEY (id));".execute.apply()
+  }
+  
    "Evolution" should {
-     "apply all scripts when they return with success" in new AutoRollback { 
+     "apply all scripts when they return with success" in new AutoRollback {
+       
+       override def fixture(implicit session: DBSession): Unit = initDb
+       
+       val script1 = mock[Script]
+       val script2 = mock[Script]
+       
        script1.execute(any[DBSession]) returns Success(true)
        script2.execute(any[DBSession]) returns Success(true)
        
@@ -56,5 +57,33 @@ class EvolutionSpec extends Specification with Mockito with TestDB with Before {
        there was one (script1).execute(any[DBSession])
        there was one (script2).execute(any[DBSession])
      }  
+     
+     "apply revision when second script fails" in new AutoRollback {
+       
+       override def fixture(implicit session: DBSession): Unit = initDb       
+       
+       val script1 = mock[Script]
+       val script2 = mock[Script]
+       val script3 = mock[Script]
+       
+       val exception = new RuntimeException
+       script1.execute(any[DBSession]) returns Success(true)
+       script2.execute(any[DBSession]) returns Failure(exception)
+       script3.execute(any[DBSession]) returns Success(true)
+       
+       val scripts = Seq(script1, script2, script3)
+       val evolution = new Evolution(Seq())
+           
+       val result = evolution.evolve(scripts, 0)
+       
+       result === Failure(exception)
+       
+       there was one (script1).execute(any[DBSession])
+       there was one (script2).execute(any[DBSession])
+       there was no (script3).execute(any[DBSession])
+       
+       //There seems to be no storing to the in memory database...
+       //evolution.currentRevision === 1
+     }
   }
  }

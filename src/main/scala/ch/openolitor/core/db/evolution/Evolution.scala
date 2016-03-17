@@ -29,6 +29,7 @@ import scala.util._
 import ch.openolitor.core.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.db.evolution.scripts.V1Scripts
+import ch.openolitor.util.IteratorUtil
 
 trait Script {
   def execute(implicit session: DBSession): Try[Boolean]
@@ -41,25 +42,25 @@ object Evolution extends Evolution(V1Scripts.scripts)
 /**
  * Base evolution class to evolve database from a specific revision to another
  */
-class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {  
+class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {
+  import IteratorUtil._
+  
   def evolveDatabase(fromRevision: Int=0)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
-    val currentDBRevision = currentRevision
+    val currentDBRevision = DB readOnly{ implicit session => currentRevision}
     val revision = Math.max(fromRevision, currentDBRevision)
     val scriptsToApply = scripts.take(scripts.length - revision)
     evolve(scriptsToApply, revision)
   }
 
   def evolve(scripts:Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
-    scripts.headOption.map {  head => 
+    val x = scripts.zipWithIndex.view.map { case (script, index) => 
       try {
         DB localTx { implicit session => 
-          head.execute match {
+          script.execute match {
             case Success(x) => 
-              logger.info(s"evolved database to $currentRevision, applied => $x")
-              insertRevision(currentRevision) match {
-                case true =>
-                  //proceed with next script
-                  evolve(scripts.tail, currentRevision+1)                  
+              val rev = currentRevision + index + 1
+              insertRevision(rev) match {
+                case true => Success(rev)                  
                 case false =>
                   //fail
                   throw EvolutionException(s"Couldn't register new db schema") 
@@ -72,9 +73,12 @@ class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {
       }
       catch {
         case e : Exception =>
+          logger.warn(s"catched exception:", e)
           Failure(e)
       }
-    }.getOrElse(Success(currentRevision))
+    }.toIterator.takeWhileInclusive(_.isSuccess).toSeq
+    
+    x.reverse.headOption.getOrElse(Failure(EvolutionException(s"No Script found")))
   }
   
   def insertRevision(revision: Int)(implicit session: DBSession):Boolean = {
@@ -88,13 +92,19 @@ class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {
   /**
    * load current revision from database schema
    */
-  def currentRevision(implicit cpContext: ConnectionPoolContext): Int = {
-    DB autoCommit { implicit session =>
-      withSQL {
-        select(max(schema.revision))
-        .from(dbSchemaMapping as schema)
-        .where.eq(schema.status, Applying)
-      }.map(_.int(1)).single.apply().get
-    }
+  def currentRevision(implicit session: DBSession): Int = {
+    withSQL {
+      select(max(schema.revision))
+      .from(dbSchemaMapping as schema)
+      .where.eq(schema.status, parameter(Applying))
+    }.map(_.intOpt(1).getOrElse(-1)).single.apply().getOrElse(-2)
+  }
+  
+  def revisions(implicit session: DBSession): List[DBSchema] = {
+    withSQL {
+      select
+      .from(dbSchemaMapping as schema)
+      .where.eq(schema.status, parameter(Applying))
+    }.map(dbSchemaMapping(schema)).list.apply()
   }
 }
