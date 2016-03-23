@@ -53,7 +53,8 @@ class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {
   }
 
   def evolve(scripts:Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
-    val x = scripts.zipWithIndex.view.map { case (script, index) => 
+    logger.debug(s"evolve database from:$currentRevision")
+    val x = scripts.zipWithIndex.view.map { case (script, index) =>      
       try {
         DB localTx { implicit session => 
           script.execute match {

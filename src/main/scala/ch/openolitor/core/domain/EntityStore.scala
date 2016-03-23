@@ -28,6 +28,11 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
 import ch.openolitor.core.Boot
+import ch.openolitor.core.db.evolution.Evolution
+import scala.util._
+import ch.openolitor.core.db.ConnectionPoolContextAware
+import scalikejdbc.DB
+import ch.openolitor.core.SystemConfig
 
 /**
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
@@ -39,8 +44,8 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, lastId: Option[UUID]) extends State
-  def props(): Props = Props(classOf[EntityStore])
+  case class EventStoreState(seqNr: Long, lastId: Option[UUID], dbRevision:Int) extends State
+  def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
 
   //base commands
   case class InsertEntityCommand(originator: UserId, entity: Any) extends Command
@@ -54,9 +59,10 @@ object EntityStore {
   case class EntityDeletedEvent(meta: EventMetadata, id: BaseId) extends PersistetEvent
 
   // other actor messages
+  case object CheckDBEvolution
 }
 
-class EntityStore extends AggregateRoot {
+class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) extends AggregateRoot with ConnectionPoolContextAware {
   import EntityStore._
   import AggregateRoot._
 
@@ -65,7 +71,7 @@ class EntityStore extends AggregateRoot {
   override def persistenceId: String = EntityStore.persistenceId
 
   type S = EventStoreState
-  override var state: EventStoreState = EventStoreState(0, None)
+  override var state: EventStoreState = EventStoreState(0, None, 0)
 
   /**
    * Updates internal processor state according to event that is to be applied.
@@ -75,9 +81,36 @@ class EntityStore extends AggregateRoot {
   override def updateState(evt: PersistetEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
-      case EntityStoreInitialized(_) =>
-        context become created
+      case EntityStoreInitialized(_) =>        
       case _ =>
+    }
+  }
+  
+  def checkDBEvolution() : Try[Int] = {
+    log.debug(s"Check DB Evolution: current revision=${state.dbRevision}")
+    evolution.evolveDatabase(state.dbRevision) match {
+      case s @ Success(rev) =>
+        log.debug(s"Successfully updated to db rev:$rev")
+        updateDBRevision(rev)
+        context become created
+        s
+      case f @ Failure(e) => 
+        log.warning(s"dB Evolution failed", e)
+        DB readOnly { implicit session => 
+          val newRev = evolution.currentRevision
+          updateDBRevision(newRev)
+        }
+        context become uncheckedDB
+        f
+    }
+  }
+    
+  def updateDBRevision(newRev:Int) = {
+    if (newRev != state.dbRevision) {
+      state = state.copy(dbRevision = newRev)
+      
+      //save new snapshot
+      saveSnapshot(state)
     }
   }
 
@@ -98,16 +131,22 @@ class EntityStore extends AggregateRoot {
       sender ! state
     case Initialize(state) =>
       //this event is used to initialize actor from within testcases
-      log.error(s"Initialize: $state")
+      log.debug(s"Initialize: $state")
       this.state = state
       context become created
     case e =>
-      log.error(s"Initialize eventstore with event:$e")
+      log.debug(s"Initialize eventstore with event:$e")
       state = incState
       persist(EntityStoreInitialized(metadata(Boot.systemUserId)))(afterEventPersisted)
-      context become created
+      context become uncheckedDB
       //reprocess event
-      created(e)
+      uncheckedDB(e)
+  }
+  
+  val uncheckedDB: Receive = {
+    case CheckDBEvolution =>
+      log.debug(s"uncheckedDB, check db evolution")
+      sender ! checkDBEvolution()
   }
 
   /**

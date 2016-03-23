@@ -48,6 +48,8 @@ import spray.http.HttpHeaders.RawHeader
 import spray.http.HttpHeaders.Location
 import spray.json._
 import ch.openolitor.core.BaseJsonProtocol._
+import spray.routing.Route
+import scala.util._
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
@@ -62,6 +64,13 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   with StammdatenRoutes
   with DefaultStammdatenRepositoryComponent
   with CORSSupport {
+  
+  var error: Option[Throwable] = None
+  
+  //initially run db evolution  
+  override def preStart() = {
+    runDBEvolution()
+  }
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -70,8 +79,53 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  val receive = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
+  val receive = runRoute(cors(dbEvolutionRoutes))
+  
+  val initializedDB = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
+  
+  val systemRoutes = pathPrefix("admin") {
+    systemRoute()
+  }
+  
+  def systemRoute(): Route = 
+    path("status") {
+      get {
+        error map { e => 
+          complete(StatusCodes.BadRequest, e)
+        } getOrElse {
+          complete("Ok")
+        }
+      }    
+  }
+  
+  val dbEvolutionRoutes =
+    pathPrefix("db") {
+      dbEvolutionRoute()
+    }
+
+  def dbEvolutionRoute(): Route =
+    path("recover") {
+        post {
+          runDBEvolution()
+        }
+    }
+  
+  def runDBEvolution() = {
+    logger.debug(s"runDBEvolution:$entityStore")
+    implicit val timeout = Timeout(5.seconds)
+    onComplete(entityStore ? CheckDBEvolution) { 
+      case Success(rev) =>
+        logger.debug(s"Successfully check db with revision:$rev")
+        context become initializedDB
+        complete("")
+      case Failure(e) => 
+        logger.warn(s"db evolution failed", e)
+        error = Some(e)
+        complete(StatusCodes.BadRequest, e)
+    }
+  }
 }
+
 
 // this trait defines our service behavior independently from the service actor
 trait DefaultRouteService extends HttpService with ActorReferences {
