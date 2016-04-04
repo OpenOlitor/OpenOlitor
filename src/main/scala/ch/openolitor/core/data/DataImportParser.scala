@@ -111,11 +111,11 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   val parseDepots = {
-    parse("id", Seq("name", "kurzzeichen", "aktiv")) {
+    parse("id", Seq("name", "kurzzeichen", "aktiv", "farbCode")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexKurzzeichen, indexAktiv) = indexes
+          val Seq(indexName, indexKurzzeichen, indexAktiv, indexFarbCode) = indexes
 
           (DepotId(UUID.randomUUID),
             DepotModify(
@@ -135,6 +135,7 @@ class DataImportParser extends Actor with ActorLogging {
               ort = "",
               aktiv = row.value[Boolean](indexAktiv),
               oeffnungszeiten = None,
+              farbCode = row.value[Option[String]](indexFarbCode),
               iban = None,
               bank = None,
               beschreibung = None,
@@ -144,12 +145,13 @@ class DataImportParser extends Actor with ActorLogging {
 
   val parseAbotypen = {
     parse("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
-      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand")) {
+      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand", "admin_prozente")) {
       indexes =>
         row =>
           //match column indexes
           val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
-            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten, indexSaldoMindestbestand) = indexes
+            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten, 
+            indexSaldoMindestbestand, adminProzente) = indexes
 
           (AbotypId(UUID.randomUUID),
             AbotypModify(
@@ -165,7 +167,8 @@ class DataImportParser extends Actor with ActorLogging {
               anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
               farbCode = row.value[String](indexFarbCode),
               zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
-              saldoMindestbestand = row.value[Int](indexSaldoMindestbestand)))
+              saldoMindestbestand = row.value[Int](indexSaldoMindestbestand),
+              adminProzente = row.value[BigDecimal](adminProzente)))
     }
   }
 

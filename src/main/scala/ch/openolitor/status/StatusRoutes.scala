@@ -20,28 +20,44 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.status
 
-import java.util.UUID
-import scalikejdbc.ParameterBinder
-import ch.openolitor.core.Macros
-import spray.json.DefaultJsonProtocol
+import akka.actor.Actor
+import spray.routing._
+import spray.http._
+import spray.http.MediaTypes._
+import spray.httpx.marshalling.ToResponseMarshallable._
+import spray.httpx.SprayJsonSupport._
+import spray.routing.Directive.pimpApply
+import spray.json._
+import spray.json.DefaultJsonProtocol._
+import ch.openolitor.core._
+import scala.util.Properties
 
-trait BaseId extends AnyRef {
-  val id: UUID
+case class Status(buildNr: String)
+
+trait StatusRoutes extends HttpService with DefaultRouteService {
+
+  import StatusJsonProtocol._
+  
+  def getSysConfig(): SystemConfig
+
+  val statusRoute =
+    pathPrefix("status") {
+      statusRoutes()
+    }
+
+  /**
+   * Project Status routes
+   */
+  def statusRoutes(): Route =
+      path("staticInfo") {
+        get {
+          respondWithMediaType(`application/json`) {
+            complete {
+              Status(Properties.envOrElse("application_buildnr", "dev" ))
+            }
+          }
+        }
+      }
 }
-
-case class UserId(id: UUID) extends BaseId
-
-trait BaseEntity[T <: BaseId] extends Product {
-  val id: T
-}
-
-sealed trait DBEvent[E <: BaseEntity[_ <: BaseId]] extends Product {
-  val originator: UserId
-  val entity: E
-}
-//events raised by this aggregateroot
-case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
-case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E, orig: E) extends DBEvent[E]
-case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]

@@ -319,6 +319,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.ort -> parameter(depot.ort),
         column.aktiv -> parameter(depot.aktiv),
         column.oeffnungszeiten -> parameter(depot.oeffnungszeiten),
+        //column.farbCode -> parameter(depot.farbCode),
         column.iban -> parameter(depot.iban),
         column.bank -> parameter(depot.bank),
         column.beschreibung -> parameter(depot.beschreibung),
@@ -457,6 +458,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.verfuegbarVon -> parameter(produkt.verfuegbarVon),
         column.verfuegbarBis -> parameter(produkt.verfuegbarBis),
         column.kategorien -> parameter(produkt.kategorien),
+        column.standardmenge -> parameter(produkt.standardmenge),
         column.einheit -> parameter(produkt.einheit),
         column.preis -> parameter(produkt.preis),
         column.produzenten -> parameter(produkt.produzenten)
@@ -492,6 +494,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.bank -> parameter(produzent.bank),
         column.mwst -> parameter(produzent.mwst),
         column.mwstSatz -> parameter(produzent.mwstSatz),
+        column.mwstNr -> parameter(produzent.mwstNr),
         column.aktiv -> parameter(produzent.aktiv))
     }
   }
@@ -530,6 +533,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.adressZusatz -> parameter(projekt.adressZusatz),
         column.plz -> parameter(projekt.plz),
         column.ort -> parameter(projekt.ort),
+        column.preiseSichtbar -> parameter(projekt.preiseSichtbar),
+        column.preiseEditierbar -> parameter(projekt.preiseEditierbar),
         column.waehrung -> parameter(projekt.waehrung))
     }
   }

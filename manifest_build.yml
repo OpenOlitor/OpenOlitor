@@ -5,12 +5,12 @@ applications:
   instances: 1
   host: openolitortest
   domain: applicationcloud.io
-  path: target/universal/openolitor-server-1.0.0.zip
+  path: universal/openolitor-server-1.0.0.zip
   buildpack: https://github.com/cloudfoundry/java-buildpack.git
   stack: cflinuxfs2
   env:
     JBP_CONFIG_OPEN_JDK_JRE: "{jre: { version: 1.8.0_+ }}"
     application_config: openolitor-server-test
     JAVA_OPTS: "-Dconfig.resource=openolitor-server-test.conf"
-    application_buildnr: "local-snapshot" 
+    application_buildnr: "${env.BUILD_NUMBER?notDefined}"
     

@@ -34,7 +34,9 @@ case class Projekt(id: ProjektId,
   adressZusatz: Option[String],
   plz: Option[String],
   ort: Option[String],
-  waehrung: Waehrung) extends BaseEntity[ProjektId]
+  preiseSichtbar: Boolean = true,
+  preiseEditierbar: Boolean = false,
+  waehrung: Waehrung = CHF) extends BaseEntity[ProjektId]
 
 case class ProjektModify(
   bezeichnung: String,
@@ -43,7 +45,9 @@ case class ProjektModify(
   adressZusatz: Option[String],
   plz: Option[String],
   ort: Option[String],
-  waehrung: Waehrung
+  preiseSichtbar: Boolean = true,
+  preiseEditierbar: Boolean = false,
+  waehrung: Waehrung = CHF
 ) extends Product 
 
 case class KundentypId(id: String)
@@ -74,7 +78,7 @@ object SystemKundentyp {
 
   val ALL = Vector(Vereinsmitglied, Goenner, Genossenschafterin)
 
-  def apply(value: String): Option[SystemKundentyp] = {
+  def parse(value: String): Option[SystemKundentyp] = {
     ALL.find(_.toString == value)
   }
 }

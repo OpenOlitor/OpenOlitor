@@ -65,25 +65,25 @@ trait StammdatenReadRepository {
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]]
-  
+
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
   def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
   def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]]
-  
+
   def getProdukte(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]]
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]]
   def getProduktProduzenten(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduzent]]
   def getProduktProduktekategorien(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduktekategorie]]
-  
+
   def getProduktekategorien(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produktekategorie]]
-  
+
   def getProduzenten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produzent]]
   def getProduzentDetail(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]]
-  
+
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]]
-  
+
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]]
 }
 
@@ -113,7 +113,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val projekt = projektMapping.syntax("projekt")
   lazy val produktProduzent = produktProduzentMapping.syntax("produktProduzent")
   lazy val produktProduktekategorie = produktProduktekategorieMapping.syntax("produktProduktekategorie")
-  
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
@@ -364,7 +363,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       p <- getPostlieferungAbo(id)
     } yield (d orElse h orElse p)
   }
-  
+
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
     withSQL {
       select
@@ -372,7 +371,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .orderBy(pendenz.datum)
     }.map(pendenzMapping(pendenz)).list.future
   }
-  
+
   def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
     withSQL {
       select
@@ -380,7 +379,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(pendenz.kundeId, parameter(id))
     }.map(pendenzMapping(pendenz)).list.future
   }
-    
+
   def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]] = {
     withSQL {
       select
@@ -388,28 +387,28 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(pendenz.id, parameter(id))
     }.map(pendenzMapping(pendenz)).single.future
   }
-  
+
   def getProdukte(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]] = {
     withSQL {
       select
         .from(produktMapping as produkt)
     }.map(produktMapping(produkt)).list.future
   }
-  
+
   def getProduktekategorien(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produktekategorie]] = {
     withSQL {
       select
         .from(produktekategorieMapping as produktekategorie)
     }.map(produktekategorieMapping(produktekategorie)).list.future
   }
-  
+
   def getProduzenten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produzent]] = {
     withSQL {
       select
         .from(produzentMapping as produzent)
     }.map(produzentMapping(produzent)).list.future
   }
-  
+
   def getProduzentDetail(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]] = {
     withSQL {
       select
@@ -417,21 +416,21 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produzent.id, parameter(id))
     }.map(produzentMapping(produzent)).single.future
   }
-  
+
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]] = {
     withSQL {
       select
         .from(tourMapping as tour)
     }.map(tourMapping(tour)).list.future
   }
-  
+
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]] = {
     withSQL {
       select
         .from(projektMapping as projekt)
     }.map(projektMapping(projekt)).single.future
   }
-  
+
   def getProduktProduzenten(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduzent]] = {
     withSQL {
       select
@@ -439,7 +438,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produktProduzent.produktId, parameter(id))
     }.map(produktProduzentMapping(produktProduzent)).list.future
   }
-  
+
   def getProduktProduktekategorien(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduktekategorie]] = {
     withSQL {
       select
@@ -447,7 +446,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produktProduktekategorie.produktId, parameter(id))
     }.map(produktProduktekategorieMapping(produktProduktekategorie)).list.future
   }
-  
+
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]] = {
     withSQL {
       select
@@ -455,7 +454,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produzent.kurzzeichen, parameter(kurzzeichen))
     }.map(produzentMapping(produzent)).single.future
   }
-  
+
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]] = {
     withSQL {
       select
@@ -463,7 +462,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produktekategorie.beschreibung, parameter(bezeichnung))
     }.map(produktekategorieMapping(produktekategorie)).single.future
   }
-  
+
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]] = {
     withSQL {
       select
@@ -471,7 +470,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.like(produkt.kategorien, '%' + bezeichnung + '%')
     }.map(produktMapping(produkt)).list.future
   }
-  
+
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
@@ -509,9 +508,9 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id varchar(36) not null, liefertag varchar(10))".execute.apply()
       sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, depot_id varchar(36) not null, liefertag varchar(10))".execute.apply()
       sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, tour_id varchar(36) not null, liefertag varchar(10))".execute.apply()
-      sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, kurzzeichen varchar(6) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), ap_email varchar(100), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), v_email varchar(100), strasse varchar(50), haus_nummer varchar(10), plz varchar(4) not null, ort varchar(50) not null, aktiv bit, oeffnungszeiten varchar(200), iban varchar(34), bank varchar(50), beschreibung varchar(200), anzahl_abonnenten_max int, anzahl_abonnenten int not null)".execute.apply()
+      sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, kurzzeichen varchar(6) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), ap_email varchar(100), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), v_email varchar(100), strasse varchar(50), haus_nummer varchar(10), plz varchar(4) not null, ort varchar(50) not null, aktiv varchar(1), oeffnungszeiten varchar(200), /*farb_code varchar(20),*/ iban varchar(34), bank varchar(50), beschreibung varchar(200), anzahl_abonnenten_max int, anzahl_abonnenten int not null)".execute.apply()
       sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), aktiv_von datetime default null, aktiv_bis datetime default null, preis DECIMAL(7,2) not null, preiseinheit varchar(20) not null, laufzeit int, laufzeiteinheit varchar(50), anzahl_abwesenheiten int, farb_code varchar(20), zielpreis DECIMAL(7,2), saldo_mindestbestand int, anzahl_abonnenten INT not null, letzte_lieferung datetime default null, waehrung varchar(10))".execute.apply()
+      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), aktiv_von datetime default null, aktiv_bis datetime default null, preis DECIMAL(7,2) not null, preiseinheit varchar(20) not null, laufzeit int, laufzeiteinheit varchar(50), anzahl_abwesenheiten int, farb_code varchar(20), zielpreis DECIMAL(7,2), saldo_mindestbestand int, admin_prozente DECIMAL(5,2), anzahl_abonnenten INT not null, letzte_lieferung datetime default null, waehrung varchar(10))".execute.apply()
       sql"create table ${kundeMapping.table} (id varchar(36) not null, bezeichnung varchar(50), strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(512), strasse_lieferung varchar(50), haus_nummer_lieferung varchar(10), adress_zusatz_lieferung varchar(100), plz_lieferung varchar(4), ort_lieferung varchar(50), typen varchar(200), anzahl_abos int not null, anzahl_pendenzen int not null, anzahl_personen int not null)".execute.apply()
       sql"create table ${pendenzMapping.table} (id varchar(36) not null, kunde_id varchar(50) not null, kunde_bezeichnung varchar(50), datum datetime default null, bemerkung varchar(2000), status varchar(10))".execute.apply()
       sql"create table ${customKundentypMapping.table} (id varchar(36) not null, kundentyp varchar(50) not null, beschreibung varchar(250), anzahl_verknuepfungen int not null)".execute.apply()
@@ -520,13 +519,13 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
       sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
       sql"create table ${lieferungMapping.table}  (id varchar(36) not null,abotyp_id varchar(36) not null, vertriebsart_id varchar(36) not null,datum datetime not null, anzahl_abwesenheiten int not null,status varchar(50) not null)".execute.apply()
-      sql"create table ${produktMapping.table}  (id varchar(36) not null, name varchar(50) not null, verfuegbar_von varchar(10) not null, verfuegbar_bis varchar(10) not null, kategorien varchar(300), einheit varchar(20) not null, preis DECIMAL(7,2) not null, produzenten varchar(300))".execute.apply()
+      sql"create table ${produktMapping.table}  (id varchar(36) not null, name varchar(50) not null, verfuegbar_von varchar(10) not null, verfuegbar_bis varchar(10) not null, kategorien varchar(300), standardmenge DECIMAL(7,3), einheit varchar(20) not null, preis DECIMAL(7,2) not null, produzenten varchar(300))".execute.apply()
       sql"create table ${produktekategorieMapping.table}  (id varchar(36) not null, beschreibung varchar(50) not null)".execute.apply()
-      sql"create table ${produzentMapping.table}  (id varchar(36) not null, name varchar(50) not null, vorname varchar(50), kurzzeichen varchar(6) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(1000), email varchar(100) not null, telefon_mobil varchar(50), telefon_festnetz varchar(50), iban varchar(34), bank varchar(50), mwst bit, mwst_satz DECIMAL(4,2), aktiv bit)".execute.apply()
-      sql"create table ${projektMapping.table}  (id varchar(36) not null, bezeichnung varchar(50) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4), ort varchar(50), waehrung varchar(10) not null)".execute.apply()
+      sql"create table ${produzentMapping.table}  (id varchar(36) not null, name varchar(50) not null, vorname varchar(50), kurzzeichen varchar(6) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(1000), email varchar(100) not null, telefon_mobil varchar(50), telefon_festnetz varchar(50), iban varchar(34), bank varchar(50), mwst varchar(1), mwst_satz DECIMAL(4,2), mwst_nr varchar(30), aktiv varchar(1))".execute.apply()
+      sql"create table ${projektMapping.table}  (id varchar(36) not null, bezeichnung varchar(50) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4), ort varchar(50), preise_sichtbar varchar(1) not null, preise_editierbar varchar(1) not null, waehrung varchar(10) not null)".execute.apply()
       sql"create table ${produktProduzentMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produzent_id varchar(36) not null)".execute.apply()
       sql"create table ${produktProduktekategorieMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produktekategorie_id varchar(36) not null)".execute.apply()
-      
+
       logger.debug(s"oo-system: cleanupDatabase - end")
     }
   }

@@ -48,6 +48,7 @@ case class Produzent(id: ProduzentId,
   bank: Option[String],
   mwst: Boolean,
   mwstSatz: Option[BigDecimal],
+  mwstNr: Option[String],
   aktiv: Boolean
   ) extends BaseEntity[ProduzentId]
 
@@ -68,4 +69,5 @@ case class ProduzentModify(
   bank: Option[String],
   mwst: Boolean,
   mwstSatz: Option[BigDecimal],
+  mwstNr: Option[String],
   aktiv: Boolean) extends Product

@@ -52,6 +52,7 @@ case class Depot(id: DepotId,
   ort: String,
   aktiv: Boolean,
   oeffnungszeiten: Option[String],
+  //farbCode: Option[String],
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   beschreibung: Option[String],
@@ -76,6 +77,7 @@ case class DepotModify(
   ort: String,
   aktiv: Boolean,
   oeffnungszeiten: Option[String],
+  farbCode: Option[String],
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   beschreibung: Option[String],

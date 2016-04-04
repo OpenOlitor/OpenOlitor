@@ -49,7 +49,7 @@ class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val syste
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
  */
-class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent] with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
+class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
   //TODO: replace with credentials of logged in user
@@ -241,7 +241,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       writeRepository.getById(customKundentypMapping, id) map { kundentyp =>
         //map all updatable fields
-        val copy = copyFrom(kundentyp, update)
+        val copy = copyFrom(kundentyp, update, "farbCode" -> "")
         writeRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
       }
     }

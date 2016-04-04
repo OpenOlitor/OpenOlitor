@@ -41,6 +41,7 @@ case class DepotlieferungModify(depotId: DepotId, liefertag: Lieferzeitpunkt) ex
 case class HeimlieferungModify(tourId: TourId, liefertag: Lieferzeitpunkt) extends VertriebsartModify
 case class PostlieferungModify(liefertag: Lieferzeitpunkt) extends VertriebsartModify
 
-case class DepotlieferungAbotypModify(abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt)
-case class HeimlieferungAbotypModify(abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt)
-case class PostlieferungAbotypModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt)
+sealed trait VertriebsartAbotypModify extends Product
+case class DepotlieferungAbotypModify(abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt) extends VertriebsartAbotypModify
+case class HeimlieferungAbotypModify(abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt) extends VertriebsartAbotypModify
+case class PostlieferungAbotypModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt) extends VertriebsartAbotypModify

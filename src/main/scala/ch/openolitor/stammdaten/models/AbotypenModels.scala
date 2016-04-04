@@ -112,6 +112,7 @@ case class Abotyp(id: AbotypId,
   farbCode: String,
   zielpreis: Option[BigDecimal],
   saldoMindestbestand: Int,
+  adminProzente: BigDecimal,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
@@ -132,4 +133,5 @@ case class AbotypModify(
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
-  saldoMindestbestand: Int) extends AktivRange
+  saldoMindestbestand: Int,
+  adminProzente: BigDecimal) extends AktivRange
