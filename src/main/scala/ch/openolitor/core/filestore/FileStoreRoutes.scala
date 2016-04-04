@@ -51,8 +51,14 @@ import ch.openolitor.core.filestore.FileType
 import ch.openolitor.core.filestore.FileStoreFileMetadata
 import ch.openolitor.core.filestore.FileStoreComponent
 import java.io.ByteArrayInputStream
+import com.typesafe.scalalogging.LazyLogging
+import java.io.File
+import java.io.BufferedOutputStream
+import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 
-trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeserializers with DefaultRouteService {
+trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeserializers with DefaultRouteService with LazyLogging {
   self: FileStoreComponent =>
 
   //TODO: get real userid from login
@@ -77,8 +83,14 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
         path(Segment) { id =>
           get {
             onSuccess(fileStore.getFile(fileType.bucket, id)) {
-              case Left(e)     => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found. Error: ${e}")
-              case Right(file) => complete(s"Result list: $file")
+              case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found. Error: ${e}")
+              case Right(file) => {
+                logger.debug(s"serving file: $file")
+                // TODO find the spray way of serving a stream
+                val temp = File.createTempFile(id, ".tmp")
+                Files.write(Paths.get(temp.getPath), Stream.continually(file.file.read).takeWhile(_ != -1).map(_.toByte).toArray)
+                getFromFile(temp)
+              }
             }
           } ~
             (put | post) {
@@ -99,6 +111,12 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
                 } getOrElse {
                   complete(StatusCodes.BadRequest, "File has to be submitted using multipart formdata")
                 }
+              }
+            } ~
+            delete {
+              onSuccess(fileStore.deleteFile(fileType.bucket, id)) {
+                case Left(e)        => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be deleted. Error: ${e}")
+                case Right(success) => complete(s"Deleted file with id $id")
               }
             }
         }

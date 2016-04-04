@@ -17,6 +17,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConversions._
 import com.amazonaws.services.s3.model.CreateBucketRequest
 import com.amazonaws.services.s3.model.ListObjectsRequest
+import com.typesafe.scalalogging.LazyLogging
+import com.amazonaws.services.s3.model.ListBucketsRequest
 
 case class FileStoreError(message: String)
 case class FileStoreSuccess()
@@ -43,17 +45,18 @@ trait FileStore {
   }
 }
 
-class S3FileStore(override val mandant: String, config: Config, actorSystem: ActorSystem) extends FileStore {
+class S3FileStore(override val mandant: String, config: Config, actorSystem: ActorSystem) extends FileStore with LazyLogging {
   lazy val createSystem = ActorSystem(mandant)
 
-  def props = S3ClientProps(config.getString("AWS_ACCESS_KEY_ID"), config.getString("AWS_SECRET_ACCESS_KEY"), Timeout(30 seconds), createSystem, createSystem)
+  def props = S3ClientProps(config.getString("AWS_ACCESS_KEY_ID"), config.getString("AWS_SECRET_ACCESS_KEY"), Timeout(30 seconds), createSystem, createSystem, config.getString("AWS_ENDPOINT"))
 
   val client = new S3Client(props)
 
   def generateId = UUID.randomUUID.toString
 
   def transform(metadata: Map[String, String]): FileStoreFileMetadata = {
-    val fileType = FileType(metadata.get("fileType").get.toLowerCase)
+    if (metadata.isEmpty) logger.warn("There was no metadata stored with this file.")
+    val fileType = FileType(metadata.get("fileType").getOrElse("").toLowerCase)
     FileStoreFileMetadata(metadata.get("name").getOrElse(""), fileType)
   }
 
