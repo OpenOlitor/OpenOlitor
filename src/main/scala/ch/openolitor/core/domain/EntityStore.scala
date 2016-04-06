@@ -44,7 +44,7 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, lastId: Option[UUID], dbRevision:Int) extends State
+  case class EventStoreState(seqNr: Long, lastId: Option[UUID], dbRevision: Int) extends State
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
 
   //base commands
@@ -81,12 +81,12 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   override def updateState(evt: PersistetEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
-      case EntityStoreInitialized(_) =>        
+      case EntityStoreInitialized(_) =>
       case _ =>
     }
   }
-  
-  def checkDBEvolution() : Try[Int] = {
+
+  def checkDBEvolution(): Try[Int] = {
     log.debug(s"Check DB Evolution: current revision=${state.dbRevision}")
     evolution.evolveDatabase(state.dbRevision) match {
       case s @ Success(rev) =>
@@ -94,9 +94,9 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
         updateDBRevision(rev)
         context become created
         s
-      case f @ Failure(e) => 
+      case f @ Failure(e) =>
         log.warning(s"dB Evolution failed", e)
-        DB readOnly { implicit session => 
+        DB readOnly { implicit session =>
           val newRev = evolution.currentRevision
           updateDBRevision(newRev)
         }
@@ -104,11 +104,11 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
         f
     }
   }
-    
-  def updateDBRevision(newRev:Int) = {
+
+  def updateDBRevision(newRev: Int) = {
     if (newRev != state.dbRevision) {
       state = state.copy(dbRevision = newRev)
-      
+
       //save new snapshot
       saveSnapshot(state)
     }
@@ -128,25 +128,28 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
    */
   val uninitialized: Receive = {
     case GetState =>
+      log.debug(s"uninitialized => GetState: $state")
       sender ! state
     case Initialize(state) =>
       //this event is used to initialize actor from within testcases
-      log.debug(s"Initialize: $state")
+      log.debug(s"uninitialized => Initialize: $state")
       this.state = state
       context become created
     case e =>
-      log.debug(s"Initialize eventstore with event:$e")
+      log.debug(s"uninitialized => Initialize eventstore with event:$e, $self")
       state = incState
       persist(EntityStoreInitialized(metadata(Boot.systemUserId)))(afterEventPersisted)
       context become uncheckedDB
       //reprocess event
       uncheckedDB(e)
   }
-  
+
   val uncheckedDB: Receive = {
     case CheckDBEvolution =>
-      log.debug(s"uncheckedDB, check db evolution")
+      log.debug(s"uncheckedDB => check db evolution")
       sender ! checkDBEvolution()
+    case x =>
+      log.warning(s"uncheckedDB => unsupported command:$x")
   }
 
   /**
@@ -154,24 +157,27 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
    */
   val created: Receive = {
     case InsertEntityCommand(userId, entity) =>
-      log.debug(s"Insert entity:$entity")
+      log.debug(s"created => Insert entity:$entity")
       val event = EntityInsertedEvent(metadata(userId), newId, entity)
       state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
       persist(event)(afterEventPersisted)
       sender ! event
     case UpdateEntityCommand(userId, id, entity) =>
-      log.debug(s"Update entity::$id, $entity")
+      log.debug(s"created => Update entity::$id, $entity")
       state = incState
       persist(EntityUpdatedEvent(metadata(userId), id, entity))(afterEventPersisted)
     case DeleteEntityCommand(userId, entity) =>
+      log.debug(s"created => delete entity:$entity")
       state = incState
       persist(EntityDeletedEvent(metadata(userId), entity))(afterEventPersisted)
     case KillAggregate =>
+      log.debug(s"created => KillAggregate")
       context.stop(self)
     case GetState =>
+      log.debug(s"created => GetState")
       sender ! state
     case other =>
-      log.warning(s"Received unknown command:$other")
+      log.warning(s"created => Received unknown command:$other")
   }
 
   def metadata(userId: UserId) = {

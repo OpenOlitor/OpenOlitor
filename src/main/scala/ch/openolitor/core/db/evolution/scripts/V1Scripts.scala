@@ -29,13 +29,9 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.StammdatenDBMappings
 
 object V1Scripts {
-  val scripts = Seq(
-      DBInitializationScript      
-  )
-  
   val DBInitializationScript = new Script with LazyLogging with StammdatenDBMappings {
     def execute(implicit session: DBSession): Try[Boolean] = {
-          //drop all tables
+      //drop all tables
       logger.debug(s"oo-system: cleanupDatabase - drop tables")
 
       sql"drop table if exists ${postlieferungMapping.table}".execute.apply()
@@ -82,9 +78,12 @@ object V1Scripts {
       sql"create table ${projektMapping.table}  (id varchar(36) not null, bezeichnung varchar(50) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4), ort varchar(50), waehrung varchar(10) not null)".execute.apply()
       sql"create table ${produktProduzentMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produzent_id varchar(36) not null)".execute.apply()
       sql"create table ${produktProduktekategorieMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produktekategorie_id varchar(36) not null)".execute.apply()
-      
+
       logger.debug(s"oo-system: cleanupDatabase - end")
       Success(true)
     }
   }
+
+  val scripts = Seq(
+    DBInitializationScript)
 }

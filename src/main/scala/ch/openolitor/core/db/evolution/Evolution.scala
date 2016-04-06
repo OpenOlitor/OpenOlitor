@@ -35,77 +35,83 @@ trait Script {
   def execute(implicit session: DBSession): Try[Boolean]
 }
 
-case class EvolutionException(msg: String) extends Exception 
+case class EvolutionException(msg: String) extends Exception
 
 object Evolution extends Evolution(V1Scripts.scripts)
 
 /**
  * Base evolution class to evolve database from a specific revision to another
  */
-class Evolution(scripts:Seq[Script]) extends CoreDBMappings with LazyLogging {
+class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging {
   import IteratorUtil._
-  
-  def evolveDatabase(fromRevision: Int=0)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
-    val currentDBRevision = DB readOnly{ implicit session => currentRevision}
+
+  logger.debug(s"Evolution manager consists of:$scripts")
+
+  def evolveDatabase(fromRevision: Int = 0)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
+    val currentDBRevision = DB readOnly { implicit session => currentRevision }
     val revision = Math.max(fromRevision, currentDBRevision)
-    val scriptsToApply = scripts.take(scripts.length - revision)
-    evolve(scriptsToApply, revision)
+    scripts.take(scripts.length - revision) match {
+      case Nil => Success(revision)
+      case scriptsToApply => evolve(scriptsToApply, revision)
+    }
   }
 
-  def evolve(scripts:Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
+  def evolve(scripts: Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
     logger.debug(s"evolve database from:$currentRevision")
-    val x = scripts.zipWithIndex.view.map { case (script, index) =>      
-      try {
-        DB localTx { implicit session => 
-          script.execute match {
-            case Success(x) => 
-              val rev = currentRevision + index + 1
-              insertRevision(rev) match {
-                case true => Success(rev)                  
-                case false =>
-                  //fail
-                  throw EvolutionException(s"Couldn't register new db schema") 
-              }
-            case Failure(e) => 
-              //failed throw e to rollback transaction
-              throw e
+    val x = scripts.zipWithIndex.view.map {
+      case (script, index) =>
+        try {
+          logger.debug(s"evolve script:$script [$index]")
+          DB localTx { implicit session =>
+            script.execute match {
+              case Success(x) =>
+                val rev = currentRevision + index + 1
+                insertRevision(rev) match {
+                  case true => Success(rev)
+                  case false =>
+                    //fail
+                    throw EvolutionException(s"Couldn't register new db schema")
+                }
+              case Failure(e) =>
+                //failed throw e to rollback transaction
+                throw e
+            }
           }
+        } catch {
+          case e: Exception =>
+            logger.warn(s"catched exception:", e)
+            Failure(e)
         }
-      }
-      catch {
-        case e : Exception =>
-          logger.warn(s"catched exception:", e)
-          Failure(e)
-      }
     }.toIterator.takeWhileInclusive(_.isSuccess).toSeq
-    
+
+    logger.debug(s"Evolved:$x:${x.reverse.headOption.getOrElse("xxx")}")
     x.reverse.headOption.getOrElse(Failure(EvolutionException(s"No Script found")))
   }
-  
-  def insertRevision(revision: Int)(implicit session: DBSession):Boolean = {
+
+  def insertRevision(revision: Int)(implicit session: DBSession): Boolean = {
     val entity = DBSchema(DBSchemaId(), revision, Done)
     val params = dbSchemaMapping.parameterMappings(entity)
     withSQL(insertInto(dbSchemaMapping).values(params: _*)).update.apply() == 1
   }
-  
+
   lazy val schema = dbSchemaMapping.syntax("db_schema")
-  
+
   /**
    * load current revision from database schema
    */
   def currentRevision(implicit session: DBSession): Int = {
     withSQL {
       select(max(schema.revision))
-      .from(dbSchemaMapping as schema)
-      .where.eq(schema.status, parameter(Applying))
-    }.map(_.intOpt(1).getOrElse(-1)).single.apply().getOrElse(-2)
+        .from(dbSchemaMapping as schema)
+        .where.eq(schema.status, parameter(Applying))
+    }.map(_.intOpt(1).getOrElse(0)).single.apply().getOrElse(0)
   }
-  
+
   def revisions(implicit session: DBSession): List[DBSchema] = {
     withSQL {
       select
-      .from(dbSchemaMapping as schema)
-      .where.eq(schema.status, parameter(Applying))
+        .from(dbSchemaMapping as schema)
+        .where.eq(schema.status, parameter(Applying))
     }.map(dbSchemaMapping(schema)).list.apply()
   }
 }

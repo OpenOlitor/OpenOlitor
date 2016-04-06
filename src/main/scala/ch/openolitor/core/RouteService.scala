@@ -64,9 +64,9 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   with StammdatenRoutes
   with DefaultStammdatenRepositoryComponent
   with CORSSupport {
-  
+
   var error: Option[Throwable] = None
-  
+
   //initially run db evolution  
   override def preStart() = {
     runDBEvolution()
@@ -80,24 +80,24 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // other things here, like request stream processing
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
-  
+
   val initializedDB = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
-  
+
   val systemRoutes = pathPrefix("admin") {
     systemRoute()
   }
-  
-  def systemRoute(): Route = 
+
+  def systemRoute(): Route =
     path("status") {
       get {
-        error map { e => 
+        error map { e =>
           complete(StatusCodes.BadRequest, e)
         } getOrElse {
           complete("Ok")
         }
-      }    
-  }
-  
+      }
+    }
+
   val dbEvolutionRoutes =
     pathPrefix("db") {
       dbEvolutionRoute()
@@ -105,27 +105,26 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
 
   def dbEvolutionRoute(): Route =
     path("recover") {
-        post {
-          runDBEvolution()
-        }
+      post {
+        onSuccess(runDBEvolution()) { x => x }
+      }
     }
-  
+
   def runDBEvolution() = {
     logger.debug(s"runDBEvolution:$entityStore")
-    implicit val timeout = Timeout(5.seconds)
-    onComplete(entityStore ? CheckDBEvolution) { 
+    implicit val timeout = Timeout(50.seconds)
+    entityStore ? CheckDBEvolution map {
       case Success(rev) =>
         logger.debug(s"Successfully check db with revision:$rev")
         context become initializedDB
         complete("")
-      case Failure(e) => 
+      case Failure(e) =>
         logger.warn(s"db evolution failed", e)
         error = Some(e)
         complete(StatusCodes.BadRequest, e)
     }
   }
 }
-
 
 // this trait defines our service behavior independently from the service actor
 trait DefaultRouteService extends HttpService with ActorReferences {
