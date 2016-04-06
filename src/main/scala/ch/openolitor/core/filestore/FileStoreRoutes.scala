@@ -57,6 +57,9 @@ import java.io.BufferedOutputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.io.Closeable
+import akka.actor._
+import akka.util.ByteString
 
 trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeserializers with DefaultRouteService with LazyLogging {
   self: FileStoreComponent =>
@@ -69,13 +72,26 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
       fileStoreFileTypeRoute
     }
 
+  def streamThenClose[T](stream: Stream[T], closeable: Closeable)(implicit marshaller: Marshaller[T], refFactory: ActorRefFactory) =
+    new StandardRoute {
+      val closingMarshaller = Marshaller[Stream[T]] {
+        (value, ctx) =>
+          if (value.isEmpty) { closeable.close(); ctx.marshalTo(HttpEntity.Empty) }
+          else refFactory.actorOf(Props(new MetaMarshallers.ChunkingActor(marshaller, ctx) {
+            override def postStop() { closeable.close(); super.postStop() }
+          })) ! value
+      }
+
+      def apply(ctx: RequestContext): Unit = ctx.complete(stream)(ToResponseMarshaller.fromMarshaller()(closingMarshaller))
+    }
+
   lazy val fileStoreFileTypeRoute: Route =
     pathPrefix(Segment) { fileTypeName =>
       val fileType = FileType(fileTypeName)
       pathEnd {
         get {
           onSuccess(fileStore.getFileIds(fileType.bucket)) {
-            case Left(e)     => complete(StatusCodes.InternalServerError, s"Could not list objects for the given fileType: ${fileType}")
+            case Left(e) => complete(StatusCodes.InternalServerError, s"Could not list objects for the given fileType: ${fileType}")
             case Right(list) => complete(s"Result list: $list")
           }
         }
@@ -86,10 +102,8 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
               case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found. Error: ${e}")
               case Right(file) => {
                 logger.debug(s"serving file: $file")
-                // TODO find the spray way of serving a stream
-                val temp = File.createTempFile(id, ".tmp")
-                Files.write(Paths.get(temp.getPath), Stream.continually(file.file.read).takeWhile(_ != -1).map(_.toByte).toArray)
-                getFromFile(temp)
+                val streamResponse: Stream[ByteString] = Stream.continually(file.file.read).takeWhile(_ != -1).map(ByteString(_))
+                streamThenClose(streamResponse, file.file)
               }
             }
           } ~
@@ -105,7 +119,7 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
                 details.map {
                   case (content, fileName) =>
                     onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
-                      case Left(e)         => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}")
+                      case Left(e) => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}")
                       case Right(metadata) => complete(s"Resulting metadata: $metadata")
                     }
                 } getOrElse {
@@ -115,7 +129,7 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
             } ~
             delete {
               onSuccess(fileStore.deleteFile(fileType.bucket, id)) {
-                case Left(e)        => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be deleted. Error: ${e}")
+                case Left(e) => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be deleted. Error: ${e}")
                 case Right(success) => complete(s"Deleted file with id $id")
               }
             }
