@@ -50,12 +50,13 @@ import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import stamina.Persister
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.filestore._
 
-trait StammdatenRoutes extends HttpService with ActorReferences 
+trait StammdatenRoutes extends HttpService with ActorReferences
   with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
   with StammdatenJsonProtocol
-  with StammdatenEventStoreSerializer{
-  self: StammdatenRepositoryComponent =>
+  with StammdatenEventStoreSerializer {
+  self: StammdatenRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = string2BaseIdConverter(AbotypId.apply)
   implicit val abotypIdPath = string2BaseIdPathMatcher(AbotypId.apply)
@@ -78,8 +79,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ 
-    kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~ 
+  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
+    kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
     produzentenRoute ~ tourenRoute ~ projektRoute
 
   lazy val kundenRoute =
@@ -95,39 +96,39 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("kunden" / kundeIdPath / "abos") { kundeId =>
 
         post {
-            requestInstance { request =>
-              entity(as[AboModify]) { 
-                case dl: DepotlieferungAboModify => 
-                  created(request)(dl)
-                case hl: HeimlieferungAboModify => 
-                  created(request)(hl)
-                case pl: PostlieferungAboModify => 
-                  created(request)(pl)                
-              }
+          requestInstance { request =>
+            entity(as[AboModify]) {
+              case dl: DepotlieferungAboModify =>
+                created(request)(dl)
+              case hl: HeimlieferungAboModify =>
+                created(request)(hl)
+              case pl: PostlieferungAboModify =>
+                created(request)(pl)
             }
           }
+        }
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath) { (kundeId, aboId) =>
         get(detail(readRepository.getAboDetail(aboId))) ~
           (put | post) {
-            entity(as[AboModify]) { 
-              case dl: DepotlieferungAboModify => 
+            entity(as[AboModify]) {
+              case dl: DepotlieferungAboModify =>
                 updated(aboId, dl)
-              case hl: HeimlieferungAboModify => 
+              case hl: HeimlieferungAboModify =>
                 updated(aboId, hl)
-              case pl: PostlieferungAboModify => 
+              case pl: PostlieferungAboModify =>
                 updated(aboId, pl)
             }
-        } ~
-        delete(remove(aboId))
+          } ~
+          delete(remove(aboId))
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(readRepository.getPendenzen(kundeId))) ~
-        	post(create[PendenzModify, PendenzId](PendenzId.apply _))
+          post(create[PendenzModify, PendenzId](PendenzId.apply _))
       } ~
       path("kunden" / kundeIdPath / "pendenzen" / pendenzIdPath) { (kundeId, pendenzId) =>
         get(detail(readRepository.getPendenzDetail(pendenzId))) ~
-           (put | post)(update[PendenzModify, PendenzId](pendenzId))
+          (put | post)(update[PendenzModify, PendenzId](pendenzId))
       }
 
   lazy val kundentypenRoute =
@@ -139,7 +140,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         (put | post)(update[CustomKundentypModify, CustomKundentypId](kundentypId)) ~
           delete(remove(kundentypId))
       }
- 
+
   lazy val aboTypenRoute =
     path("abotypen") {
       get(list(readRepository.getAbotypen)) ~
@@ -154,13 +155,13 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(readRepository.getVertriebsarten(abotypId))) ~
           post {
             requestInstance { request =>
-              entity(as[VertriebsartModify]) { 
-                case dl: DepotlieferungModify => 
+              entity(as[VertriebsartModify]) {
+                case dl: DepotlieferungModify =>
                   created(request)(copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId))
-                case hl: HeimlieferungModify => 
+                case hl: HeimlieferungModify =>
                   created(request)(copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId))
-                case pl: PostlieferungModify => 
-                  created(request)(copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId))                
+                case pl: PostlieferungModify =>
+                  created(request)(copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId))
               }
             }
           }
@@ -168,14 +169,14 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath) { (abotypId, vertriebsartId) =>
         get(detail(readRepository.getVertriebsart(vertriebsartId))) ~
           (put | post) {
-            entity(as[VertriebsartModify]) { 
-              case dl: DepotlieferungModify => 
+            entity(as[VertriebsartModify]) {
+              case dl: DepotlieferungModify =>
                 updated(vertriebsartId, copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId))
-              case hl: HeimlieferungModify => 
+              case hl: HeimlieferungModify =>
                 updated(vertriebsartId, copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId))
-              case pl: PostlieferungModify => 
+              case pl: PostlieferungModify =>
                 updated(vertriebsartId, copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId))
-            }            
+            }
           } ~
           delete(remove(vertriebsartId))
       } ~
@@ -209,32 +210,32 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     path("abos") {
       get(list(readRepository.getAbos))
     }
-  
+
   lazy val pendenzenRoute =
     path("pendenzen") {
       get(list(readRepository.getPendenzen))
     }
-  
+
   lazy val produkteRoute =
     path("produkte") {
       get(list(readRepository.getProdukte)) ~
         post(create[ProduktModify, ProduktId](ProduktId.apply _))
     } ~
       path("produkte" / produktIdPath) { id =>
-          (put | post)(update[ProduktModify, ProduktId](id)) ~
+        (put | post)(update[ProduktModify, ProduktId](id)) ~
           delete(remove(id))
       }
-    
+
   lazy val produktekategorienRoute =
     path("produktekategorien") {
       get(list(readRepository.getProduktekategorien)) ~
         post(create[ProduktekategorieModify, ProduktekategorieId](ProduktekategorieId.apply _))
     } ~
       path("produktekategorien" / produktekategorieIdPath) { id =>
-          (put | post)(update[ProduktekategorieModify, ProduktekategorieId](id)) ~
+        (put | post)(update[ProduktekategorieModify, ProduktekategorieId](id)) ~
           delete(remove(id))
       }
-    
+
   lazy val produzentenRoute =
     path("produzenten") {
       get(list(readRepository.getProduzenten)) ~
@@ -245,17 +246,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           (put | post)(update[ProduzentModify, ProduzentId](id)) ~
           delete(remove(id))
       }
-    
+
   lazy val tourenRoute =
     path("touren") {
       get(list(readRepository.getTouren)) ~
         post(create[TourModify, TourId](TourId.apply _))
     } ~
       path("touren" / tourIdPath) { id =>
-          (put | post)(update[TourModify, TourId](id)) ~
+        (put | post)(update[TourModify, TourId](id)) ~
           delete(remove(id))
       }
-    
+
   lazy val projektRoute =
     path("projekt") {
       get(detail(readRepository.getProjekt)) ~
@@ -264,5 +265,12 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("projekt" / projektIdPath) { id =>
         get(detail(readRepository.getProjekt)) ~
           (put | post)(update[ProjektModify, ProjektId](id))
+      } ~
+      path("projekt" / projektIdPath / "logo") { id =>
+        get(download(ProjektStammdaten, "logo")) ~
+          (put | post)(upload(ProjektStammdaten, Some("logo")) { (id, metadata) =>
+            //TODO: update projekt stammdaten entity
+            complete("Logo uploaded")
+          })
       }
 }

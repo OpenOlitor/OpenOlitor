@@ -61,17 +61,7 @@ import java.io.Closeable
 import akka.actor._
 import akka.util.ByteString
 
-trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeserializers with DefaultRouteService with LazyLogging {
-  self: FileStoreComponent =>
-
-  //TODO: get real userid from login
-  override val userId: UserId = Boot.systemUserId
-
-  lazy val fileStoreRoute =
-    pathPrefix("filestore") {
-      fileStoreFileTypeRoute
-    }
-
+trait StreamSupport {
   def streamThenClose[T](stream: Stream[T], closeable: Closeable)(implicit marshaller: Marshaller[T], refFactory: ActorRefFactory) =
     new StandardRoute {
       val closingMarshaller = Marshaller[Stream[T]] {
@@ -83,6 +73,18 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
       }
 
       def apply(ctx: RequestContext): Unit = ctx.complete(stream)(ToResponseMarshaller.fromMarshaller()(closingMarshaller))
+    }
+}
+
+trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeserializers with DefaultRouteService with LazyLogging {
+  self: FileStoreComponent =>
+
+  //TODO: get real userid from login
+  override val userId: UserId = Boot.systemUserId
+
+  lazy val fileStoreRoute =
+    pathPrefix("filestore") {
+      fileStoreFileTypeRoute
     }
 
   lazy val fileStoreFileTypeRoute: Route =
@@ -106,33 +108,7 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
                 streamThenClose(streamResponse, file.file)
               }
             }
-          } ~
-            (put | post) {
-              entity(as[MultipartFormData]) { formData =>
-                val details = formData.fields.collectFirst {
-                  case BodyPart(entity, headers) =>
-                    val content = new ByteArrayInputStream(entity.data.toByteArray)
-                    val fileName = headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
-                    (content, fileName)
-                }
-
-                details.map {
-                  case (content, fileName) =>
-                    onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
-                      case Left(e) => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}")
-                      case Right(metadata) => complete(s"Resulting metadata: $metadata")
-                    }
-                } getOrElse {
-                  complete(StatusCodes.BadRequest, "File has to be submitted using multipart formdata")
-                }
-              }
-            } ~
-            delete {
-              onSuccess(fileStore.deleteFile(fileType.bucket, id)) {
-                case Left(e) => complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be deleted. Error: ${e}")
-                case Right(success) => complete(s"Deleted file with id $id")
-              }
-            }
+          }
         }
     }
 }
