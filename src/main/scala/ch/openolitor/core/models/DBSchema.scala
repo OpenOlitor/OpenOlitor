@@ -20,60 +20,20 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.models
 
-import akka.persistence._
-import akka.actor._
 import java.util.UUID
+import org.joda.time.DateTime
 
-object AggregateRoot {
-  trait State
-  trait Command
+sealed trait EvolutionStatus
+case object Applying extends EvolutionStatus
+case object Done extends EvolutionStatus
 
-  case object KillAggregate extends Command
-
-  case object GetState extends Command
-
-  case object Removed extends State
-  case object Created extends State
-  case object Uninitialized extends State
-}
-
-trait AggregateRoot extends PersistentActor with ActorLogging {
-  import AggregateRoot._
-
-  type S <: State
-  var state: S
-
-  case class Initialize(state: S) extends Command
-
-  def updateState(evt: PersistetEvent): Unit
-  def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
+object EvolutionStatus {
+  val AllStatus = Vector(Applying, Done)
   
-  def afterRecoveryCompleted(): Unit = {}
-
-  def newId = UUID.randomUUID()
-
-  def now = System.currentTimeMillis
-
-  protected def afterEventPersisted(evt: PersistetEvent): Unit = {
-    updateState(evt)
-    publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
-  }
-
-  private def publish(event: PersistetEvent) =
-    context.system.eventStream.publish(event)
-
-  override val receiveRecover: Receive = {
-    case evt: PersistetEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
-    case SnapshotOffer(metadata, state: State) =>
-      restoreFromSnapshot(metadata, state)
-      log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted => 
-      afterRecoveryCompleted()
-  }
+  def apply(value: String): EvolutionStatus = AllStatus.find(_.toString == value).getOrElse(Applying) 
 }
+
+case class DBSchemaId(id: UUID = UUID.randomUUID) extends BaseId
+case class DBSchema(id: DBSchemaId, revision:Int, status: EvolutionStatus, executionDate: DateTime = DateTime.now) extends BaseEntity[DBSchemaId]

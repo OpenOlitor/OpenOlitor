@@ -34,32 +34,9 @@ import ch.openolitor.core.repositories.DBMappings
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.stammdaten.models.PendenzStatus
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 
 //DB Model bindig
-
-trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging {
-  //override def columnNames 
-  def apply(p: SyntaxProvider[E])(rs: WrappedResultSet): E = apply(p.resultName)(rs)
-
-  def opt(e: SyntaxProvider[E])(rs: WrappedResultSet): Option[E] = try {
-    rs.stringOpt(e.resultName.id).map(_ => apply(e)(rs))
-  } catch {
-    case e: IllegalArgumentException => None
-  }
-
-  def apply(rn: ResultName[E])(rs: WrappedResultSet): E
-
-  /**
-   * Declare parameter mappings for all parameters used on insert
-   */
-  def parameterMappings(entity: E): Seq[Any]
-
-  /**
-   * Declare update parameters for this entity used on update. Is by default an empty set
-   */
-  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq()
-}
-
 trait StammdatenDBMappings extends DBMappings {
   import TypeBinder._
 

@@ -23,6 +23,7 @@
 package ch.openolitor.core
 
 import akka.actor.Actor
+
 import akka.actor.ActorRef
 import akka.actor.Props
 import ch.openolitor.helloworld.HelloWorldRoutes
@@ -52,6 +53,8 @@ import ch.openolitor.stammdaten.FileStoreRoutes
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import spray.routing.Route
+import scala.util._
 import ch.openolitor.core.BaseJsonProtocol.IdResponse
 import stamina.Persister
 import stamina.json.JsonPersister
@@ -80,6 +83,13 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   with CORSSupport
   with BaseJsonProtocol {
 
+  var error: Option[Throwable] = None
+
+  //initially run db evolution  
+  override def preStart() = {
+    runDBEvolution()
+  }
+
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   val actorRefFactory = context
@@ -87,8 +97,52 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  val receive = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute ~ fileStoreRoute))
+  val receive = runRoute(cors(dbEvolutionRoutes))
 
+  val initializedDB = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute ~ fileStoreRoute))
+
+  val systemRoutes = pathPrefix("admin") {
+    systemRoute()
+  }
+
+  def systemRoute(): Route =
+    path("status") {
+      get {
+        error map { e =>
+          complete(StatusCodes.BadRequest, e)
+        } getOrElse {
+          complete("Ok")
+        }
+      }
+    }
+
+  val dbEvolutionRoutes =
+    pathPrefix("db") {
+      dbEvolutionRoute()
+    }
+
+  def dbEvolutionRoute(): Route =
+    path("recover") {
+      post {
+        onSuccess(runDBEvolution()) { x => x }
+      }
+    }
+
+  def runDBEvolution() = {
+    logger.debug(s"runDBEvolution:$entityStore")
+    implicit val timeout = Timeout(50.seconds)
+    entityStore ? CheckDBEvolution map {
+      case Success(rev) =>
+        logger.debug(s"Successfully check db with revision:$rev")
+        context become initializedDB
+        complete("")
+      case Failure(e) =>
+        logger.warn(s"db evolution failed", e)
+        error = Some(e)
+        complete(StatusCodes.BadRequest, e)
+    }
+  }
+  
   def getSysConfig() = {
     sysConfig
   }

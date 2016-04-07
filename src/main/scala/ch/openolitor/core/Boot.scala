@@ -23,6 +23,7 @@
 package ch.openolitor.core
 
 import scalikejdbc.config._
+
 import akka.actor.{ ActorSystem, Props, ActorRef }
 import akka.pattern.ask
 import akka.io.IO
@@ -53,6 +54,9 @@ import java.net.ServerSocket
 import spray.http.Uri
 import ch.openolitor.core.proxy.ProxyServiceActor
 import util.Properties
+import ch.openolitor.core.db.evolution.Evolution
+import ch.openolitor.core.domain.EntityStore.CheckDBEvolution
+import scala.util._
 
 case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -144,7 +148,7 @@ object Boot extends App with LazyLogging {
       val duration = Duration.create(1, SECONDS);
       val system = app.actorOf(SystemActor.props, "oo-system")
       logger.debug(s"oo-system:$system")
-      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props, "entity-store"), duration).asInstanceOf[ActorRef]
+      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(Evolution), "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 
@@ -160,10 +164,6 @@ object Boot extends App with LazyLogging {
       //initialize global persistentviews
       logger.debug(s"oo-system: send Startup to entityStoreview")
       stammdatenEntityStoreView ! EntityStoreView.Startup
-
-      //send a dummy command to initialize store
-      logger.debug(s"oo-system: send initialize to entityStore")
-      entityStore ! "Initialize"
 
       // create and start our service actor
       val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore), "route-service"), duration).asInstanceOf[ActorRef]
