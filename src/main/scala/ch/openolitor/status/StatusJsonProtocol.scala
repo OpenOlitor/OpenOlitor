@@ -20,28 +20,10 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.status
 
-import java.util.UUID
-import scalikejdbc.ParameterBinder
-import ch.openolitor.core.Macros
 import spray.json.DefaultJsonProtocol
 
-trait BaseId extends AnyRef {
-  val id: UUID
+object StatusJsonProtocol extends DefaultJsonProtocol {
+  implicit val statusFormat = jsonFormat1(Status)
 }
-
-case class UserId(id: UUID) extends BaseId
-
-trait BaseEntity[T <: BaseId] extends Product {
-  val id: T
-}
-
-sealed trait DBEvent[E <: BaseEntity[_ <: BaseId]] extends Product {
-  val originator: UserId
-  val entity: E
-}
-//events raised by this aggregateroot
-case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
-case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E, orig: E) extends DBEvent[E]
-case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]

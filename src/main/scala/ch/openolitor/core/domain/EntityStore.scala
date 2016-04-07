@@ -23,6 +23,7 @@
 package ch.openolitor.core.domain
 
 import akka.actor._
+
 import akka.persistence._
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -33,8 +34,10 @@ import scala.util._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import scalikejdbc.DB
 import ch.openolitor.core.SystemConfig
+import spray.json.DefaultJsonProtocol
+import ch.openolitor.core.BaseJsonProtocol
 
-/**
+/**_
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
  */
 object EntityStore {
@@ -48,18 +51,26 @@ object EntityStore {
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
 
   //base commands
-  case class InsertEntityCommand(originator: UserId, entity: Any) extends Command
-  case class UpdateEntityCommand(originator: UserId, id: BaseId, entity: Any) extends Command
+  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends Command
+  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends Command
   case class DeleteEntityCommand(originator: UserId, id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent(meta: EventMetadata, id: UUID, entity: Any) extends PersistetEvent
-  case class EntityUpdatedEvent(meta: EventMetadata, id: BaseId, entity: Any) extends PersistetEvent
-  case class EntityDeletedEvent(meta: EventMetadata, id: BaseId) extends PersistetEvent
-
+  case class EntityInsertedEvent[E <: AnyRef](meta: EventMetadata, id: UUID, entity: E) extends PersistetEvent
+  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent
+  case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistetEvent
+   
   // other actor messages
   case object CheckDBEvolution
+}
+
+//json protocol
+trait EntityStoreJsonProtocol extends BaseJsonProtocol {
+    import EntityStore._
+  
+    implicit val metadataFormat = jsonFormat5(EventMetadata)
+    implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)    
 }
 
 class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) extends AggregateRoot with ConnectionPoolContextAware {

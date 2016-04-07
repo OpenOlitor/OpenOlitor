@@ -32,9 +32,8 @@ object ClientMessages {
   case class HelloClient(userId: UserId) extends ClientMessage
 }
 
-object ClientMessagesJsonProtocol extends DefaultJsonProtocol {
+object ClientMessagesJsonProtocol extends BaseJsonProtocol {
   import ClientMessages._
-  import BaseJsonProtocol._
 
   implicit val helloClientFormat = jsonFormat1(HelloClient.apply)
 }

@@ -5,6 +5,10 @@ enablePlugins(JavaServerAppPackaging)
 name := "openolitor-server"
 mainClass in Compile := Some("ch.openolitor.core.Boot")
 
+sources in EditSource <++= baseDirectory.map(d => (d / "manifest_build.yml").get)
+variables in EditSource += ("foo", "bar")
+targetDirectory in EditSource <<= baseDirectory(_ / "target")
+
 assemblyJarName in assembly := "openolitor-server.jar"
 
 mainClass in assembly := Some("ch.openolitor.core.Boot")

@@ -66,25 +66,25 @@ trait StammdatenReadRepository {
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]]
-  
+
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
   def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
   def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]]
-  
+
   def getProdukte(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]]
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]]
   def getProduktProduzenten(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduzent]]
   def getProduktProduktekategorien(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduktekategorie]]
-  
+
   def getProduktekategorien(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produktekategorie]]
-  
+
   def getProduzenten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produzent]]
   def getProduzentDetail(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]]
-  
+
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]]
-  
+
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]]
 }
 
@@ -114,7 +114,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val projekt = projektMapping.syntax("projekt")
   lazy val produktProduzent = produktProduzentMapping.syntax("produktProduzent")
   lazy val produktProduktekategorie = produktProduktekategorieMapping.syntax("produktProduktekategorie")
-  
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
@@ -365,7 +364,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       p <- getPostlieferungAbo(id)
     } yield (d orElse h orElse p)
   }
-  
+
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
     withSQL {
       select
@@ -373,7 +372,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .orderBy(pendenz.datum)
     }.map(pendenzMapping(pendenz)).list.future
   }
-  
+
   def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
     withSQL {
       select
@@ -381,7 +380,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(pendenz.kundeId, parameter(id))
     }.map(pendenzMapping(pendenz)).list.future
   }
-    
+
   def getPendenzDetail(id: PendenzId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Pendenz]] = {
     withSQL {
       select
@@ -389,28 +388,28 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(pendenz.id, parameter(id))
     }.map(pendenzMapping(pendenz)).single.future
   }
-  
+
   def getProdukte(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]] = {
     withSQL {
       select
         .from(produktMapping as produkt)
     }.map(produktMapping(produkt)).list.future
   }
-  
+
   def getProduktekategorien(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produktekategorie]] = {
     withSQL {
       select
         .from(produktekategorieMapping as produktekategorie)
     }.map(produktekategorieMapping(produktekategorie)).list.future
   }
-  
+
   def getProduzenten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produzent]] = {
     withSQL {
       select
         .from(produzentMapping as produzent)
     }.map(produzentMapping(produzent)).list.future
   }
-  
+
   def getProduzentDetail(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]] = {
     withSQL {
       select
@@ -418,21 +417,21 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produzent.id, parameter(id))
     }.map(produzentMapping(produzent)).single.future
   }
-  
+
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]] = {
     withSQL {
       select
         .from(tourMapping as tour)
     }.map(tourMapping(tour)).list.future
   }
-  
+
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]] = {
     withSQL {
       select
         .from(projektMapping as projekt)
     }.map(projektMapping(projekt)).single.future
   }
-  
+
   def getProduktProduzenten(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduzent]] = {
     withSQL {
       select
@@ -440,7 +439,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produktProduzent.produktId, parameter(id))
     }.map(produktProduzentMapping(produktProduzent)).list.future
   }
-  
+
   def getProduktProduktekategorien(id: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduktProduktekategorie]] = {
     withSQL {
       select
@@ -448,7 +447,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produktProduktekategorie.produktId, parameter(id))
     }.map(produktProduktekategorieMapping(produktProduktekategorie)).list.future
   }
-  
+
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]] = {
     withSQL {
       select
@@ -456,7 +455,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produzent.kurzzeichen, parameter(kurzzeichen))
     }.map(produzentMapping(produzent)).single.future
   }
-  
+
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]] = {
     withSQL {
       select
@@ -464,7 +463,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(produktekategorie.beschreibung, parameter(bezeichnung))
     }.map(produktekategorieMapping(produktekategorie)).single.future
   }
-  
+
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]] = {
     withSQL {
       select
@@ -472,7 +471,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.like(produkt.kategorien, '%' + bezeichnung + '%')
     }.map(produktMapping(produkt)).list.future
   }
-  
+
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {

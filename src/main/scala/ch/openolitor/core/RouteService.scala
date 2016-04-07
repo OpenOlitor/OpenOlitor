@@ -23,6 +23,7 @@
 package ch.openolitor.core
 
 import akka.actor.Actor
+
 import akka.actor.ActorRef
 import akka.actor.Props
 import ch.openolitor.helloworld.HelloWorldRoutes
@@ -50,6 +51,10 @@ import spray.json._
 import ch.openolitor.core.BaseJsonProtocol._
 import spray.routing.Route
 import scala.util._
+import ch.openolitor.core.BaseJsonProtocol.IdResponse
+import stamina.Persister
+import stamina.json.JsonPersister
+import ch.openolitor.status.StatusRoutes
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
@@ -61,9 +66,11 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   extends Actor with ActorReferences
   with DefaultRouteService
   with HelloWorldRoutes
+  with StatusRoutes
   with StammdatenRoutes
   with DefaultStammdatenRepositoryComponent
-  with CORSSupport {
+  with CORSSupport
+  with BaseJsonProtocol{
 
   var error: Option[Throwable] = None
 
@@ -81,7 +88,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ stammdatenRoute))
+  val initializedDB = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute))
 
   val systemRoutes = pathPrefix("admin") {
     systemRoute()
@@ -124,16 +131,20 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
         complete(StatusCodes.BadRequest, e)
     }
   }
+  
+  def getSysConfig() = {
+    sysConfig
+  }
 }
 
 // this trait defines our service behavior independently from the service actor
-trait DefaultRouteService extends HttpService with ActorReferences {
+trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol {
 
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
 
-  def create[E, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I]) = {
+  def create[E <: AnyRef, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I], persister:Persister[E, _]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         created(request)(entity)
@@ -141,10 +152,10 @@ trait DefaultRouteService extends HttpService with ActorReferences {
     }
   }
 
-  def created[E, I <: BaseId](request: HttpRequest)(entity: E) = {
+  def created[E <: AnyRef, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister:Persister[E, _]) = {
     //create entity
     onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
-      case event: EntityInsertedEvent =>
+      case event: EntityInsertedEvent[_] =>
         respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
           respondWithStatus(StatusCodes.Created) {
             complete(IdResponse(event.id.toString).toJson.compactPrint)
@@ -155,12 +166,12 @@ trait DefaultRouteService extends HttpService with ActorReferences {
     }
   }
 
-  def update[E, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I]) = {
+  def update[E <: AnyRef, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I], idPersister:Persister[I, _], entityPersister: Persister[E, _]) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 
-  def updated[E, I <: BaseId](id: I, entity: E) = {
+  def updated[E <: AnyRef, I <: BaseId](id: I, entity: E)(implicit idPersister:Persister[I, _], entityPersister: Persister[E, _]) = {
     //update entity
     onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
       complete(StatusCodes.Accepted, "")
@@ -181,7 +192,10 @@ trait DefaultRouteService extends HttpService with ActorReferences {
     }
   }
 
-  def remove[I <: BaseId](id: I) = {
+  /**
+   * @persister declare format to ensure that format exists for persising purposes
+   */
+  def remove[I <: BaseId](id: I)(implicit persister:Persister[I, _]) = {
     onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
       complete("")
     }
