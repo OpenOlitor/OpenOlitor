@@ -100,7 +100,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
     DB autoCommit { implicit session =>
       //create abotyp
-      writeRepository.insertEntity(typ)
+      writeRepository.insertEntity[Abotyp, AbotypId](typ)
     }
   }
 
@@ -109,7 +109,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> vertriebsartId)
 
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(insert)
+      writeRepository.insertEntity[Depotlieferung, VertriebsartId](insert)
     }
   }
 
@@ -118,7 +118,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> vertriebsartId)
 
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(insert)
+      writeRepository.insertEntity[Heimlieferung, VertriebsartId](insert)
     }
   }
 
@@ -127,7 +127,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> vertriebsartId)
 
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(insert)
+      writeRepository.insertEntity[Postlieferung, VertriebsartId](insert)
     }
   }
 
@@ -139,7 +139,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
     DB autoCommit { implicit session =>
       //create lieferung
-      writeRepository.insertEntity(insert)
+      writeRepository.insertEntity[Lieferung, LieferungId](insert)
     }
   }
 
@@ -157,7 +157,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         "anzahlPendenzen" -> ZERO)
       DB autoCommit { implicit session =>
         //create abotyp
-        writeRepository.insertEntity(kunde)
+        writeRepository.insertEntity[Kunde, KundeId](kunde)
       }
 
       //create personen as well
@@ -176,7 +176,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "sort" -> sort)
 
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(person)
+      writeRepository.insertEntity[Person, PersonId](person)
     }
   }
   
@@ -187,7 +187,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung)
 
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(pendenz)
+      writeRepository.insertEntity[Pendenz, PendenzId](pendenz)
     }
   }
 
@@ -198,7 +198,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "farbCode" -> "",
       "anzahlAbonnenten" -> ZERO)
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(depot)
+      writeRepository.insertEntity[Depot, DepotId](depot)
     }
   }
 
@@ -207,13 +207,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       val aboId = AboId(id)
       val abo = create match {
         case create: DepotlieferungAboModify =>
-          writeRepository.insertEntity(copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
+          writeRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
             "id" -> aboId, "saldo" -> ZERO))
         case create: HeimlieferungAboModify =>
-          writeRepository.insertEntity(copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
+          writeRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
             "id" -> aboId, "saldo" -> ZERO))
         case create: PostlieferungAboModify =>
-          writeRepository.insertEntity(copyTo[PostlieferungAboModify, PostlieferungAbo](create,
+          writeRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](create,
             "id" -> aboId, "saldo" -> ZERO))
       }
     }
@@ -225,7 +225,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "id" -> customKundentypId,
       "anzahlVerknuepfungen" -> ZERO)
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(kundentyp)
+      writeRepository.insertEntity[CustomKundentyp, CustomKundentypId](kundentyp)
     }
   }
   
@@ -234,7 +234,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val produkt = copyTo[ProduktModify, Produkt](create,
       "id" -> produktId)
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(produkt)
+      writeRepository.insertEntity[Produkt, ProduktId](produkt)
     }
   }
   
@@ -243,7 +243,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val produktekategrie = copyTo[ProduktekategorieModify, Produktekategorie](create,
       "id" -> produktekategorieId)
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(produktekategrie)
+      writeRepository.insertEntity[Produktekategorie, ProduktekategorieId](produktekategrie)
     }
   }
   
@@ -252,7 +252,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val produzent = copyTo[ProduzentModify, Produzent](create,
       "id" -> produzentId)
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(produzent)
+      writeRepository.insertEntity[Produzent, ProduzentId](produzent)
     }
   }
   
@@ -261,7 +261,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val tour = copyTo[TourModify, Tour](create,
       "id" -> tourId)
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(tour)
+      writeRepository.insertEntity[Tour, TourId](tour)
     }
   }
   
@@ -270,7 +270,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val projekt = copyTo[ProjektModify, Projekt](create,
       "id" -> projektId)
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity(projekt)
+      writeRepository.insertEntity[Projekt, ProjektId](projekt)
     }
   }
 }

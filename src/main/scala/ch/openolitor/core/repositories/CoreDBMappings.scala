@@ -20,60 +20,36 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.repositories
 
-import akka.persistence._
-import akka.actor._
-import java.util.UUID
+import scalikejdbc._
+import scalikejdbc.TypeBinder._
+import ch.openolitor.core.models._
 
-object AggregateRoot {
-  trait State
-  trait Command
-
-  case object KillAggregate extends Command
-
-  case object GetState extends Command
-
-  case object Removed extends State
-  case object Created extends State
-  case object Uninitialized extends State
-}
-
-trait AggregateRoot extends PersistentActor with ActorLogging {
-  import AggregateRoot._
-
-  type S <: State
-  var state: S
-
-  case class Initialize(state: S) extends Command
-
-  def updateState(evt: PersistetEvent): Unit
-  def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
+trait CoreDBMappings extends DBMappings {
   
-  def afterRecoveryCompleted(): Unit = {}
+  implicit val dbschemaIdBinder: TypeBinder[DBSchemaId] = baseIdTypeBinder(DBSchemaId.apply _)
+  implicit val evolutionStatusTypeBinder: TypeBinder[EvolutionStatus] = string.map(EvolutionStatus.apply)
+  
+  implicit val dbSchemaIdSqlBinder = baseIdSqlBinder[DBSchemaId]
+  implicit val evolutionStatusBinder = toStringSqlBinder[EvolutionStatus]
+  
+  implicit val dbSchemaMapping = new BaseEntitySQLSyntaxSupport[DBSchema] {
+    override val tableName = "DBSchema"
 
-  def newId = UUID.randomUUID()
+    override lazy val columns = autoColumns[DBSchema]()
 
-  def now = System.currentTimeMillis
+    def apply(rn: ResultName[DBSchema])(rs: WrappedResultSet): DBSchema =
+      autoConstruct(rs, rn)
 
-  protected def afterEventPersisted(evt: PersistetEvent): Unit = {
-    updateState(evt)
-    publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
-  }
+    def parameterMappings(entity: DBSchema): Seq[Any] =
+      parameters(DBSchema.unapply(entity).get)
 
-  private def publish(event: PersistetEvent) =
-    context.system.eventStream.publish(event)
-
-  override val receiveRecover: Receive = {
-    case evt: PersistetEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
-    case SnapshotOffer(metadata, state: State) =>
-      restoreFromSnapshot(metadata, state)
-      log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted => 
-      afterRecoveryCompleted()
+    override def updateParameters(schema: DBSchema) = {
+      Seq(
+          column.revision -> parameter(schema.revision),
+          column.status -> parameter(schema.status)
+        )
+    }
   }
 }

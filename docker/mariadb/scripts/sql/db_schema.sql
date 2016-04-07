@@ -22,3 +22,11 @@ CREATE TABLE IF NOT EXISTS persistence_snapshot (
   PRIMARY KEY (persistence_key, sequence_nr),
   FOREIGN KEY (persistence_key) REFERENCES persistence_metadata (persistence_key)
 );
+
+CREATE TABLE IF NOT EXISTS DBSchema (
+  id varchar(36) NOT NULL,
+  revision BIGINT NOT NULL,
+  status varchar(50) NOT NULL,
+  execution_date TIMESTAMP NOT NULL,
+  PRIMARY KEY (id)
+);

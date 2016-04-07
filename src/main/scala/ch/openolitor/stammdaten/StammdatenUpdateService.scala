@@ -152,7 +152,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
                 "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung)
               logger.debug(s"Create new pendenz on Kunde:$kundeId, data -> $newPendenz")
 
-              writeRepository.insertEntity(newPendenz)
+              writeRepository.insertEntity[Pendenz, PendenzId](newPendenz)
             }
           }
       }
@@ -174,7 +174,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
                   "sort" -> index)
                 logger.debug(s"Create new person on Kunde:$kundeId, data -> $newPerson")
 
-                writeRepository.insertEntity(newPerson)
+                writeRepository.insertEntity[Person, PersonId](newPerson)
               }
           }
 
@@ -284,7 +284,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
               case Some(prod) => 
                 val newProduktProduzent = ProduktProduzent(produktProduzentId, id, prod.id)
                 logger.debug(s"Create new ProduktProduzent :$produktProduzentId, data -> $newProduktProduzent")
-                writeRepository.insertEntity(newProduktProduzent)
+                writeRepository.insertEntity[ProduktProduzent, ProduktProduzentId](newProduktProduzent)
               case None => logger.debug(s"Produzent was not found with kurzzeichen :$updateProduzentKurzzeichen")
             }
           }
@@ -309,7 +309,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
               case Some(kat) => 
                 val newProduktProduktekategorie = ProduktProduktekategorie(produktProduktekategorieId, id, kat.id)
                 logger.debug(s"Create new ProduktProduktekategorie :produktProduktekategorieId, data -> newProduktProduktekategorie")
-                writeRepository.insertEntity(newProduktProduktekategorie)
+                writeRepository.insertEntity[ProduktProduktekategorie, ProduktProduktekategorieId](newProduktProduktekategorie)
               case None => logger.debug(s"Produktekategorie was not found with bezeichnung :$updateKategorieBezeichnung")
             }
           }
