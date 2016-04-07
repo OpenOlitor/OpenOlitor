@@ -39,7 +39,7 @@ class DefaultStammdatenEntityStoreView(implicit val sysConfig: SystemConfig, imp
  * Zusammenfügen des Componenten (cake pattern) zu der persistentView
  */
 trait StammdatenEntityStoreView extends EntityStoreView
-  with StammdatenEntityStoreViewComponent with ConnectionPoolContextAware {
+    with StammdatenEntityStoreViewComponent with ConnectionPoolContextAware {
   self: StammdatenRepositoryComponent =>
 
   override val module = "stammdaten"

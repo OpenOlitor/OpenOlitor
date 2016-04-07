@@ -49,28 +49,39 @@ import spray.http.HttpHeaders.RawHeader
 import spray.http.HttpHeaders.Location
 import spray.json._
 import ch.openolitor.core.BaseJsonProtocol._
+import ch.openolitor.stammdaten.FileStoreRoutes
+import ch.openolitor.core.filestore.DefaultFileStoreComponent
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import spray.routing.Route
 import scala.util._
 import ch.openolitor.core.BaseJsonProtocol.IdResponse
 import stamina.Persister
 import stamina.json.JsonPersister
 import ch.openolitor.status.StatusRoutes
+import java.io.ByteArrayInputStream
+import ch.openolitor.core.filestore._
+import spray.routing.StandardRoute
+import akka.util.ByteString
+import ch.openolitor.stammdaten.StreamSupport
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system)
+  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system, sysConfig.mandant, ConfigFactory.load)
 }
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem)
+class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem, override val mandant: String, override val config: Config)
   extends Actor with ActorReferences
   with DefaultRouteService
   with HelloWorldRoutes
-  with StatusRoutes
   with StammdatenRoutes
+  with StatusRoutes
   with DefaultStammdatenRepositoryComponent
+  with FileStoreRoutes
+  with DefaultFileStoreComponent
   with CORSSupport
-  with BaseJsonProtocol{
+  with BaseJsonProtocol {
 
   var error: Option[Throwable] = None
 
@@ -88,7 +99,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute))
+  val initializedDB = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute ~ fileStoreRoute))
 
   val systemRoutes = pathPrefix("admin") {
     systemRoute()
@@ -138,13 +149,13 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
 }
 
 // this trait defines our service behavior independently from the service actor
-trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol {
+trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport with FileStoreComponent {
 
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
 
   def create[E <: AnyRef, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], persister:Persister[E, _]) = {
+    tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         created(request)(entity)
@@ -152,7 +163,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def created[E <: AnyRef, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister:Persister[E, _]) = {
+  def created[E <: AnyRef, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister: Persister[E, _]) = {
     //create entity
     onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
       case event: EntityInsertedEvent[_] =>
@@ -167,11 +178,11 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   def update[E <: AnyRef, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], idPersister:Persister[I, _], entityPersister: Persister[E, _]) = {
+    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 
-  def updated[E <: AnyRef, I <: BaseId](id: I, entity: E)(implicit idPersister:Persister[I, _], entityPersister: Persister[E, _]) = {
+  def updated[E <: AnyRef, I <: BaseId](id: I, entity: E)(implicit idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     //update entity
     onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
       complete(StatusCodes.Accepted, "")
@@ -195,9 +206,41 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   /**
    * @persister declare format to ensure that format exists for persising purposes
    */
-  def remove[I <: BaseId](id: I)(implicit persister:Persister[I, _]) = {
+  def remove[I <: BaseId](id: I)(implicit persister: Persister[I, _]) = {
     onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
       complete("")
+    }
+  }
+
+  def download(fileType: FileType, id: String) = {
+    onSuccess(fileStore.getFile(fileType.bucket, id)) {
+      case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found. Error: ${e}")
+      case Right(file) => {
+        val streamResponse: Stream[ByteString] = Stream.continually(file.file.read).takeWhile(_ != -1).map(ByteString(_))
+        streamThenClose(streamResponse, file.file)
+      }
+    }
+  }
+
+  def upload(fileType: FileType, name: Option[String] = None)(onUpload: (String, FileStoreFileMetadata) => StandardRoute, onError: Option[FileStoreError => StandardRoute] = None) = {
+    entity(as[MultipartFormData]) { formData =>
+      val details = formData.fields.collectFirst {
+        case BodyPart(entity, headers) =>
+          val content = new ByteArrayInputStream(entity.data.toByteArray)
+          val fileName = headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
+          (content, fileName)
+      }
+
+      val id = name.getOrElse(UUID.randomUUID.toString)
+      details.map {
+        case (content, fileName) =>
+          onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
+            case Left(e) => onError.map(_(e)).getOrElse(complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}"))
+            case Right(metadata) => onUpload(id, metadata)
+          }
+      } getOrElse {
+        complete(StatusCodes.BadRequest, "File has to be submitted using multipart formdata")
+      }
     }
   }
 }

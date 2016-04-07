@@ -19,6 +19,7 @@ object BuildSettings {
     resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
     scalacOptions ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
     mainClass in (Compile, run) := Some("ch.openolitor.core.Boot"),
+
     libraryDependencies ++= {	  
 	  Seq(
 	    "io.spray"            %%  "spray-can"     					           % sprayV,
@@ -51,22 +52,23 @@ object BuildSettings {
 	    "ch.qos.logback"  	  %  "logback-classic"    		  		       % "1.1.3",
 	    "org.mariadb.jdbc"	  %  "mariadb-java-client"                 % "1.3.2",
 	    // Libreoffice document API
-	    "org.apache.odftoolkit"	  %  "simple-odf"					             % "0.8.1-incubating",
-	    "com.jsuereth"        %% "scala-arm"                           % "1.4",
-	    // simple websocket client
-	    "org.jfarcand"        % "wcs"                                  % "1.5",
-	    "com.scalapenos"      %% "stamina-json"                        % "0.1.1"
+	    "org.apache.odftoolkit"	  %  "simple-odf"					 % "0.8.1-incubating",
+	    "com.jsuereth" %% "scala-arm" % "1.4",
+	    //simple websocket client
+	    "org.jfarcand" % "wcs" % "1.5",
+	    "com.scalapenos" %% "stamina-json" % "0.1.1",
+      //s3 access
+        "com.sclasen" %% "spray-s3" % "0.3.6"
 	  )
 	}
   )
 }
 
 object OpenOlitorBuild extends Build {
-    import BuildSettings._ 
-        
-    lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
-     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
-   ))
-   lazy val main = Project("main", file("."), settings = buildSettings ) dependsOn(macroSub)
-   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate(macroSub, main)
+  import BuildSettings._
+
+  lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
+  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub)
+  lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main)
 }

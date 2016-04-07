@@ -69,7 +69,7 @@ object Macros {
           c.abort(c.enclosingPosition, s"No eligible param found $p!")
         }
       case p if from.actualType.decl(p.name).isTerm => Select(fromTree, p.name)
-      case p => Select(tree, p.name)
+      case p                                        => Select(tree, p.name)
     }
 
     c.Expr[S](Apply(

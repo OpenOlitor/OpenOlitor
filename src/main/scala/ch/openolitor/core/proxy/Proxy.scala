@@ -37,25 +37,33 @@ import org.jfarcand.wcs.WebSocket
 import spray.can.Http
 import spray.can.websocket._
 import spray.can.websocket.WebSocketServerWorker
+import com.typesafe.scalalogging.LazyLogging
 
 /**
- * Borrowed from: 
+ * Borrowed from:
  * http://www.cakesolutions.net/teamblogs/http-proxy-with-spray
  */
-trait Proxy {
+trait Proxy extends LazyLogging {
 
   private def proxyRequest(updateRequest: RequestContext => HttpRequest)(implicit system: ActorSystem): Route =
-    ctx => IO(UHttp)(system) tell (updateRequest(ctx), ctx.responder)
+    ctx => {
+      logger.debug(s"proxyRequest:$ctx, ${ctx.responder}")
+      IO(UHttp)(system) tell (updateRequest(ctx), ctx.responder)
+    }
 
-  private def stripHostHeader(headers: List[HttpHeader] = Nil) =
-    headers filterNot (header => header is (HttpHeaders.Host.lowercaseName))
+  private def stripHeader(headers: List[HttpHeader] = Nil) =
+    headers filterNot (header => filterHostHeader(header) || filterContinueHeader(header))
+
+  private def filterHostHeader(header: HttpHeader) = header is (HttpHeaders.Host.lowercaseName)
+
+  private def filterContinueHeader(header: HttpHeader) = header.name.toLowerCase == HttpHeaders.Expect.lowercaseName
 
   private val updateUriUnmatchedPath = (ctx: RequestContext, uri: Uri) => uri.withPath(uri.path ++ ctx.unmatchedPath)
 
   def updateRequest(uri: Uri, updateUri: (RequestContext, Uri) => Uri): RequestContext => HttpRequest =
     ctx => ctx.request.copy(
       uri = updateUri(ctx, uri),
-      headers = stripHostHeader(ctx.request.headers))
+      headers = stripHeader(ctx.request.headers))
 
   def proxyToUnmatchedPath(uri: Uri)(implicit system: ActorSystem): Route = proxyRequest(updateRequest(uri, updateUriUnmatchedPath))
 }
@@ -65,7 +73,7 @@ object ProxyServiceActor {
 }
 
 /**
- * Proxy Service which redirects routes matching a mandant key in first row to either 
+ * Proxy Service which redirects routes matching a mandant key in first row to either
  * the websocket or service redirect url using their actor system
  */
 class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
@@ -73,15 +81,15 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   with ActorLogging
   with HttpService
   with CORSSupport {
-  
+
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   val actorRefFactory = context
-  
+
   val routeMap = mandanten.list.map(c => (c.config.key, c)).toMap
-  
+
   log.debug(s"Configure proxy service for mandanten${routeMap.keySet}")
-  
+
   val websocketHandler = new WebsocketHandler
 
   override def receive = {

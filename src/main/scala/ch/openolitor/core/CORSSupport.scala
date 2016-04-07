@@ -51,7 +51,6 @@ trait CORSSupport extends LazyLogging {
       }
     }).withHttpResponseHeadersMapped { headers =>
       allowOriginHeader :: headers
-
     }
   }
 }
