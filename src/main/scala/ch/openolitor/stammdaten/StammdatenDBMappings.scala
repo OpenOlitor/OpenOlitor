@@ -35,7 +35,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.stammdaten.models.PendenzStatus
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.core.repositories.Product23
+import ch.openolitor.core.scalax._
 
 //DB Model bindig
 trait StammdatenDBMappings extends DBMappings {
@@ -281,8 +281,7 @@ trait StammdatenDBMappings extends DBMappings {
     def apply(rn: ResultName[Depot])(rs: WrappedResultSet): Depot =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Depot): Seq[Any] =
-      parameters(Depot.unapply(entity).get)
+    def parameterMappings(entity: Depot): Seq[Any] = parameters(entity)    
 
     override def updateParameters(depot: Depot) = {
       super.updateParameters(depot) ++ Seq(column.name -> parameter(depot.name),

@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
+import ch.openolitor.core.scalax.Product26
 
 sealed trait Vertriebskanal {
   val name: String
@@ -64,7 +65,8 @@ case class Depot(id: DepotId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal
+  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal with Product26[DepotId,
+  String,String,Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],String,String,Boolean,Option[String],Option[String],  Option[String], Option[String], Option[Int],Int,DateTime,UserId,DateTime,UserId]
 
 case class DepotModify(
   name: String,

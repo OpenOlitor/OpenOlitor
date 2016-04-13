@@ -71,5 +71,5 @@ object OpenOlitorBuild extends Build {
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
   lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro)
-  lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main)
+  lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }

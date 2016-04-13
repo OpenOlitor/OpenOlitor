@@ -23,6 +23,7 @@
 package ch.openolitor.stammdaten
 
 import spray.routing._
+
 import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
