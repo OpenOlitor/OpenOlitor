@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS DBSchema (
   id varchar(36) NOT NULL,
   revision BIGINT NOT NULL,
   status varchar(50) NOT NULL,
-  execution_date TIMESTAMP NOT NULL,
+  erstelldat DATETIME NOT NULL,
+  ersteller VARCHAR(36) NOT NULL, 
+  modifidat DATETIME NOT NULL, 
+  modifikator VARCHAR(36) NOT NULL,
   PRIMARY KEY (id)
 );
