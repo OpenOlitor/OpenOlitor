@@ -36,4 +36,9 @@ object EvolutionStatus {
 }
 
 case class DBSchemaId(id: UUID = UUID.randomUUID) extends BaseId
-case class DBSchema(id: DBSchemaId, revision:Int, status: EvolutionStatus, executionDate: DateTime = DateTime.now) extends BaseEntity[DBSchemaId]
+case class DBSchema(id: DBSchemaId, revision:Int, status: EvolutionStatus,
+    //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[DBSchemaId]

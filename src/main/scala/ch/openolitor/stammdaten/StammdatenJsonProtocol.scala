@@ -31,12 +31,13 @@ import org.joda.time.format._
 import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.JSONSerializable
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten
  */
 trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging
-  with AutoProductFormats[BaseEntity[_]] {
+  with AutoProductFormats[JSONSerializable] {
 
   //enum formats
   implicit val wochentagFormat = enumFormat(x => Wochentag.apply(x).getOrElse(Montag))
@@ -313,7 +314,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging
   implicit val lieferungAbotypCreateFormat = jsonFormat3(LieferungAbotypCreate)
   implicit val lieferungModifyFormat = jsonFormat1(LieferungModify)
 
-  implicit val produktekategorieFormat = jsonFormat2(Produktekategorie)
+  //implicit val produktekategorieFormat = jsonFormat2(Produktekategorie)
   implicit val pModifyFormat = jsonFormat1(ProduktekategorieModify)
 
   //implicit val produzentFormat = jsonFormat23(Produzent)

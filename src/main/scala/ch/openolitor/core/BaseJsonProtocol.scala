@@ -30,6 +30,8 @@ import ch.openolitor.core.models._
 import java.util.UUID
 import java.text.SimpleDateFormat
 
+trait JSONSerializable extends Product
+
 /**
  * Basis JSON Formatter for spray-json serialisierung/deserialisierung
  */

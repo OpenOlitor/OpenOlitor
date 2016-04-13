@@ -26,6 +26,7 @@ import java.util.UUID
 import ch.openolitor.core.models._
 import java.util.Date
 import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 case class KundeId(id: UUID) extends BaseId
 
@@ -78,7 +79,7 @@ case class KundeDetail(id: KundeId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId)
+  modifikator: UserId) extends JSONSerializable
 
 case class KundeModify(
   bezeichnung: Option[String],

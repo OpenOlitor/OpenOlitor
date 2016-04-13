@@ -55,9 +55,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify)                       => updateAbotyp(meta, id, entity)
-    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: DepotlieferungAbotypModify)   => updateVertriebsart(meta, id, entity)
-    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: HeimlieferungAbotypModify)    => updateVertriebsart(meta, id, entity)
-    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: PostlieferungAbotypModify)    => updateVertriebsart(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: DepotlieferungAbotypModify)   => updateDepotlieferungVertriebsart(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: HeimlieferungAbotypModify)    => updateHeimlieferungVertriebsart(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: VertriebsartId, entity: PostlieferungAbotypModify)    => updatePostlieferungVertriebsart(meta, id, entity)
     case EntityUpdatedEvent(meta, id: KundeId, entity: KundeModify)                         => updateKunde(meta, id, entity)
     case EntityUpdatedEvent(meta, id: PendenzId, entity: PendenzModify)                     => updatePendenz(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AboId, entity: HeimlieferungAboModify)                => updateHeimlieferungAbo(meta, id, entity)
@@ -86,7 +86,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def updateVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def updateDepotlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(depotlieferungMapping, id) map { depotlieferung =>
         //map all updatable fields
@@ -96,7 +96,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def updateVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: PostlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def updatePostlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: PostlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(postlieferungMapping, id) map { lieferung =>
         //map all updatable fields
@@ -106,7 +106,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def updateVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: HeimlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def updateHeimlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: HeimlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(heimlieferungMapping, id) map { lieferung =>
         //map all updatable fields
@@ -313,7 +313,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             val produktProduktekategorieId = ProduktProduktekategorieId(UUID.randomUUID)
             readRepository.getProduktekategorieByBezeichnung(updateKategorieBezeichnung) map {
               case Some(kat) => 
-                val newProduktProduktekategorie = ProduktProduktekategorie(produktProduktekategorieId, id, kat.id)
+                val newProduktProduktekategorie = ProduktProduktekategorie(produktProduktekategorieId, id, kat.id, meta.timestamp, userId, meta.timestamp, userId)
                 logger.debug(s"Create new ProduktProduktekategorie :produktProduktekategorieId, data -> newProduktProduktekategorie")
                 writeRepository.insertEntity[ProduktProduktekategorie, ProduktProduktekategorieId](newProduktProduktekategorie)
               case None => logger.debug(s"Produktekategorie was not found with bezeichnung :$updateKategorieBezeichnung")

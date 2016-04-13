@@ -66,11 +66,11 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     case EntityInsertedEvent(meta, id, lieferung: LieferungAbotypCreate) =>
       createLieferung(meta, id, lieferung)
     case EntityInsertedEvent(meta, id, lieferung: HeimlieferungAbotypModify) =>
-      createVertriebsart(meta, id, lieferung)
+      createHeimlieferungVertriebsart(meta, id, lieferung)
     case EntityInsertedEvent(meta, id, lieferung: PostlieferungAbotypModify) =>
-      createVertriebsart(meta, id, lieferung)
+      createPostlieferungVertriebsart(meta, id, lieferung)
     case EntityInsertedEvent(meta, id, depotlieferung: DepotlieferungAbotypModify) =>
-      createVertriebsart(meta, id, depotlieferung)
+      createDepotlieferungVertriebsart(meta, id, depotlieferung)
     case EntityInsertedEvent(meta, id, kundentyp: CustomKundentypCreate) =>
       createKundentyp(meta, id, kundentyp)
     case EntityInsertedEvent(meta, id, produkt: ProduktModify) =>
@@ -107,7 +107,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: DepotlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def createDepotlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: DepotlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
     val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> vertriebsartId,
       "erstelldat" -> meta.timestamp,
@@ -120,7 +120,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: HeimlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def createHeimlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: HeimlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
     val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> vertriebsartId,
       "erstelldat" -> meta.timestamp,
@@ -133,7 +133,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: PostlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def createPostlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: PostlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
     val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> vertriebsartId,
       "erstelldat" -> meta.timestamp,
