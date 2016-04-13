@@ -29,6 +29,8 @@ import org.specs2.mock.Mockito
 import ch.openolitor.core.db.TestDB
 import scalikejdbc.specs2.mutable.AutoRollback
 import ch.openolitor.core.models.DBSchema
+import ch.openolitor.core.models.UserId
+import java.util.UUID
 
 class EvolutionSpec extends Specification with Mockito with TestDB {    
    
@@ -50,6 +52,7 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
        val scripts = Seq(script1, script2)
        val evolution = new Evolution(Seq())
            
+       implicit val user = UserId(UUID.randomUUID)
        val result = evolution.evolve(scripts, 0)
        
        result === Success(2)
@@ -74,6 +77,7 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
        val scripts = Seq(script1, script2, script3)
        val evolution = new Evolution(Seq())
            
+       implicit val user = UserId(UUID.randomUUID)
        val result = evolution.evolve(scripts, 0)
        
        result === Failure(exception)
