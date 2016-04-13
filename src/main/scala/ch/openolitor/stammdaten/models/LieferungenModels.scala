@@ -45,7 +45,12 @@ case class Lieferung(id: LieferungId,
   vertriebsartId: VertriebsartId,
   datum: DateTime,
   anzahlAbwesenheiten: Int,
-  status: LieferungStatus) extends BaseEntity[LieferungId]
+  status: LieferungStatus,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[LieferungId]
 
 case class LieferungModify(datum: DateTime)
 

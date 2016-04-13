@@ -116,7 +116,12 @@ case class Abotyp(id: AbotypId,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange with Product
+  waehrung: Waehrung = CHF,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[AbotypId] with AktivRange with Product
 
 case class AbotypSummary(id: AbotypId, name: String) extends Product
 

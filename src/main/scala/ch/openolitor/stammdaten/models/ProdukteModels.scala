@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten.models
 import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
 import java.util.UUID
+import org.joda.time.DateTime
 
 sealed trait Liefersaison extends Product
 sealed trait Monat extends Liefersaison
@@ -69,10 +70,10 @@ case class BaseProduktekategorieId(id: String)
 case class ProduktekategorieId(id: UUID) extends BaseId
 
 case class Produktekategorie(id: ProduktekategorieId,
-  val beschreibung: String) extends BaseEntity[ProduktekategorieId]  {
+  val beschreibung: String) extends BaseEntity[ProduktekategorieId] {
 }
 
-case class ProduktekategorieModify(beschreibung: String) extends Product 
+case class ProduktekategorieModify(beschreibung: String) extends Product
 
 case class ProduktId(id: UUID) extends BaseId
 
@@ -85,8 +86,12 @@ case class Produkt(
   standardmenge: Option[BigDecimal],
   einheit: Liefereinheit,
   preis: BigDecimal,
-  produzenten: Seq[String]
-) extends BaseEntity[ProduktId]
+  produzenten: Seq[String],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[ProduktId]
 
 case class ProduktModify(
   name: String,
@@ -96,22 +101,24 @@ case class ProduktModify(
   standardmenge: Option[BigDecimal],
   einheit: Liefereinheit,
   preis: BigDecimal,
-  produzenten: Seq[String]
-) extends Product 
+  produzenten: Seq[String]) extends Product
 
 case class ProduktProduzentId(id: UUID) extends BaseId
 
 case class ProduktProduzent(
-  id: ProduktProduzentId, 
-  produktId: ProduktId, 
-  produzentId: ProduzentId
-) extends BaseEntity[ProduktProduzentId]
+  id: ProduktProduzentId,
+  produktId: ProduktId,
+  produzentId: ProduzentId,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[ProduktProduzentId]
 
 case class ProduktProduktekategorieId(id: UUID) extends BaseId
 
 case class ProduktProduktekategorie(
-  id: ProduktProduktekategorieId, 
-  produktId: ProduktId, 
-  produktekategorieId: ProduktekategorieId
-) extends BaseEntity[ProduktProduktekategorieId]
+  id: ProduktProduktekategorieId,
+  produktId: ProduktId,
+  produktekategorieId: ProduktekategorieId) extends BaseEntity[ProduktProduktekategorieId]
 

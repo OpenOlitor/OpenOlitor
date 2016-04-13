@@ -24,6 +24,7 @@ package ch.openolitor.stammdaten.models
 
 import java.util.UUID
 import ch.openolitor.core.models._
+import org.joda.time.DateTime
 
 sealed trait Vertriebskanal {
   val name: String
@@ -58,7 +59,12 @@ case class Depot(id: DepotId,
   beschreibung: Option[String],
   anzahlAbonnentenMax: Option[Int],
   //Zusatzinformationen
-  anzahlAbonnenten: Int) extends BaseEntity[DepotId] with Vertriebskanal
+  anzahlAbonnenten: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal
 
 case class DepotModify(
   name: String,
@@ -90,10 +96,15 @@ case class DepotSummary(
 case class TourId(id: UUID) extends BaseId
 
 case class Tour(
-    id: TourId, 
-    name: String, 
-    beschreibung: Option[String]) extends BaseEntity[TourId] with Vertriebskanal
-    
+  id: TourId,
+  name: String,
+  beschreibung: Option[String],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[TourId] with Vertriebskanal
+
 case class TourModify(
-    name: String, 
-    beschreibung: Option[String]) extends Product
+  name: String,
+  beschreibung: Option[String]) extends Product

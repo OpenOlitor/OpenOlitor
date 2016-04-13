@@ -46,7 +46,12 @@ case class Kunde(id: KundeId,
   //Zusatzinformationen
   anzahlAbos: Int,
   anzahlPendenzen: Int,
-  anzahlPersonen: Int) extends BaseEntity[KundeId]
+  anzahlPersonen: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[KundeId]
 
 case class KundeDetail(id: KundeId,
   bezeichnung: String,
@@ -68,7 +73,12 @@ case class KundeDetail(id: KundeId,
   anzahlPersonen: Int,
   abos: Seq[Abo],
   pendenzen: Seq[Pendenz],
-  ansprechpersonen: Seq[Person])
+  ansprechpersonen: Seq[Person],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId)
 
 case class KundeModify(
   bezeichnung: Option[String],
@@ -87,9 +97,20 @@ case class KundeModify(
   pendenzen: Seq[PendenzModify],
   ansprechpersonen: Seq[PersonModify]) extends Product
 
+sealed trait Anrede extends Product
+case object Herr extends Anrede
+case object Frau extends Anrede
+
+object Anrede {
+  def apply(value: String): Anrede = {
+    Vector(Herr, Frau).find(_.toString == value).getOrElse(Herr)
+  }
+}
+
 case class PersonId(id: UUID) extends BaseId
 case class Person(id: PersonId,
   kundeId: KundeId,
+  anrede: Option[Anrede],
   name: String,
   vorname: String,
   email: String,
@@ -97,12 +118,18 @@ case class Person(id: PersonId,
   telefonMobil: Option[String],
   telefonFestnetz: Option[String],
   bemerkungen: Option[String],
-  sort: Int) extends BaseEntity[PersonId]
+  sort: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[PersonId]
 
 case class KundeSummary(id: KundeId, kunde: String) extends Product
 
 case class PersonModify(
   id: Option[PersonId],
+  anrede: Option[Anrede],
   name: String,
   vorname: String,
   email: String,
@@ -127,13 +154,18 @@ object PendenzStatus {
 case class PendenzId(id: UUID) extends BaseId
 
 case class Pendenz(id: PendenzId,
-    kundeId: KundeId,
-    kundeBezeichnung: String,
-    datum: DateTime,
-    bemerkung: Option[String],
-    status: PendenzStatus) extends BaseEntity[PendenzId]
+  kundeId: KundeId,
+  kundeBezeichnung: String,
+  datum: DateTime,
+  bemerkung: Option[String],
+  status: PendenzStatus,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[PendenzId]
 
 case class PendenzModify(id: Option[PendenzId],
-    datum: DateTime,
-    bemerkung: Option[String],
-    status: PendenzStatus) extends Product
+  datum: DateTime,
+  bemerkung: Option[String],
+  status: PendenzStatus) extends Product

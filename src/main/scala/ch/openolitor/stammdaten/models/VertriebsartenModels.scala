@@ -24,17 +24,48 @@ package ch.openolitor.stammdaten.models
 
 import java.util.UUID
 import ch.openolitor.core.models._
+import org.joda.time.DateTime
 
 case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
-case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt) extends Vertriebsart
-case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt) extends Vertriebsart
-case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt) extends Vertriebsart
+case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends Vertriebsart
+case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends Vertriebsart
+case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends Vertriebsart
 
 sealed trait VertriebsartDetail extends Product
-case class DepotlieferungDetail(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, depot: DepotSummary, liefertag: Lieferzeitpunkt) extends VertriebsartDetail
-case class HeimlieferungDetail(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, tour: Tour, liefertag: Lieferzeitpunkt) extends VertriebsartDetail
-case class PostlieferungDetail(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt) extends VertriebsartDetail
+case class DepotlieferungDetail(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, depot: DepotSummary, liefertag: Lieferzeitpunkt,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends VertriebsartDetail
+case class HeimlieferungDetail(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, tour: Tour, liefertag: Lieferzeitpunkt,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends VertriebsartDetail
+case class PostlieferungDetail(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends VertriebsartDetail
 
 sealed trait VertriebsartModify extends Product
 case class DepotlieferungModify(depotId: DepotId, liefertag: Lieferzeitpunkt) extends VertriebsartModify

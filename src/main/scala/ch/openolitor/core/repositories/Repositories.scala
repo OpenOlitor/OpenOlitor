@@ -33,7 +33,8 @@ import scala.util._
 
 case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
 
-trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging {
+trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging with DBMappings {
+
   //override def columnNames 
   def apply(p: SyntaxProvider[E])(rs: WrappedResultSet): E = apply(p.resultName)(rs)
 
@@ -53,7 +54,10 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
   /**
    * Declare update parameters for this entity used on update. Is by default an empty set
    */
-  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq()
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(column.erstelldat -> parameter(entity.erstelldat),
+    column.ersteller -> parameter(entity.ersteller),
+    column.modifidat -> parameter(entity.modifidat),
+    column.modifikator -> parameter(entity.modifikator))
 }
 
 trait ParameterBinderMapping[A] {
@@ -90,6 +94,9 @@ trait DBMappings {
   implicit val optionDateTimeSqlBinder = optionSqlBinder[DateTime]
   implicit val optionIntSqlBinder = optionSqlBinder[Int]
   implicit val optionBigDecimalSqlBinder = optionSqlBinder[BigDecimal]
+
+  implicit val userIdBinder: TypeBinder[UserId] = baseIdTypeBinder(UserId.apply _)
+  implicit val userIdSqlBinder = baseIdSqlBinder[UserId]
 
   def parameters[A](params: Tuple1[A])(
     implicit binder0: SqlBinder[A]) = {
@@ -663,6 +670,55 @@ trait DBMappings {
       parameter(params._22)).productIterator.toSeq
   }
 
+  def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W](params: Product23[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W])(
+    implicit binder0: SqlBinder[A],
+    binder1: SqlBinder[B],
+    binder2: SqlBinder[C],
+    binder3: SqlBinder[D],
+    binder4: SqlBinder[E],
+    binder5: SqlBinder[F],
+    binder6: SqlBinder[G],
+    binder7: SqlBinder[H],
+    binder8: SqlBinder[I],
+    binder9: SqlBinder[J],
+    binder10: SqlBinder[K],
+    binder11: SqlBinder[L],
+    binder12: SqlBinder[M],
+    binder13: SqlBinder[N],
+    binder14: SqlBinder[O],
+    binder15: SqlBinder[P],
+    binder16: SqlBinder[Q],
+    binder17: SqlBinder[R],
+    binder18: SqlBinder[S],
+    binder19: SqlBinder[T],
+    binder20: SqlBinder[U],
+    binder21: SqlBinder[V],
+    binder22: SqlBinder[W]) = {
+    Tuple23(parameter(params._1),
+      parameter(params._2),
+      parameter(params._3),
+      parameter(params._4),
+      parameter(params._5),
+      parameter(params._6),
+      parameter(params._7),
+      parameter(params._8),
+      parameter(params._9),
+      parameter(params._10),
+      parameter(params._11),
+      parameter(params._12),
+      parameter(params._13),
+      parameter(params._14),
+      parameter(params._15),
+      parameter(params._16),
+      parameter(params._17),
+      parameter(params._18),
+      parameter(params._19),
+      parameter(params._20),
+      parameter(params._21),
+      parameter(params._22),
+      parameter(params._23)).productIterator.toSeq
+  }
+
   def parameter[V](value: V)(implicit binder: SqlBinder[V] = defaultSqlConversion): Any = binder.apply(value)
 }
 
@@ -694,9 +750,9 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     getById(syntaxSupport, entity.id) match {
       case Some(x) =>
         logger.debug(s"Ignore insert event, entity already exists:${entity.id}")
-      case None => 
+      case None =>
         withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
-        
+
         //publish event to stream
         publish(EntityCreated(user, entity))
     }
