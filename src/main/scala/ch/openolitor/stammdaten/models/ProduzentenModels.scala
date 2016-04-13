@@ -23,11 +23,11 @@
 package ch.openolitor.stammdaten.models
 
 import java.util.UUID
-
 import ch.openolitor.core.models._
 import java.util.Date
 import org.joda.time.DateTime
 import ch.openolitor.core.scalax.Product23
+import ch.openolitor.core.scalax.Tuple23
 
 case class BaseProduzentId(id: String)
 
@@ -56,8 +56,37 @@ case class Produzent(id: ProduzentId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[ProduzentId] with Product23[ProduzentId, String, Option[String], String, Option[String], Option[String], Option[String], String, String, Option[String], String, Option[String], Option[String], Option[String], //maybe use dedicated type
-  Option[String], Boolean, Option[BigDecimal], Option[String], Boolean, DateTime, UserId, DateTime, UserId]
+  modifikator: UserId) extends BaseEntity[ProduzentId]
+
+object Produzent {
+  def unapply(p: Produzent) = {
+    Some(Tuple23(
+  p.id: ProduzentId,
+  p.name: String,
+  p.vorname: Option[String],
+  p.kurzzeichen: String,
+  p.strasse: Option[String],
+  p.hausNummer: Option[String],
+  p.adressZusatz: Option[String],
+  p.plz: String,
+  p.ort: String,
+  p.bemerkungen: Option[String],
+  p.email: String,
+  p.telefonMobil: Option[String],
+  p.telefonFestnetz: Option[String],
+  p.iban: Option[String], //maybe use dedicated type
+  p.bank: Option[String],
+  p.mwst: Boolean,
+  p.mwstSatz: Option[BigDecimal],
+  p.mwstNr: Option[String],
+  p.aktiv: Boolean,
+  //modification flags
+  p.erstelldat: DateTime,
+  p.ersteller: UserId,
+  p.modifidat: DateTime,
+  p.modifikator: UserId))
+  }
+}
 
 case class ProduzentModify(
   name: String,

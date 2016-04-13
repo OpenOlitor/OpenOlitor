@@ -29,3 +29,11 @@ case class Tuple26[+T1, +T2, +T3, +T4, +T5, +T6, +T7, +T8, +T9, +T10, +T11, +T12
   override def canEqual(other: Any) =
     other.isInstanceOf[Tuple26[_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]]
 }
+
+//object Tuple26 {
+//  def apply[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26]
+//  (_1: Any, _2: Any, _3: Any, _4: Any, _5: Any, _6: Any, _7: Any, _8: Any, _9: Any, _10: Any, _11: Any, _12: Any, _13: Any, _14: Any, 
+//      _15: Any, _16: Any, _17: Any, _18: Any, _19: Any, _20: Any, _21: Any, _22: Any, _23: Any, _24: Any, _25: Any, _26: Any):Tuple26[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26] = {
+//    Tuple26(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _25)
+//  }
+//}

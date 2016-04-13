@@ -26,6 +26,7 @@ import java.util.UUID
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.scalax.Product26
+import ch.openolitor.core.scalax.Tuple26
 
 sealed trait Vertriebskanal {
   val name: String
@@ -65,8 +66,43 @@ case class Depot(id: DepotId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal with Product26[DepotId,
-  String,String,Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],Option[String],String,String,Boolean,Option[String],Option[String],  Option[String], Option[String], Option[Int],Int,DateTime,UserId,DateTime,UserId]
+  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal 
+
+object Depot {
+  def unapply(d: Depot) = {
+    Some(Tuple26(
+          d.id: DepotId,
+          d.name: String,
+          d.kurzzeichen: String,
+          d.apName: Option[String],
+          d.apVorname: Option[String],
+          d.apTelefon: Option[String],
+          d.apEmail: Option[String],
+          d.vName: Option[String],
+          d.vVorname: Option[String],
+          d.vTelefon: Option[String],
+          d.vEmail: Option[String],
+          d.strasse: Option[String],
+          d.hausNummer: Option[String],
+          d.plz: String,
+          d.ort: String,
+          d.aktiv: Boolean,
+          d.oeffnungszeiten: Option[String],
+          //farbCode: Option[String],
+          d.iban: Option[String], //maybe use dedicated type
+          d.bank: Option[String],
+          d.beschreibung: Option[String],
+          d.anzahlAbonnentenMax: Option[Int],
+          //Zusatzinformationen
+          d.anzahlAbonnenten: Int,
+          //modification flags
+          d.erstelldat: DateTime,
+          d.ersteller: UserId,
+          d.modifidat: DateTime,
+          d.modifikator: UserId
+        ))
+  }
+}
 
 case class DepotModify(
   name: String,
