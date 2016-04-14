@@ -26,6 +26,7 @@ import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
 import java.util.UUID
 import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 case class AboId(id: UUID) extends BaseId
 
@@ -36,7 +37,7 @@ sealed trait Abo extends BaseEntity[AboId] {
   val saldo: Int
 }
 
-sealed trait AboModify extends Product {
+sealed trait AboModify extends JSONSerializable {
   val kundeId: KundeId
   val kunde: String
   val abotypId: AbotypId

@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten.models
 import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import java.util.UUID
+import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus extends Product
 
@@ -52,6 +53,6 @@ case class Lieferung(id: LieferungId,
   modifidat: DateTime,
   modifikator: UserId) extends BaseEntity[LieferungId]
 
-case class LieferungModify(datum: DateTime)
+case class LieferungModify(datum: DateTime) extends JSONSerializable
 
-case class LieferungAbotypCreate(datum: DateTime, abotypId: AbotypId, vertriebsartId: VertriebsartId)
+case class LieferungAbotypCreate(datum: DateTime, abotypId: AbotypId, vertriebsartId: VertriebsartId) extends JSONSerializable

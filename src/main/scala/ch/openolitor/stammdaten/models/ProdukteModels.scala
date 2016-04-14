@@ -26,6 +26,7 @@ import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
 import java.util.UUID
 import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 sealed trait Liefersaison extends Product
 sealed trait Monat extends Liefersaison
@@ -78,7 +79,7 @@ case class Produktekategorie(id: ProduktekategorieId,
   modifikator: UserId) extends BaseEntity[ProduktekategorieId] {
 }
 
-case class ProduktekategorieModify(beschreibung: String) extends Product
+case class ProduktekategorieModify(beschreibung: String) extends JSONSerializable
 
 case class ProduktId(id: UUID) extends BaseId
 
@@ -106,7 +107,7 @@ case class ProduktModify(
   standardmenge: Option[BigDecimal],
   einheit: Liefereinheit,
   preis: BigDecimal,
-  produzenten: Seq[String]) extends Product
+  produzenten: Seq[String]) extends JSONSerializable
 
 case class ProduktProduzentId(id: UUID) extends BaseId
 

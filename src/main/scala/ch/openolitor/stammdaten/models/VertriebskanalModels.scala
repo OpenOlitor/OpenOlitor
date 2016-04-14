@@ -27,12 +27,13 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.scalax.Product26
 import ch.openolitor.core.scalax.Tuple26
+import ch.openolitor.core.JSONSerializable
 
 sealed trait Vertriebskanal {
   val name: String
 }
 
-sealed trait VertriebskanalDetail extends Vertriebskanal {
+sealed trait VertriebskanalDetail extends Vertriebskanal with JSONSerializable {
   val beschreibung: Option[String]
 }
 
@@ -66,41 +67,40 @@ case class Depot(id: DepotId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal 
+  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal
 
 object Depot {
   def unapply(d: Depot) = {
     Some(Tuple26(
-          d.id: DepotId,
-          d.name: String,
-          d.kurzzeichen: String,
-          d.apName: Option[String],
-          d.apVorname: Option[String],
-          d.apTelefon: Option[String],
-          d.apEmail: Option[String],
-          d.vName: Option[String],
-          d.vVorname: Option[String],
-          d.vTelefon: Option[String],
-          d.vEmail: Option[String],
-          d.strasse: Option[String],
-          d.hausNummer: Option[String],
-          d.plz: String,
-          d.ort: String,
-          d.aktiv: Boolean,
-          d.oeffnungszeiten: Option[String],
-          //farbCode: Option[String],
-          d.iban: Option[String], //maybe use dedicated type
-          d.bank: Option[String],
-          d.beschreibung: Option[String],
-          d.anzahlAbonnentenMax: Option[Int],
-          //Zusatzinformationen
-          d.anzahlAbonnenten: Int,
-          //modification flags
-          d.erstelldat: DateTime,
-          d.ersteller: UserId,
-          d.modifidat: DateTime,
-          d.modifikator: UserId
-        ))
+      d.id: DepotId,
+      d.name: String,
+      d.kurzzeichen: String,
+      d.apName: Option[String],
+      d.apVorname: Option[String],
+      d.apTelefon: Option[String],
+      d.apEmail: Option[String],
+      d.vName: Option[String],
+      d.vVorname: Option[String],
+      d.vTelefon: Option[String],
+      d.vEmail: Option[String],
+      d.strasse: Option[String],
+      d.hausNummer: Option[String],
+      d.plz: String,
+      d.ort: String,
+      d.aktiv: Boolean,
+      d.oeffnungszeiten: Option[String],
+      //farbCode: Option[String],
+      d.iban: Option[String], //maybe use dedicated type
+      d.bank: Option[String],
+      d.beschreibung: Option[String],
+      d.anzahlAbonnentenMax: Option[Int],
+      //Zusatzinformationen
+      d.anzahlAbonnenten: Int,
+      //modification flags
+      d.erstelldat: DateTime,
+      d.ersteller: UserId,
+      d.modifidat: DateTime,
+      d.modifikator: UserId))
   }
 }
 
@@ -125,11 +125,11 @@ case class DepotModify(
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   beschreibung: Option[String],
-  anzahlAbonnentenMax: Option[Int]) extends Product
+  anzahlAbonnentenMax: Option[Int]) extends JSONSerializable
 
 case class DepotSummary(
   id: DepotId,
-  name: String) extends Product
+  name: String) extends JSONSerializable
 
 case class TourId(id: UUID) extends BaseId
 
@@ -145,4 +145,4 @@ case class Tour(
 
 case class TourModify(
   name: String,
-  beschreibung: Option[String]) extends Product
+  beschreibung: Option[String]) extends JSONSerializable

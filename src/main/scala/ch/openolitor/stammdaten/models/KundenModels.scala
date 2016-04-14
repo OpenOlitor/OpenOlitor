@@ -96,7 +96,7 @@ case class KundeModify(
   ortLieferung: Option[String],
   typen: Set[KundentypId],
   pendenzen: Seq[PendenzModify],
-  ansprechpersonen: Seq[PersonModify]) extends Product
+  ansprechpersonen: Seq[PersonModify]) extends JSONSerializable
 
 sealed trait Anrede extends Product
 case object Herr extends Anrede
@@ -137,7 +137,7 @@ case class PersonModify(
   emailAlternative: Option[String],
   telefonMobil: Option[String],
   telefonFestnetz: Option[String],
-  bemerkungen: Option[String]) extends Product {
+  bemerkungen: Option[String]) extends JSONSerializable {
   def fullName = vorname + ' ' + name
 }
 
@@ -169,4 +169,4 @@ case class Pendenz(id: PendenzId,
 case class PendenzModify(id: Option[PendenzId],
   datum: DateTime,
   bemerkung: Option[String],
-  status: PendenzStatus) extends Product
+  status: PendenzStatus) extends JSONSerializable

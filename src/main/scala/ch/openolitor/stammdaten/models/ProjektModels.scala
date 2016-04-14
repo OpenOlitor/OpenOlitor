@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 case class ProjektId(id: UUID) extends BaseId
 
@@ -53,7 +54,7 @@ case class ProjektModify(
   ort: Option[String],
   preiseSichtbar: Boolean = true,
   preiseEditierbar: Boolean = false,
-  waehrung: Waehrung = CHF) extends Product
+  waehrung: Waehrung = CHF) extends JSONSerializable
 
 case class KundentypId(id: String)
 
@@ -77,8 +78,8 @@ case class CustomKundentyp(id: CustomKundentypId,
   override def system = false
 }
 
-case class CustomKundentypModify(beschreibung: Option[String])
-case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String])
+case class CustomKundentypModify(beschreibung: Option[String]) extends JSONSerializable
+case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String]) extends JSONSerializable
 
 sealed trait SystemKundentyp extends Kundentyp with Product {
   override def system = true

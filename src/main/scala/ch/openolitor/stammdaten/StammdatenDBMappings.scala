@@ -281,7 +281,7 @@ trait StammdatenDBMappings extends DBMappings {
     def apply(rn: ResultName[Depot])(rs: WrappedResultSet): Depot =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)    
+    def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)
 
     override def updateParameters(depot: Depot) = {
       super.updateParameters(depot) ++ Seq(column.name -> parameter(depot.name),
