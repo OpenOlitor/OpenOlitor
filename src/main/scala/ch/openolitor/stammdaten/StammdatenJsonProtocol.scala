@@ -31,11 +31,12 @@ import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.JSONSerializable
+import zangelo.spray.json.AutoProductFormats
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten
  */
-trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
+trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] {
 
   //enum formats
   implicit val wochentagFormat = enumFormat(x => Wochentag.apply(x).getOrElse(Montag))
@@ -227,6 +228,13 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
       }
   }
 
+  implicit val depotaboFormat = jsonFormat13(DepotlieferungAbo)
+  implicit val depotaboModifyFormat = jsonFormat7(DepotlieferungAboModify)
+  implicit val heimlieferungAboFormat = jsonFormat13(HeimlieferungAbo)
+  implicit val heimlieferungAboModifyFormat = jsonFormat7(HeimlieferungAboModify)
+  implicit val postlieferungAboFormat = jsonFormat11(PostlieferungAbo)
+  implicit val postlieferungAboModifyFormat = jsonFormat5(PostlieferungAboModify)
+
   implicit val aboFormat = new RootJsonFormat[Abo] {
     def write(obj: Abo): JsValue =
       obj match {
@@ -271,4 +279,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging {
       case pt => sys.error(s"Unknown anrede:$pt")
     }
   }
+  
+ implicit val projektFormat = jsonFormat14(Projekt)
+ implicit val projektModifyFormat = jsonFormat9(ProjektModify)
 }
