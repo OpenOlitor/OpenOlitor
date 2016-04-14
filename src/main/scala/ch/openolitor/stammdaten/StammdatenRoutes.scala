@@ -130,6 +130,21 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("kunden" / kundeIdPath / "pendenzen" / pendenzIdPath) { (kundeId, pendenzId) =>
         get(detail(readRepository.getPendenzDetail(pendenzId))) ~
           (put | post)(update[PendenzModify, PendenzId](pendenzId))
+      } ~
+      path("kunden" / kundeIdPath / "personen") { kundeId =>
+        get(list(readRepository.getPersonen(kundeId))) ~
+          post {
+            requestInstance { request =>
+              entity(as[PersonModify]) { entity =>
+                val person = copyTo[PersonModify, PersonCreate](entity, "kundeId" -> kundeId)
+                created(request)(person)
+              }
+            }
+          }
+      } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath) { (kundeId, personId) =>
+        delete(remove(personId)) ~
+          (put | post)(update[PersonModify, PersonId](personId))
       }
 
   lazy val kundentypenRoute =
