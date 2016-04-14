@@ -103,7 +103,7 @@ class DataImportParser extends Actor with ActorLogging {
             anrede = row.value[Option[String]](indexAnrede).map(Anrede.apply),
             name = row.value[String](indexName),
             vorname = row.value[String](indexVorname),
-            email = row.value[String](indexEmail),
+            email = row.value[Option[String]](indexEmail),
             emailAlternative = row.value[Option[String]](indexEmailAlternative),
             telefonMobil = row.value[Option[String]](indexTelefonMobil),
             telefonFestnetz = row.value[Option[String]](indexTelefonFestnetz),

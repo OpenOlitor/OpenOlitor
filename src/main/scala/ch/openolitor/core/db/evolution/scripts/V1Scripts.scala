@@ -199,7 +199,7 @@ object V1Scripts {
       	anrede varchar(20) null, 
       	name varchar(50) not null, 
       	vorname varchar(50) not null, 
-      	email varchar(100) not null, 
+      	email varchar(100), 
       	email_alternative varchar(100), 
       	telefon_mobil varchar(50), 
       	telefon_festnetz varchar(50), 
