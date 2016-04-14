@@ -129,19 +129,7 @@ case class Person(id: PersonId,
 case class KundeSummary(id: KundeId, kunde: String) extends Product
 
 case class PersonModify(
-  anrede: Option[Anrede],
-  name: String,
-  vorname: String,
-  email: Option[String],
-  emailAlternative: Option[String],
-  telefonMobil: Option[String],
-  telefonFestnetz: Option[String],
-  bemerkungen: Option[String]) extends JSONSerializable {
-  def fullName = vorname + ' ' + name
-}
-
-case class PersonCreate(
-  kundeId: KundeId,
+  id: Option[PersonId],
   anrede: Option[Anrede],
   name: String,
   vorname: String,

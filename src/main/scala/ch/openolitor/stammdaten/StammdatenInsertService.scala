@@ -59,8 +59,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createAbotyp(meta, id, abotyp)
     case EntityInsertedEvent(meta, id, kunde: KundeModify) =>
       createKunde(meta, id, kunde)
-    case EntityInsertedEvent(meta, id, person: PersonCreate) =>
-      createPerson(meta, id, person)
     case EntityInsertedEvent(meta, id, depot: DepotModify) =>
       createDepot(meta, id, depot)
     case EntityInsertedEvent(meta, id, abo: AboModify) =>
@@ -93,7 +91,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createAbotyp(meta: EventMetadata, id: UUID, abotyp: AbotypModify)(implicit userId: UserId = meta.originator) = {
     val abotypId = AbotypId(id)
-    val typ = copyTo[AbotypModify, Abotyp](abotyp,
+    val typ = copyTo[AbotypModify, Abotyp](abotyp, 
       "id" -> abotypId,
       "anzahlAbonnenten" -> ZERO,
       "letzteLieferung" -> None,
@@ -176,10 +174,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         "anzahlPersonen" -> create.ansprechpersonen.length,
         "anzahlAbos" -> ZERO,
         "anzahlPendenzen" -> ZERO,
-        "erstelldat" -> meta.timestamp,
-        "ersteller" -> meta.originator,
-        "modifidat" -> meta.timestamp,
-        "modifikator" -> meta.originator)
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
       DB autoCommit { implicit session =>
         //create abotyp
         writeRepository.insertEntity[Kunde, KundeId](kunde)
@@ -188,21 +186,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       //create personen as well
       create.ansprechpersonen.zipWithIndex.map {
         case (person, index) =>
-          createPersonInt(meta, UUID.randomUUID, person, kundeId, index)
+          createPerson(meta, UUID.randomUUID, person, kundeId, index)
       }
     }
   }
 
-  def createPerson(meta: EventMetadata, id: UUID, create: PersonCreate)(implicit userId: UserId = meta.originator): Unit = {
-    DB autoCommit { implicit session =>
-      writeRepository.getById(kundeMapping, create.kundeId) map { kunde =>
-        val newPerson = copyTo[PersonCreate, PersonModify](create)
-        createPersonInt(meta, id, newPerson, create.kundeId, kunde.anzahlPersonen + 1)
-      }
-    }
-  }
-
-  def createPersonInt(meta: EventMetadata, id: UUID, create: PersonModify, kundeId: KundeId, sort: Int)(implicit userId: UserId = meta.originator): Unit = {
+  def createPerson(meta: EventMetadata, id: UUID, create: PersonModify, kundeId: KundeId, sort: Int)(implicit userId: UserId = meta.originator) = {
     val personId = PersonId(id)
 
     val person = copyTo[PersonModify, Person](create, "id" -> personId,
@@ -217,12 +206,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity[Person, PersonId](person)
     }
   }
-
+  
   def createPendenz(meta: EventMetadata, id: UUID, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String)(implicit userId: UserId = meta.originator) = {
     val pendenzId = PendenzId(id)
 
     val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> pendenzId,
-      "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung,
+        "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -255,24 +244,24 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         case create: DepotlieferungAboModify =>
           writeRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
             "id" -> aboId, "saldo" -> ZERO,
-            "erstelldat" -> meta.timestamp,
-            "ersteller" -> meta.originator,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> meta.originator))
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator))
         case create: HeimlieferungAboModify =>
           writeRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
             "id" -> aboId, "saldo" -> ZERO,
-            "erstelldat" -> meta.timestamp,
-            "ersteller" -> meta.originator,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> meta.originator))
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator))
         case create: PostlieferungAboModify =>
           writeRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](create,
             "id" -> aboId, "saldo" -> ZERO,
-            "erstelldat" -> meta.timestamp,
-            "ersteller" -> meta.originator,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> meta.originator))
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator))
       }
     }
   }
@@ -290,7 +279,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity[CustomKundentyp, CustomKundentypId](kundentyp)
     }
   }
-
+  
   def createProdukt(meta: EventMetadata, id: UUID, create: ProduktModify)(implicit userId: UserId = meta.originator) = {
     val produktId = ProduktId(id)
     val produkt = copyTo[ProduktModify, Produkt](create,
@@ -303,7 +292,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity[Produkt, ProduktId](produkt)
     }
   }
-
+  
   def createProduktekategorie(meta: EventMetadata, id: UUID, create: ProduktekategorieModify)(implicit userId: UserId = meta.originator) = {
     val produktekategorieId = ProduktekategorieId(id)
     val produktekategrie = copyTo[ProduktekategorieModify, Produktekategorie](create,
@@ -316,7 +305,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity[Produktekategorie, ProduktekategorieId](produktekategrie)
     }
   }
-
+  
   def createProduzent(meta: EventMetadata, id: UUID, create: ProduzentModify)(implicit userId: UserId = meta.originator) = {
     val produzentId = ProduzentId(id)
     val produzent = copyTo[ProduzentModify, Produzent](create,
@@ -329,7 +318,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity[Produzent, ProduzentId](produzent)
     }
   }
-
+  
   def createTour(meta: EventMetadata, id: UUID, create: TourModify)(implicit userId: UserId = meta.originator) = {
     val tourId = TourId(id)
     val tour = copyTo[TourModify, Tour](create,
@@ -342,8 +331,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity[Tour, TourId](tour)
     }
   }
-
-  def createProjekt(meta: EventMetadata, id: UUID, create: ProjektModify)(implicit userId: UserId = meta.originator) = {
+  
+   def createProjekt(meta: EventMetadata, id: UUID, create: ProjektModify)(implicit userId: UserId = meta.originator) = {
     val projektId = ProjektId(id)
     val projekt = copyTo[ProjektModify, Projekt](create,
       "id" -> projektId,

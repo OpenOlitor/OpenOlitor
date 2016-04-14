@@ -99,7 +99,8 @@ class DataImportParser extends Actor with ActorLogging {
           val Seq(indexAnrede, indexName, indexVorname, indexEmail, indexEmailAlternative, indexTelefonMobil, indexTelefonFestnetz, indexBemerkungen) =
             indexes
 
-          PersonModify(anrede = row.value[Option[String]](indexAnrede).map(Anrede.apply),
+          PersonModify(None,
+            anrede = row.value[Option[String]](indexAnrede).map(Anrede.apply),
             name = row.value[String](indexName),
             vorname = row.value[String](indexVorname),
             email = row.value[Option[String]](indexEmail),
