@@ -23,12 +23,12 @@
 package ch.openolitor.core.data
 
 import ch.openolitor.core.models._
+
 import ch.openolitor.stammdaten.models._
 import org.odftoolkit.simple._
 import org.odftoolkit.simple.table._
 import scala.collection.JavaConversions._
 import scala.reflect.runtime.universe._
-import java.util.UUID
 import java.util.Date
 import akka.actor._
 import java.io.File
@@ -58,7 +58,7 @@ class DataImportParser extends Actor with ActorLogging {
     ImportResult(kunden, abotypen, depots, abos)
   }
 
-  def parseKunden(kunde2PersonenMapping: Map[Int, Seq[PersonModify]]) = {
+  def parseKunden(kunde2PersonenMapping: Map[Long, Seq[PersonModify]]) = {
     parse("id", Seq("id", "bezeichnung", "strasse", "hausNummer", "plz", "ort", "bemerkungen")) {
       indexes =>
         row =>
@@ -66,10 +66,10 @@ class DataImportParser extends Actor with ActorLogging {
           val Seq(indexKundeId, indexBezeichnung, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexBemerkungen) =
             indexes
 
-          val kundeIdInt = row.value[Int](indexKundeId)
-          val personen = kunde2PersonenMapping.get(kundeIdInt).getOrElse(sys.error(s"Kunde id $kundeIdInt does not reference any person. At least one person is required"))
+          val kundeIdLong = row.value[Long](indexKundeId)
+          val personen = kunde2PersonenMapping.get(kundeIdLong).getOrElse(sys.error(s"Kunde id $kundeIdLong does not reference any person. At least one person is required"))
 
-          (KundeId(UUID.randomUUID),
+          (KundeId(kundeIdLong),
             KundeModify(
               bezeichnung = row.value[Option[String]](indexBezeichnung),
               strasse = row.value[String](indexStrasse),
@@ -112,13 +112,15 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   val parseDepots = {
-    parse("id", Seq("name", "kurzzeichen", "aktiv", "farbCode")) {
+    parse("id", Seq("id", "name", "kurzzeichen", "aktiv", "farbCode")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexKurzzeichen, indexAktiv, indexFarbCode) = indexes
+          val Seq(indexId, indexName, indexKurzzeichen, indexAktiv, indexFarbCode) = indexes
+          
+          val idLong = row.value[Long](indexId)
 
-          (DepotId(UUID.randomUUID),
+          (DepotId(idLong),
             DepotModify(
               name = row.value[String](indexName),
               kurzzeichen = row.value[String](indexKurzzeichen),
@@ -145,16 +147,18 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   val parseAbotypen = {
-    parse("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
+    parse("id", Seq("id", "name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
       "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand", "admin_prozente")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
+          val Seq(indexId, indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
             indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
             indexSaldoMindestbestand, adminProzente) = indexes
+            
+          val idLong = row.value[Long](indexId)
 
-          (AbotypId(UUID.randomUUID),
+          (AbotypId(idLong),
             AbotypModify(
               name = row.value[String](indexName),
               beschreibung = row.value[Option[String]](indexBeschreibung),
@@ -175,16 +179,17 @@ class DataImportParser extends Actor with ActorLogging {
 
   //TODO: parse vertriebsarten
 
-  def parseAbos(kundeIdMapping: Map[Int, KundeId], abotypIdMapping: Map[Int, AbotypId], depotIdMapping: Map[Int, DepotId]) = {
-    parse("kundeId", Seq("kundeId", "kunde", "abotypId", "abotypName", "depotId", "depotName")) {
+  def parseAbos(kundeIdMapping: Map[Long, KundeId], abotypIdMapping: Map[Long, AbotypId], depotIdMapping: Map[Long, DepotId]) = {
+    parse("kundeId", Seq("id", "kundeId", "kunde", "abotypId", "abotypName", "depotId", "depotName")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(kundeIdIndex, kundeIndex, abotypIdIndex, abotypNameIndex, depotIdIndex, depotNameIndex) = indexes
+          val Seq(indexId, kundeIdIndex, kundeIndex, abotypIdIndex, abotypNameIndex, depotIdIndex, depotNameIndex) = indexes
 
-          val kundeIdInt = row.value[Int](kundeIdIndex)
-          val abotypIdInt = row.value[Int](abotypIdIndex)
-          val depotIdOpt = row.value[Option[Int]](depotIdIndex)
+          val idLong = row.value[Long](indexId)
+          val kundeIdInt = row.value[Long](kundeIdIndex)
+          val abotypIdInt = row.value[Long](abotypIdIndex)
+          val depotIdOpt = row.value[Option[Long]](depotIdIndex)
 
           val kunde = row.value[String](kundeIndex)
           val abotypName = row.value[String](abotypNameIndex)
@@ -196,7 +201,7 @@ class DataImportParser extends Actor with ActorLogging {
             val depotId = depotIdMapping.getOrElse(depotIdInt, sys.error(s"Dept id $depotIdInt referenced from abo not found"))
 
             //TODO: read lieferzeitpunkt
-            (AboId(UUID.randomUUID),
+            (AboId(idLong),
               DepotlieferungAboModify(kundeId, kunde, abotypId, abotypName, depotId, depotName, Montag).asInstanceOf[AboModify])
           }.getOrElse(sys.error(s"Unknown abotyp: no depot specified"))
     }
@@ -205,7 +210,7 @@ class DataImportParser extends Actor with ActorLogging {
   def parse[E, I <: BaseId](idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => (I, E)) = {
     name: String =>
       table: Table =>
-        var idMapping = Map[Int, I]()
+        var idMapping = Map[Long, I]()
         val parseResult = parseImpl(name, table, idCol, colNames)(entityFactory) {
           case (id, (entityId, entity)) =>
             idMapping = idMapping + (id -> entityId)
@@ -217,7 +222,7 @@ class DataImportParser extends Actor with ActorLogging {
   def parseSubEntities[E](idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => (E)) = {
     name: String =>
       table: Table =>
-        var entityMap = Map[Int, Seq[E]]()
+        var entityMap = Map[Long, Seq[E]]()
         parseImpl(name, table, idCol, colNames)(entityFactory) { (id, entity) =>
           val newList = entityMap.get(id).map { values =>
             values :+ entity
@@ -230,7 +235,7 @@ class DataImportParser extends Actor with ActorLogging {
         entityMap
   }
 
-  def parseImpl[E, P, R](name: String, table: Table, idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => P)(resultHandler: (Int, P) => Option[R]): List[R] = {
+  def parseImpl[E, P, R](name: String, table: Table, idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => P)(resultHandler: (Long, P) => Option[R]): List[R] = {
     log.debug(s"Parse $name")
     val rows = table.getRowList().toList.take(1000)
     val header = rows.head
@@ -244,7 +249,7 @@ class DataImportParser extends Actor with ActorLogging {
     (for {
       row <- data
     } yield {
-      val optId = row.value[Option[Int]](indexId)
+      val optId = row.value[Option[Long]](indexId)
       optId.map { id =>
         val result = entityFactory(otherIndexes)(row)
 
@@ -327,8 +332,10 @@ object DataImportParser {
         case t if t =:= typeOf[Date] => self.getDateValue
         case t if t =:= typeOf[DateTime] => DateTime.parse(self.getStringValue, format)
         case t if t =:= typeOf[Option[DateTime]] => self.getStringOptionValue.map(s => DateTime.parse(s, format))
-        case t if t =:= typeOf[Int] => self.getStringValue.toInt
+        case t if t =:= typeOf[Int] => self.getStringValue.toInt        
         case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
+        case t if t =:= typeOf[Long] => self.getStringValue.toLong
+        case t if t =:= typeOf[Option[Long]] => getStringOptionValue.map(_.toLong)
         case t if t =:= typeOf[Float] => self.getStringValue.toFloat
         case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
         case _ =>

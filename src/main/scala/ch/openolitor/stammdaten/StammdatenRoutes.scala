@@ -59,21 +59,21 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   with StammdatenEventStoreSerializer {
   self: StammdatenRepositoryComponent with FileStoreComponent =>
 
-  implicit val abotypIdParamConverter = string2BaseIdConverter(AbotypId.apply)
-  implicit val abotypIdPath = string2BaseIdPathMatcher(AbotypId.apply)
-  implicit val kundeIdPath = string2BaseIdPathMatcher(KundeId.apply)
-  implicit val pendenzIdPath = string2BaseIdPathMatcher(PendenzId.apply)
-  implicit val personIdPath = string2BaseIdPathMatcher(PersonId.apply)
-  implicit val kundentypIdPath = string2BaseIdPathMatcher(CustomKundentypId.apply)
-  implicit val depotIdPath = string2BaseIdPathMatcher(DepotId.apply)
-  implicit val aboIdPath = string2BaseIdPathMatcher(AboId.apply)
-  implicit val vertriebsartIdPath = string2BaseIdPathMatcher(VertriebsartId.apply)
-  implicit val lieferungIdPath = string2BaseIdPathMatcher(LieferungId.apply)
-  implicit val produktIdPath = string2BaseIdPathMatcher(ProduktId.apply)
-  implicit val produktekategorieIdPath = string2BaseIdPathMatcher(ProduktekategorieId.apply)
-  implicit val produzentIdPath = string2BaseIdPathMatcher(ProduzentId.apply)
-  implicit val tourIdPath = string2BaseIdPathMatcher(TourId.apply)
-  implicit val projektIdPath = string2BaseIdPathMatcher(ProjektId.apply)
+  implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
+  implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
+  implicit val kundeIdPath = long2BaseIdPathMatcher(KundeId.apply)
+  implicit val pendenzIdPath = long2BaseIdPathMatcher(PendenzId.apply)
+  implicit val personIdPath = long2BaseIdPathMatcher(PersonId.apply)
+  implicit val kundentypIdPath = long2BaseIdPathMatcher(CustomKundentypId.apply)
+  implicit val depotIdPath = long2BaseIdPathMatcher(DepotId.apply)
+  implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
+  implicit val vertriebsartIdPath = long2BaseIdPathMatcher(VertriebsartId.apply)
+  implicit val lieferungIdPath = long2BaseIdPathMatcher(LieferungId.apply)
+  implicit val produktIdPath = long2BaseIdPathMatcher(ProduktId.apply)
+  implicit val produktekategorieIdPath = long2BaseIdPathMatcher(ProduktekategorieId.apply)
+  implicit val produzentIdPath = long2BaseIdPathMatcher(ProduzentId.apply)
+  implicit val tourIdPath = long2BaseIdPathMatcher(TourId.apply)
+  implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
 
   import EntityStore._
 

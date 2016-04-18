@@ -6,7 +6,6 @@ import stamina._
 import migrations._
 import ch.openolitor.core.domain._
 import spray.json._
-import java.util.UUID
 import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.models.BaseId
@@ -70,26 +69,24 @@ package events {
     def toBytes(t:EntityInsertedEvent[AnyRef]): ByteString = {
       //build custom json
       val meta = metadataFormat.write(t.meta)
-      val uuid = uuidFormat.write(t.id)
       
       //lookup persister for entity
       val entity = persistEntity(t.entity)
       
       fromJson(JsObject(
         "meta" -> meta,
-        "uuid" -> uuid,
+        "id" -> JsNumber(t.id),
         "entity" -> entity
       ))
     }
     
     def fromBytes(bytes:ByteString):EntityInsertedEvent[AnyRef] = {
-      toJson(bytes).asJsObject.getFields("meta", "uuid", "entity") match {
-          case Seq(metaJson, uuidJson, entityJson) =>
+      toJson(bytes).asJsObject.getFields("meta", "id", "entity") match {
+          case Seq(metaJson, JsNumber(id), entityJson) =>
             val meta = metadataFormat.read(metaJson)
-            val uuid = uuidFormat.read(uuidJson)
             
            val entity = unpersistEntity[AnyRef](entityJson)
-           EntityInsertedEvent(meta, uuid, entity)
+           EntityInsertedEvent(meta, id.toLong, entity)
           case x => throw new DeserializationException(s"EntityInsertedEvent data expected, received:$x")
       }
     }  

@@ -84,7 +84,7 @@ object Boot extends App with LazyLogging {
   val config = ConfigFactory.load
 
   //TODO: replace with real userid after login succeeded
-  val systemUserId = UserId(UUID.randomUUID)
+  val systemUserId = UserId(1000)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
   val configs = getMandantConfiguration(config)

@@ -39,7 +39,7 @@ object LieferungStatus {
   }
 }
 
-case class LieferungId(id: UUID) extends BaseId
+case class LieferungId(id: Long) extends BaseId
 
 case class Lieferung(id: LieferungId,
   abotypId: AbotypId,

@@ -27,7 +27,7 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
-case class ProjektId(id: UUID) extends BaseId
+case class ProjektId(id: Long) extends BaseId
 
 case class Projekt(id: ProjektId,
   bezeichnung: String,
@@ -58,7 +58,7 @@ case class ProjektModify(
 
 case class KundentypId(id: String)
 
-case class CustomKundentypId(id: UUID) extends BaseId
+case class CustomKundentypId(id: Long) extends BaseId
 
 trait Kundentyp {
   val kundentyp: KundentypId

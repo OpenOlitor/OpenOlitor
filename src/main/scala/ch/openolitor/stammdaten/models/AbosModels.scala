@@ -28,7 +28,7 @@ import java.util.UUID
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
-case class AboId(id: UUID) extends BaseId
+case class AboId(id: Long) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
   val abotypId: AbotypId

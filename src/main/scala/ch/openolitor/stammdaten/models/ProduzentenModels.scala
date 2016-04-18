@@ -32,7 +32,7 @@ import ch.openolitor.core.JSONSerializable
 
 case class BaseProduzentId(id: String)
 
-case class ProduzentId(id: UUID) extends BaseId
+case class ProduzentId(id: Long) extends BaseId
 
 case class Produzent(id: ProduzentId,
   name: String,
