@@ -23,6 +23,7 @@
 package ch.openolitor.core.domain
 
 import akka.actor._
+
 import akka.persistence._
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,6 +37,8 @@ import ch.openolitor.core.SystemConfig
 import spray.json.DefaultJsonProtocol
 import ch.openolitor.core.BaseJsonProtocol
 import org.joda.time.DateTime
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.Macros._
 
 /**_
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
@@ -168,12 +171,51 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
    * Eventlog initialized, handle entity events
    */
   val created: Receive = {
+    case InsertEntityCommand(userId, entity: KundeModify) =>
+      if (entity.ansprechpersonen.isEmpty) {
+        //TODO: handle error
+      } else {
+        log.debug(s"created => Insert entity:$entity")
+        val event = EntityInsertedEvent(metadata(userId), newId, entity)
+        
+        state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
+        persist(event)(afterEventPersisted)
+        
+        val kundeId = KundeId(event.id)
+        entity.ansprechpersonen.zipWithIndex.map{ 
+          case (newPerson, index) =>             
+            val sort = index+1
+            val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> kundeId, "sort" -> sort)
+            log.debug(s"created => Insert entity:$personCreate")
+            val event = EntityInsertedEvent(metadata(userId), newId, personCreate)
+            state = incState
+            persist(event)(afterEventPersisted)            
+        }
+        
+        sender ! event
+      }
     case InsertEntityCommand(userId, entity) =>
       log.debug(s"created => Insert entity:$entity")
       val event = EntityInsertedEvent(metadata(userId), newId, entity)
       state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
       persist(event)(afterEventPersisted)
       sender ! event
+    case UpdateEntityCommand(userId, id: KundeId, entity: KundeModify) =>
+      val partitions = entity.ansprechpersonen.partition(_.id.isDefined)
+      val newPersons:Seq[PersonModify] = partitions._2.zipWithIndex.map { 
+        case (newPerson, index) => 
+        //generate persistent id for new person
+        val sort = partitions._1.length + index
+        val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
+        val event = EntityInsertedEvent(metadata(userId), newId, personCreate)
+        state = incState
+        persist(event)(afterEventPersisted)            
+        newPerson.copy(id = Some(PersonId(newId)))
+      }
+      val updatePersons = (partitions._1 ++ newPersons)
+      val updateEntity = entity.copy(ansprechpersonen = updatePersons)
+      state = incState
+      persist(EntityUpdatedEvent(metadata(userId), id, updateEntity))(afterEventPersisted)
     case UpdateEntityCommand(userId, id, entity) =>
       log.debug(s"created => Update entity::$id, $entity")
       state = incState
