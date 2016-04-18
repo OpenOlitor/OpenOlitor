@@ -93,7 +93,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       logger.warn(s"Unknown event:$e")
   }
 
-  def createAbotyp(meta: EventMetadata, id: UUID, abotyp: AbotypModify)(implicit userId: UserId = meta.originator) = {
+  def createAbotyp(meta: EventMetadata, id: Long, abotyp: AbotypModify)(implicit userId: UserId = meta.originator) = {
     val abotypId = AbotypId(id)
     val typ = copyTo[AbotypModify, Abotyp](abotyp, 
       "id" -> abotypId,
@@ -111,7 +111,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createDepotlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: DepotlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def createDepotlieferungVertriebsart(meta: EventMetadata, id: Long, vertriebsart: DepotlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
     val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> vertriebsartId,
       "erstelldat" -> meta.timestamp,
@@ -124,7 +124,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createHeimlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: HeimlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def createHeimlieferungVertriebsart(meta: EventMetadata, id: Long, vertriebsart: HeimlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
     val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> vertriebsartId,
       "erstelldat" -> meta.timestamp,
@@ -137,7 +137,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createPostlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: PostlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
+  def createPostlieferungVertriebsart(meta: EventMetadata, id: Long, vertriebsart: PostlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
     val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> vertriebsartId,
       "erstelldat" -> meta.timestamp,
@@ -150,7 +150,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createLieferung(meta: EventMetadata, id: UUID, lieferung: LieferungAbotypCreate)(implicit userId: UserId = meta.originator) = {
+  def createLieferung(meta: EventMetadata, id: Long, lieferung: LieferungAbotypCreate)(implicit userId: UserId = meta.originator) = {
     val lieferungId = LieferungId(id)
     val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> lieferungId,
       "anzahlAbwesenheiten" -> ZERO,
@@ -166,7 +166,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createKunde(meta: EventMetadata, id: UUID, create: KundeModify)(implicit userId: UserId = meta.originator) = {
+  def createKunde(meta: EventMetadata, id: Long, create: KundeModify)(implicit userId: UserId = meta.originator) = {
     val kundeId = KundeId(id)
     val bez = create.bezeichnung.getOrElse(create.ansprechpersonen.head.fullName)
     val kunde = copyTo[KundeModify, Kunde](create,
@@ -185,7 +185,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createPerson(meta: EventMetadata, id: UUID, create: PersonModify, kundeId: KundeId, sort: Int)(implicit userId: UserId = meta.originator) = {
+  def createPerson(meta: EventMetadata, id: Long, create: PersonModify, kundeId: KundeId, sort: Int)(implicit userId: UserId = meta.originator) = {
     val personId = PersonId(id)
 
     val person = copyTo[PersonModify, Person](create, "id" -> personId,
@@ -201,7 +201,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
   
-  def createPendenz(meta: EventMetadata, id: UUID, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String)(implicit userId: UserId = meta.originator) = {
+  def createPendenz(meta: EventMetadata, id: Long, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String)(implicit userId: UserId = meta.originator) = {
     val pendenzId = PendenzId(id)
 
     val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> pendenzId,
@@ -216,7 +216,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createDepot(meta: EventMetadata, id: UUID, create: DepotModify)(implicit userId: UserId = meta.originator) = {
+  def createDepot(meta: EventMetadata, id: Long, create: DepotModify)(implicit userId: UserId = meta.originator) = {
     val depotId = DepotId(id)
     val depot = copyTo[DepotModify, Depot](create,
       "id" -> depotId,
@@ -231,7 +231,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createAbo(meta: EventMetadata, id: UUID, create: AboModify)(implicit userId: UserId = meta.originator) = {
+  def createAbo(meta: EventMetadata, id: Long, create: AboModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       val aboId = AboId(id)
       val abo = create match {
@@ -260,7 +260,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createKundentyp(meta: EventMetadata, id: UUID, create: CustomKundentypCreate)(implicit userId: UserId = meta.originator) = {
+  def createKundentyp(meta: EventMetadata, id: Long, create: CustomKundentypCreate)(implicit userId: UserId = meta.originator) = {
     val customKundentypId = CustomKundentypId(id)
     val kundentyp = copyTo[CustomKundentypCreate, CustomKundentyp](create,
       "id" -> customKundentypId,
@@ -274,7 +274,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
   
-  def createProdukt(meta: EventMetadata, id: UUID, create: ProduktModify)(implicit userId: UserId = meta.originator) = {
+  def createProdukt(meta: EventMetadata, id: Long, create: ProduktModify)(implicit userId: UserId = meta.originator) = {
     val produktId = ProduktId(id)
     val produkt = copyTo[ProduktModify, Produkt](create,
       "id" -> produktId,
@@ -287,7 +287,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
   
-  def createProduktekategorie(meta: EventMetadata, id: UUID, create: ProduktekategorieModify)(implicit userId: UserId = meta.originator) = {
+  def createProduktekategorie(meta: EventMetadata, id: Long, create: ProduktekategorieModify)(implicit userId: UserId = meta.originator) = {
     val produktekategorieId = ProduktekategorieId(id)
     val produktekategrie = copyTo[ProduktekategorieModify, Produktekategorie](create,
       "id" -> produktekategorieId,
@@ -300,7 +300,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
   
-  def createProduzent(meta: EventMetadata, id: UUID, create: ProduzentModify)(implicit userId: UserId = meta.originator) = {
+  def createProduzent(meta: EventMetadata, id: Long, create: ProduzentModify)(implicit userId: UserId = meta.originator) = {
     val produzentId = ProduzentId(id)
     val produzent = copyTo[ProduzentModify, Produzent](create,
       "id" -> produzentId,
@@ -313,7 +313,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
   
-  def createTour(meta: EventMetadata, id: UUID, create: TourModify)(implicit userId: UserId = meta.originator) = {
+  def createTour(meta: EventMetadata, id: Long, create: TourModify)(implicit userId: UserId = meta.originator) = {
     val tourId = TourId(id)
     val tour = copyTo[TourModify, Tour](create,
       "id" -> tourId,
@@ -326,7 +326,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
   
-   def createProjekt(meta: EventMetadata, id: UUID, create: ProjektModify)(implicit userId: UserId = meta.originator) = {
+   def createProjekt(meta: EventMetadata, id: Long, create: ProjektModify)(implicit userId: UserId = meta.originator) = {
     val projektId = ProjektId(id)
     val projekt = copyTo[ProjektModify, Projekt](create,
       "id" -> projektId,

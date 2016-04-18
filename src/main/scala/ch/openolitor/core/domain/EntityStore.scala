@@ -23,7 +23,6 @@
 package ch.openolitor.core.domain
 
 import akka.actor._
-
 import akka.persistence._
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,6 +38,8 @@ import ch.openolitor.core.BaseJsonProtocol
 import org.joda.time.DateTime
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
+import scala.reflect._
+import scala.reflect.runtime.universe.{Try => TTry, _}
 
 /**_
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
@@ -50,7 +51,7 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, lastId: Option[UUID], dbRevision: Int) extends State
+  case class EventStoreState(seqNr: Long, dbRevision: Int, ids: Map[Class[_], Long]) extends State
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
 
   //base commands
@@ -60,7 +61,7 @@ object EntityStore {
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent[E <: AnyRef](meta: EventMetadata, id: UUID, entity: E) extends PersistetEvent
+  case class EntityInsertedEvent[E <: AnyRef](meta: EventMetadata, id: Long, entity: E) extends PersistetEvent
   case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent
   case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistetEvent
    
@@ -85,7 +86,16 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   override def persistenceId: String = EntityStore.persistenceId
 
   type S = EventStoreState
-  override var state: EventStoreState = EventStoreState(0, None, 0)
+  override var state: EventStoreState = EventStoreState(0, 0, Map())
+  
+  def newId[E](entity: E)(implicit ct: ClassTag[E]): Long =  {
+    val clOf = ct.runtimeClass
+    val id: Long = state.ids.get(clOf).map {id => 
+      id + 1
+    }.getOrElse(1L)
+    state = state.copy(ids = state.ids + (clOf -> id))
+    id
+  }
 
   /**
    * Updates internal processor state according to event that is to be applied.
@@ -176,9 +186,9 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
         //TODO: handle error
       } else {
         log.debug(s"created => Insert entity:$entity")
-        val event = EntityInsertedEvent(metadata(userId), newId, entity)
+        val event = EntityInsertedEvent(metadata(userId), newId(entity), entity)
         
-        state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
+        state = state.copy(seqNr = state.seqNr + 1)
         persist(event)(afterEventPersisted)
         
         val kundeId = KundeId(event.id)
@@ -187,7 +197,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
             val sort = index+1
             val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> kundeId, "sort" -> sort)
             log.debug(s"created => Insert entity:$personCreate")
-            val event = EntityInsertedEvent(metadata(userId), newId, personCreate)
+            val event = EntityInsertedEvent(metadata(userId), newId(personCreate), personCreate)
             state = incState
             persist(event)(afterEventPersisted)            
         }
@@ -196,8 +206,8 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
       }
     case InsertEntityCommand(userId, entity) =>
       log.debug(s"created => Insert entity:$entity")
-      val event = EntityInsertedEvent(metadata(userId), newId, entity)
-      state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
+      val event = EntityInsertedEvent(metadata(userId), newId(entity), entity)
+      state = state.copy(seqNr = state.seqNr + 1)
       persist(event)(afterEventPersisted)
       sender ! event
     case UpdateEntityCommand(userId, id: KundeId, entity: KundeModify) =>
@@ -207,10 +217,10 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
         //generate persistent id for new person
         val sort = partitions._1.length + index
         val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
-        val event = EntityInsertedEvent(metadata(userId), newId, personCreate)
+        val event = EntityInsertedEvent(metadata(userId), newId(personCreate), personCreate)
         state = incState
         persist(event)(afterEventPersisted)            
-        newPerson.copy(id = Some(PersonId(newId)))
+        newPerson.copy(id = Some(PersonId(event.id)))
       }
       val updatePersons = (partitions._1 ++ newPersons)
       val updateEntity = entity.copy(ansprechpersonen = updatePersons)

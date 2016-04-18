@@ -37,7 +37,7 @@ sealed trait VertriebskanalDetail extends Vertriebskanal with JSONSerializable {
   val beschreibung: Option[String]
 }
 
-case class DepotId(id: UUID) extends BaseId
+case class DepotId(id: Long) extends BaseId
 
 case class Depot(id: DepotId,
   name: String,
@@ -131,7 +131,7 @@ case class DepotSummary(
   id: DepotId,
   name: String) extends JSONSerializable
 
-case class TourId(id: UUID) extends BaseId
+case class TourId(id: Long) extends BaseId
 
 case class Tour(
   id: TourId,

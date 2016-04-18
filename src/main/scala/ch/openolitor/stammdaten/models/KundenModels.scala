@@ -28,7 +28,7 @@ import java.util.Date
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
-case class KundeId(id: UUID) extends BaseId
+case class KundeId(id: Long) extends BaseId
 
 case class Kunde(id: KundeId,
   bezeichnung: String,
@@ -108,7 +108,7 @@ object Anrede {
   }
 }
 
-case class PersonId(id: UUID) extends BaseId
+case class PersonId(id: Long) extends BaseId
 case class Person(id: PersonId,
   kundeId: KundeId,
   anrede: Option[Anrede],
@@ -166,7 +166,7 @@ object PendenzStatus {
   }
 }
 
-case class PendenzId(id: UUID) extends BaseId
+case class PendenzId(id: Long) extends BaseId
 
 case class Pendenz(id: PendenzId,
   kundeId: KundeId,

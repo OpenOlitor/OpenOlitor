@@ -59,12 +59,12 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
       }
   }
 
-  def baseIdFormat[I <: BaseId](implicit fromJson: UUID => I) = new RootJsonFormat[I] {
-    def write(obj: I): JsValue = JsString(obj.id.toString)
+  def baseIdFormat[I <: BaseId](implicit fromJson: Long => I) = new RootJsonFormat[I] {
+    def write(obj: I): JsValue = JsNumber(obj.id)
 
     def read(json: JsValue): I =
       json match {
-        case (JsString(value)) => fromJson(UUID.fromString(value))
+        case (JsNumber(value)) => fromJson(value.toLong)
         case value => deserializationError(s"Unrecognized baseId format:$value")
       }
   }

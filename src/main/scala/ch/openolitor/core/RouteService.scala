@@ -154,7 +154,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
 
-  def create[E <: AnyRef, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
+  def create[E <: AnyRef, I <: BaseId](idFactory: Long => I)(implicit um: FromRequestUnmarshaller[E],
     tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>

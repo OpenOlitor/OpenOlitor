@@ -28,7 +28,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 
-case class VertriebsartId(id: UUID = UUID.randomUUID) extends BaseId
+case class VertriebsartId(id: Long) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
 case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt,
   //modification flags

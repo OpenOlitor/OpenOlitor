@@ -68,7 +68,7 @@ object Liefereinheit {
 
 case class BaseProduktekategorieId(id: String)
 
-case class ProduktekategorieId(id: UUID) extends BaseId
+case class ProduktekategorieId(id: Long) extends BaseId
 
 case class Produktekategorie(id: ProduktekategorieId,
   val beschreibung: String,
@@ -81,7 +81,7 @@ case class Produktekategorie(id: ProduktekategorieId,
 
 case class ProduktekategorieModify(beschreibung: String) extends JSONSerializable
 
-case class ProduktId(id: UUID) extends BaseId
+case class ProduktId(id: Long) extends BaseId
 
 case class Produkt(
   id: ProduktId,
@@ -109,7 +109,7 @@ case class ProduktModify(
   preis: BigDecimal,
   produzenten: Seq[String]) extends JSONSerializable
 
-case class ProduktProduzentId(id: UUID) extends BaseId
+case class ProduktProduzentId(id: Long) extends BaseId
 
 case class ProduktProduzent(
   id: ProduktProduzentId,
@@ -121,7 +121,7 @@ case class ProduktProduzent(
   modifidat: DateTime,
   modifikator: UserId) extends BaseEntity[ProduktProduzentId]
 
-case class ProduktProduktekategorieId(id: UUID) extends BaseId
+case class ProduktProduktekategorieId(id: Long) extends BaseId
 
 case class ProduktProduktekategorie(
   id: ProduktProduktekategorieId,

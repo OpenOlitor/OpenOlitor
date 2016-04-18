@@ -35,7 +35,7 @@ object EvolutionStatus {
   def apply(value: String): EvolutionStatus = AllStatus.find(_.toString == value).getOrElse(Applying) 
 }
 
-case class DBSchemaId(id: UUID = UUID.randomUUID) extends BaseId
+case class DBSchemaId(id: Long = System.currentTimeMillis) extends BaseId
 case class DBSchema(id: DBSchemaId, revision:Int, status: EvolutionStatus,
     //modification flags
   erstelldat: DateTime,

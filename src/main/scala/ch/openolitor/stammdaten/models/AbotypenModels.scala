@@ -97,7 +97,7 @@ trait AktivRange {
   }
 }
 
-case class AbotypId(id: UUID) extends BaseId
+case class AbotypId(id: Long) extends BaseId
 
 case class Abotyp(id: AbotypId,
   name: String,

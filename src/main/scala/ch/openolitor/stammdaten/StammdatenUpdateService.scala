@@ -144,7 +144,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           DB autoCommit { implicit session =>
             //recreate submitted pendenzen
             update.pendenzen.map { updatePendenz =>
-              val pendenzId = PendenzId(UUID.randomUUID)
+              val pendenzId = PendenzId(System.currentTimeMillis)
               val kundeBezeichnung = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
               val newPendenz = copyTo[PendenzModify, Pendenz](updatePendenz, "id" -> pendenzId,
                 "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung, 
@@ -269,7 +269,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         DB autoCommit { implicit session =>
           //recreate new ProduktProduzent-Mappings
           update.produzenten.map { updateProduzentKurzzeichen =>
-            val produktProduzentId = ProduktProduzentId(UUID.randomUUID)
+            val produktProduzentId = ProduktProduzentId(System.currentTimeMillis)
             readRepository.getProduzentDetailByKurzzeichen(updateProduzentKurzzeichen) map {
               case Some(prod) => 
                 val newProduktProduzent = ProduktProduzent(produktProduzentId, id, prod.id, meta.timestamp, userId, meta.timestamp, userId)
@@ -294,7 +294,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         DB autoCommit { implicit session =>
           //recreate new ProduktProduktekategorie-Mappings
           update.kategorien.map { updateKategorieBezeichnung =>
-            val produktProduktekategorieId = ProduktProduktekategorieId(UUID.randomUUID)
+            val produktProduktekategorieId = ProduktProduktekategorieId(System.currentTimeMillis)
             readRepository.getProduktekategorieByBezeichnung(updateKategorieBezeichnung) map {
               case Some(kat) => 
                 val newProduktProduktekategorie = ProduktProduktekategorie(produktProduktekategorieId, id, kat.id, meta.timestamp, userId, meta.timestamp, userId)

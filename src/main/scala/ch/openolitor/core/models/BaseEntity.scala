@@ -30,10 +30,10 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
 trait BaseId extends AnyRef {
-  val id: UUID
+  val id: Long
 }
 
-case class UserId(id: UUID) extends BaseId
+case class UserId(id: Long) extends BaseId
 
 trait BaseEntity[T <: BaseId] extends Product with JSONSerializable {
   val id: T
