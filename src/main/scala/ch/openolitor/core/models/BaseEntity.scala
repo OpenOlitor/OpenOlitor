@@ -26,6 +26,8 @@ import java.util.UUID
 import scalikejdbc.ParameterBinder
 import ch.openolitor.core.Macros
 import spray.json.DefaultJsonProtocol
+import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 trait BaseId extends AnyRef {
   val id: UUID
@@ -33,8 +35,13 @@ trait BaseId extends AnyRef {
 
 case class UserId(id: UUID) extends BaseId
 
-trait BaseEntity[T <: BaseId] extends Product {
+trait BaseEntity[T <: BaseId] extends Product with JSONSerializable {
   val id: T
+  //modification flags on all entities
+  val erstelldat: DateTime
+  val ersteller: UserId
+  val modifidat: DateTime
+  val modifikator: UserId
 }
 
 sealed trait DBEvent[E <: BaseEntity[_ <: BaseId]] extends Product {

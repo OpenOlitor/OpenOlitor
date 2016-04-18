@@ -27,6 +27,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import scalikejdbc._
 import java.util.UUID
+import ch.openolitor.core.JSONSerializable
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -61,7 +62,7 @@ object Rhythmus {
   }
 }
 
-sealed trait Preiseinheit
+sealed trait Preiseinheit extends Product
 case object ProLieferung extends Preiseinheit
 case object ProMonat extends Preiseinheit
 case object ProQuartal extends Preiseinheit
@@ -116,9 +117,14 @@ case class Abotyp(id: AbotypId,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF) extends BaseEntity[AbotypId] with AktivRange with Product
+  waehrung: Waehrung = CHF,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[AbotypId] with AktivRange with Product
 
-case class AbotypSummary(id: AbotypId, name: String) extends Product
+case class AbotypSummary(id: AbotypId, name: String) extends JSONSerializable
 
 case class AbotypModify(
   name: String,
@@ -134,4 +140,4 @@ case class AbotypModify(
   farbCode: String,
   zielpreis: Option[BigDecimal],
   saldoMindestbestand: Int,
-  adminProzente: BigDecimal) extends AktivRange
+  adminProzente: BigDecimal) extends AktivRange with JSONSerializable

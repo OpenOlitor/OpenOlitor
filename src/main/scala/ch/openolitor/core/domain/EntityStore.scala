@@ -23,7 +23,6 @@
 package ch.openolitor.core.domain
 
 import akka.actor._
-
 import akka.persistence._
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,6 +35,7 @@ import scalikejdbc.DB
 import ch.openolitor.core.SystemConfig
 import spray.json.DefaultJsonProtocol
 import ch.openolitor.core.BaseJsonProtocol
+import org.joda.time.DateTime
 
 /**_
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
@@ -99,6 +99,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   def checkDBEvolution(): Try[Int] = {
     log.debug(s"Check DB Evolution: current revision=${state.dbRevision}")
+    implicit val userId = Boot.systemUserId
     evolution.evolveDatabase(state.dbRevision) match {
       case s @ Success(rev) =>
         log.debug(s"Successfully updated to db rev:$rev")
@@ -157,7 +158,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   val uncheckedDB: Receive = {
     case CheckDBEvolution =>
-      log.debug(s"uncheckedDB => check db evolution")
+      log.debug(s"uncheckedDB => check db evolution")      
       sender ! checkDBEvolution()
     case x =>
       log.warning(s"uncheckedDB => unsupported command:$x")
@@ -192,7 +193,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   }
 
   def metadata(userId: UserId) = {
-    EventMetadata(userId, VERSION, now, state.seqNr, persistenceId)
+    EventMetadata(userId, VERSION, DateTime.now, state.seqNr, persistenceId)
   }
 
   def incState = {

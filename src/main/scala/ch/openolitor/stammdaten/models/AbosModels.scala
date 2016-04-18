@@ -25,6 +25,8 @@ package ch.openolitor.stammdaten.models
 import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
 import java.util.UUID
+import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 case class AboId(id: UUID) extends BaseId
 
@@ -35,7 +37,7 @@ sealed trait Abo extends BaseEntity[AboId] {
   val saldo: Int
 }
 
-sealed trait AboModify extends Product {
+sealed trait AboModify extends JSONSerializable {
   val kundeId: KundeId
   val kunde: String
   val abotypId: AbotypId
@@ -50,7 +52,12 @@ case class DepotlieferungAbo(id: AboId,
   depotId: DepotId,
   depotName: String,
   liefertag: Lieferzeitpunkt,
-  saldo: Int = 0) extends Abo
+  saldo: Int = 0,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends Abo
 
 case class DepotlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -68,7 +75,12 @@ case class HeimlieferungAbo(id: AboId,
   tourId: TourId,
   tourName: String,
   liefertag: Lieferzeitpunkt,
-  saldo: Int = 0) extends Abo
+  saldo: Int = 0,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends Abo
 
 case class HeimlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -84,7 +96,12 @@ case class PostlieferungAbo(id: AboId,
   abotypId: AbotypId,
   abotypName: String,
   liefertag: Lieferzeitpunkt,
-  saldo: Int = 0) extends Abo
+  saldo: Int = 0,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends Abo
 
 case class PostlieferungAboModify(kundeId: KundeId,
   kunde: String,

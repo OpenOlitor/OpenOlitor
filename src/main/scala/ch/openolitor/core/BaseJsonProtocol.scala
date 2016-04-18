@@ -29,11 +29,14 @@ import org.joda.time.format._
 import ch.openolitor.core.models._
 import java.util.UUID
 import java.text.SimpleDateFormat
+import zangelo.spray.json.AutoProductFormats
+
+trait JSONSerializable extends Product
 
 /**
  * Basis JSON Formatter for spray-json serialisierung/deserialisierung
  */
-trait BaseJsonProtocol extends DefaultJsonProtocol {
+trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONSerializable] {
   val defaultConvert: Any => String = x => x.toString
 
   implicit val uuidFormat = new RootJsonFormat[UUID] {
@@ -45,7 +48,7 @@ trait BaseJsonProtocol extends DefaultJsonProtocol {
         case value => deserializationError(s"Unrecognized UUID format:$value")
       }
   }
-  
+
   def enumFormat[E](implicit fromJson: String => E, toJson: E => String = defaultConvert) = new JsonFormat[E] {
     def write(obj: E): JsValue = JsString(toJson(obj))
 
@@ -96,7 +99,6 @@ trait BaseJsonProtocol extends DefaultJsonProtocol {
 
   implicit val optionDateTimeFormat = new OptionFormat[DateTime]
   implicit val userIdFormat = baseIdFormat(UserId.apply)
-  
 
   implicit val idResponseFormat = jsonFormat1(BaseJsonProtocol.IdResponse)
 }

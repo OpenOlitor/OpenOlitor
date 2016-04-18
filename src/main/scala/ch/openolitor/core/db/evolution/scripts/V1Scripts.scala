@@ -58,26 +58,294 @@ object V1Scripts {
       logger.debug(s"oo-system: cleanupDatabase - create tables")
       //create tables
 
-      sql"create table ${postlieferungMapping.table}  (id varchar(36) not null, abotyp_id varchar(36) not null, liefertag varchar(10))".execute.apply()
-      sql"create table ${depotlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, depot_id varchar(36) not null, liefertag varchar(10))".execute.apply()
-      sql"create table ${heimlieferungMapping.table} (id varchar(36) not null, abotyp_id varchar(36) not null, tour_id varchar(36) not null, liefertag varchar(10))".execute.apply()
-      sql"create table ${depotMapping.table} (id varchar(36) not null, name varchar(50) not null, kurzzeichen varchar(6) not null, ap_name varchar(50), ap_vorname varchar(50), ap_telefon varchar(20), ap_email varchar(100), v_name varchar(50), v_vorname varchar(50), v_telefon varchar(20), v_email varchar(100), strasse varchar(50), haus_nummer varchar(10), plz varchar(4) not null, ort varchar(50) not null, aktiv varchar(1), oeffnungszeiten varchar(200), /*farb_code varchar(20),*/ iban varchar(34), bank varchar(50), beschreibung varchar(200), anzahl_abonnenten_max int, anzahl_abonnenten int not null)".execute.apply()
-      sql"create table ${tourMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256))".execute.apply()
-      sql"create table ${abotypMapping.table} (id varchar(36) not null, name varchar(50) not null, beschreibung varchar(256), lieferrhythmus varchar(256), aktiv_von datetime default null, aktiv_bis datetime default null, preis DECIMAL(7,2) not null, preiseinheit varchar(20) not null, laufzeit int, laufzeiteinheit varchar(50), anzahl_abwesenheiten int, farb_code varchar(20), zielpreis DECIMAL(7,2), saldo_mindestbestand int, admin_prozente DECIMAL(5,2), anzahl_abonnenten INT not null, letzte_lieferung datetime default null, waehrung varchar(10))".execute.apply()
-      sql"create table ${kundeMapping.table} (id varchar(36) not null, bezeichnung varchar(50), strasse varchar(50) not null, haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(512), strasse_lieferung varchar(50), haus_nummer_lieferung varchar(10), adress_zusatz_lieferung varchar(100), plz_lieferung varchar(4), ort_lieferung varchar(50), typen varchar(200), anzahl_abos int not null, anzahl_pendenzen int not null, anzahl_personen int not null)".execute.apply()
-      sql"create table ${pendenzMapping.table} (id varchar(36) not null, kunde_id varchar(50) not null, kunde_bezeichnung varchar(50), datum datetime default null, bemerkung varchar(2000), status varchar(10))".execute.apply()
-      sql"create table ${customKundentypMapping.table} (id varchar(36) not null, kundentyp varchar(50) not null, beschreibung varchar(250), anzahl_verknuepfungen int not null)".execute.apply()
-      sql"create table ${personMapping.table} (id varchar(36) not null, kunde_id varchar(50) not null, name varchar(50) not null, vorname varchar(50) not null, email varchar(100) not null, email_alternative varchar(100), telefon_mobil varchar(50), telefon_festnetz varchar(50), bemerkungen varchar(512), sort int not null)".execute.apply()
-      sql"create table ${depotlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), depot_id varchar(36), depot_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
-      sql"create table ${heimlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), tour_id varchar(36), tour_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
-      sql"create table ${postlieferungAboMapping.table}  (id varchar(36) not null,kunde_id varchar(36) not null, kunde varchar(100), abotyp_id varchar(36) not null, abotyp_name varchar(50), liefertag varchar(10), saldo int)".execute.apply()
-      sql"create table ${lieferungMapping.table}  (id varchar(36) not null,abotyp_id varchar(36) not null, vertriebsart_id varchar(36) not null,datum datetime not null, anzahl_abwesenheiten int not null,status varchar(50) not null)".execute.apply()
-      sql"create table ${produktMapping.table}  (id varchar(36) not null, name varchar(50) not null, verfuegbar_von varchar(10) not null, verfuegbar_bis varchar(10) not null, kategorien varchar(300), standardmenge DECIMAL(7,3), einheit varchar(20) not null, preis DECIMAL(7,2) not null, produzenten varchar(300))".execute.apply()
-      sql"create table ${produktekategorieMapping.table}  (id varchar(36) not null, beschreibung varchar(50) not null)".execute.apply()
-      sql"create table ${produzentMapping.table}  (id varchar(36) not null, name varchar(50) not null, vorname varchar(50), kurzzeichen varchar(6) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4) not null, ort varchar(50) not null, bemerkungen varchar(1000), email varchar(100) not null, telefon_mobil varchar(50), telefon_festnetz varchar(50), iban varchar(34), bank varchar(50), mwst varchar(1), mwst_satz DECIMAL(4,2), mwst_nr varchar(30), aktiv varchar(1))".execute.apply()
-      sql"create table ${projektMapping.table}  (id varchar(36) not null, bezeichnung varchar(50) not null, strasse varchar(50), haus_nummer varchar(10), adress_zusatz varchar(100), plz varchar(4), ort varchar(50), preise_sichtbar varchar(1) not null, preise_editierbar varchar(1) not null, waehrung varchar(10) not null)".execute.apply()
-      sql"create table ${produktProduzentMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produzent_id varchar(36) not null)".execute.apply()
-      sql"create table ${produktProduktekategorieMapping.table} (id varchar(36) not null, produkt_id varchar(36) not null, produktekategorie_id varchar(36) not null)".execute.apply()
+      sql"""create table ${postlieferungMapping.table}  (
+      	id varchar(36) not null, 
+      	abotyp_id varchar(36) not null,
+      	liefertag varchar(10), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${depotlieferungMapping.table} (
+      	id varchar(36) not null, 
+      	abotyp_id varchar(36) not null, 
+      	depot_id varchar(36) not null, 
+      	liefertag varchar(10), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${heimlieferungMapping.table} (
+      	id varchar(36) not null, 
+      	abotyp_id varchar(36) not null, 
+      	tour_id varchar(36) not null, 
+      	liefertag varchar(10), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${depotMapping.table} (
+      	id varchar(36) not null, 
+      	name varchar(50) not null, 
+      	kurzzeichen varchar(6) not null, 
+      	ap_name varchar(50), 
+      	ap_vorname varchar(50), 
+      	ap_telefon varchar(20), 
+      	ap_email varchar(100), 
+      	v_name varchar(50), 
+      	v_vorname varchar(50), 
+      	v_telefon varchar(20), 
+      	v_email varchar(100), 
+      	strasse varchar(50), 
+      	haus_nummer varchar(10), 
+      	plz varchar(5) not null, 
+      	ort varchar(50) not null, 
+      	aktiv varchar(1), 
+      	oeffnungszeiten varchar(200), 
+      	/*farb_code varchar(20),*/ 
+      	iban varchar(34), 
+      	bank varchar(50), 
+      	beschreibung varchar(200), 
+      	anzahl_abonnenten_max int, 
+      	anzahl_abonnenten int not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${tourMapping.table} (
+      	id varchar(36) not null, 
+      	name varchar(50) not null, 
+      	beschreibung varchar(256), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${abotypMapping.table} (
+      	id varchar(36) not null, 
+      	name varchar(50) not null, 
+      	beschreibung varchar(256), 
+      	lieferrhythmus varchar(256), 
+      	aktiv_von datetime default null, 
+      	aktiv_bis datetime default null, 
+      	preis DECIMAL(7,2) not null, 
+      	preiseinheit varchar(20) not null, 
+      	laufzeit int, 
+      	laufzeiteinheit varchar(50), 
+      	anzahl_abwesenheiten int, farb_code varchar(20), 
+      	zielpreis DECIMAL(7,2), 
+      	saldo_mindestbestand int, 
+      	admin_prozente DECIMAL(5,2), 
+      	anzahl_abonnenten INT not null, 
+      	letzte_lieferung datetime default null, 
+      	waehrung varchar(10), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${kundeMapping.table} (
+      	id varchar(36) not null, 
+      	bezeichnung varchar(50), 
+      	strasse varchar(50) not null, 
+      	haus_nummer varchar(10), 
+      	adress_zusatz varchar(100), 
+      	plz varchar(5) not null, 
+      	ort varchar(50) not null, 
+      	bemerkungen varchar(512), 
+      	strasse_lieferung varchar(50), 
+      	haus_nummer_lieferung varchar(10), 
+      	adress_zusatz_lieferung varchar(100), 
+      	plz_lieferung varchar(5), 
+      	ort_lieferung varchar(50), 
+      	typen varchar(200), 
+      	anzahl_abos int not null, 
+      	anzahl_pendenzen int not null, 
+      	anzahl_personen int not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${pendenzMapping.table} (
+      	id varchar(36) not null, 
+      	kunde_id varchar(50) not null, 
+      	kunde_bezeichnung varchar(50), 
+      	datum datetime default null, 
+      	bemerkung varchar(2000), 
+      	status varchar(10), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${customKundentypMapping.table} (
+      	id varchar(36) not null, 
+      	kundentyp varchar(50) not null, 
+      	beschreibung varchar(250), 
+      	anzahl_verknuepfungen int not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${personMapping.table} (
+      	id varchar(36) not null, 
+      	kunde_id varchar(50) not null, 
+      	anrede varchar(20) null, 
+      	name varchar(50) not null, 
+      	vorname varchar(50) not null, 
+      	email varchar(100), 
+      	email_alternative varchar(100), 
+      	telefon_mobil varchar(50), 
+      	telefon_festnetz varchar(50), 
+      	bemerkungen varchar(512), 
+      	sort int not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${depotlieferungAboMapping.table}  (
+      	id varchar(36) not null,
+      	kunde_id varchar(36) not null, 
+      	kunde varchar(100), 
+      	abotyp_id varchar(36) not null, 
+      	abotyp_name varchar(50), 
+      	depot_id varchar(36), 
+      	depot_name varchar(50), 
+      	liefertag varchar(10), 
+      	saldo int, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${heimlieferungAboMapping.table}  (
+      	id varchar(36) not null,
+      	kunde_id varchar(36) not null, 
+      	kunde varchar(100), 
+      	abotyp_id varchar(36) not null, 
+      	abotyp_name varchar(50), 
+      	tour_id varchar(36), 
+      	tour_name varchar(50), 
+      	liefertag varchar(10), 
+      	saldo int, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${postlieferungAboMapping.table}  (
+      	id varchar(36) not null,
+      	kunde_id varchar(36) not null, 
+      	kunde varchar(100), 
+      	abotyp_id varchar(36) not null, 
+      	abotyp_name varchar(50), 
+      	liefertag varchar(10), 
+      	saldo int, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${lieferungMapping.table}  (
+      	id varchar(36) not null,
+      	abotyp_id varchar(36) not null, 
+      	vertriebsart_id varchar(36) not null,
+      	datum datetime not null, 
+      	anzahl_abwesenheiten int not null,
+      	status varchar(50) not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${produktMapping.table}  (
+      	id varchar(36) not null, 
+      	name varchar(50) not null, 
+      	verfuegbar_von varchar(10) not null, 
+      	verfuegbar_bis varchar(10) not null, 
+      	kategorien varchar(300), 
+      	standardmenge DECIMAL(7,3), 
+      	einheit varchar(20) not null, 
+      	preis DECIMAL(7,2) not null, 
+      	produzenten varchar(300), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${produktekategorieMapping.table}  (
+      	id varchar(36) not null, 
+      	beschreibung varchar(50) not null,
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${produzentMapping.table}  (
+      	id varchar(36) not null, 
+      	name varchar(50) not null, 
+      	vorname varchar(50), 
+      	kurzzeichen varchar(6) not null, 
+      	strasse varchar(50), 
+      	haus_nummer varchar(10), 
+      	adress_zusatz varchar(100), 
+      	plz varchar(5) not null, 
+      	ort varchar(50) not null, 
+      	bemerkungen varchar(1000), 
+      	email varchar(100) not null, 
+      	telefon_mobil varchar(50), 
+      	telefon_festnetz varchar(50), 
+      	iban varchar(34), 
+      	bank varchar(50), 
+      	mwst varchar(1), 
+      	mwst_satz DECIMAL(4,2), 
+      	mwst_nr varchar(30), 
+      	aktiv varchar(1), 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${projektMapping.table}  (
+      	id varchar(36) not null, 
+      	bezeichnung varchar(50) not null, 
+      	strasse varchar(50), 
+      	haus_nummer varchar(10), 
+      	adress_zusatz varchar(100), 
+      	plz varchar(5), 
+      	ort varchar(50), 
+      	preise_sichtbar varchar(1) not null, 
+      	preise_editierbar varchar(1) not null, 
+      	waehrung varchar(10) not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${produktProduzentMapping.table} (
+      	id varchar(36) not null, 
+      	produkt_id varchar(36) not null, 
+      	produzent_id varchar(36) not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
+
+      sql"""create table ${produktProduktekategorieMapping.table} (
+      	id varchar(36) not null, 
+      	produkt_id varchar(36) not null, 
+      	produktekategorie_id varchar(36) not null, 
+      	erstelldat datetime not null, 
+        ersteller varchar(36) not null, 
+        modifidat datetime not null, 
+        modifikator varchar(36) not null)""".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
       Success(true)

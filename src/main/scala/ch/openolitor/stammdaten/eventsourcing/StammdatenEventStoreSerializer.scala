@@ -21,6 +21,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val kundeModifyPersister = persister[KundeModify]("kunde-modify")
   implicit val kundeIdPersister = persister[KundeId]("kunde-id")
   
+  implicit val personIdPersister = persister[PersonId]("person-id")
+  
   implicit val vertriebsartDLAbotypPersister = persister[DepotlieferungAbotypModify]("depotlieferungabotyp-modify")
   implicit val vertriebsartPLAbotypPersister = persister[PostlieferungAbotypModify]("postlieferungabotyp-modify")
   implicit val vertriebsartHLAbotypPersister = persister[HeimlieferungAbotypModify]("heimlieferungabotyp-modify")  
@@ -67,6 +69,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     abotypIdPersister,
     kundeModifyPersister,
     kundeIdPersister,
+    personIdPersister,
     vertriebsartDLPersister,
     vertriebsartPLPersister,
     vertriebsartHLPersister,  

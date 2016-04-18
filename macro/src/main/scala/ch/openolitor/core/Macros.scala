@@ -45,7 +45,6 @@ object Macros {
 
     val keys: Map[String, Tree] = mapping.map(_.tree).flatMap {
       case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
-        c.echo(c.enclosingPosition, s"Found mapping for key typ:$typ:${typ.getClass}, key $name, ${name.getClass}, valueTyp $valueTyp, ${valueTyp.getClass} and value $value, ${value.getClass}")
         val Literal(Constant(key)) = name
         Some(key.asInstanceOf[String], n)
       case m =>
@@ -69,7 +68,7 @@ object Macros {
           c.abort(c.enclosingPosition, s"No eligible param found $p!")
         }
       case p if from.actualType.decl(p.name).isTerm => Select(fromTree, p.name)
-      case p                                        => Select(tree, p.name)
+      case p => Select(tree, p.name)
     }
 
     c.Expr[S](Apply(
@@ -97,7 +96,6 @@ object Macros {
 
     val keys: Map[String, Tree] = mapping.map(_.tree).flatMap {
       case n @ q"scala.this.Predef.ArrowAssoc[$typ]($name).->[$valueTyp]($value)" =>
-        c.echo(c.enclosingPosition, s"Found mapping for key typ:$typ:${typ.getClass}, key $name, ${name.getClass}, valueTyp $valueTyp, ${valueTyp.getClass} and value $value, ${value.getClass}")
         val Literal(Constant(key)) = name
         Some(key.asInstanceOf[String], n)
       case m =>
@@ -123,7 +121,6 @@ object Macros {
       case p if source.actualType.decl(p.name).isTerm => Select(sourceTree, p.name)
       case p => c.abort(c.enclosingPosition, s"No eligible param found $p!")
     }
-    c.echo(c.enclosingPosition, s"CopyTo: $companionObject($applyParams)")
 
     c.Expr[D] { q"$companionObject(..$applyParams)" }
   }
