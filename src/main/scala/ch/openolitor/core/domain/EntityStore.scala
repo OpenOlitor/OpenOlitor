@@ -67,6 +67,17 @@ object EntityStore {
    
   // other actor messages
   case object CheckDBEvolution
+  
+  val Seeds: Map[Class[_], Long] = Map(       
+       classOf[Projekt] -> 1000L,
+       classOf[Depot] -> 10000L,
+       classOf[Tour] -> 20000L,
+       classOf[Kunde] -> 30000L,
+       classOf[Person] -> 40000L,
+       classOf[Abotyp] -> 50000L,
+       classOf[Produkt] -> 60000L,
+       classOf[Produzent] -> 70000L   
+  )
 }
 
 //json protocol
@@ -92,7 +103,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
     val clOf = ct.runtimeClass
     val id: Long = state.ids.get(clOf).map {id => 
       id + 1
-    }.getOrElse(1L)
+    }.getOrElse(EntityStore.Seeds.get(clOf).getOrElse(1L))
     state = state.copy(ids = state.ids + (clOf -> id))
     id
   }
