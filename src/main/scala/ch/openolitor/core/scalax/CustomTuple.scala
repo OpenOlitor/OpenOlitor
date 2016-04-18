@@ -20,14 +20,17 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.scalax
 
-import ch.openolitor.core.models.UserId
-import org.joda.time.DateTime
+import scala.runtime.ScalaRunTime
 
-case class EventMetadata(originator: UserId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
+trait CustomTuple {
+  this: Product =>
 
-trait PersistetEvent extends Serializable {
-  val meta: EventMetadata
+  override def toString() = "(" + this.productIterator.mkString(", ") + ")"
+
+  override def hashCode(): Int = ScalaRunTime._hashCode(this)
+
+  override def equals(other: Any): Boolean
+
 }
-

@@ -35,6 +35,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.stammdaten.models.PendenzStatus
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.core.scalax._
 
 //DB Model bindig
 trait StammdatenDBMappings extends DBMappings {
@@ -52,7 +53,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
   implicit val customKundentypIdBinder: TypeBinder[CustomKundentypId] = baseIdTypeBinder(CustomKundentypId.apply _)
   implicit val kundentypIdBinder: TypeBinder[KundentypId] = string.map(KundentypId)
-  implicit val produktekategorieIdBinder: TypeBinder[ProduktekategorieId] = baseIdTypeBinder(ProduktekategorieId.apply _) 
+  implicit val produktekategorieIdBinder: TypeBinder[ProduktekategorieId] = baseIdTypeBinder(ProduktekategorieId.apply _)
   implicit val baseProduktekategorieIdBinder: TypeBinder[BaseProduktekategorieId] = string.map(BaseProduktekategorieId)
   implicit val produktIdBinder: TypeBinder[ProduktId] = baseIdTypeBinder(ProduktId.apply _)
   implicit val produzentIdBinder: TypeBinder[ProduzentId] = baseIdTypeBinder(ProduzentId.apply _)
@@ -60,7 +61,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val projektIdBinder: TypeBinder[ProjektId] = baseIdTypeBinder(ProjektId.apply _)
   implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
   implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
-  
+
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
@@ -72,12 +73,13 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
   implicit val liefereinheitypeBinder: TypeBinder[Liefereinheit] = string.map(Liefereinheit.apply)
   implicit val liefersaisonTypeBinder: TypeBinder[Liefersaison] = string.map(Liefersaison.apply)
-  
+  implicit val anredeTypeBinder: TypeBinder[Anrede] = string.map(Anrede.apply)
+
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
-  
+
   implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
-  
+
   //DB parameter binders for write and query operationsit
   implicit val pendenzStatusBinder = toStringSqlBinder[PendenzStatus]
   implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
@@ -89,7 +91,9 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
   implicit val liefereinheitSqlBinder = toStringSqlBinder[Liefereinheit]
   implicit val liefersaisonSqlBinder = toStringSqlBinder[Liefersaison]
-  
+  implicit val anredeSqlBinder = toStringSqlBinder[Anrede]
+  implicit val optionAnredeSqlBinder = optionSqlBinder[Anrede]
+
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
@@ -112,7 +116,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val projektIdSqlBinder = baseIdSqlBinder[ProjektId]
   implicit val produktProduzentIdIdSqlBinder = baseIdSqlBinder[ProduktProduzentId]
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
-  
+
   implicit val stringSeqSqlBinder = seqSqlBinder[String]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
@@ -120,14 +124,13 @@ trait StammdatenDBMappings extends DBMappings {
 
     override lazy val columns = autoColumns[Abotyp]()
 
-    def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Abotyp): Seq[Any] =
       parameters(Abotyp.unapply(entity).get)
 
     override def updateParameters(abotyp: Abotyp) = {
-      Seq(column.name -> parameter(abotyp.name),
+      super.updateParameters(abotyp) ++ Seq(column.name -> parameter(abotyp.name),
         column.beschreibung -> parameter(abotyp.beschreibung),
         column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
         column.aktivVon -> parameter(abotyp.aktivVon),
@@ -158,7 +161,7 @@ trait StammdatenDBMappings extends DBMappings {
       parameters(CustomKundentyp.unapply(entity).get)
 
     override def updateParameters(typ: CustomKundentyp) = {
-      Seq(column.kundentyp -> parameter(typ.kundentyp),
+      super.updateParameters(typ) ++ Seq(column.kundentyp -> parameter(typ.kundentyp),
         column.beschreibung -> parameter(typ.beschreibung),
         column.anzahlVerknuepfungen -> parameter(typ.anzahlVerknuepfungen))
     }
@@ -176,7 +179,7 @@ trait StammdatenDBMappings extends DBMappings {
       parameters(Kunde.unapply(entity).get)
 
     override def updateParameters(kunde: Kunde) = {
-      Seq(column.bezeichnung -> parameter(kunde.bezeichnung),
+      super.updateParameters(kunde) ++ Seq(column.bezeichnung -> parameter(kunde.bezeichnung),
         column.strasse -> parameter(kunde.strasse),
         column.hausNummer -> parameter(kunde.hausNummer),
         column.adressZusatz -> parameter(kunde.adressZusatz),
@@ -206,7 +209,8 @@ trait StammdatenDBMappings extends DBMappings {
       parameters(Person.unapply(entity).get)
 
     override def updateParameters(person: Person) = {
-      Seq(column.kundeId -> parameter(person.kundeId),
+      super.updateParameters(person) ++ Seq(column.kundeId -> parameter(person.kundeId),
+        column.anrede -> parameter(person.anrede),
         column.name -> parameter(person.name),
         column.vorname -> parameter(person.vorname),
         column.email -> parameter(person.email),
@@ -217,7 +221,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.sort -> parameter(person.sort))
     }
   }
-  
+
   implicit val pendenzMapping = new BaseEntitySQLSyntaxSupport[Pendenz] {
     override val tableName = "Pendenz"
 
@@ -230,7 +234,7 @@ trait StammdatenDBMappings extends DBMappings {
       parameters(Pendenz.unapply(entity).get)
 
     override def updateParameters(pendenz: Pendenz) = {
-      Seq(column.kundeId -> parameter(pendenz.kundeId),
+      super.updateParameters(pendenz) ++ Seq(column.kundeId -> parameter(pendenz.kundeId),
         column.kundeBezeichnung -> parameter(pendenz.kundeBezeichnung),
         column.datum -> parameter(pendenz.datum),
         column.bemerkung -> parameter(pendenz.bemerkung),
@@ -249,7 +253,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Lieferung): Seq[Any] = parameters(Lieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Lieferung) = {
-      Seq(column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten))
+      super.updateParameters(lieferung) ++ Seq(column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten))
     }
   }
 
@@ -262,9 +266,9 @@ trait StammdatenDBMappings extends DBMappings {
       autoConstruct(rs, rn)
 
     def parameterMappings(entity: Tour): Seq[Any] = parameters(Tour.unapply(entity).get)
-    
+
     override def updateParameters(tour: Tour) = {
-    	Seq(column.name -> parameter(tour.name),
+      super.updateParameters(tour) ++ Seq(column.name -> parameter(tour.name),
         column.beschreibung -> parameter(tour.beschreibung))
     }
   }
@@ -280,7 +284,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)
 
     override def updateParameters(depot: Depot) = {
-      Seq(column.name -> parameter(depot.name),
+      super.updateParameters(depot) ++ Seq(column.name -> parameter(depot.name),
         column.kurzzeichen -> parameter(depot.kurzzeichen),
         column.apName -> parameter(depot.apName),
         column.apVorname -> parameter(depot.apVorname),
@@ -316,7 +320,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Heimlieferung): Seq[Any] = parameters(Heimlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Heimlieferung) = {
-      Seq(column.liefertag -> parameter(lieferung.liefertag),
+      super.updateParameters(lieferung) ++ Seq(column.liefertag -> parameter(lieferung.liefertag),
         column.tourId -> parameter(lieferung.tourId))
     }
   }
@@ -333,7 +337,7 @@ trait StammdatenDBMappings extends DBMappings {
       parameters(Depotlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Depotlieferung) = {
-      Seq(column.liefertag -> parameter(lieferung.liefertag),
+      super.updateParameters(lieferung) ++ Seq(column.liefertag -> parameter(lieferung.liefertag),
         column.depotId -> parameter(lieferung.depotId))
     }
   }
@@ -349,7 +353,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Postlieferung) = {
-      Seq(column.liefertag -> parameter(lieferung.liefertag))
+      super.updateParameters(lieferung) ++ Seq(column.liefertag -> parameter(lieferung.liefertag))
     }
   }
 
@@ -364,7 +368,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: DepotlieferungAbo): Seq[Any] = parameters(DepotlieferungAbo.unapply(entity).get)
 
     override def updateParameters(depotlieferungAbo: DepotlieferungAbo) = {
-      Seq(
+      super.updateParameters(depotlieferungAbo) ++ Seq(
         column.kundeId -> parameter(depotlieferungAbo.kundeId),
         column.kunde -> parameter(depotlieferungAbo.kunde),
         column.abotypId -> parameter(depotlieferungAbo.abotypId),
@@ -387,7 +391,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: HeimlieferungAbo): Seq[Any] = parameters(HeimlieferungAbo.unapply(entity).get)
 
     override def updateParameters(heimlieferungAbo: HeimlieferungAbo) = {
-      Seq(
+      super.updateParameters(heimlieferungAbo) ++ Seq(
         column.kundeId -> parameter(heimlieferungAbo.kundeId),
         column.kunde -> parameter(heimlieferungAbo.kunde),
         column.abotypId -> parameter(heimlieferungAbo.abotypId),
@@ -410,7 +414,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: PostlieferungAbo): Seq[Any] = parameters(PostlieferungAbo.unapply(entity).get)
 
     override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
-      Seq(
+      super.updateParameters(postlieferungAbo) ++ Seq(
         column.kundeId -> parameter(postlieferungAbo.kundeId),
         column.kunde -> parameter(postlieferungAbo.kunde),
         column.abotypId -> parameter(postlieferungAbo.abotypId),
@@ -418,7 +422,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.liefertag -> parameter(postlieferungAbo.liefertag))
     }
   }
-  
+
   implicit val produktMapping = new BaseEntitySQLSyntaxSupport[Produkt] {
     override val tableName = "Produkt"
 
@@ -430,7 +434,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Produkt): Seq[Any] = parameters(Produkt.unapply(entity).get)
 
     override def updateParameters(produkt: Produkt) = {
-      Seq(
+      super.updateParameters(produkt) ++ Seq(
         column.name -> parameter(produkt.name),
         column.verfuegbarVon -> parameter(produkt.verfuegbarVon),
         column.verfuegbarBis -> parameter(produkt.verfuegbarBis),
@@ -438,11 +442,10 @@ trait StammdatenDBMappings extends DBMappings {
         column.standardmenge -> parameter(produkt.standardmenge),
         column.einheit -> parameter(produkt.einheit),
         column.preis -> parameter(produkt.preis),
-        column.produzenten -> parameter(produkt.produzenten)
-      )
+        column.produzenten -> parameter(produkt.produzenten))
     }
   }
-  
+
   implicit val produzentMapping = new BaseEntitySQLSyntaxSupport[Produzent] {
     override val tableName = "Produzent"
 
@@ -454,7 +457,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Produzent): Seq[Any] = parameters(Produzent.unapply(entity).get)
 
     override def updateParameters(produzent: Produzent) = {
-      Seq(
+      super.updateParameters(produzent) ++ Seq(
         column.name -> parameter(produzent.name),
         column.vorname -> parameter(produzent.vorname),
         column.kurzzeichen -> parameter(produzent.kurzzeichen),
@@ -475,7 +478,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.aktiv -> parameter(produzent.aktiv))
     }
   }
-  
+
   implicit val produktekategorieMapping = new BaseEntitySQLSyntaxSupport[Produktekategorie] {
     override val tableName = "Produktekategorie"
 
@@ -487,11 +490,11 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Produktekategorie): Seq[Any] = parameters(Produktekategorie.unapply(entity).get)
 
     override def updateParameters(produktekategorie: Produktekategorie) = {
-      Seq(
+      super.updateParameters(produktekategorie) ++ Seq(
         column.beschreibung -> parameter(produktekategorie.beschreibung))
     }
   }
-  
+
   implicit val projektMapping = new BaseEntitySQLSyntaxSupport[Projekt] {
     override val tableName = "Projekt"
 
@@ -503,7 +506,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: Projekt): Seq[Any] = parameters(Projekt.unapply(entity).get)
 
     override def updateParameters(projekt: Projekt) = {
-      Seq(
+      super.updateParameters(projekt) ++ Seq(
         column.bezeichnung -> parameter(projekt.bezeichnung),
         column.strasse -> parameter(projekt.strasse),
         column.hausNummer -> parameter(projekt.hausNummer),
@@ -515,7 +518,7 @@ trait StammdatenDBMappings extends DBMappings {
         column.waehrung -> parameter(projekt.waehrung))
     }
   }
-  
+
   implicit val produktProduzentMapping = new BaseEntitySQLSyntaxSupport[ProduktProduzent] {
     override val tableName = "ProduktProduzent"
 
@@ -527,12 +530,12 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: ProduktProduzent): Seq[Any] = parameters(ProduktProduzent.unapply(entity).get)
 
     override def updateParameters(projekt: ProduktProduzent) = {
-      Seq(
+      super.updateParameters(projekt) ++ Seq(
         column.produktId -> parameter(projekt.produktId),
         column.produzentId -> parameter(projekt.produzentId))
     }
   }
-  
+
   implicit val produktProduktekategorieMapping = new BaseEntitySQLSyntaxSupport[ProduktProduktekategorie] {
     override val tableName = "ProduktProduktekategorie"
 
@@ -544,7 +547,7 @@ trait StammdatenDBMappings extends DBMappings {
     def parameterMappings(entity: ProduktProduktekategorie): Seq[Any] = parameters(ProduktProduktekategorie.unapply(entity).get)
 
     override def updateParameters(produktkat: ProduktProduktekategorie) = {
-      Seq(
+      super.updateParameters(produktkat) ++ Seq(
         column.produktId -> parameter(produktkat.produktId),
         column.produktekategorieId -> parameter(produktkat.produktekategorieId))
     }

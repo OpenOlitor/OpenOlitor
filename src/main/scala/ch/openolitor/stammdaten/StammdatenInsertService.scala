@@ -35,6 +35,8 @@ import akka.actor.ActorSystem
 import ch.openolitor.core.Macros._
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
+import org.joda.time.DateTime
+import ch.openolitor.core.Macros._
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -51,52 +53,57 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
-  //TODO: replace with credentials of logged in user
-  implicit val userId = Boot.systemUserId
-
   val ZERO = 0
 
   val handle: Handle = {
     case EntityInsertedEvent(meta, id, abotyp: AbotypModify) =>
-      createAbotyp(id, abotyp)
+      createAbotyp(meta, id, abotyp)
     case EntityInsertedEvent(meta, id, kunde: KundeModify) =>
-      createKunde(id, kunde)
+      createKunde(meta, id, kunde)
+    case EntityInsertedEvent(meta, id, person: PersonCreate) =>
+      val modify = copyTo[PersonCreate, PersonModify](person, "id" -> None)
+      createPerson(meta, id, modify, person.kundeId, person.sort)
     case EntityInsertedEvent(meta, id, depot: DepotModify) =>
-      createDepot(id, depot)
+      createDepot(meta, id, depot)
     case EntityInsertedEvent(meta, id, abo: AboModify) =>
-      createAbo(id, abo)
+      createAbo(meta, id, abo)
     case EntityInsertedEvent(meta, id, lieferung: LieferungAbotypCreate) =>
-      createLieferung(id, lieferung)
+      createLieferung(meta, id, lieferung)
     case EntityInsertedEvent(meta, id, lieferung: HeimlieferungAbotypModify) =>
-      createVertriebsart(id, lieferung)
+      createHeimlieferungVertriebsart(meta, id, lieferung)
     case EntityInsertedEvent(meta, id, lieferung: PostlieferungAbotypModify) =>
-      createVertriebsart(id, lieferung)
+      createPostlieferungVertriebsart(meta, id, lieferung)
     case EntityInsertedEvent(meta, id, depotlieferung: DepotlieferungAbotypModify) =>
-      createVertriebsart(id, depotlieferung)
+      createDepotlieferungVertriebsart(meta, id, depotlieferung)
     case EntityInsertedEvent(meta, id, kundentyp: CustomKundentypCreate) =>
-      createKundentyp(id, kundentyp)
+      createKundentyp(meta, id, kundentyp)
     case EntityInsertedEvent(meta, id, produkt: ProduktModify) =>
-      createProdukt(id, produkt)
+      createProdukt(meta, id, produkt)
     case EntityInsertedEvent(meta, id, produktekategorie: ProduktekategorieModify) =>
-      createProduktekategorie(id, produktekategorie)
+      createProduktekategorie(meta, id, produktekategorie)
     case EntityInsertedEvent(meta, id, produzent: ProduzentModify) =>
-      createProduzent(id, produzent)
+      createProduzent(meta, id, produzent)
     case EntityInsertedEvent(meta, id, tour: TourModify) =>
-      createTour(id, tour)
+      createTour(meta, id, tour)
     case EntityInsertedEvent(meta, id, projekt: ProjektModify) =>
-      createProjekt(id, projekt)
+      createProjekt(meta, id, projekt)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
       logger.warn(s"Unknown event:$e")
   }
 
-  def createAbotyp(id: UUID, abotyp: AbotypModify) = {
+  def createAbotyp(meta: EventMetadata, id: UUID, abotyp: AbotypModify)(implicit userId: UserId = meta.originator) = {
     val abotypId = AbotypId(id)
-    val typ = copyTo[AbotypModify, Abotyp](abotyp, "id" -> abotypId,
+    val typ = copyTo[AbotypModify, Abotyp](abotyp, 
+      "id" -> abotypId,
       "anzahlAbonnenten" -> ZERO,
       "letzteLieferung" -> None,
-      "waehrung" -> CHF)
+      "waehrung" -> CHF,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
       //create abotyp
@@ -104,38 +111,54 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createVertriebsart(id: UUID, vertriebsart: DepotlieferungAbotypModify) = {
+  def createDepotlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: DepotlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
-    val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> vertriebsartId)
+    val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> vertriebsartId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Depotlieferung, VertriebsartId](insert)
     }
   }
 
-  def createVertriebsart(id: UUID, vertriebsart: HeimlieferungAbotypModify) = {
+  def createHeimlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: HeimlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
-    val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> vertriebsartId)
+    val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> vertriebsartId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Heimlieferung, VertriebsartId](insert)
     }
   }
 
-  def createVertriebsart(id: UUID, vertriebsart: PostlieferungAbotypModify) = {
+  def createPostlieferungVertriebsart(meta: EventMetadata, id: UUID, vertriebsart: PostlieferungAbotypModify)(implicit userId: UserId = meta.originator) = {
     val vertriebsartId = VertriebsartId(id)
-    val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> vertriebsartId)
+    val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> vertriebsartId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Postlieferung, VertriebsartId](insert)
     }
   }
 
-  def createLieferung(id: UUID, lieferung: LieferungAbotypCreate) = {
+  def createLieferung(meta: EventMetadata, id: UUID, lieferung: LieferungAbotypCreate)(implicit userId: UserId = meta.originator) = {
     val lieferungId = LieferungId(id)
     val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> lieferungId,
       "anzahlAbwesenheiten" -> ZERO,
-      "status" -> Offen)
+      "status" -> Offen,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
       //create lieferung
@@ -143,132 +166,174 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createKunde(id: UUID, create: KundeModify) = {
-    if (create.ansprechpersonen.isEmpty) {
-      //TODO: handle error
-    } else {
-      val kundeId = KundeId(id)
-      val bez = create.bezeichnung.getOrElse(create.ansprechpersonen.head.fullName)
-      val kunde = copyTo[KundeModify, Kunde](create,
-        "id" -> kundeId,
-        "bezeichnung" -> bez,
-        "anzahlPersonen" -> create.ansprechpersonen.length,
-        "anzahlAbos" -> ZERO,
-        "anzahlPendenzen" -> ZERO)
-      DB autoCommit { implicit session =>
-        //create abotyp
-        writeRepository.insertEntity[Kunde, KundeId](kunde)
-      }
-
-      //create personen as well
-      create.ansprechpersonen.zipWithIndex.map {
-        case (person, index) =>
-          createPerson(UUID.randomUUID, person, kundeId, index)
-      }
+  def createKunde(meta: EventMetadata, id: UUID, create: KundeModify)(implicit userId: UserId = meta.originator) = {
+    val kundeId = KundeId(id)
+    val bez = create.bezeichnung.getOrElse(create.ansprechpersonen.head.fullName)
+    val kunde = copyTo[KundeModify, Kunde](create,
+      "id" -> kundeId,
+      "bezeichnung" -> bez,
+      "anzahlPersonen" -> create.ansprechpersonen.length,
+      "anzahlAbos" -> ZERO,
+      "anzahlPendenzen" -> ZERO,
+    "erstelldat" -> meta.timestamp,
+    "ersteller" -> meta.originator,
+    "modifidat" -> meta.timestamp,
+    "modifikator" -> meta.originator)
+    DB autoCommit { implicit session =>
+      //create abotyp
+      writeRepository.insertEntity[Kunde, KundeId](kunde)
     }
   }
 
-  def createPerson(id: UUID, create: PersonModify, kundeId: KundeId, sort: Int) = {
+  def createPerson(meta: EventMetadata, id: UUID, create: PersonModify, kundeId: KundeId, sort: Int)(implicit userId: UserId = meta.originator) = {
     val personId = PersonId(id)
 
     val person = copyTo[PersonModify, Person](create, "id" -> personId,
       "kundeId" -> kundeId,
-      "sort" -> sort)
+      "sort" -> sort,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Person, PersonId](person)
     }
   }
   
-  def createPendenz(id: UUID, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String) = {
+  def createPendenz(meta: EventMetadata, id: UUID, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String)(implicit userId: UserId = meta.originator) = {
     val pendenzId = PendenzId(id)
 
     val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> pendenzId,
-        "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung)
+        "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Pendenz, PendenzId](pendenz)
     }
   }
 
-  def createDepot(id: UUID, create: DepotModify) = {
+  def createDepot(meta: EventMetadata, id: UUID, create: DepotModify)(implicit userId: UserId = meta.originator) = {
     val depotId = DepotId(id)
     val depot = copyTo[DepotModify, Depot](create,
       "id" -> depotId,
       "farbCode" -> "",
-      "anzahlAbonnenten" -> ZERO)
+      "anzahlAbonnenten" -> ZERO,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Depot, DepotId](depot)
     }
   }
 
-  def createAbo(id: UUID, create: AboModify) = {
+  def createAbo(meta: EventMetadata, id: UUID, create: AboModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       val aboId = AboId(id)
       val abo = create match {
         case create: DepotlieferungAboModify =>
           writeRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
-            "id" -> aboId, "saldo" -> ZERO))
+            "id" -> aboId, "saldo" -> ZERO,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator))
         case create: HeimlieferungAboModify =>
           writeRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
-            "id" -> aboId, "saldo" -> ZERO))
+            "id" -> aboId, "saldo" -> ZERO,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator))
         case create: PostlieferungAboModify =>
           writeRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](create,
-            "id" -> aboId, "saldo" -> ZERO))
+            "id" -> aboId, "saldo" -> ZERO,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator))
       }
     }
   }
 
-  def createKundentyp(id: UUID, create: CustomKundentypCreate) = {
+  def createKundentyp(meta: EventMetadata, id: UUID, create: CustomKundentypCreate)(implicit userId: UserId = meta.originator) = {
     val customKundentypId = CustomKundentypId(id)
     val kundentyp = copyTo[CustomKundentypCreate, CustomKundentyp](create,
       "id" -> customKundentypId,
-      "anzahlVerknuepfungen" -> ZERO)
+      "anzahlVerknuepfungen" -> ZERO,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[CustomKundentyp, CustomKundentypId](kundentyp)
     }
   }
   
-  def createProdukt(id: UUID, create: ProduktModify) = {
+  def createProdukt(meta: EventMetadata, id: UUID, create: ProduktModify)(implicit userId: UserId = meta.originator) = {
     val produktId = ProduktId(id)
     val produkt = copyTo[ProduktModify, Produkt](create,
-      "id" -> produktId)
+      "id" -> produktId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Produkt, ProduktId](produkt)
     }
   }
   
-  def createProduktekategorie(id: UUID, create: ProduktekategorieModify) = {
+  def createProduktekategorie(meta: EventMetadata, id: UUID, create: ProduktekategorieModify)(implicit userId: UserId = meta.originator) = {
     val produktekategorieId = ProduktekategorieId(id)
     val produktekategrie = copyTo[ProduktekategorieModify, Produktekategorie](create,
-      "id" -> produktekategorieId)
+      "id" -> produktekategorieId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Produktekategorie, ProduktekategorieId](produktekategrie)
     }
   }
   
-  def createProduzent(id: UUID, create: ProduzentModify) = {
+  def createProduzent(meta: EventMetadata, id: UUID, create: ProduzentModify)(implicit userId: UserId = meta.originator) = {
     val produzentId = ProduzentId(id)
     val produzent = copyTo[ProduzentModify, Produzent](create,
-      "id" -> produzentId)
+      "id" -> produzentId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Produzent, ProduzentId](produzent)
     }
   }
   
-  def createTour(id: UUID, create: TourModify) = {
+  def createTour(meta: EventMetadata, id: UUID, create: TourModify)(implicit userId: UserId = meta.originator) = {
     val tourId = TourId(id)
     val tour = copyTo[TourModify, Tour](create,
-      "id" -> tourId)
+      "id" -> tourId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Tour, TourId](tour)
     }
   }
   
-   def createProjekt(id: UUID, create: ProjektModify) = {
+   def createProjekt(meta: EventMetadata, id: UUID, create: ProjektModify)(implicit userId: UserId = meta.originator) = {
     val projektId = ProjektId(id)
     val projekt = copyTo[ProjektModify, Projekt](create,
-      "id" -> projektId)
+      "id" -> projektId,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Projekt, ProjektId](projekt)
     }

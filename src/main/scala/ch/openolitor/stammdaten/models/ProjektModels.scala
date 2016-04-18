@@ -24,6 +24,8 @@ package ch.openolitor.stammdaten.models
 
 import java.util.UUID
 import ch.openolitor.core.models._
+import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 case class ProjektId(id: UUID) extends BaseId
 
@@ -36,7 +38,12 @@ case class Projekt(id: ProjektId,
   ort: Option[String],
   preiseSichtbar: Boolean = true,
   preiseEditierbar: Boolean = false,
-  waehrung: Waehrung = CHF) extends BaseEntity[ProjektId]
+  waehrung: Waehrung = CHF,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[ProjektId]
 
 case class ProjektModify(
   bezeichnung: String,
@@ -47,8 +54,7 @@ case class ProjektModify(
   ort: Option[String],
   preiseSichtbar: Boolean = true,
   preiseEditierbar: Boolean = false,
-  waehrung: Waehrung = CHF
-) extends Product 
+  waehrung: Waehrung = CHF) extends JSONSerializable
 
 case class KundentypId(id: String)
 
@@ -63,12 +69,17 @@ trait Kundentyp {
 case class CustomKundentyp(id: CustomKundentypId,
   override val kundentyp: KundentypId,
   override val beschreibung: Option[String],
-  anzahlVerknuepfungen: Int) extends BaseEntity[CustomKundentypId] with Kundentyp {
+  anzahlVerknuepfungen: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[CustomKundentypId] with Kundentyp {
   override def system = false
 }
 
-case class CustomKundentypModify(beschreibung: Option[String])
-case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String])
+case class CustomKundentypModify(beschreibung: Option[String]) extends JSONSerializable
+case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String]) extends JSONSerializable
 
 sealed trait SystemKundentyp extends Kundentyp with Product {
   override def system = true

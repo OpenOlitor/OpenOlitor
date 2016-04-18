@@ -91,18 +91,19 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parsePersonen = {
-    parseSubEntities("kundeId", Seq("name", "vorname", "email", "emailAlternative",
+    parseSubEntities("kundeId", Seq("anrede", "name", "vorname", "email", "emailAlternative",
       "telefonMobil", "telefonFestnetz", "bemerkungen")) {
       indexes =>
         row =>
           //match column indexes
-          val Seq(indexName, indexVorname, indexEmail, indexEmailAlternative, indexTelefonMobil, indexTelefonFestnetz, indexBemerkungen) =
+          val Seq(indexAnrede, indexName, indexVorname, indexEmail, indexEmailAlternative, indexTelefonMobil, indexTelefonFestnetz, indexBemerkungen) =
             indexes
 
           PersonModify(None,
+            anrede = row.value[Option[String]](indexAnrede).map(Anrede.apply),
             name = row.value[String](indexName),
             vorname = row.value[String](indexVorname),
-            email = row.value[String](indexEmail),
+            email = row.value[Option[String]](indexEmail),
             emailAlternative = row.value[Option[String]](indexEmailAlternative),
             telefonMobil = row.value[Option[String]](indexTelefonMobil),
             telefonFestnetz = row.value[Option[String]](indexTelefonFestnetz),
@@ -150,7 +151,7 @@ class DataImportParser extends Actor with ActorLogging {
         row =>
           //match column indexes
           val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
-            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten, 
+            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
             indexSaldoMindestbestand, adminProzente) = indexes
 
           (AbotypId(UUID.randomUUID),

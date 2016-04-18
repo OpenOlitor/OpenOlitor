@@ -26,6 +26,9 @@ import java.util.UUID
 import ch.openolitor.core.models._
 import java.util.Date
 import org.joda.time.DateTime
+import ch.openolitor.core.scalax.Product23
+import ch.openolitor.core.scalax.Tuple23
+import ch.openolitor.core.JSONSerializable
 
 case class BaseProduzentId(id: String)
 
@@ -49,8 +52,42 @@ case class Produzent(id: ProduzentId,
   mwst: Boolean,
   mwstSatz: Option[BigDecimal],
   mwstNr: Option[String],
-  aktiv: Boolean
-  ) extends BaseEntity[ProduzentId]
+  aktiv: Boolean,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[ProduzentId]
+
+object Produzent {
+  def unapply(p: Produzent) = {
+    Some(Tuple23(
+      p.id: ProduzentId,
+      p.name: String,
+      p.vorname: Option[String],
+      p.kurzzeichen: String,
+      p.strasse: Option[String],
+      p.hausNummer: Option[String],
+      p.adressZusatz: Option[String],
+      p.plz: String,
+      p.ort: String,
+      p.bemerkungen: Option[String],
+      p.email: String,
+      p.telefonMobil: Option[String],
+      p.telefonFestnetz: Option[String],
+      p.iban: Option[String], //maybe use dedicated type
+      p.bank: Option[String],
+      p.mwst: Boolean,
+      p.mwstSatz: Option[BigDecimal],
+      p.mwstNr: Option[String],
+      p.aktiv: Boolean,
+      //modification flags
+      p.erstelldat: DateTime,
+      p.ersteller: UserId,
+      p.modifidat: DateTime,
+      p.modifikator: UserId))
+  }
+}
 
 case class ProduzentModify(
   name: String,
@@ -70,4 +107,4 @@ case class ProduzentModify(
   mwst: Boolean,
   mwstSatz: Option[BigDecimal],
   mwstNr: Option[String],
-  aktiv: Boolean) extends Product
+  aktiv: Boolean) extends JSONSerializable

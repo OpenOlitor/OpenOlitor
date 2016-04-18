@@ -30,6 +30,7 @@ import ch.openolitor.core.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.db.evolution.scripts.V1Scripts
 import ch.openolitor.util.IteratorUtil
+import org.joda.time.DateTime
 
 trait Script {
   def execute(implicit session: DBSession): Try[Boolean]
@@ -47,7 +48,7 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging {
 
   logger.debug(s"Evolution manager consists of:$scripts")
 
-  def evolveDatabase(fromRevision: Int = 0)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
+  def evolveDatabase(fromRevision: Int = 0)(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Int] = {
     val currentDBRevision = DB readOnly { implicit session => currentRevision }
     val revision = Math.max(fromRevision, currentDBRevision)
     scripts.take(scripts.length - revision) match {
@@ -56,7 +57,7 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging {
     }
   }
 
-  def evolve(scripts: Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext): Try[Int] = {
+  def evolve(scripts: Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Int] = {
     logger.debug(s"evolve database from:$currentRevision")
     val x = scripts.zipWithIndex.view.map {
       case (script, index) =>
@@ -88,8 +89,8 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging {
     x.reverse.headOption.getOrElse(Failure(EvolutionException(s"No Script found")))
   }
 
-  def insertRevision(revision: Int)(implicit session: DBSession): Boolean = {
-    val entity = DBSchema(DBSchemaId(), revision, Done)
+  def insertRevision(revision: Int)(implicit session: DBSession, userId: UserId): Boolean = {
+    val entity = DBSchema(DBSchemaId(), revision, Done, DateTime.now, userId, DateTime.now, userId)
     val params = dbSchemaMapping.parameterMappings(entity)
     withSQL(insertInto(dbSchemaMapping).values(params: _*)).update.apply() == 1
   }
