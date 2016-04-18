@@ -59,36 +59,36 @@ object V1Scripts {
       //create tables
 
       sql"""create table ${postlieferungMapping.table}  (
-      	id varchar(36) not null, 
-      	abotyp_id varchar(36) not null,
+      	id SIGNED BIGINT not null, 
+      	abotyp_id SIGNED BIGINT not null,
       	liefertag varchar(10), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${depotlieferungMapping.table} (
-      	id varchar(36) not null, 
-      	abotyp_id varchar(36) not null, 
-      	depot_id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
+      	abotyp_id SIGNED BIGINT not null, 
+      	depot_id SIGNED BIGINT not null, 
       	liefertag varchar(10), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${heimlieferungMapping.table} (
-      	id varchar(36) not null, 
-      	abotyp_id varchar(36) not null, 
-      	tour_id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
+      	abotyp_id SIGNED BIGINT not null, 
+      	tour_id SIGNED BIGINT not null, 
       	liefertag varchar(10), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${depotMapping.table} (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	name varchar(50) not null, 
       	kurzzeichen varchar(6) not null, 
       	ap_name varchar(50), 
@@ -112,21 +112,21 @@ object V1Scripts {
       	anzahl_abonnenten_max int, 
       	anzahl_abonnenten int not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${tourMapping.table} (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	name varchar(50) not null, 
       	beschreibung varchar(256), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${abotypMapping.table} (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	name varchar(50) not null, 
       	beschreibung varchar(256), 
       	lieferrhythmus varchar(256), 
@@ -144,12 +144,12 @@ object V1Scripts {
       	letzte_lieferung datetime default null, 
       	waehrung varchar(10), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${kundeMapping.table} (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	bezeichnung varchar(50), 
       	strasse varchar(50) not null, 
       	haus_nummer varchar(10), 
@@ -167,34 +167,34 @@ object V1Scripts {
       	anzahl_pendenzen int not null, 
       	anzahl_personen int not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${pendenzMapping.table} (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	kunde_id varchar(50) not null, 
       	kunde_bezeichnung varchar(50), 
       	datum datetime default null, 
       	bemerkung varchar(2000), 
       	status varchar(10), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${customKundentypMapping.table} (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	kundentyp varchar(50) not null, 
       	beschreibung varchar(250), 
       	anzahl_verknuepfungen int not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${personMapping.table} (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	kunde_id varchar(50) not null, 
       	anrede varchar(20) null, 
       	name varchar(50) not null, 
@@ -206,67 +206,67 @@ object V1Scripts {
       	bemerkungen varchar(512), 
       	sort int not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${depotlieferungAboMapping.table}  (
-      	id varchar(36) not null,
-      	kunde_id varchar(36) not null, 
+      	id SIGNED BIGINT not null,
+      	kunde_id SIGNED BIGINT not null, 
       	kunde varchar(100), 
-      	abotyp_id varchar(36) not null, 
+      	abotyp_id SIGNED BIGINT not null, 
       	abotyp_name varchar(50), 
-      	depot_id varchar(36), 
+      	depot_id SIGNED BIGINT, 
       	depot_name varchar(50), 
       	liefertag varchar(10), 
       	saldo int, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${heimlieferungAboMapping.table}  (
-      	id varchar(36) not null,
-      	kunde_id varchar(36) not null, 
+      	id SIGNED BIGINT not null,
+      	kunde_id SIGNED BIGINT not null, 
       	kunde varchar(100), 
-      	abotyp_id varchar(36) not null, 
+      	abotyp_id SIGNED BIGINT not null, 
       	abotyp_name varchar(50), 
-      	tour_id varchar(36), 
+      	tour_id SIGNED BIGINT, 
       	tour_name varchar(50), 
       	liefertag varchar(10), 
       	saldo int, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${postlieferungAboMapping.table}  (
-      	id varchar(36) not null,
-      	kunde_id varchar(36) not null, 
+      	id SIGNED BIGINT not null,
+      	kunde_id SIGNED BIGINT not null, 
       	kunde varchar(100), 
-      	abotyp_id varchar(36) not null, 
+      	abotyp_id SIGNED BIGINT not null, 
       	abotyp_name varchar(50), 
       	liefertag varchar(10), 
       	saldo int, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${lieferungMapping.table}  (
-      	id varchar(36) not null,
-      	abotyp_id varchar(36) not null, 
-      	vertriebsart_id varchar(36) not null,
+      	id SIGNED BIGINT not null,
+      	abotyp_id SIGNED BIGINT not null, 
+      	vertriebsart_id SIGNED BIGINT not null,
       	datum datetime not null, 
       	anzahl_abwesenheiten int not null,
       	status varchar(50) not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${produktMapping.table}  (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	name varchar(50) not null, 
       	verfuegbar_von varchar(10) not null, 
       	verfuegbar_bis varchar(10) not null, 
@@ -276,20 +276,20 @@ object V1Scripts {
       	preis DECIMAL(7,2) not null, 
       	produzenten varchar(300), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${produktekategorieMapping.table}  (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	beschreibung varchar(50) not null,
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${produzentMapping.table}  (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	name varchar(50) not null, 
       	vorname varchar(50), 
       	kurzzeichen varchar(6) not null, 
@@ -309,12 +309,12 @@ object V1Scripts {
       	mwst_nr varchar(30), 
       	aktiv varchar(1), 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${projektMapping.table}  (
-      	id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
       	bezeichnung varchar(50) not null, 
       	strasse varchar(50), 
       	haus_nummer varchar(10), 
@@ -325,27 +325,27 @@ object V1Scripts {
       	preise_editierbar varchar(1) not null, 
       	waehrung varchar(10) not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${produktProduzentMapping.table} (
-      	id varchar(36) not null, 
-      	produkt_id varchar(36) not null, 
-      	produzent_id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
+      	produkt_id SIGNED BIGINT not null, 
+      	produzent_id SIGNED BIGINT not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       sql"""create table ${produktProduktekategorieMapping.table} (
-      	id varchar(36) not null, 
-      	produkt_id varchar(36) not null, 
-      	produktekategorie_id varchar(36) not null, 
+      	id SIGNED BIGINT not null, 
+      	produkt_id SIGNED BIGINT not null, 
+      	produktekategorie_id SIGNED BIGINT not null, 
       	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller SIGNED BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null)""".execute.apply()
+        modifikator SIGNED BIGINT not null)""".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end")
       Success(true)
