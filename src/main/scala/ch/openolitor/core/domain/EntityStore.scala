@@ -39,9 +39,10 @@ import org.joda.time.DateTime
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
 import scala.reflect._
-import scala.reflect.runtime.universe.{Try => TTry, _}
+import scala.reflect.runtime.universe.{ Try => TTry, _ }
 
-/**_
+/**
+ * _
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
  */
 object EntityStore {
@@ -55,37 +56,44 @@ object EntityStore {
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
 
   //base commands
-  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends Command
-  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends Command
+  case class InsertEntityCommand[E <: AnyRef: ClassTag](originator: UserId, entity: E) extends Command {
+    val entityType = entity.getClass
+  }
+  case class UpdateEntityCommand[E <: AnyRef: ClassTag](originator: UserId, id: BaseId, entity: E) extends Command {
+    val entityType = entity.getClass
+  }
   case class DeleteEntityCommand(originator: UserId, id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent[E <: AnyRef](meta: EventMetadata, id: Long, entity: E) extends PersistetEvent
-  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent
+  case class EntityInsertedEvent[E <: AnyRef: ClassTag](meta: EventMetadata, id: Long, entity: E) extends PersistetEvent {
+    val entityType = entity.getClass
+  }
+  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef: ClassTag](meta: EventMetadata, id: I, entity: E) extends PersistetEvent {
+    val entityType = entity.getClass
+  }
   case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistetEvent
-   
+
   // other actor messages
   case object CheckDBEvolution
-  
-  val Seeds: Map[Class[_], Long] = Map(       
-       classOf[Projekt] -> 1000L,
-       classOf[Depot] -> 10000L,
-       classOf[Tour] -> 20000L,
-       classOf[Kunde] -> 30000L,
-       classOf[Person] -> 40000L,
-       classOf[Abotyp] -> 50000L,
-       classOf[Produkt] -> 60000L,
-       classOf[Produzent] -> 70000L   
-  )
+
+  val Seeds: Map[Class[_], Long] = Map(
+    classOf[ProjektModify] -> 1000L,
+    classOf[DepotModify] -> 10000L,
+    classOf[TourModify] -> 20000L,
+    classOf[KundeModify] -> 30000L,
+    classOf[PersonCreate] -> 40000L,
+    classOf[AbotypModify] -> 50000L,
+    classOf[ProduktModify] -> 60000L,
+    classOf[ProduzentModify] -> 70000L)
 }
 
 //json protocol
 trait EntityStoreJsonProtocol extends BaseJsonProtocol {
-    import EntityStore._
-  
-    implicit val metadataFormat = jsonFormat5(EventMetadata)
-    implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)    
+  import EntityStore._
+
+  implicit val metadataFormat = jsonFormat5(EventMetadata)
+  implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)
 }
 
 class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) extends AggregateRoot with ConnectionPoolContextAware {
@@ -98,14 +106,18 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   type S = EventStoreState
   override var state: EventStoreState = EventStoreState(0, 0, Map())
-  
-  def newId[E](entity: E)(implicit ct: ClassTag[E]): Long =  {
-    val clOf = ct.runtimeClass
-    val id: Long = state.ids.get(clOf).map {id => 
+
+  def newId[E](clOf: Class[_]): Long = {
+    val id: Long = state.ids.get(clOf).map { id =>
       id + 1
     }.getOrElse(EntityStore.Seeds.get(clOf).getOrElse(1L))
-    state = state.copy(ids = state.ids + (clOf -> id))
+    log.debug(s"newId:$clOf -> $id")
     id
+  }
+
+  def updateId[E](clOf: Class[_], id: Long)(implicit ct: ClassTag[E]) = {
+    log.debug(s"updateId:$clOf -> $id")
+    state = state.copy(ids = state.ids + (clOf -> id))
   }
 
   /**
@@ -117,6 +129,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
     log.debug(s"updateState:$evt")
     evt match {
       case EntityStoreInitialized(_) =>
+      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.entityType, id)
       case _ =>
     }
   }
@@ -182,7 +195,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   val uncheckedDB: Receive = {
     case CheckDBEvolution =>
-      log.debug(s"uncheckedDB => check db evolution")      
+      log.debug(s"uncheckedDB => check db evolution")
       sender ! checkDBEvolution()
     case x =>
       log.warning(s"uncheckedDB => unsupported command:$x")
@@ -192,46 +205,46 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
    * Eventlog initialized, handle entity events
    */
   val created: Receive = {
-    case InsertEntityCommand(userId, entity: KundeModify) =>
+    case e @ InsertEntityCommand(userId, entity: KundeModify) =>
       if (entity.ansprechpersonen.isEmpty) {
         //TODO: handle error
       } else {
         log.debug(s"created => Insert entity:$entity")
-        val event = EntityInsertedEvent(metadata(userId), newId(entity), entity)
-        
+        val event = EntityInsertedEvent(metadata(userId), newId(e.entityType), entity)
+
         state = state.copy(seqNr = state.seqNr + 1)
         persist(event)(afterEventPersisted)
-        
+
         val kundeId = KundeId(event.id)
-        entity.ansprechpersonen.zipWithIndex.map{ 
-          case (newPerson, index) =>             
-            val sort = index+1
+        entity.ansprechpersonen.zipWithIndex.map {
+          case (newPerson, index) =>
+            val sort = index + 1
             val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> kundeId, "sort" -> sort)
             log.debug(s"created => Insert entity:$personCreate")
-            val event = EntityInsertedEvent(metadata(userId), newId(personCreate), personCreate)
+            val event = EntityInsertedEvent(metadata(userId), newId(classOf[PersonCreate]), personCreate)
             state = incState
-            persist(event)(afterEventPersisted)            
+            persist(event)(afterEventPersisted)
         }
-        
+
         sender ! event
       }
-    case InsertEntityCommand(userId, entity) =>
+    case e @ InsertEntityCommand(userId, entity) =>
       log.debug(s"created => Insert entity:$entity")
-      val event = EntityInsertedEvent(metadata(userId), newId(entity), entity)
+      val event = EntityInsertedEvent(metadata(userId), newId(e.entityType), entity)
       state = state.copy(seqNr = state.seqNr + 1)
       persist(event)(afterEventPersisted)
       sender ! event
     case UpdateEntityCommand(userId, id: KundeId, entity: KundeModify) =>
       val partitions = entity.ansprechpersonen.partition(_.id.isDefined)
-      val newPersons:Seq[PersonModify] = partitions._2.zipWithIndex.map { 
-        case (newPerson, index) => 
-        //generate persistent id for new person
-        val sort = partitions._1.length + index
-        val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
-        val event = EntityInsertedEvent(metadata(userId), newId(personCreate), personCreate)
-        state = incState
-        persist(event)(afterEventPersisted)            
-        newPerson.copy(id = Some(PersonId(event.id)))
+      val newPersons: Seq[PersonModify] = partitions._2.zipWithIndex.map {
+        case (newPerson, index) =>
+          //generate persistent id for new person
+          val sort = partitions._1.length + index
+          val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
+          val event = EntityInsertedEvent(metadata(userId), newId(classOf[PersonCreate]), personCreate)
+          state = incState
+          persist(event)(afterEventPersisted)
+          newPerson.copy(id = Some(PersonId(event.id)))
       }
       val updatePersons = (partitions._1 ++ newPersons)
       val updateEntity = entity.copy(ansprechpersonen = updatePersons)
