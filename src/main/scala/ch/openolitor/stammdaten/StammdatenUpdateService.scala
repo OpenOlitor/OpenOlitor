@@ -163,30 +163,14 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         DB autoCommit { implicit session =>
           update.ansprechpersonen.zipWithIndex.map {
             case (updatePerson, index) =>
-              personen.filter(_.sort == index).headOption.map { person =>
-                logger.debug(s"Update person with at index:$index, data -> $updatePerson")
-                val copy = copyFrom(person, updatePerson, "id" -> person.id, "modifidat" -> meta.timestamp, "modifikator" -> userId)
+              updatePerson.id.map { id => 
+                personen.filter(_.id == id).headOption.map { person =>
+                  logger.debug(s"Update person with at index:$index, data -> $updatePerson")
+                  val copy = copyFrom(person, updatePerson, "id" -> person.id, "modifidat" -> meta.timestamp, "modifikator" -> userId)
 
-                writeRepository.updateEntity[Person, PersonId](copy)
-              }.getOrElse {
-                //not found person for this index, remove
-                val personId = PersonId(UUID.randomUUID)
-                val newPerson = copyTo[PersonModify, Person](updatePerson, "id" -> personId,
-                  "kundeId" -> kundeId,
-                  "sort" -> index, 
-                  "erstelldat" -> meta.timestamp, 
-                  "ersteller" -> userId, 
-                  "modifidat" -> meta.timestamp, 
-                  "modifikator" -> userId)
-                logger.debug(s"Create new person on Kunde:$kundeId, data -> $newPerson")
-
-                writeRepository.insertEntity[Person, PersonId](newPerson)
-              }
-          }
-
-          //delete personen which aren't longer bound to this customer
-          personen.filter(p => p.sort > update.ansprechpersonen.size) map { personToDelete =>
-            writeRepository.deleteEntity[Person, PersonId](personToDelete.id)
+                  writeRepository.updateEntity[Person, PersonId](copy)
+                }                
+              }              
           }
         }
       }

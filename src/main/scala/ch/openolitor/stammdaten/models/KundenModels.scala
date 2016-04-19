@@ -141,6 +141,20 @@ case class PersonModify(
   def fullName = vorname + ' ' + name
 }
 
+case class PersonCreate(
+  kundeId: KundeId,
+  anrede: Option[Anrede],
+  name: String,
+  vorname: String,
+  email: Option[String],
+  emailAlternative: Option[String],
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
+  bemerkungen: Option[String],
+  sort: Int) extends JSONSerializable {
+  def fullName = vorname + ' ' + name
+}
+
 sealed trait PendenzStatus
 case object Ausstehend extends PendenzStatus
 case object Erledigt extends PendenzStatus

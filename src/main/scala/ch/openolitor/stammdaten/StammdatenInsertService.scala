@@ -36,6 +36,7 @@ import ch.openolitor.core.Macros._
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
+import ch.openolitor.core.Macros._
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -59,6 +60,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createAbotyp(meta, id, abotyp)
     case EntityInsertedEvent(meta, id, kunde: KundeModify) =>
       createKunde(meta, id, kunde)
+    case EntityInsertedEvent(meta, id, person: PersonCreate) =>
+      val modify = copyTo[PersonCreate, PersonModify](person, "id" -> None)
+      createPerson(meta, id, modify, person.kundeId, person.sort)
     case EntityInsertedEvent(meta, id, depot: DepotModify) =>
       createDepot(meta, id, depot)
     case EntityInsertedEvent(meta, id, abo: AboModify) =>
@@ -163,31 +167,21 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createKunde(meta: EventMetadata, id: UUID, create: KundeModify)(implicit userId: UserId = meta.originator) = {
-    if (create.ansprechpersonen.isEmpty) {
-      //TODO: handle error
-    } else {
-      val kundeId = KundeId(id)
-      val bez = create.bezeichnung.getOrElse(create.ansprechpersonen.head.fullName)
-      val kunde = copyTo[KundeModify, Kunde](create,
-        "id" -> kundeId,
-        "bezeichnung" -> bez,
-        "anzahlPersonen" -> create.ansprechpersonen.length,
-        "anzahlAbos" -> ZERO,
-        "anzahlPendenzen" -> ZERO,
-      "erstelldat" -> meta.timestamp,
-      "ersteller" -> meta.originator,
-      "modifidat" -> meta.timestamp,
-      "modifikator" -> meta.originator)
-      DB autoCommit { implicit session =>
-        //create abotyp
-        writeRepository.insertEntity[Kunde, KundeId](kunde)
-      }
-
-      //create personen as well
-      create.ansprechpersonen.zipWithIndex.map {
-        case (person, index) =>
-          createPerson(meta, UUID.randomUUID, person, kundeId, index)
-      }
+    val kundeId = KundeId(id)
+    val bez = create.bezeichnung.getOrElse(create.ansprechpersonen.head.fullName)
+    val kunde = copyTo[KundeModify, Kunde](create,
+      "id" -> kundeId,
+      "bezeichnung" -> bez,
+      "anzahlPersonen" -> create.ansprechpersonen.length,
+      "anzahlAbos" -> ZERO,
+      "anzahlPendenzen" -> ZERO,
+    "erstelldat" -> meta.timestamp,
+    "ersteller" -> meta.originator,
+    "modifidat" -> meta.timestamp,
+    "modifikator" -> meta.originator)
+    DB autoCommit { implicit session =>
+      //create abotyp
+      writeRepository.insertEntity[Kunde, KundeId](kunde)
     }
   }
 
