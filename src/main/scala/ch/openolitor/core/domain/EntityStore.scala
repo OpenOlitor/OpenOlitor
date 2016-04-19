@@ -107,7 +107,10 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   def updateId[E](clOf: Class[_], id: Long)(implicit ct: ClassTag[E]) = {
     log.debug(s"updateId:$clOf -> $id")
-    state = state.copy(ids = state.ids + (clOf -> id))
+    if (state.ids.get(clOf).map(_ < id).getOrElse(true)) {
+      //only update if current id is smaller than new one or no id did exist 
+      state = state.copy(ids = state.ids + (clOf -> id))
+    }
   }
 
   /**
