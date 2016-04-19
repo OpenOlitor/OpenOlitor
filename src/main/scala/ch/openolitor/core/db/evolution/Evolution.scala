@@ -31,6 +31,10 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.db.evolution.scripts.V1Scripts
 import ch.openolitor.util.IteratorUtil
 import org.joda.time.DateTime
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.repositories.SqlBinder
 
 trait Script {
   def execute(implicit session: DBSession): Try[Boolean]
@@ -43,10 +47,60 @@ object Evolution extends Evolution(V1Scripts.scripts)
 /**
  * Base evolution class to evolve database from a specific revision to another
  */
-class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging {
+class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging with StammdatenDBMappings {
   import IteratorUtil._
 
   logger.debug(s"Evolution manager consists of:$scripts")
+
+  def checkDBSeeds(seeds: Map[Class[_], Long])(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Map[Class[_], Long]] = {
+    DB readOnly { implicit session =>
+      try {
+        val dbIds = Seq(
+          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping, classOf[AbotypModify]),
+          adjustSeed[Depot, DepotId](seeds, depotMapping, classOf[DepotModify]),
+          adjustSeed[Depotlieferung, VertriebsartId](seeds, depotlieferungMapping, classOf[DepotlieferungModify]),
+          adjustSeed[DepotlieferungAbo, AboId](seeds, depotlieferungAboMapping, classOf[DepotlieferungAboModify]),
+          adjustSeed[Heimlieferung, VertriebsartId](seeds, heimlieferungMapping, classOf[HeimlieferungModify]),
+          adjustSeed[HeimlieferungAbo, AboId](seeds, heimlieferungAboMapping, classOf[HeimlieferungAboModify]),
+          adjustSeed[Kunde, KundeId](seeds, kundeMapping, classOf[KundeModify]),
+          adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping, classOf[CustomKundentypCreate]),
+          adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping, classOf[LieferungAbotypCreate]),
+          adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping, classOf[PendenzModify]),
+          adjustSeed[Person, PersonId](seeds, personMapping, classOf[PersonCreate]),
+          adjustSeed[Postlieferung, VertriebsartId](seeds, postlieferungMapping, classOf[PostlieferungModify]),
+          adjustSeed[PostlieferungAbo, AboId](seeds, postlieferungAboMapping, classOf[PostlieferungAboModify]),
+          adjustSeed[Produkt, ProduktId](seeds, produktMapping, classOf[ProduktModify]),
+          adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping, classOf[ProduktekategorieModify]),
+          adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping, classOf[ProduktProduzent]),
+          adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping, classOf[ProduktekategorieModify]),
+          adjustSeed[Projekt, ProjektId](seeds, projektMapping, classOf[ProjektModify]),
+          adjustSeed[Tour, TourId](seeds, tourMapping, classOf[TourModify])).flatten
+
+        Success(seeds ++ dbIds.toMap)
+      } catch {
+        case t: Throwable =>
+          Failure(t)
+      }
+    }
+  }
+
+  def adjustSeed[E <: BaseEntity[I], I <: BaseId](seeds: Map[Class[_], Long], syntax: BaseEntitySQLSyntaxSupport[E], entity: Class[_])(implicit session: DBSession, userId: UserId): Option[(Class[_], Long)] = {
+    maxId[E, I](syntax).map { id =>
+      seeds.get(entity).map(_ < id).getOrElse(true) match {
+        case true => Some(entity -> id)
+        case _ => None
+      }
+    }.getOrElse(None)
+  }
+
+  def maxId[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E])(implicit session: DBSession, userId: UserId): Option[Long] = {
+    val alias = syntax.syntax("x")
+    val idx = alias.id
+    withSQL {
+      select(max(idx))
+        .from(syntax as alias)
+    }.map(_.longOpt(1)).single.apply().getOrElse(None)
+  }
 
   def evolveDatabase(fromRevision: Int = 0)(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Int] = {
     val currentDBRevision = DB readOnly { implicit session => currentRevision }
