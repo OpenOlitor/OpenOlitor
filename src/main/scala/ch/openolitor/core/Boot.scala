@@ -58,11 +58,11 @@ import ch.openolitor.core.db.evolution.Evolution
 import ch.openolitor.core.domain.EntityStore.CheckDBEvolution
 import scala.util._
 
-case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
+case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext, dbSeeds: Map[Class[_], Long])
 
 object Boot extends App with LazyLogging {
 
-  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer) {
+  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer, dbSeeds: Map[Class[_], Long]) {
     val configKey = s"openolitor.${key}"
 
     def wsUri = s"ws://$interface:$wsPort"
@@ -84,7 +84,7 @@ object Boot extends App with LazyLogging {
   val config = ConfigFactory.load
 
   //TODO: replace with real userid after login succeeded
-  val systemUserId = UserId(UUID.randomUUID)
+  val systemUserId = UserId(1000)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
   val configs = getMandantConfiguration(config)
@@ -116,14 +116,14 @@ object Boot extends App with LazyLogging {
         val wsPort = config.getIntOption(s"openolitor.$mandant.webservicePort").getOrElse(freePort)
         val name = config.getStringOption(s"openolitor.$mandant.name").getOrElse(mandant)
 
-        MandantConfiguration(mandant, name, ifc, port, wsPort)
+        MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(config))
     }).getOrElse {
       //default if no list of mandanten is configured
       val ifc = rootInterface
       val port = rootPort
       val wsPort = config.getIntOption("openolitor.webservicePort").getOrElse(9001)
 
-      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort))
+      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(config)))
     }
   }
 
@@ -181,7 +181,15 @@ object Boot extends App with LazyLogging {
     }
   }
 
-  def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant.key, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant))
+  def dbSeeds(config: Config) = {
+    val models = config.getStringList("db.seed.models")
+    val mappings: Seq[(Class[_], Long)] = models.map { model =>
+      Class.forName(model) -> config.getLong(s"db.seed.mappings.$model")
+    }.toSeq
+    mappings.toMap
+  }
+
+  def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant.key, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant), mandant.dbSeeds)
 
   def connectionPoolContext(mandant: MandantConfiguration) = MandantDBs(mandant.configKey).connectionPoolContext
 

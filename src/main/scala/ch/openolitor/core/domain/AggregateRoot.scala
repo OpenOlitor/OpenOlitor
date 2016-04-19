@@ -50,9 +50,7 @@ trait AggregateRoot extends PersistentActor with ActorLogging {
   def updateState(evt: PersistetEvent): Unit
   def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
   
-  def afterRecoveryCompleted(): Unit = {}
-
-  def newId = UUID.randomUUID()
+  def afterRecoveryCompleted(): Unit = {}  
 
   def now = System.currentTimeMillis
 

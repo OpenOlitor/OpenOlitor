@@ -24,12 +24,12 @@ CREATE TABLE IF NOT EXISTS persistence_snapshot (
 );
 
 CREATE TABLE IF NOT EXISTS DBSchema (
-  id varchar(36) NOT NULL,
+  id BIGINT NOT NULL,
   revision BIGINT NOT NULL,
   status varchar(50) NOT NULL,
   erstelldat DATETIME NOT NULL,
-  ersteller VARCHAR(36) NOT NULL, 
+  ersteller BIGINT NOT NULL, 
   modifidat DATETIME NOT NULL, 
-  modifikator VARCHAR(36) NOT NULL,
+  modifikator BIGINT NOT NULL,
   PRIMARY KEY (id)
 );

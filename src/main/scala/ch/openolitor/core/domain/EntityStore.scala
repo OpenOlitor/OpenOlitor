@@ -23,7 +23,6 @@
 package ch.openolitor.core.domain
 
 import akka.actor._
-
 import akka.persistence._
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,8 +38,11 @@ import ch.openolitor.core.BaseJsonProtocol
 import org.joda.time.DateTime
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
+import scala.reflect._
+import scala.reflect.runtime.universe.{ Try => TTry, _ }
 
-/**_
+/**
+ * _
  * Dieser EntityStore speichert alle Events, welche zu Modifikationen am Datenmodell führen können je Mandant.
  */
 object EntityStore {
@@ -50,30 +52,38 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, lastId: Option[UUID], dbRevision: Int) extends State
+  case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], BaseId]) extends State
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
 
   //base commands
-  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends Command
-  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends Command
+  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends Command {
+    val entityType = entity.getClass
+  }
+  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends Command {
+    val entityType = entity.getClass
+  }
   case class DeleteEntityCommand(originator: UserId, id: BaseId) extends Command
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent[E <: AnyRef](meta: EventMetadata, id: UUID, entity: E) extends PersistetEvent
-  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent
+  case class EntityInsertedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent {
+    val idType = id.getClass
+  }
+  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent {
+    val idType = id.getClass
+  }
   case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistetEvent
-   
+
   // other actor messages
   case object CheckDBEvolution
 }
 
 //json protocol
 trait EntityStoreJsonProtocol extends BaseJsonProtocol {
-    import EntityStore._
-  
-    implicit val metadataFormat = jsonFormat5(EventMetadata)
-    implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)    
+  import EntityStore._
+
+  implicit val metadataFormat = jsonFormat5(EventMetadata)
+  implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)
 }
 
 class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) extends AggregateRoot with ConnectionPoolContextAware {
@@ -85,7 +95,23 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   override def persistenceId: String = EntityStore.persistenceId
 
   type S = EventStoreState
-  override var state: EventStoreState = EventStoreState(0, None, 0)
+  override var state: EventStoreState = EventStoreState(0, 0, Map())
+
+  def newId[E, I <: BaseId](clOf: Class[_ <: BaseId])(implicit f: Long => I): I = {
+    val id: Long = state.dbSeeds.get(clOf).map { id =>
+      id.id + 1
+    }.getOrElse(sysConfig.dbSeeds.get(clOf).getOrElse(1L))
+    log.debug(s"newId:$clOf -> $id")
+    id
+  }
+
+  def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: I) = {
+    log.debug(s"updateId:$clOf -> $id")
+    if (state.dbSeeds.get(clOf).map(_.id < id.id).getOrElse(true)) {
+      //only update if current id is smaller than new one or no id did exist 
+      state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
+    }
+  }
 
   /**
    * Updates internal processor state according to event that is to be applied.
@@ -96,6 +122,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
     log.debug(s"updateState:$evt")
     evt match {
       case EntityStoreInitialized(_) =>
+      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id)
       case _ =>
     }
   }
@@ -107,6 +134,15 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
       case s @ Success(rev) =>
         log.debug(s"Successfully updated to db rev:$rev")
         updateDBRevision(rev)
+
+        evolution.checkDBSeeds(state.dbSeeds) match {
+          case Success(newSeeds) =>
+            log.debug(s"Read dbseeds:$newSeeds")
+            state = state.copy(dbSeeds = newSeeds)
+          case Failure(e) =>
+            log.warning(s"Coulnd't read actual seeds from db", e)
+        }
+
         context become created
         s
       case f @ Failure(e) =>
@@ -161,56 +197,101 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   val uncheckedDB: Receive = {
     case CheckDBEvolution =>
-      log.debug(s"uncheckedDB => check db evolution")      
+      log.debug(s"uncheckedDB => check db evolution")
       sender ! checkDBEvolution()
     case x =>
       log.warning(s"uncheckedDB => unsupported command:$x")
+  }
+
+  def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](userId: UserId, entity: E, f: Long => I): Unit = {
+    val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
+    log.debug(s"created => Insert entity:$entity")
+    val event = EntityInsertedEvent(metadata(userId), newId(clOf)(f), entity)
+    state = state.copy(seqNr = state.seqNr + 1)
+    persist(event)(afterEventPersisted)
+    sender ! event
   }
 
   /**
    * Eventlog initialized, handle entity events
    */
   val created: Receive = {
-    case InsertEntityCommand(userId, entity: KundeModify) =>
+    case e @ InsertEntityCommand(userId, entity: AbotypModify) =>
+      handleEntityInsert[AbotypModify, AbotypId](userId, entity, AbotypId.apply)
+    case e @ InsertEntityCommand(userId, entity: DepotModify) =>
+      handleEntityInsert[DepotModify, DepotId](userId, entity, DepotId.apply)
+    case e @ InsertEntityCommand(userId, entity: DepotlieferungModify) =>
+      handleEntityInsert[DepotlieferungModify, VertriebsartId](userId, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(userId, entity: HeimlieferungModify) =>
+      handleEntityInsert[HeimlieferungModify, VertriebsartId](userId, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(userId, entity: PostlieferungModify) =>
+      handleEntityInsert[PostlieferungModify, VertriebsartId](userId, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(userId, entity: DepotlieferungAbotypModify) =>
+      handleEntityInsert[DepotlieferungAbotypModify, VertriebsartId](userId, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(userId, entity: HeimlieferungAbotypModify) =>
+      handleEntityInsert[HeimlieferungAbotypModify, VertriebsartId](userId, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(userId, entity: PostlieferungAbotypModify) =>
+      handleEntityInsert[PostlieferungAbotypModify, VertriebsartId](userId, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(userId, entity: DepotlieferungAboModify) =>
+      handleEntityInsert[DepotlieferungAboModify, AboId](userId, entity, AboId.apply)
+    case e @ InsertEntityCommand(userId, entity: HeimlieferungAboModify) =>
+      handleEntityInsert[HeimlieferungAboModify, AboId](userId, entity, AboId.apply)
+    case e @ InsertEntityCommand(userId, entity: PostlieferungAboModify) =>
+      handleEntityInsert[PostlieferungAboModify, AboId](userId, entity, AboId.apply)
+    case e @ InsertEntityCommand(userId, entity: KundeModify) =>
       if (entity.ansprechpersonen.isEmpty) {
         //TODO: handle error
       } else {
         log.debug(s"created => Insert entity:$entity")
-        val event = EntityInsertedEvent(metadata(userId), newId, entity)
-        
-        state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
+        val event = EntityInsertedEvent(metadata(userId), newId(classOf[KundeId])(KundeId.apply), entity)
+
+        state = state.copy(seqNr = state.seqNr + 1)
         persist(event)(afterEventPersisted)
-        
-        val kundeId = KundeId(event.id)
-        entity.ansprechpersonen.zipWithIndex.map{ 
-          case (newPerson, index) =>             
-            val sort = index+1
+
+        val kundeId = event.id
+        entity.ansprechpersonen.zipWithIndex.map {
+          case (newPerson, index) =>
+            val sort = index + 1
             val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> kundeId, "sort" -> sort)
             log.debug(s"created => Insert entity:$personCreate")
-            val event = EntityInsertedEvent(metadata(userId), newId, personCreate)
+            val event = EntityInsertedEvent(metadata(userId), newId(classOf[PersonId])(PersonId.apply), personCreate)
             state = incState
-            persist(event)(afterEventPersisted)            
+            persist(event)(afterEventPersisted)
         }
-        
+
         sender ! event
       }
-    case InsertEntityCommand(userId, entity) =>
-      log.debug(s"created => Insert entity:$entity")
-      val event = EntityInsertedEvent(metadata(userId), newId, entity)
-      state = state.copy(seqNr = state.seqNr + 1, lastId = Some(event.id))
-      persist(event)(afterEventPersisted)
-      sender ! event
+    case e @ InsertEntityCommand(userId, entity: CustomKundentypCreate) =>
+      handleEntityInsert[CustomKundentypCreate, CustomKundentypId](userId, entity, CustomKundentypId.apply)
+    case e @ InsertEntityCommand(userId, entity: LieferungAbotypCreate) =>
+      handleEntityInsert[LieferungAbotypCreate, LieferungId](userId, entity, LieferungId.apply)
+    case e @ InsertEntityCommand(userId, entity: PendenzModify) =>
+      handleEntityInsert[PendenzModify, PendenzId](userId, entity, PendenzId.apply)
+    case e @ InsertEntityCommand(userId, entity: PersonCreate) =>
+      handleEntityInsert[PersonCreate, PersonId](userId, entity, PersonId.apply)
+    case e @ InsertEntityCommand(userId, entity: ProduktModify) =>
+      handleEntityInsert[ProduktModify, ProduktId](userId, entity, ProduktId.apply)
+    case e @ InsertEntityCommand(userId, entity: ProduktProduktekategorie) =>
+      handleEntityInsert[ProduktProduktekategorie, ProduktProduktekategorieId](userId, entity, ProduktProduktekategorieId.apply)
+    case e @ InsertEntityCommand(userId, entity: ProduktProduzent) =>
+      handleEntityInsert[ProduktProduzent, ProduktProduzentId](userId, entity, ProduktProduzentId.apply)
+    case e @ InsertEntityCommand(userId, entity: ProduktekategorieModify) =>
+      handleEntityInsert[ProduktekategorieModify, ProduktekategorieId](userId, entity, ProduktekategorieId.apply)
+    case e @ InsertEntityCommand(userId, entity: ProjektModify) =>
+      handleEntityInsert[ProjektModify, ProjektId](userId, entity, ProjektId.apply)
+    case e @ InsertEntityCommand(userId, entity: TourModify) =>
+      handleEntityInsert[TourModify, TourId](userId, entity, TourId.apply)
     case UpdateEntityCommand(userId, id: KundeId, entity: KundeModify) =>
       val partitions = entity.ansprechpersonen.partition(_.id.isDefined)
-      val newPersons:Seq[PersonModify] = partitions._2.zipWithIndex.map { 
-        case (newPerson, index) => 
-        //generate persistent id for new person
-        val sort = partitions._1.length + index
-        val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
-        val event = EntityInsertedEvent(metadata(userId), newId, personCreate)
-        state = incState
-        persist(event)(afterEventPersisted)            
-        newPerson.copy(id = Some(PersonId(newId)))
+      val newPersons: Seq[PersonModify] = partitions._2.zipWithIndex.map {
+        case (newPerson, index) =>
+          //generate persistent id for new person
+          val sort = partitions._1.length + index
+          val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
+          val event = EntityInsertedEvent(metadata(userId), newId(classOf[PersonId])(PersonId.apply), personCreate)
+          state = incState
+          persist(event)(afterEventPersisted)
+          newPerson.copy(id = Some(event.id))
       }
       val updatePersons = (partitions._1 ++ newPersons)
       val updateEntity = entity.copy(ansprechpersonen = updatePersons)

@@ -38,22 +38,17 @@ trait SprayDeserializers {
     }
   }
 
-  def string2BaseIdPathMatcher[T <: BaseId](implicit f: UUID => T): spray.routing.PathMatcher1[T] = {
-    PathMatchers.JavaUUID.flatMap(uuid => Some(f(uuid)))
+  def long2BaseIdPathMatcher[T <: BaseId](implicit f: Long => T): spray.routing.PathMatcher1[T] = {
+    PathMatchers.LongNumber.flatMap(id => Some(f(id)))
   }
 
-  def string2BaseIdConverter[T <: BaseId](implicit f: UUID => T) = new Deserializer[String, T] {
-    def apply(value: String) = {
+  def long2BaseIdConverter[T <: BaseId](implicit f: Long => T) = new Deserializer[Long, T] {
+    def apply(value: Long) = {
       try {
-        val uuid = UUID.fromString(value)
-        if (uuid == null) {
-          Left(MalformedContent(s"'$value' is not a valid UUID:null"))
-        } else {
-          Right(f(uuid))
-        }
+        Right(f(value))        
       } catch {
         case e: Exception =>
-          Left(MalformedContent(s"'$value' is not a valid UUID:$e"))
+          Left(MalformedContent(s"'$value' is not a valid id:$e"))
       }
     }
 

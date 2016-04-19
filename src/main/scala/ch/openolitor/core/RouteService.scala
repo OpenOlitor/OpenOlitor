@@ -23,7 +23,6 @@
 package ch.openolitor.core
 
 import akka.actor.Actor
-
 import akka.actor.ActorRef
 import akka.actor.Props
 import ch.openolitor.helloworld.HelloWorldRoutes
@@ -64,6 +63,7 @@ import ch.openolitor.core.filestore._
 import spray.routing.StandardRoute
 import akka.util.ByteString
 import ch.openolitor.stammdaten.StreamSupport
+import scala.reflect.ClassTag
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system, sysConfig.mandant, ConfigFactory.load)
@@ -142,7 +142,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
         complete(StatusCodes.BadRequest, e)
     }
   }
-  
+
   def getSysConfig() = {
     sysConfig
   }
@@ -154,7 +154,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
 
-  def create[E <: AnyRef, I <: BaseId](idFactory: UUID => I)(implicit um: FromRequestUnmarshaller[E],
+  def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit um: FromRequestUnmarshaller[E],
     tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
@@ -163,13 +163,13 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def created[E <: AnyRef, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister: Persister[E, _]) = {
+  def created[E <: AnyRef: ClassTag, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister: Persister[E, _]) = {
     //create entity
     onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
-      case event: EntityInsertedEvent[_] =>
+      case event: EntityInsertedEvent[_, _] =>
         respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
           respondWithStatus(StatusCodes.Created) {
-            complete(IdResponse(event.id.toString).toJson.compactPrint)
+            complete(IdResponse(event.id.id).toJson.compactPrint)
           }
         }
       case x =>
@@ -177,12 +177,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def update[E <: AnyRef, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
+  def update[E <: AnyRef: ClassTag, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
     tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 
-  def updated[E <: AnyRef, I <: BaseId](id: I, entity: E)(implicit idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
+  def updated[E <: AnyRef: ClassTag, I <: BaseId](id: I, entity: E)(implicit idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     //update entity
     onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
       complete(StatusCodes.Accepted, "")
