@@ -104,5 +104,5 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
 }
 
 object BaseJsonProtocol {
-  case class IdResponse(id: String)
+  case class IdResponse(id: Long)
 }
