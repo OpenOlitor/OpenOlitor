@@ -166,10 +166,10 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   def created[E <: AnyRef: ClassTag, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister: Persister[E, _]) = {
     //create entity
     onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
-      case event: EntityInsertedEvent[_] =>
+      case event: EntityInsertedEvent[_, _] =>
         respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
           respondWithStatus(StatusCodes.Created) {
-            complete(IdResponse(event.id).toJson.compactPrint)
+            complete(IdResponse(event.id.id).toJson.compactPrint)
           }
         }
       case x =>

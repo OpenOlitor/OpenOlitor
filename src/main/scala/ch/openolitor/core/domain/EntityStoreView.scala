@@ -40,7 +40,7 @@ trait EventService[E <: PersistetEvent] {
  */
 trait EntityStoreViewComponent extends Actor {
   import EntityStore._
-  val insertService: EventService[EntityInsertedEvent[_]]
+  val insertService: EventService[EntityInsertedEvent[_, _]]
   val updateService: EventService[EntityUpdatedEvent[_, _]]
   val deleteService: EventService[EntityDeletedEvent[_]]
 
@@ -76,7 +76,7 @@ trait EntityStoreView extends PersistentView with ActorLogging {
     case e: EntityStoreInitialized =>
       log.debug(s"Received EntityStoreInitialized")
       initializeEntityStoreView()
-    case e: EntityInsertedEvent[_] =>
+    case e: EntityInsertedEvent[_, _] =>
       insertService.handle(e)
     case e: EntityUpdatedEvent[_, _] =>
       updateService.handle(e)
