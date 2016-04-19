@@ -142,7 +142,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
         complete(StatusCodes.BadRequest, e)
     }
   }
-  
+
   def getSysConfig() = {
     sysConfig
   }
@@ -169,7 +169,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
       case event: EntityInsertedEvent[_] =>
         respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
           respondWithStatus(StatusCodes.Created) {
-            complete(IdResponse(event.id.toString).toJson.compactPrint)
+            complete(IdResponse(event.id).toJson.compactPrint)
           }
         }
       case x =>
