@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import java.util.UUID
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
+import scala.collection.immutable.TreeMap
 
 case class AboId(id: Long) extends BaseId
 
@@ -35,6 +36,11 @@ sealed trait Abo extends BaseEntity[AboId] {
   val kundeId: KundeId
   val kunde: String
   val saldo: Int
+  val saldoInRechnung: Int
+  val letzteLieferung: Option[DateTime]
+  //calculated fields
+  val anzahlAbwesenheiten: TreeMap[String, Int]
+  val anzahlLieferungen: TreeMap[String, Int]
 }
 
 sealed trait AboModify extends JSONSerializable {
@@ -53,6 +59,11 @@ case class DepotlieferungAbo(id: AboId,
   depotName: String,
   liefertag: Lieferzeitpunkt,
   saldo: Int = 0,
+  saldoInRechnung: Int = 0,
+  letzteLieferung: Option[DateTime] = None,
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
+  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -76,6 +87,11 @@ case class HeimlieferungAbo(id: AboId,
   tourName: String,
   liefertag: Lieferzeitpunkt,
   saldo: Int = 0,
+  saldoInRechnung: Int = 0,
+  letzteLieferung: Option[DateTime] = None,
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
+  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -97,6 +113,11 @@ case class PostlieferungAbo(id: AboId,
   abotypName: String,
   liefertag: Lieferzeitpunkt,
   saldo: Int = 0,
+  saldoInRechnung: Int = 0,
+  letzteLieferung: Option[DateTime] = None,
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
+  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,

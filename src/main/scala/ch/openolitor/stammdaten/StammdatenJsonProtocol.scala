@@ -32,6 +32,7 @@ import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.JSONSerializable
 import zangelo.spray.json.AutoProductFormats
+import scala.collection.immutable.TreeMap
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten
@@ -228,11 +229,33 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
-  implicit val depotaboFormat = jsonFormat13(DepotlieferungAbo)
+  implicit val treeMapFormat = new JsonFormat[TreeMap[String, Int]] {
+    def write(obj: TreeMap[String, Int]): JsValue = {
+      val elems = obj.toTraversable.map {
+        case (key, value) => JsObject("key" -> JsString(key), "value" -> JsNumber(value))
+      }.toVector
+      JsArray(elems)
+    }
+
+    def read(json: JsValue): TreeMap[String, Int] =
+      json match {
+        case JsArray(elems) =>
+          val entries = elems.map { elem =>
+            elem.asJsObject.getFields("key", "value") match {
+              case Seq(JsString(key), JsNumber(value)) =>
+                (key -> value.toInt)
+            }
+          }.toSeq
+          (TreeMap.empty[String, Int] /: entries) { (tree, c) => tree + c }
+        case pt => sys.error(s"Unknown treemap:$pt")
+      }
+  }
+
+  //implicit val depotaboFormat = jsonFormat13(DepotlieferungAbo)
   implicit val depotaboModifyFormat = jsonFormat7(DepotlieferungAboModify)
-  implicit val heimlieferungAboFormat = jsonFormat13(HeimlieferungAbo)
+  //implicit val heimlieferungAboFormat = jsonFormat13(HeimlieferungAbo)
   implicit val heimlieferungAboModifyFormat = jsonFormat7(HeimlieferungAboModify)
-  implicit val postlieferungAboFormat = jsonFormat11(PostlieferungAbo)
+  //implicit val postlieferungAboFormat = jsonFormat11(PostlieferungAbo)
   implicit val postlieferungAboModifyFormat = jsonFormat5(PostlieferungAboModify)
 
   implicit val aboFormat = new RootJsonFormat[Abo] {
@@ -279,7 +302,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       case pt => sys.error(s"Unknown anrede:$pt")
     }
   }
-  
- implicit val projektFormat = jsonFormat14(Projekt)
- implicit val projektModifyFormat = jsonFormat9(ProjektModify)
+
+  implicit val projektFormat = jsonFormat14(Projekt)
+  implicit val projektModifyFormat = jsonFormat9(ProjektModify)
 }
