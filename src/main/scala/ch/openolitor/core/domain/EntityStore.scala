@@ -232,6 +232,12 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
       handleEntityInsert[HeimlieferungAbotypModify, VertriebsartId](userId, entity, VertriebsartId.apply)
     case e @ InsertEntityCommand(userId, entity: PostlieferungAbotypModify) =>
       handleEntityInsert[PostlieferungAbotypModify, VertriebsartId](userId, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(userId, entity: DepotlieferungAboModify) =>
+      handleEntityInsert[DepotlieferungAboModify, AboId](userId, entity, AboId.apply)
+    case e @ InsertEntityCommand(userId, entity: HeimlieferungAboModify) =>
+      handleEntityInsert[HeimlieferungAboModify, AboId](userId, entity, AboId.apply)
+    case e @ InsertEntityCommand(userId, entity: PostlieferungAboModify) =>
+      handleEntityInsert[PostlieferungAboModify, AboId](userId, entity, AboId.apply)
     case e @ InsertEntityCommand(userId, entity: KundeModify) =>
       if (entity.ansprechpersonen.isEmpty) {
         //TODO: handle error
