@@ -52,7 +52,7 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, dbRevision: Int, ids: Map[Class[_], Long]) extends State
+  case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_], Long]) extends State
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
 
   //base commands
@@ -98,7 +98,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   override var state: EventStoreState = EventStoreState(0, 0, Map())
 
   def newId[E](clOf: Class[_]): Long = {
-    val id: Long = state.ids.get(clOf).map { id =>
+    val id: Long = state.dbSeeds.get(clOf).map { id =>
       id + 1
     }.getOrElse(sysConfig.dbSeeds.get(clOf).getOrElse(1L))
     log.debug(s"newId:$clOf -> $id")
@@ -107,9 +107,9 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   def updateId[E](clOf: Class[_], id: Long)(implicit ct: ClassTag[E]) = {
     log.debug(s"updateId:$clOf -> $id")
-    if (state.ids.get(clOf).map(_ < id).getOrElse(true)) {
+    if (state.dbSeeds.get(clOf).map(_ < id).getOrElse(true)) {
       //only update if current id is smaller than new one or no id did exist 
-      state = state.copy(ids = state.ids + (clOf -> id))
+      state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
     }
   }
 
@@ -134,6 +134,15 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
       case s @ Success(rev) =>
         log.debug(s"Successfully updated to db rev:$rev")
         updateDBRevision(rev)
+
+        evolution.checkDBSeeds(state.dbSeeds) match {
+          case Success(newSeeds) =>
+            log.debug(s"Read dbseeds:$newSeeds")
+            state = state.copy(dbSeeds = newSeeds)
+          case Failure(e) =>
+            log.warning(s"Coulnd't read actual seeds from db", e)
+        }
+
         context become created
         s
       case f @ Failure(e) =>
