@@ -35,6 +35,7 @@ import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.repositories.SqlBinder
+import scala.reflect._
 
 trait Script {
   def execute(implicit session: DBSession): Try[Boolean]
@@ -52,29 +53,31 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
 
   logger.debug(s"Evolution manager consists of:$scripts")
 
-  def checkDBSeeds(seeds: Map[Class[_], Long])(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Map[Class[_], Long]] = {
+  def checkDBSeeds(seeds: Map[Class[_ <: BaseId], BaseId])(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Map[Class[_ <: BaseId], BaseId]] = {
     DB readOnly { implicit session =>
       try {
         val dbIds = Seq(
-          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping, classOf[AbotypModify]),
-          adjustSeed[Depot, DepotId](seeds, depotMapping, classOf[DepotModify]),
-          adjustSeed[Depotlieferung, VertriebsartId](seeds, depotlieferungMapping, classOf[DepotlieferungModify]),
-          adjustSeed[DepotlieferungAbo, AboId](seeds, depotlieferungAboMapping, classOf[DepotlieferungAboModify]),
-          adjustSeed[Heimlieferung, VertriebsartId](seeds, heimlieferungMapping, classOf[HeimlieferungModify]),
-          adjustSeed[HeimlieferungAbo, AboId](seeds, heimlieferungAboMapping, classOf[HeimlieferungAboModify]),
-          adjustSeed[Kunde, KundeId](seeds, kundeMapping, classOf[KundeModify]),
-          adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping, classOf[CustomKundentypCreate]),
-          adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping, classOf[LieferungAbotypCreate]),
-          adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping, classOf[PendenzModify]),
-          adjustSeed[Person, PersonId](seeds, personMapping, classOf[PersonCreate]),
-          adjustSeed[Postlieferung, VertriebsartId](seeds, postlieferungMapping, classOf[PostlieferungModify]),
-          adjustSeed[PostlieferungAbo, AboId](seeds, postlieferungAboMapping, classOf[PostlieferungAboModify]),
-          adjustSeed[Produkt, ProduktId](seeds, produktMapping, classOf[ProduktModify]),
-          adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping, classOf[ProduktekategorieModify]),
-          adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping, classOf[ProduktProduzent]),
-          adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping, classOf[ProduktekategorieModify]),
-          adjustSeed[Projekt, ProjektId](seeds, projektMapping, classOf[ProjektModify]),
-          adjustSeed[Tour, TourId](seeds, tourMapping, classOf[TourModify])).flatten
+          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping)(AbotypId.apply),
+          adjustSeed[Depot, DepotId](seeds, depotMapping)(DepotId.apply),
+          adjustSeeds[VertriebsartId](seeds,
+            maxId[Depotlieferung, VertriebsartId](depotlieferungMapping),
+            maxId[Heimlieferung, VertriebsartId](heimlieferungMapping),
+            maxId[Postlieferung, VertriebsartId](postlieferungMapping))(VertriebsartId.apply),
+          adjustSeeds[AboId](seeds,
+            maxId[DepotlieferungAbo, AboId](depotlieferungAboMapping),
+            maxId[HeimlieferungAbo, AboId](heimlieferungAboMapping),
+            maxId[PostlieferungAbo, AboId](postlieferungAboMapping))(AboId.apply),
+          adjustSeed[Kunde, KundeId](seeds, kundeMapping)(KundeId.apply),
+          adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping)(CustomKundentypId.apply),
+          adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping)(LieferungId.apply),
+          adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping)(PendenzId.apply),
+          adjustSeed[Person, PersonId](seeds, personMapping)(PersonId.apply),
+          adjustSeed[Produkt, ProduktId](seeds, produktMapping)(ProduktId.apply),
+          adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping)(ProduktProduktekategorieId.apply),
+          adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping)(ProduktProduzentId.apply),
+          adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping)(ProduktekategorieId.apply),
+          adjustSeed[Projekt, ProjektId](seeds, projektMapping)(ProjektId.apply),
+          adjustSeed[Tour, TourId](seeds, tourMapping)(TourId.apply)).flatten
 
         Success(seeds ++ dbIds.toMap)
       } catch {
@@ -84,13 +87,17 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
     }
   }
 
-  def adjustSeed[E <: BaseEntity[I], I <: BaseId](seeds: Map[Class[_], Long], syntax: BaseEntitySQLSyntaxSupport[E], entity: Class[_])(implicit session: DBSession, userId: UserId): Option[(Class[_], Long)] = {
-    maxId[E, I](syntax).map { id =>
-      seeds.get(entity).map(_ < id).getOrElse(true) match {
-        case true => Some(entity -> id)
-        case _ => None
-      }
-    }.getOrElse(None)
+  def adjustSeed[E <: BaseEntity[I], I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], BaseId], syntax: BaseEntitySQLSyntaxSupport[E])(f: Long => I)(implicit session: DBSession, userId: UserId): Option[(Class[I], BaseId)] = {
+    adjustSeeds(seeds, maxId[E, I](syntax))(f)
+  }
+
+  def adjustSeeds[I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], BaseId], queries: Option[Long]*)(f: Long => I)(implicit session: DBSession, userId: UserId): Option[(Class[I], BaseId)] = {
+    val entity: Class[I] = classTag[I].runtimeClass.asInstanceOf[Class[I]]
+    val overallMaxId = queries.flatten.max
+    seeds.get(entity).map(_.id < overallMaxId).getOrElse(true) match {
+      case true => Some(entity -> f(overallMaxId))
+      case _ => None
+    }
   }
 
   def maxId[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E])(implicit session: DBSession, userId: UserId): Option[Long] = {

@@ -61,30 +61,31 @@ package events {
   }
 
   class EntityInsertEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters)
-    extends PersistedEventPersister[EntityInsertedEvent[AnyRef], V]("entity-inserted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
+    extends PersistedEventPersister[EntityInsertedEvent[BaseId, AnyRef], V]("entity-inserted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
     with LazyLogging {
 
-    def toBytes(t: EntityInsertedEvent[AnyRef]): ByteString = {
+    def toBytes(t: EntityInsertedEvent[BaseId, AnyRef]): ByteString = {
       //build custom json
       val meta = metadataFormat.write(t.meta)
 
       //lookup persister for entity
       val entity = persistEntity(t.entity)
+      val id = persistEntity(t.id)
 
       fromJson(JsObject(
         "meta" -> meta,
-        "id" -> JsNumber(t.id),
+        "id" -> id,
         "entity" -> entity))
     }
 
-    def fromBytes(bytes: ByteString): EntityInsertedEvent[AnyRef] = {
+    def fromBytes(bytes: ByteString): EntityInsertedEvent[BaseId, AnyRef] = {
       toJson(bytes).asJsObject.getFields("meta", "id", "entity") match {
-        case Seq(metaJson, JsNumber(id), entityJson) =>
+        case Seq(metaJson, idJson, entityJson) =>
           val meta = metadataFormat.read(metaJson)
+          val id: BaseId = unpersistEntity(idJson)
 
           val entity = unpersistEntity[AnyRef](entityJson)
-          val event = EntityInsertedEvent(meta, id.toLong, entity)
-          logger.debug(s"unpersist EntityInsertEvent. $entity -> ${event.entityType}")
+          val event = EntityInsertedEvent(meta, id, entity)
           event
         case x => throw new DeserializationException(s"EntityInsertedEvent data expected, received:$x")
       }
