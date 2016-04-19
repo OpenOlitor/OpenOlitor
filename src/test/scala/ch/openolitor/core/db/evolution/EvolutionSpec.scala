@@ -30,19 +30,18 @@ import ch.openolitor.core.db.TestDB
 import scalikejdbc.specs2.mutable.AutoRollback
 import ch.openolitor.core.models.DBSchema
 import ch.openolitor.core.models.UserId
-import java.util.UUID
 
 class EvolutionSpec extends Specification with Mockito with TestDB {
 
   def initDb(implicit session: DBSession): Unit = {
     sql"""create table if not exists dbschema(
-    	id varchar(36) NOT NULL, 
+    	id BIGINT NOT NULL, 
     	revision BIGINT NOT NULL, 
     	status varchar(50) NOT NULL,
     	erstelldat datetime not null, 
-        ersteller varchar(36) not null, 
+        ersteller BIGINT not null, 
         modifidat datetime not null, 
-        modifikator varchar(36) not null,
+        modifikator BIGINT not null,
     	PRIMARY KEY (id));""".execute.apply()
   }
 
@@ -60,7 +59,7 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
       val scripts = Seq(script1, script2)
       val evolution = new Evolution(Seq())
 
-      implicit val user = UserId(UUID.randomUUID)
+      implicit val user = UserId(23)
       val result = evolution.evolve(scripts, 0)
 
       result === Success(2)
@@ -85,7 +84,7 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
       val scripts = Seq(script1, script2, script3)
       val evolution = new Evolution(Seq())
 
-      implicit val user = UserId(UUID.randomUUID)
+      implicit val user = UserId(24)
       val result = evolution.evolve(scripts, 0)
 
       result === Failure(exception)
