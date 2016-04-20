@@ -35,6 +35,8 @@ sealed trait Abo extends BaseEntity[AboId] {
   val abotypId: AbotypId
   val kundeId: KundeId
   val kunde: String
+  val start: DateTime
+  val ende: Option[DateTime]
   val saldo: Int
   val saldoInRechnung: Int
   val letzteLieferung: Option[DateTime]
@@ -48,6 +50,8 @@ sealed trait AboModify extends JSONSerializable {
   val kunde: String
   val abotypId: AbotypId
   val abotypName: String
+  val start: DateTime
+  val ende: Option[DateTime]
 }
 
 case class DepotlieferungAbo(id: AboId,
@@ -58,6 +62,8 @@ case class DepotlieferungAbo(id: AboId,
   depotId: DepotId,
   depotName: String,
   liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None,
   saldo: Int = 0,
   saldoInRechnung: Int = 0,
   letzteLieferung: Option[DateTime] = None,
@@ -76,7 +82,9 @@ case class DepotlieferungAboModify(kundeId: KundeId,
   abotypName: String,
   depotId: DepotId,
   depotName: String,
-  liefertag: Lieferzeitpunkt) extends AboModify
+  liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None) extends AboModify
 
 case class HeimlieferungAbo(id: AboId,
   kundeId: KundeId,
@@ -86,6 +94,8 @@ case class HeimlieferungAbo(id: AboId,
   tourId: TourId,
   tourName: String,
   liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None,
   saldo: Int = 0,
   saldoInRechnung: Int = 0,
   letzteLieferung: Option[DateTime] = None,
@@ -104,7 +114,9 @@ case class HeimlieferungAboModify(kundeId: KundeId,
   abotypName: String,
   tourId: TourId,
   tourName: String,
-  liefertag: Lieferzeitpunkt) extends AboModify
+  liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None) extends AboModify
 
 case class PostlieferungAbo(id: AboId,
   kundeId: KundeId,
@@ -112,6 +124,8 @@ case class PostlieferungAbo(id: AboId,
   abotypId: AbotypId,
   abotypName: String,
   liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None,
   saldo: Int = 0,
   saldoInRechnung: Int = 0,
   letzteLieferung: Option[DateTime] = None,
@@ -128,5 +142,7 @@ case class PostlieferungAboModify(kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
-  liefertag: Lieferzeitpunkt) extends AboModify
+  liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None) extends AboModify
 
