@@ -75,6 +75,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val produzentIdPath = long2BaseIdPathMatcher(ProduzentId.apply)
   implicit val tourIdPath = long2BaseIdPathMatcher(TourId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
+  implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
 
   import EntityStore._
 
@@ -96,7 +97,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       } ~
       path("kunden" / kundeIdPath / "abos") { kundeId =>
-
         post {
           requestInstance { request =>
             entity(as[AboModify]) {
@@ -123,6 +123,18 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             }
           } ~
           delete(remove(aboId))
+      } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten") { (_, aboId) =>
+        post {
+          requestInstance { request =>
+            entity(as[AbwesenheitModify]) { abw =>
+              created(request)(copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))
+            }
+          }
+        }
+      } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (_, aboId, abwesenheitId) =>
+        delete(remove(abwesenheitId))
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(readRepository.getPendenzen(kundeId))) ~

@@ -584,7 +584,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
-  implicit val abwesenheiMapping = new BaseEntitySQLSyntaxSupport[Abwesenheit] {
+  implicit val abwesenheitMapping = new BaseEntitySQLSyntaxSupport[Abwesenheit] {
     override val tableName = "Abwesenheit"
 
     override lazy val columns = autoColumns[Abwesenheit]()
@@ -596,7 +596,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(entity: Abwesenheit) = {
       super.updateParameters(entity) ++ Seq(
-        column.lieferung -> parameter(entity.lieferung),
+        column.aboId -> parameter(entity.aboId),
+        column.lieferungId -> parameter(entity.lieferungId),
         column.datum -> parameter(entity.datum),
         column.bemerkung -> parameter(entity.bemerkung))
     }

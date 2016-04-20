@@ -65,7 +65,7 @@ trait StammdatenReadRepository {
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
-  def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]]
+  def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]]
 
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
   def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
@@ -114,6 +114,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val projekt = projektMapping.syntax("projekt")
   lazy val produktProduzent = produktProduzentMapping.syntax("produktProduzent")
   lazy val produktProduktekategorie = produktProduktekategorieMapping.syntax("produktProduktekategorie")
+  lazy val abwesenheit = abwesenheitMapping.syntax("abwesenheit")
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
@@ -333,31 +334,43 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }
   }
 
-  def getDepotlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotlieferungAbo]] = {
+  def getDepotlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotlieferungAboDetail]] = {
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
+        .leftJoin(abwesenheitMapping as abwesenheit).on(depotlieferungAbo.id, abwesenheit.aboId)
         .where.eq(depotlieferungAbo.id, parameter(id))
-    }.map(depotlieferungAboMapping(depotlieferungAbo)).single.future
+    }
+      .one(depotlieferungAboMapping(depotlieferungAbo))
+      .toMany(rs => abwesenheitMapping.opt(abwesenheit)(rs))
+      .map((abo, abw) =>
+        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> abw)).single.future
   }
 
-  def getHeimlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[HeimlieferungAbo]] = {
+  def getHeimlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[HeimlieferungAboDetail]] = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
+        .leftJoin(abwesenheitMapping as abwesenheit).on(heimlieferungAbo.id, abwesenheit.aboId)
         .where.eq(heimlieferungAbo.id, parameter(id))
-    }.map(heimlieferungAboMapping(heimlieferungAbo)).single.future
+    }.one(heimlieferungAboMapping(heimlieferungAbo))
+      .toMany(rs => abwesenheitMapping.opt(abwesenheit)(rs))
+      .map((abo, abw) =>
+        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> abw)).single.future
   }
 
-  def getPostlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostlieferungAbo]] = {
+  def getPostlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostlieferungAboDetail]] = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
         .where.eq(postlieferungAbo.id, parameter(id))
-    }.map(postlieferungAboMapping(postlieferungAbo)).single.future
+    }.one(postlieferungAboMapping(postlieferungAbo))
+      .toMany(rs => abwesenheitMapping.opt(abwesenheit)(rs))
+      .map((abo, abw) =>
+        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> abw)).single.future
   }
 
-  def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abo]] = {
+  def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]] = {
     for {
       d <- getDepotlieferungAbo(id)
       h <- getHeimlieferungAbo(id)
