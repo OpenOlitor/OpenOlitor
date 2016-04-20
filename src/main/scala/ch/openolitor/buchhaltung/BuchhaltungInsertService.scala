@@ -49,14 +49,14 @@ class DefaultBuchhaltungInsertService(sysConfig: SystemConfig, override val syst
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Buchhaltung Modul
  */
-class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent[_]] with LazyLogging with AsyncConnectionPoolContextAware
+class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware
     with BuchhaltungDBMappings {
   self: BuchhaltungRepositoryComponent =>
 
   val ZERO = 0
 
   val handle: Handle = {
-    case EntityInsertedEvent(meta, id, entity: RechnungModify) =>
+    case EntityInsertedEvent(meta, id: RechnungId, entity: RechnungModify) =>
       createRechnung(meta, id, entity)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
@@ -64,12 +64,12 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       logger.warn(s"Unknown event:$e")
   }
 
-  def createRechnung(meta: EventMetadata, id: UUID, entity: RechnungModify)(implicit userId: UserId = meta.originator) = {
-    val entityId = RechnungId(id)
+  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungModify)(implicit userId: UserId = meta.originator) = {
     val referenzNummer = generateReferenzNummer(entity)
     val esrNummer = generateEsrNummer(entity, referenzNummer)
+
     val typ = copyTo[RechnungModify, Rechnung](entity,
-      "id" -> entityId,
+      "id" -> id,
       "status" -> Erstellt,
       "referenzNummer" -> referenzNummer,
       "esrNummer" -> esrNummer,

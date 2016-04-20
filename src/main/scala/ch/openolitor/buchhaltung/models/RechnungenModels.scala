@@ -24,7 +24,6 @@ package ch.openolitor.buchhaltung.models
 
 import ch.openolitor.buchhaltung._
 import ch.openolitor.core.models._
-import java.util.UUID
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
@@ -41,7 +40,7 @@ object RechnungStatus {
   }
 }
 
-case class RechnungId(id: UUID) extends BaseId
+case class RechnungId(id: Long) extends BaseId
 
 case class Rechnung(
   id: RechnungId,

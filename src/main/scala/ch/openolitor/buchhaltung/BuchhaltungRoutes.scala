@@ -59,7 +59,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     with BuchhaltungEventStoreSerializer {
   self: BuchhaltungRepositoryComponent with FileStoreComponent =>
 
-  implicit val rechnungIdPath = string2BaseIdPathMatcher(RechnungId.apply)
+  implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
 
   import EntityStore._
 
