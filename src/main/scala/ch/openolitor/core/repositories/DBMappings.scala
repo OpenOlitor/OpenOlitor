@@ -27,6 +27,7 @@ import ch.openolitor.core.models.BaseId
 import java.util.UUID
 import org.joda.time.DateTime
 import ch.openolitor.core.models.UserId
+import scala.collection.immutable.TreeMap
 
 trait DBMappings extends BaseParameter
   with Parameters23
@@ -39,6 +40,7 @@ trait DBMappings extends BaseParameter
   def toStringSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value.toString }
   def seqSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Seq[V]] { def apply(values: Seq[V]): Any = values map (binder) mkString (",") }
   def setSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Set[V]] { def apply(values: Set[V]): Any = values map (binder) mkString (",") }
+  def treeMapSqlBinder[K, V](implicit keyBinder: SqlBinder[K], valueBinder: SqlBinder[V]) = new SqlBinder[TreeMap[K, V]] { def apply(map: TreeMap[K, V]): Any = map.toIterable.map { case (k, v) => keyBinder(k) + "=" + valueBinder(v) }.mkString(",") }
   def noConversionSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value }
   def optionSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Option[V]] { def apply(value: Option[V]): Any = value map (binder) }
   def baseIdSqlBinder[I <: BaseId] = new SqlBinder[I] { def apply(value: I): Any = value.id }
@@ -633,5 +635,5 @@ trait DBMappings extends BaseParameter
       parameter(params._20),
       parameter(params._21),
       parameter(params._22)).productIterator.toSeq
-  }  
+  }
 }

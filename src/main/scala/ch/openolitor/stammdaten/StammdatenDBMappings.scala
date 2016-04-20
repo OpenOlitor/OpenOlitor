@@ -36,6 +36,7 @@ import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.stammdaten.models.PendenzStatus
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.scalax._
+import scala.collection.immutable.TreeMap
 
 //DB Model bindig
 trait StammdatenDBMappings extends DBMappings {
@@ -61,6 +62,7 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val projektIdBinder: TypeBinder[ProjektId] = baseIdTypeBinder(ProjektId.apply _)
   implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
   implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
+  implicit val abwesenheitIdBinder: TypeBinder[AbwesenheitId] = baseIdTypeBinder(AbwesenheitId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
@@ -77,6 +79,10 @@ trait StammdatenDBMappings extends DBMappings {
 
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
+  implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = string.map(s => (TreeMap.empty[String, Int] /: s.split(",")) { (tree, str) =>
+    val pairs = str.split("=")
+    tree + (pairs(0) -> pairs(1).toInt)
+  })
 
   implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
 
@@ -114,8 +120,10 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val baseProduzentIdSqlBinder = new SqlBinder[BaseProduzentId] { def apply(value: BaseProduzentId): Any = value.id }
   implicit val baseProduzentIdSetSqlBinder = setSqlBinder[BaseProduzentId]
   implicit val projektIdSqlBinder = baseIdSqlBinder[ProjektId]
+  implicit val abwesenheitIdSqlBinder = baseIdSqlBinder[AbwesenheitId]
   implicit val produktProduzentIdIdSqlBinder = baseIdSqlBinder[ProduktProduzentId]
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
+  implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
 
   implicit val stringSeqSqlBinder = seqSqlBinder[String]
 
@@ -238,7 +246,8 @@ trait StammdatenDBMappings extends DBMappings {
         column.kundeBezeichnung -> parameter(pendenz.kundeBezeichnung),
         column.datum -> parameter(pendenz.datum),
         column.bemerkung -> parameter(pendenz.bemerkung),
-        column.status -> parameter(pendenz.status))
+        column.status -> parameter(pendenz.status),
+        column.generiert -> parameter(pendenz.generiert))
     }
   }
 
@@ -376,7 +385,13 @@ trait StammdatenDBMappings extends DBMappings {
         column.depotId -> parameter(depotlieferungAbo.depotId),
         column.depotName -> parameter(depotlieferungAbo.depotName),
         column.liefertag -> parameter(depotlieferungAbo.liefertag),
-        column.saldo -> parameter(depotlieferungAbo.saldo))
+        column.start -> parameter(depotlieferungAbo.start),
+        column.ende -> parameter(depotlieferungAbo.ende),
+        column.saldo -> parameter(depotlieferungAbo.saldo),
+        column.saldoInRechnung -> parameter(depotlieferungAbo.saldoInRechnung),
+        column.letzteLieferung -> parameter(depotlieferungAbo.letzteLieferung),
+        column.anzahlAbwesenheiten -> parameter(depotlieferungAbo.anzahlAbwesenheiten),
+        column.anzahlLieferungen -> parameter(depotlieferungAbo.anzahlAbwesenheiten))
     }
   }
 
@@ -399,7 +414,13 @@ trait StammdatenDBMappings extends DBMappings {
         column.tourId -> parameter(heimlieferungAbo.tourId),
         column.tourName -> parameter(heimlieferungAbo.tourName),
         column.liefertag -> parameter(heimlieferungAbo.liefertag),
-        column.saldo -> parameter(heimlieferungAbo.saldo))
+        column.start -> parameter(heimlieferungAbo.start),
+        column.ende -> parameter(heimlieferungAbo.ende),
+        column.saldo -> parameter(heimlieferungAbo.saldo),
+        column.saldoInRechnung -> parameter(heimlieferungAbo.saldoInRechnung),
+        column.letzteLieferung -> parameter(heimlieferungAbo.letzteLieferung),
+        column.anzahlAbwesenheiten -> parameter(heimlieferungAbo.anzahlAbwesenheiten),
+        column.anzahlLieferungen -> parameter(heimlieferungAbo.anzahlAbwesenheiten))
     }
   }
 
@@ -419,7 +440,14 @@ trait StammdatenDBMappings extends DBMappings {
         column.kunde -> parameter(postlieferungAbo.kunde),
         column.abotypId -> parameter(postlieferungAbo.abotypId),
         column.abotypName -> parameter(postlieferungAbo.abotypName),
-        column.liefertag -> parameter(postlieferungAbo.liefertag))
+        column.liefertag -> parameter(postlieferungAbo.liefertag),
+        column.start -> parameter(postlieferungAbo.start),
+        column.ende -> parameter(postlieferungAbo.ende),
+        column.saldo -> parameter(postlieferungAbo.saldo),
+        column.saldoInRechnung -> parameter(postlieferungAbo.saldoInRechnung),
+        column.letzteLieferung -> parameter(postlieferungAbo.letzteLieferung),
+        column.anzahlAbwesenheiten -> parameter(postlieferungAbo.anzahlAbwesenheiten),
+        column.anzahlLieferungen -> parameter(postlieferungAbo.anzahlAbwesenheiten))
     }
   }
 
@@ -550,6 +578,24 @@ trait StammdatenDBMappings extends DBMappings {
       super.updateParameters(produktkat) ++ Seq(
         column.produktId -> parameter(produktkat.produktId),
         column.produktekategorieId -> parameter(produktkat.produktekategorieId))
+    }
+  }
+
+  implicit val abwesenheiMapping = new BaseEntitySQLSyntaxSupport[Abwesenheit] {
+    override val tableName = "Abwesenheit"
+
+    override lazy val columns = autoColumns[Abwesenheit]()
+
+    def apply(rn: ResultName[Abwesenheit])(rs: WrappedResultSet): Abwesenheit =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Abwesenheit): Seq[Any] = parameters(Abwesenheit.unapply(entity).get)
+
+    override def updateParameters(entity: Abwesenheit) = {
+      super.updateParameters(entity) ++ Seq(
+        column.lieferung -> parameter(entity.lieferung),
+        column.datum -> parameter(entity.datum),
+        column.bemerkung -> parameter(entity.bemerkung))
     }
   }
 }

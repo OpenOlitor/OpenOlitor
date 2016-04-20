@@ -37,6 +37,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
+import scala.collection.immutable.TreeMap
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -54,6 +55,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   self: StammdatenRepositoryComponent =>
 
   val ZERO = 0
+  val FALSE = false
 
   val handle: Handle = {
     case EntityInsertedEvent(meta, id: AbotypId, abotyp: AbotypModify) =>
@@ -196,7 +198,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createPendenz(meta: EventMetadata, id: PendenzId, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String)(implicit userId: UserId = meta.originator) = {
     val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> id,
-      "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung,
+      "kundeId" -> kundeId,
+      "generiert" -> FALSE,
+      "kundeBezeichnung" -> kundeBezeichnung,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -223,10 +227,16 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createAbo(meta: EventMetadata, id: AboId, create: AboModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
+      val emptyMap: TreeMap[String, Int] = TreeMap()
       val abo = create match {
         case create: DepotlieferungAboModify =>
           writeRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
-            "id" -> id, "saldo" -> ZERO,
+            "id" -> id,
+            "saldo" -> ZERO,
+            "saldoInRechnung" -> ZERO,
+            "letzteLieferung" -> None,
+            "anzahlAbwesenheiten" -> emptyMap,
+            "anzahlLieferungen" -> emptyMap,
             "erstelldat" -> meta.timestamp,
             "ersteller" -> meta.originator,
             "modifidat" -> meta.timestamp,
@@ -234,6 +244,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         case create: HeimlieferungAboModify =>
           writeRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
             "id" -> id, "saldo" -> ZERO,
+            "saldoInRechnung" -> ZERO,
+            "letzteLieferung" -> None,
+            "anzahlAbwesenheiten" -> emptyMap,
+            "anzahlLieferungen" -> emptyMap,
             "erstelldat" -> meta.timestamp,
             "ersteller" -> meta.originator,
             "modifidat" -> meta.timestamp,
@@ -241,6 +255,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         case create: PostlieferungAboModify =>
           writeRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](create,
             "id" -> id, "saldo" -> ZERO,
+            "saldoInRechnung" -> ZERO,
+            "letzteLieferung" -> None,
+            "anzahlAbwesenheiten" -> emptyMap,
+            "anzahlLieferungen" -> emptyMap,
             "erstelldat" -> meta.timestamp,
             "ersteller" -> meta.originator,
             "modifidat" -> meta.timestamp,
