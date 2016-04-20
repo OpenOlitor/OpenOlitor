@@ -52,6 +52,7 @@ import stamina.Persister
 import ch.openolitor.buchhaltung.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
+import akka.actor._
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -79,3 +80,12 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 }
+
+class DefaultBuchhaltungRoutes(
+  override val entityStore: ActorRef,
+  override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
+  override val fileStore: FileStore,
+  override val actorRefFactory: ActorRefFactory)
+    extends BuchhaltungRoutes
+    with DefaultBuchhaltungRepositoryComponent

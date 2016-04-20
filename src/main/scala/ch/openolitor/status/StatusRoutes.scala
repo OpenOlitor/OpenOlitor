@@ -39,8 +39,6 @@ case class Status(buildNr: String)
 trait StatusRoutes extends HttpService with DefaultRouteService {
 
   import StatusJsonProtocol._
-  
-  def getSysConfig(): SystemConfig
 
   val statusRoute =
     pathPrefix("status") {
@@ -51,13 +49,13 @@ trait StatusRoutes extends HttpService with DefaultRouteService {
    * Project Status routes
    */
   def statusRoutes(): Route =
-      path("staticInfo") {
-        get {
-          respondWithMediaType(`application/json`) {
-            complete {
-              Status(Properties.envOrElse("application_buildnr", "dev" ))
-            }
+    path("staticInfo") {
+      get {
+        respondWithMediaType(`application/json`) {
+          complete {
+            Status(Properties.envOrElse("application_buildnr", "dev"))
           }
         }
       }
+    }
 }
