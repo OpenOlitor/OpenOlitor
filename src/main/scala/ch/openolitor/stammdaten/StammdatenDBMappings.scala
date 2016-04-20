@@ -39,7 +39,7 @@ import ch.openolitor.core.scalax._
 import scala.collection.immutable.TreeMap
 
 //DB Model bindig
-trait StammdatenDBMappings extends DBMappings {
+trait StammdatenDBMappings extends DBMappings with LazyLogging {
   import TypeBinder._
 
   // DB type binders for read operations
@@ -80,8 +80,12 @@ trait StammdatenDBMappings extends DBMappings {
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
   implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = string.map(s => (TreeMap.empty[String, Int] /: s.split(",")) { (tree, str) =>
-    val pairs = str.split("=")
-    tree + (pairs(0) -> pairs(1).toInt)
+    str.split("=") match {
+      case Array(left, right) =>
+        tree + (left -> right.toInt)
+      case _ =>
+        tree
+    }
   })
 
   implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
@@ -371,8 +375,7 @@ trait StammdatenDBMappings extends DBMappings {
 
     override lazy val columns = autoColumns[DepotlieferungAbo]()
 
-    def apply(rn: ResultName[DepotlieferungAbo])(rs: WrappedResultSet): DepotlieferungAbo =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[DepotlieferungAbo])(rs: WrappedResultSet): DepotlieferungAbo = autoConstruct(rs, rn)
 
     def parameterMappings(entity: DepotlieferungAbo): Seq[Any] = parameters(DepotlieferungAbo.unapply(entity).get)
 
