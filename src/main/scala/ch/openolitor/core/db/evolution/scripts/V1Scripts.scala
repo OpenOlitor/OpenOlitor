@@ -27,12 +27,13 @@ import scalikejdbc._
 import scala.util._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 object V1Scripts {
-  val DBInitializationScript = new Script with LazyLogging with StammdatenDBMappings {
+  val StammdatenDBInitializationScript = new Script with LazyLogging with StammdatenDBMappings {
     def execute(implicit session: DBSession): Try[Boolean] = {
       //drop all tables
-      logger.debug(s"oo-system: cleanupDatabase - drop tables")
+      logger.debug(s"oo-system: cleanupDatabase - drop tables - stammdaten")
 
       sql"drop table if exists ${postlieferungMapping.table}".execute.apply()
       sql"drop table if exists ${depotlieferungMapping.table}".execute.apply()
@@ -55,7 +56,7 @@ object V1Scripts {
       sql"drop table if exists ${produktProduzentMapping.table}".execute.apply()
       sql"drop table if exists ${produktProduktekategorieMapping.table}".execute.apply()
 
-      logger.debug(s"oo-system: cleanupDatabase - create tables")
+      logger.debug(s"oo-system: cleanupDatabase - create tables - stammdaten")
       //create tables
 
       sql"""create table ${postlieferungMapping.table}  (
@@ -366,11 +367,51 @@ object V1Scripts {
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
 
-      logger.debug(s"oo-system: cleanupDatabase - end")
+      logger.debug(s"oo-system: cleanupDatabase - end - stammdaten")
+      Success(true)
+    }
+  }
+
+  val BuchhaltungDBInitializationScript = new Script with LazyLogging with BuchhaltungDBMappings {
+    def execute(implicit session: DBSession): Try[Boolean] = {
+      //drop all tables
+      logger.debug(s"oo-system: cleanupDatabase - drop tables - buchhaltung")
+
+      sql"drop table if exists ${rechnungMapping.table}".execute.apply()
+
+      logger.debug(s"oo-system: cleanupDatabase - create tables - buchhaltung")
+      //create tables
+
+      sql"""create table ${rechnungMapping.table} (
+        id BIGINT not null, 
+        kunde_id BIGINT not null, 
+        abo_id BIGINT not null,
+        titel varchar(100),
+        betrag DECIMAL(8,2),
+        einbezahlter_betrag DECIMAL(8,2),
+        rechnungs_datum datetime,
+        faelligkeits_datum datetime,
+        eingangs_datum datetime,
+        status varchar(10),
+        referenz_nummer varchar(27),
+        esr_nummer varchar(54),
+        strasse varchar(50),
+        haus_nummer varchar(10), 
+        adress_zusatz varchar(100), 
+        plz varchar(5) not null, 
+        ort varchar(50) not null, 
+        bemerkungen varchar(512), 
+        erstelldat datetime not null, 
+        ersteller BIGINT not null, 
+        modifidat datetime not null, 
+        modifikator BIGINT not null)""".execute.apply()
+
+      logger.debug(s"oo-system: cleanupDatabase - end - buchhaltung")
       Success(true)
     }
   }
 
   val scripts = Seq(
-    DBInitializationScript)
+    StammdatenDBInitializationScript,
+    BuchhaltungDBInitializationScript)
 }
