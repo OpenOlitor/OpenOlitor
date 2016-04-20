@@ -81,6 +81,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val aboIdFormat = baseIdFormat(AboId)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId)
   implicit val customKundentypIdFormat = baseIdFormat(CustomKundentypId.apply)
+  implicit val abwesenheitIdFormat = baseIdFormat(AbwesenheitId.apply)
   implicit val kundentypIdFormat = new RootJsonFormat[KundentypId] {
     def write(obj: KundentypId): JsValue =
       JsString(obj.id)
@@ -250,13 +251,35 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         case pt => sys.error(s"Unknown treemap:$pt")
       }
   }
-
   implicit val depotaboFormat = jsonFormat19(DepotlieferungAbo)
+  implicit val depotaboDetailFormat = jsonFormat20(DepotlieferungAboDetail)
   implicit val depotaboModifyFormat = jsonFormat9(DepotlieferungAboModify)
   implicit val heimlieferungAboFormat = jsonFormat19(HeimlieferungAbo)
+  implicit val heimlieferungAboDetailFormat = jsonFormat20(HeimlieferungAboDetail)
   implicit val heimlieferungAboModifyFormat = jsonFormat9(HeimlieferungAboModify)
   implicit val postlieferungAboFormat = jsonFormat17(PostlieferungAbo)
+  implicit val postlieferungAboDetailFormat = jsonFormat18(PostlieferungAboDetail)
   implicit val postlieferungAboModifyFormat = jsonFormat7(PostlieferungAboModify)
+
+  implicit val aboDetailFormat = new RootJsonFormat[AboDetail] {
+    def write(obj: AboDetail): JsValue =
+      obj match {
+        case d: DepotlieferungAboDetail => d.toJson
+        case h: HeimlieferungAboDetail => h.toJson
+        case p: PostlieferungAboDetail => p.toJson
+        case _ => JsObject()
+      }
+
+    def read(json: JsValue): AboDetail = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[DepotlieferungAboDetail]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[HeimlieferungAboDetail]
+      } else {
+        json.convertTo[PostlieferungAboDetail]
+      }
+    }
+  }
 
   implicit val aboFormat = new RootJsonFormat[Abo] {
     def write(obj: Abo): JsValue =

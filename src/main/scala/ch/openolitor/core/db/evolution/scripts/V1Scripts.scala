@@ -366,6 +366,17 @@ object V1Scripts {
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
 
+      sql"""create table ${abwesenheitMapping.table} (
+      	id BIGINT not null, 
+      	abo_id BIGINT not null, 
+      	lieferung_id BIGINT not null,
+        datum datetime not null,
+        bemerkung varchar(500),
+      	erstelldat datetime not null, 
+        ersteller BIGINT not null, 
+        modifidat datetime not null, 
+        modifikator BIGINT not null)""".execute.apply()
+
       logger.debug(s"oo-system: cleanupDatabase - end")
       Success(true)
     }

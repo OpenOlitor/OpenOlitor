@@ -185,15 +185,3 @@ case class PendenzModify(id: Option[PendenzId],
   datum: DateTime,
   bemerkung: Option[String],
   status: PendenzStatus) extends JSONSerializable
-
-case class AbwesenheitId(id: Long) extends BaseId
-
-case class Abwesenheit(id: AbwesenheitId,
-  lieferung: LieferungId,
-  datum: DateTime,
-  bemerkung: String,
-  //modification flags
-  erstelldat: DateTime,
-  ersteller: UserId,
-  modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[AbwesenheitId]

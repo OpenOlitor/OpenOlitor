@@ -28,6 +28,11 @@ import java.util.UUID
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 case class AboId(id: Long) extends BaseId
 
@@ -43,6 +48,21 @@ sealed trait Abo extends BaseEntity[AboId] {
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
   val anzahlLieferungen: TreeMap[String, Int]
+}
+
+sealed trait AboDetail {
+  val abotypId: AbotypId
+  val kundeId: KundeId
+  val kunde: String
+  val start: DateTime
+  val ende: Option[DateTime]
+  val saldo: Int
+  val saldoInRechnung: Int
+  val letzteLieferung: Option[DateTime]
+  //calculated fields
+  val anzahlAbwesenheiten: TreeMap[String, Int]
+  val anzahlLieferungen: TreeMap[String, Int]
+  val abwesenheiten: Seq[Abwesenheit]
 }
 
 sealed trait AboModify extends JSONSerializable {
@@ -76,6 +96,29 @@ case class DepotlieferungAbo(id: AboId,
   modifidat: DateTime,
   modifikator: UserId) extends Abo
 
+case class DepotlieferungAboDetail(id: AboId,
+  kundeId: KundeId,
+  kunde: String,
+  abotypId: AbotypId,
+  abotypName: String,
+  depotId: DepotId,
+  depotName: String,
+  liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None,
+  saldo: Int = 0,
+  saldoInRechnung: Int = 0,
+  letzteLieferung: Option[DateTime] = None,
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
+  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId,
+  abwesenheiten: Seq[Abwesenheit]) extends AboDetail with JSONSerializable
+
 case class DepotlieferungAboModify(kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -108,6 +151,29 @@ case class HeimlieferungAbo(id: AboId,
   modifidat: DateTime,
   modifikator: UserId) extends Abo
 
+case class HeimlieferungAboDetail(id: AboId,
+  kundeId: KundeId,
+  kunde: String,
+  abotypId: AbotypId,
+  abotypName: String,
+  tourId: TourId,
+  tourName: String,
+  liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None,
+  saldo: Int = 0,
+  saldoInRechnung: Int = 0,
+  letzteLieferung: Option[DateTime] = None,
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
+  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId,
+  abwesenheiten: Seq[Abwesenheit]) extends AboDetail with JSONSerializable
+
 case class HeimlieferungAboModify(kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -138,6 +204,27 @@ case class PostlieferungAbo(id: AboId,
   modifidat: DateTime,
   modifikator: UserId) extends Abo
 
+case class PostlieferungAboDetail(id: AboId,
+  kundeId: KundeId,
+  kunde: String,
+  abotypId: AbotypId,
+  abotypName: String,
+  liefertag: Lieferzeitpunkt,
+  start: DateTime,
+  ende: Option[DateTime] = None,
+  saldo: Int = 0,
+  saldoInRechnung: Int = 0,
+  letzteLieferung: Option[DateTime] = None,
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
+  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId,
+  abwesenheiten: Seq[Abwesenheit]) extends AboDetail with JSONSerializable
+
 case class PostlieferungAboModify(kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -146,3 +233,26 @@ case class PostlieferungAboModify(kundeId: KundeId,
   start: DateTime,
   ende: Option[DateTime] = None) extends AboModify
 
+case class AbwesenheitId(id: Long) extends BaseId
+
+case class Abwesenheit(id: AbwesenheitId,
+  aboId: AboId,
+  lieferungId: LieferungId,
+  datum: DateTime,
+  bemerkung: String,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[AbwesenheitId] with JSONSerializable
+
+case class AbwesenheitModify(
+  lieferungId: LieferungId,
+  datum: DateTime,
+  bemerkung: String) extends JSONSerializable
+
+case class AbwesenheitCreate(
+  aboId: AboId,
+  lieferungId: LieferungId,
+  datum: DateTime,
+  bemerkung: String) extends JSONSerializable
