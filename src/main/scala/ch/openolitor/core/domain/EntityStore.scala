@@ -40,6 +40,8 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
 import scala.reflect._
 import scala.reflect.runtime.universe.{ Try => TTry, _ }
+import ch.openolitor.buchhaltung.models.RechnungModify
+import ch.openolitor.buchhaltung.models.RechnungId
 
 /**
  * _
@@ -121,9 +123,9 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   override def updateState(evt: PersistetEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
-      case EntityStoreInitialized(_) =>
+      case EntityStoreInitialized(_)                 =>
       case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id)
-      case _ =>
+      case _                                         =>
     }
   }
 
@@ -168,8 +170,8 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   override def restoreFromSnapshot(metadata: SnapshotMetadata, state: State) = {
     log.debug(s"restoreFromSnapshot:$state")
     state match {
-      case Removed => context become removed
-      case Created => context become created
+      case Removed            => context become removed
+      case Created            => context become created
       case s: EventStoreState => this.state = s
     }
   }
@@ -281,6 +283,8 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
       handleEntityInsert[ProjektModify, ProjektId](userId, entity, ProjektId.apply)
     case e @ InsertEntityCommand(userId, entity: TourModify) =>
       handleEntityInsert[TourModify, TourId](userId, entity, TourId.apply)
+    case e @ InsertEntityCommand(userId, entity: RechnungModify) =>
+      handleEntityInsert[RechnungModify, RechnungId](userId, entity, RechnungId.apply)
     case UpdateEntityCommand(userId, id: KundeId, entity: KundeModify) =>
       val partitions = entity.ansprechpersonen.partition(_.id.isDefined)
       val newPersons: Seq[PersonModify] = partitions._2.zipWithIndex.map {

@@ -23,7 +23,6 @@
 package ch.openolitor.core
 
 import scalikejdbc.config._
-
 import akka.actor.{ ActorSystem, Props, ActorRef }
 import akka.pattern.ask
 import akka.io.IO
@@ -57,6 +56,8 @@ import util.Properties
 import ch.openolitor.core.db.evolution.Evolution
 import ch.openolitor.core.domain.EntityStore.CheckDBEvolution
 import scala.util._
+import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
+import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 
 case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext, dbSeeds: Map[Class[_], Long])
 
@@ -154,6 +155,9 @@ object Boot extends App with LazyLogging {
 
       //start actor listening on dbevents to modify calculated fields
       val stammdatenDBEventListener = Await.result(system ? SystemActor.Child(StammdatenDBEventEntityListener.props, "stammdaten-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
+
+      val buchhaltungEntityStoreView = Await.result(system ? SystemActor.Child(BuchhaltungEntityStoreView.props, "buchhaltung-entity-store-view"), duration).asInstanceOf[ActorRef]
+      val buchhaltungDBEventListener = Await.result(system ? SystemActor.Child(BuchhaltungDBEventEntityListener.props, "buchhaltung-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
 
       //start websocket service
       val clientMessages = Await.result(system ? SystemActor.Child(ClientMessagesServer.props, "ws-client-messages"), duration).asInstanceOf[ActorRef]
