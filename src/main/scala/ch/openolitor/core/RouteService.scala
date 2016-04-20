@@ -22,15 +22,13 @@
 \*                                                                           */
 package ch.openolitor.core
 
-import akka.actor.Actor
-import akka.actor.ActorRef
-import akka.actor.Props
+import akka.actor._
 import ch.openolitor.helloworld.HelloWorldRoutes
 import ch.openolitor.stammdaten.StammdatenRoutes
+import ch.openolitor.stammdaten.DefaultStammdatenRoutes
 import spray.routing.HttpService
 import ch.openolitor.stammdaten.DefaultStammdatenRepositoryComponent
 import ch.openolitor.core._
-import akka.actor.ActorSystem
 import ch.openolitor.core.models._
 import spray.httpx.marshalling._
 import spray.httpx.unmarshalling._
@@ -64,24 +62,44 @@ import spray.routing.StandardRoute
 import akka.util.ByteString
 import ch.openolitor.stammdaten.StreamSupport
 import scala.reflect.ClassTag
+import ch.openolitor.buchhaltung.BuchhaltungRoutes
+import ch.openolitor.buchhaltung.DefaultBuchhaltungRepositoryComponent
+import ch.openolitor.buchhaltung.DefaultBuchhaltungRoutes
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[RouteServiceActor], entityStore, sysConfig, system, sysConfig.mandant, ConfigFactory.load)
+  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandant, ConfigFactory.load)
 }
 
-// we don't implement our route structure directly in the service actor because
+trait RouteServiceComponent {
+
+  val entityStore: ActorRef
+  val sysConfig: SystemConfig
+  val system: ActorSystem
+  val fileStore: FileStore
+  val actorRefFactory: ActorRefFactory
+
+  val stammdatenRoute: Route
+  val buchhaltungRoute: Route
+}
+
+trait DefaultRouteServiceComponent extends RouteServiceComponent {
+  override lazy val stammdatenRoute = new DefaultStammdatenRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory).stammdatenRoute
+  override lazy val buchhaltungRoute = new DefaultBuchhaltungRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory).buchhaltungRoute
+}
+
+// we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
 // we want to be able to test it independently, without having to spin up an actor
-class RouteServiceActor(override val entityStore: ActorRef, override val sysConfig: SystemConfig, override val system: ActorSystem, override val mandant: String, override val config: Config)
-  extends Actor with ActorReferences
-  with DefaultRouteService
-  with HelloWorldRoutes
-  with StammdatenRoutes
-  with StatusRoutes
-  with DefaultStammdatenRepositoryComponent
-  with FileStoreRoutes
-  with DefaultFileStoreComponent
-  with CORSSupport
-  with BaseJsonProtocol {
+trait RouteServiceActor
+    extends Actor with ActorReferences
+    with DefaultRouteService
+    with HelloWorldRoutes
+    with StatusRoutes
+    with FileStoreRoutes
+    with DefaultFileStoreComponent
+    with CORSSupport
+    with BaseJsonProtocol {
+  self: RouteServiceComponent =>
 
   var error: Option[Throwable] = None
 
@@ -99,7 +117,7 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute ~ fileStoreRoute))
+  val initializedDB = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute ~ buchhaltungRoute ~ fileStoreRoute))
 
   val systemRoutes = pathPrefix("admin") {
     systemRoute()
@@ -142,10 +160,6 @@ class RouteServiceActor(override val entityStore: ActorRef, override val sysConf
         complete(StatusCodes.BadRequest, e)
     }
   }
-
-  def getSysConfig() = {
-    sysConfig
-  }
 }
 
 // this trait defines our service behavior independently from the service actor
@@ -155,7 +169,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   implicit val timeout = Timeout(5.seconds)
 
   def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
+                                                                       tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         created(request)(entity)
@@ -178,7 +192,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   def update[E <: AnyRef: ClassTag, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
+                                                        tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 
@@ -235,7 +249,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
       details.map {
         case (content, fileName) =>
           onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
-            case Left(e) => onError.map(_(e)).getOrElse(complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}"))
+            case Left(e)         => onError.map(_(e)).getOrElse(complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}"))
             case Right(metadata) => onUpload(id, metadata)
           }
       } getOrElse {
@@ -244,3 +258,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 }
+
+class DefaultRouteServiceActor(
+  override val entityStore: ActorRef,
+  override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
+  override val mandant: String,
+  override val config: Config)
+    extends RouteServiceActor
+    with DefaultRouteServiceComponent

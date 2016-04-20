@@ -20,42 +20,27 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.status
+package ch.openolitor.buchhaltung
 
-import akka.actor.Actor
-import spray.routing._
-import spray.http._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
 import spray.json._
-import spray.json.DefaultJsonProtocol._
-import ch.openolitor.core._
-import scala.util.Properties
+import ch.openolitor.core.models._
+import java.util.UUID
+import org.joda.time._
+import org.joda.time.format._
+import ch.openolitor.core.BaseJsonProtocol
+import ch.openolitor.stammdaten.StammdatenJsonProtocol
+import ch.openolitor.buchhaltung.models._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.JSONSerializable
+import zangelo.spray.json.AutoProductFormats
 
-case class Status(buildNr: String)
+/**
+ * JSON Format deklarationen für das Modul Buchhaltung
+ */
+trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
 
-trait StatusRoutes extends HttpService with DefaultRouteService {
+  implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
 
-  import StatusJsonProtocol._
-
-  val statusRoute =
-    pathPrefix("status") {
-      statusRoutes()
-    }
-
-  /**
-   * Project Status routes
-   */
-  def statusRoutes(): Route =
-    path("staticInfo") {
-      get {
-        respondWithMediaType(`application/json`) {
-          complete {
-            Status(Properties.envOrElse("application_buildnr", "dev"))
-          }
-        }
-      }
-    }
+  //id formats
+  implicit val rechnungIdFormat = baseIdFormat(RechnungId)
 }

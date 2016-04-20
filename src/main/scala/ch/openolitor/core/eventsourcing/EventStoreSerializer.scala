@@ -12,6 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.models.CustomKundentyp
 import ch.openolitor.stammdaten.models.CustomKundentypCreate
 import ch.openolitor.core.eventsourcing.events._
+import ch.openolitor.buchhaltung.eventsourcing.BuchhaltungEventStoreSerializer
 
 class EventStoreSerializer extends StaminaAkkaSerializer(EventStoreSerializer.eventStorePersisters) with LazyLogging with StammdatenEventStoreSerializer {
   
@@ -33,9 +34,9 @@ class EventStoreSerializer extends StaminaAkkaSerializer(EventStoreSerializer.ev
   }
 }
 
-object EventStoreSerializer extends EntityStoreJsonProtocol with StammdatenEventStoreSerializer { 
+object EventStoreSerializer extends EntityStoreJsonProtocol with StammdatenEventStoreSerializer with BuchhaltungEventStoreSerializer { 
   
-  val entityPersisters = Persisters(stammdatenPersisters)
+  val entityPersisters = Persisters(stammdatenPersisters ++ buchhaltungPersisters)
   
   val entityStoreInitializedPersister = persister[EntityStoreInitialized]("entity-store-initialized")  
   val entityInsertEventPersister = new EntityInsertEventPersister[V1](entityPersisters)

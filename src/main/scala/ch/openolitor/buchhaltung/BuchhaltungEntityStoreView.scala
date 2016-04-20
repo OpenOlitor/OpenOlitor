@@ -20,42 +20,44 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.status
+package ch.openolitor.buchhaltung
 
-import akka.actor.Actor
-import spray.routing._
-import spray.http._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
-import spray.json._
-import spray.json.DefaultJsonProtocol._
+import ch.openolitor.core.domain._
 import ch.openolitor.core._
-import scala.util.Properties
+import ch.openolitor.core.db.ConnectionPoolContextAware
+import akka.actor.Props
+import akka.actor.ActorSystem
 
-case class Status(buildNr: String)
+object BuchhaltungEntityStoreView {
+  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)
+}
 
-trait StatusRoutes extends HttpService with DefaultRouteService {
+class DefaultBuchhaltungEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends BuchhaltungEntityStoreView
+  with DefaultBuchhaltungRepositoryComponent
 
-  import StatusJsonProtocol._
+/**
+ * Zusammenfügen des Componenten (cake pattern) zu der persistentView
+ */
+trait BuchhaltungEntityStoreView extends EntityStoreView
+    with BuchhaltungEntityStoreViewComponent with ConnectionPoolContextAware {
+  self: BuchhaltungRepositoryComponent =>
 
-  val statusRoute =
-    pathPrefix("status") {
-      statusRoutes()
-    }
+  override val module = "buchhaltung"
 
-  /**
-   * Project Status routes
-   */
-  def statusRoutes(): Route =
-    path("staticInfo") {
-      get {
-        respondWithMediaType(`application/json`) {
-          complete {
-            Status(Properties.envOrElse("application_buildnr", "dev"))
-          }
-        }
-      }
-    }
+  def initializeEntityStoreView = {
+    writeRepository.cleanupDatabase
+  }
+}
+
+/**
+ * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
+ */
+trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
+  import EntityStore._
+  val sysConfig: SystemConfig
+  val system: ActorSystem
+
+  override val insertService = BuchhaltungInsertService(sysConfig, system)
+  override val updateService = BuchhaltungUpdateService(sysConfig, system)
+  override val deleteService = BuchhaltungDeleteService(sysConfig, system)
 }

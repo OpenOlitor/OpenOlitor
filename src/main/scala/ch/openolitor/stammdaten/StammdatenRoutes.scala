@@ -52,11 +52,12 @@ import stamina.Persister
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
+import akka.actor._
 
 trait StammdatenRoutes extends HttpService with ActorReferences
-  with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
-  with StammdatenJsonProtocol
-  with StammdatenEventStoreSerializer {
+    with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
+    with StammdatenJsonProtocol
+    with StammdatenEventStoreSerializer {
   self: StammdatenRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
@@ -290,3 +291,12 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           })
       }
 }
+
+class DefaultStammdatenRoutes(
+  override val entityStore: ActorRef,
+  override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
+  override val fileStore: FileStore,
+  override val actorRefFactory: ActorRefFactory)
+    extends StammdatenRoutes
+    with DefaultStammdatenRepositoryComponent

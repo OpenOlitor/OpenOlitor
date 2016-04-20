@@ -20,42 +20,18 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.status
+package ch.openolitor.buchhaltung
 
-import akka.actor.Actor
-import spray.routing._
-import spray.http._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
-import spray.json._
-import spray.json.DefaultJsonProtocol._
-import ch.openolitor.core._
-import scala.util.Properties
+import akka.actor.ActorSystem
 
-case class Status(buildNr: String)
+trait BuchhaltungRepositoryComponent {
+  val writeRepository: BuchhaltungWriteRepository
+  val readRepository: BuchhaltungReadRepository
+}
 
-trait StatusRoutes extends HttpService with DefaultRouteService {
+trait DefaultBuchhaltungRepositoryComponent extends BuchhaltungRepositoryComponent {
+  val system: ActorSystem
 
-  import StatusJsonProtocol._
-
-  val statusRoute =
-    pathPrefix("status") {
-      statusRoutes()
-    }
-
-  /**
-   * Project Status routes
-   */
-  def statusRoutes(): Route =
-    path("staticInfo") {
-      get {
-        respondWithMediaType(`application/json`) {
-          complete {
-            Status(Properties.envOrElse("application_buildnr", "dev"))
-          }
-        }
-      }
-    }
+  override val writeRepository: BuchhaltungWriteRepository = new BuchhaltungWriteRepositoryImpl(system)
+  override val readRepository: BuchhaltungReadRepository = new BuchhaltungReadRepositoryImpl
 }

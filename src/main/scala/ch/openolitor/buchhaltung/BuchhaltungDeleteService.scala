@@ -20,42 +20,50 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.status
+package ch.openolitor.buchhaltung
 
-import akka.actor.Actor
-import spray.routing._
-import spray.http._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
-import spray.json._
-import spray.json.DefaultJsonProtocol._
+import akka.persistence.PersistentView
+
+import akka.actor._
 import ch.openolitor.core._
-import scala.util.Properties
+import ch.openolitor.core.db._
+import ch.openolitor.core.domain._
+import scala.concurrent.duration._
+import ch.openolitor.buchhaltung._
+import scalikejdbc.DB
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.domain.EntityStore._
+import ch.openolitor.buchhaltung.models._
+import scala.concurrent.ExecutionContext.Implicits.global
 
-case class Status(buildNr: String)
+object BuchhaltungDeleteService {
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungDeleteService = new DefaultBuchhaltungDeleteService(sysConfig, system)
+}
 
-trait StatusRoutes extends HttpService with DefaultRouteService {
+class DefaultBuchhaltungDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
+    extends BuchhaltungDeleteService(sysConfig: SystemConfig) with DefaultBuchhaltungRepositoryComponent {
+}
 
-  import StatusJsonProtocol._
+/**
+ * Actor zum Verarbeiten der Delete Anweisungen für das Buchhaltung Modul
+ */
+class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent[_]]
+    with LazyLogging with AsyncConnectionPoolContextAware with BuchhaltungDBMappings {
+  self: BuchhaltungRepositoryComponent =>
+  import EntityStore._
 
-  val statusRoute =
-    pathPrefix("status") {
-      statusRoutes()
+  //TODO: replace with credentials of logged in user
+  implicit val userId = Boot.systemUserId
+
+  val handle: Handle = {
+    case EntityDeletedEvent(meta, id: RechnungId) => deleteRechnung(id)
+    case e =>
+      logger.warn(s"Unknown event:$e")
+  }
+
+  def deleteRechnung(id: RechnungId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[Rechnung, RechnungId](id)
     }
-
-  /**
-   * Project Status routes
-   */
-  def statusRoutes(): Route =
-    path("staticInfo") {
-      get {
-        respondWithMediaType(`application/json`) {
-          complete {
-            Status(Properties.envOrElse("application_buildnr", "dev"))
-          }
-        }
-      }
-    }
+  }
 }
