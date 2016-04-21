@@ -340,7 +340,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(depotlieferungAboMapping as depotlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(depotlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
-        .where.eq(depotlieferungAbo.id, parameter(id)).and.not.eq(lieferung.status, parameter(Bearbeitet))
+        .where.eq(depotlieferungAbo.id, parameter(id)).and.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet))
     }
       .one(depotlieferungAboMapping(depotlieferungAbo))
       .toManies(
@@ -355,8 +355,8 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(heimlieferungAbo.id, abwesenheit.aboId)
-        .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
-        .where.eq(heimlieferungAbo.id, parameter(id)).and.not.eq(lieferung.status, parameter(Bearbeitet))
+        .leftJoin(lieferungMapping as lieferung).on(heimlieferungAbo.abotypId, lieferung.abotypId)
+        .where.eq(heimlieferungAbo.id, parameter(id)).and.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet))
     }.one(heimlieferungAboMapping(heimlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
@@ -370,8 +370,8 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       select
         .from(postlieferungAboMapping as postlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(postlieferungAbo.id, abwesenheit.aboId)
-        .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
-        .where.eq(postlieferungAbo.id, parameter(id)).and.not.eq(lieferung.status, parameter(Bearbeitet))
+        .leftJoin(lieferungMapping as lieferung).on(postlieferungAbo.abotypId, lieferung.abotypId)
+        .where.eq(postlieferungAbo.id, parameter(id)).and.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet))
     }.one(postlieferungAboMapping(postlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),

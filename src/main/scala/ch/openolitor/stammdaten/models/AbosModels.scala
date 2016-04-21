@@ -238,7 +238,7 @@ case class Abwesenheit(id: AbwesenheitId,
   aboId: AboId,
   lieferungId: LieferungId,
   datum: DateTime,
-  bemerkung: String,
+  bemerkung: Option[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -248,10 +248,10 @@ case class Abwesenheit(id: AbwesenheitId,
 case class AbwesenheitModify(
   lieferungId: LieferungId,
   datum: DateTime,
-  bemerkung: String) extends JSONSerializable
+  bemerkung: Option[String]) extends JSONSerializable
 
 case class AbwesenheitCreate(
   aboId: AboId,
   lieferungId: LieferungId,
   datum: DateTime,
-  bemerkung: String) extends JSONSerializable
+  bemerkung: Option[String]) extends JSONSerializable

@@ -89,10 +89,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createTour(meta, id, tour)
     case EntityInsertedEvent(meta, id: ProjektId, projekt: ProjektModify) =>
       createProjekt(meta, id, projekt)
+    case EntityInsertedEvent(meta, id: AbwesenheitId, abw: AbwesenheitCreate) =>
+      createAbwesenheit(meta, id, abw)
     case EntityInsertedEvent(meta, id, entity) =>
-      logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
+      logger.error(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
-      logger.warn(s"Unknown event:$e")
+      logger.error(s"Unknown event:$e")
   }
 
   def createAbotyp(meta: EventMetadata, id: AbotypId, abotyp: AbotypModify)(implicit userId: UserId = meta.originator) = {
@@ -337,6 +339,18 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Projekt, ProjektId](projekt)
+    }
+  }
+
+  def createAbwesenheit(meta: EventMetadata, id: AbwesenheitId, create: AbwesenheitCreate)(implicit userId: UserId = meta.originator) = {
+    val abw = copyTo[AbwesenheitCreate, Abwesenheit](create,
+      "id" -> id,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity[Abwesenheit, AbwesenheitId](abw)
     }
   }
 }
