@@ -252,13 +252,13 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
   implicit val depotaboFormat = jsonFormat19(DepotlieferungAbo)
-  implicit val depotaboDetailFormat = jsonFormat20(DepotlieferungAboDetail)
+  implicit val depotaboDetailFormat = jsonFormat21(DepotlieferungAboDetail)
   implicit val depotaboModifyFormat = jsonFormat9(DepotlieferungAboModify)
   implicit val heimlieferungAboFormat = jsonFormat19(HeimlieferungAbo)
-  implicit val heimlieferungAboDetailFormat = jsonFormat20(HeimlieferungAboDetail)
+  implicit val heimlieferungAboDetailFormat = jsonFormat21(HeimlieferungAboDetail)
   implicit val heimlieferungAboModifyFormat = jsonFormat9(HeimlieferungAboModify)
   implicit val postlieferungAboFormat = jsonFormat17(PostlieferungAbo)
-  implicit val postlieferungAboDetailFormat = jsonFormat18(PostlieferungAboDetail)
+  implicit val postlieferungAboDetailFormat = jsonFormat19(PostlieferungAboDetail)
   implicit val postlieferungAboModifyFormat = jsonFormat7(PostlieferungAboModify)
 
   implicit val aboDetailFormat = new RootJsonFormat[AboDetail] {

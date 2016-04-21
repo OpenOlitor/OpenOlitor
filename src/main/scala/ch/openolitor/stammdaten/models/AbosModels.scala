@@ -58,6 +58,7 @@ sealed trait AboDetail {
   val anzahlAbwesenheiten: TreeMap[String, Int]
   val anzahlLieferungen: TreeMap[String, Int]
   val abwesenheiten: Seq[Abwesenheit]
+  val lieferdaten: Seq[Lieferung]
 }
 
 sealed trait AboModify extends JSONSerializable {
@@ -112,7 +113,8 @@ case class DepotlieferungAboDetail(id: AboId,
   ersteller: UserId,
   modifidat: DateTime,
   modifikator: UserId,
-  abwesenheiten: Seq[Abwesenheit]) extends AboDetail with JSONSerializable
+  abwesenheiten: Seq[Abwesenheit],
+  lieferdaten: Seq[Lieferung]) extends AboDetail with JSONSerializable
 
 case class DepotlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -167,7 +169,8 @@ case class HeimlieferungAboDetail(id: AboId,
   ersteller: UserId,
   modifidat: DateTime,
   modifikator: UserId,
-  abwesenheiten: Seq[Abwesenheit]) extends AboDetail with JSONSerializable
+  abwesenheiten: Seq[Abwesenheit],
+  lieferdaten: Seq[Lieferung]) extends AboDetail with JSONSerializable
 
 case class HeimlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -218,7 +221,8 @@ case class PostlieferungAboDetail(id: AboId,
   ersteller: UserId,
   modifidat: DateTime,
   modifikator: UserId,
-  abwesenheiten: Seq[Abwesenheit]) extends AboDetail with JSONSerializable
+  abwesenheiten: Seq[Abwesenheit],
+  lieferdaten: Seq[Lieferung]) extends AboDetail with JSONSerializable
 
 case class PostlieferungAboModify(kundeId: KundeId,
   kunde: String,

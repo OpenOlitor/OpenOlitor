@@ -339,12 +339,15 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(depotlieferungAbo.id, abwesenheit.aboId)
-        .where.eq(depotlieferungAbo.id, parameter(id))
+        .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
+        .where.eq(depotlieferungAbo.id, parameter(id)).and.not.eq(lieferung.status, parameter(Bearbeitet))
     }
       .one(depotlieferungAboMapping(depotlieferungAbo))
-      .toMany(rs => abwesenheitMapping.opt(abwesenheit)(rs))
-      .map((abo, abw) =>
-        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> abw)).single.future
+      .toManies(
+        rs => abwesenheitMapping.opt(abwesenheit)(rs),
+        rs => lieferungMapping.opt(lieferung)(rs))
+      .map((abo, abw, lieferungen) =>
+        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> abw, "lieferdaten" -> lieferungen)).single.future
   }
 
   def getHeimlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[HeimlieferungAboDetail]] = {
@@ -352,22 +355,29 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(heimlieferungAbo.id, abwesenheit.aboId)
-        .where.eq(heimlieferungAbo.id, parameter(id))
+        .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
+        .where.eq(heimlieferungAbo.id, parameter(id)).and.not.eq(lieferung.status, parameter(Bearbeitet))
     }.one(heimlieferungAboMapping(heimlieferungAbo))
-      .toMany(rs => abwesenheitMapping.opt(abwesenheit)(rs))
-      .map((abo, abw) =>
-        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> abw)).single.future
+      .toManies(
+        rs => abwesenheitMapping.opt(abwesenheit)(rs),
+        rs => lieferungMapping.opt(lieferung)(rs))
+      .map((abo, abw, lieferungen) =>
+        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> abw, "lieferdaten" -> lieferungen)).single.future
   }
 
   def getPostlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostlieferungAboDetail]] = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
-        .where.eq(postlieferungAbo.id, parameter(id))
+        .leftJoin(abwesenheitMapping as abwesenheit).on(postlieferungAbo.id, abwesenheit.aboId)
+        .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
+        .where.eq(postlieferungAbo.id, parameter(id)).and.not.eq(lieferung.status, parameter(Bearbeitet))
     }.one(postlieferungAboMapping(postlieferungAbo))
-      .toMany(rs => abwesenheitMapping.opt(abwesenheit)(rs))
-      .map((abo, abw) =>
-        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> abw)).single.future
+      .toManies(
+        rs => abwesenheitMapping.opt(abwesenheit)(rs),
+        rs => lieferungMapping.opt(lieferung)(rs))
+      .map((abo, abw, lieferungen) =>
+        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> abw, "lieferdaten" -> lieferungen)).single.future
   }
 
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]] = {
