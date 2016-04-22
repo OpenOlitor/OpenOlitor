@@ -80,6 +80,10 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val personIdFormat = baseIdFormat(PersonId)
   implicit val aboIdFormat = baseIdFormat(AboId)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId)
+  implicit val lieferplanungIdFormat = baseIdFormat(LieferplanungId)
+  implicit val lieferpositionIdFormat = baseIdFormat(LieferpositionId)
+  implicit val bestellungIdFormat = baseIdFormat(BestellungId)
+  implicit val bestellpositionIdFormat = baseIdFormat(BestellpositionId)
   implicit val customKundentypIdFormat = baseIdFormat(CustomKundentypId.apply)
   implicit val abwesenheitIdFormat = baseIdFormat(AbwesenheitId.apply)
   implicit val kundentypIdFormat = new RootJsonFormat[KundentypId] {
@@ -197,12 +201,18 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
 
   // json formatter which adds calculated boolean field  
   def enhanceWithBooleanFlag[E <: AktivRange](flag: String)(defaultFormat: JsonFormat[E]): RootJsonFormat[E] = new RootJsonFormat[E] {
-    def write(obj: E): JsValue = JsObject(defaultFormat.write(obj).asJsObject.fields + (flag -> JsBoolean(obj.aktiv)))
+    def write(obj: E): JsValue = {
+      JsObject(defaultFormat.write(obj)
+          .asJsObject.fields + 
+          (flag -> JsBoolean(
+              obj.aktiv)))
+    }
 
     def read(json: JsValue): E = defaultFormat.read(json)
   }
 
-  implicit val abotypFormat = enhanceWithBooleanFlag("aktiv")(jsonFormat22(Abotyp))
+  implicit val abotypFormat = enhanceWithBooleanFlag("aktiv")(implicitly[JsonFormat[Abotyp]])
+  implicit val abotypModifyFormat = jsonFormat15(AbotypModify)
 
   implicit val systemKundentypFormat = new JsonFormat[SystemKundentyp] {
     def write(obj: SystemKundentyp): JsValue =
@@ -325,6 +335,15 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       case pt => sys.error(s"Unknown anrede:$pt")
     }
   }
+  
+  implicit val lieferungAbotypCreateFormat = jsonFormat3(LieferungAbotypCreate)
+  implicit val lieferungModifyFormat = jsonFormat12(LieferungModify)
+  implicit val lieferplanungModifyFormat = jsonFormat3(LieferplanungModify)
+  implicit val lieferplanungCreateFormat = jsonFormat2(LieferplanungCreate)
+  implicit val lieferpositionModifyFormat = jsonFormat10(LieferpositionModify)
+  implicit val bestellungModifyFormat = jsonFormat7(BestellungModify)
+  implicit val bestellungenCreateFormat = jsonFormat1(BestellungenCreate)
+  implicit val bestellpositionModifyFormat = jsonFormat8(BestellpositionModify)
 
   implicit val projektFormat = jsonFormat14(Projekt)
   implicit val projektModifyFormat = jsonFormat9(ProjektModify)

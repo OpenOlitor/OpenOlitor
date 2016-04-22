@@ -70,6 +70,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
   implicit val vertriebsartIdPath = long2BaseIdPathMatcher(VertriebsartId.apply)
   implicit val lieferungIdPath = long2BaseIdPathMatcher(LieferungId.apply)
+  implicit val lieferplanungIdPath = long2BaseIdPathMatcher(LieferplanungId.apply)
+  implicit val lieferpositionIdPath = long2BaseIdPathMatcher(LieferpositionId.apply)
+  implicit val bestellungIdPath = long2BaseIdPathMatcher(BestellungId.apply)
   implicit val produktIdPath = long2BaseIdPathMatcher(ProduktId.apply)
   implicit val produktekategorieIdPath = long2BaseIdPathMatcher(ProduktekategorieId.apply)
   implicit val produzentIdPath = long2BaseIdPathMatcher(ProduzentId.apply)
@@ -84,7 +87,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
     kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-    produzentenRoute ~ tourenRoute ~ projektRoute
+    produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute
 
   lazy val kundenRoute =
     path("kunden") {
@@ -201,9 +204,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(readRepository.getOffeneLieferungen(abotypId, vertriebsartId))) ~
           post {
             requestInstance { request =>
-              entity(as[LieferungModify]) { entity =>
-                val lieferung = copyTo[LieferungModify, LieferungAbotypCreate](entity, "abotypId" -> abotypId, "vertriebsartId" -> vertriebsartId)
-                created(request)(lieferung)
+              entity(as[LieferungAbotypCreate]) { entity =>
+                created(request)(entity)
               }
             }
           }
@@ -290,6 +292,31 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             complete("Logo uploaded")
           })
       }
+      
+  lazy val lieferplanungRoute =
+    path("lieferplanungen") {
+      get(list(readRepository.getLieferplanungen)) ~
+        post(create[LieferplanungCreate, LieferplanungId](LieferplanungId.apply _))
+    } ~
+      path("lieferplanungen" / lieferplanungIdPath) { id =>
+        get(detail(readRepository.getLieferplanung(id))) ~
+          (put | post)(update[LieferplanungModify, LieferplanungId](id))
+    } ~
+    path("lieferplanungen" / lieferplanungIdPath / "lieferungen") { lieferplanungId =>
+      get(list(readRepository.getLieferungen(lieferplanungId)))
+    } ~
+    path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
+      (put | post)(update[LieferungModify, LieferungId](lieferungId))
+    }
+    path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
+      get(list(readRepository.getBestellungen(lieferplanungId)))
+    } ~
+    path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / "create") { lieferplanungId =>
+      post(create[BestellungenCreate, BestellungId](BestellungId.apply _))
+    } ~
+    path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
+      get(list(readRepository.getBestellpositionen(bestellungId)))
+    }
 }
 
 class DefaultStammdatenRoutes(

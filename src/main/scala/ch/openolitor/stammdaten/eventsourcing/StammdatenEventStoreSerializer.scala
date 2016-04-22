@@ -49,6 +49,17 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val lieferungAbotypCreatePersister = persister[LieferungAbotypCreate]("lieferung-abotyp-create")
   implicit val lieferungIdPersister = persister[LieferungId]("lieferung-id")
+  implicit val lieferungModifyPersister = persister[LieferungModify]("lieferung-modify")
+  implicit val lieferplanungModifyPersister = persister[LieferplanungModify]("lieferplanung-modify")
+  implicit val lieferplanungCreatePersister = persister[LieferplanungCreate]("lieferplanung-create")
+  implicit val lieferplanungIdPersister = persister[LieferplanungId]("lieferplanung-id")
+  implicit val lieferpositionModifyPersister = persister[LieferpositionModify]("lieferposition-modify")
+  implicit val lieferpositionIdPersister = persister[LieferpositionId]("lieferposition-id")
+  implicit val bestellungenCreatePersister = persister[BestellungenCreate]("bestellungen-create")
+  implicit val bestellungModifyPersister = persister[BestellungModify]("bestellung-modify")
+  implicit val bestellungIdPersister = persister[BestellungId]("bestellung-id")
+  implicit val bestellpositionModifyPersister = persister[BestellpositionModify]("bestellposition-modify")
+  implicit val bestellpositionIdPersister = persister[BestellpositionId]("bestellposition-id")
 
   implicit val produktModifyPersister = persister[ProduktModify]("produkt-modify")
   implicit val produktIdPersister = persister[ProduktId]("produkt-id")
@@ -92,6 +103,17 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     pendenzIdPersister,
     lieferungAbotypCreatePersister,
     lieferungIdPersister,
+    lieferungModifyPersister,
+    lieferplanungModifyPersister,
+    lieferplanungIdPersister,
+    lieferplanungCreatePersister,
+    lieferpositionModifyPersister,
+    lieferpositionIdPersister,
+    bestellungenCreatePersister,
+    bestellungModifyPersister,
+    bestellungIdPersister,
+    bestellpositionModifyPersister,
+    bestellpositionIdPersister,
     produktIdPersister,
     produktModifyPersister,
     produktkategorieModifyPersister,
