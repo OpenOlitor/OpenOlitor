@@ -47,14 +47,14 @@ object StammdatenInsertService {
 }
 
 class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
+    extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
 class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware
-  with StammdatenDBMappings {
+    with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
   val ZERO = 0
@@ -157,16 +157,16 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit userId: UserId = meta.originator) = {
     readRepository.getAbotypDetail(lieferung.abotypId) map {
-      case Some(abotyp) => 
+      case Some(abotyp) =>
         readRepository.getVertriebsart(lieferung.vertriebsartId) map {
-          case Some(vertriebsart) => 
+          case Some(vertriebsart) =>
             val vaBeschrieb = vertriebsart match {
-                case dl:DepotlieferungDetail => dl.depot.name
-                case hl:HeimlieferungDetail => hl.tour.name
-                case pl:PostlieferungDetail => ""
-              }
+              case dl: DepotlieferungDetail => dl.depot.name
+              case hl: HeimlieferungDetail  => hl.tour.name
+              case pl: PostlieferungDetail  => ""
+            }
             val atBeschrieb = abotyp.beschreibung.getOrElse("")
-            
+
             val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
               "abotypBeschrieb" -> atBeschrieb,
               "vertriebsartBeschrieb" -> vaBeschrieb,
@@ -181,15 +181,17 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               "ersteller" -> meta.originator,
               "modifidat" -> meta.timestamp,
               "modifikator" -> meta.originator)
-            
-            
+
             DB autoCommit { implicit session =>
               //create lieferung
               writeRepository.insertEntity[Lieferung, LieferungId](insert)
             }
+          case _ =>
+            logger.error(s"Vertriebsart with id ${lieferung.vertriebsartId} not found.")
         }
+      case _ =>
+        logger.error(s"Abotyp with id ${lieferung.abotypId} not found.")
     }
-
   }
 
   def createKunde(meta: EventMetadata, id: KundeId, create: KundeModify)(implicit userId: UserId = meta.originator) = {
@@ -367,12 +369,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       writeRepository.insertEntity[Projekt, ProjektId](projekt)
     }
   }
-  
+
   def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit userId: UserId = meta.originator) = {
     val insert = readRepository.getLatestLieferplanung map {
       case Some(latestLP) => {
         val newNr = latestLP.nr + 1
-        val lp = copyTo[LieferplanungCreate, Lieferplanung](lieferplanung, 
+        val lp = copyTo[LieferplanungCreate, Lieferplanung](lieferplanung,
           "id" -> lieferplanungId,
           "nr" -> newNr,
           "erstelldat" -> meta.timestamp,
@@ -383,7 +385,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       }
       case None => {
         val firstNr = 1
-        val lp = copyTo[LieferplanungCreate, Lieferplanung](lieferplanung, 
+        val lp = copyTo[LieferplanungCreate, Lieferplanung](lieferplanung,
           "id" -> lieferplanungId,
           "nr" -> firstNr,
           "erstelldat" -> meta.timestamp,
@@ -403,13 +405,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
           readRepository.getLieferungenNext() map {
             _ foreach {
-              lieferung => 
+              lieferung =>
                 val lpId = Some(lieferplanungId)
                 val lpNr = Some(obj.nr)
-                val lObj = copyTo[Lieferung, Lieferung](lieferung, 
+                val lObj = copyTo[Lieferung, Lieferung](lieferung,
                   "lieferplanungId" -> lpId,
-                  "lieferplanungNr" -> lpNr
-                  )
+                  "lieferplanungNr" -> lpNr)
                 DB autoCommit { implicit session =>
                   //update Lieferung
                   writeRepository.updateEntity[Lieferung, LieferungId](lObj)
@@ -440,12 +441,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 {
                   writeRepository.getById(lieferungMapping, lieferposition.lieferungId) map { lieferung =>
                     // enhance or create bestellung by produzentT
-                    newBs.get((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) match {
-                      case None => {
-                        //create bestellung
-                        val bestellung = Bestellung(BestellungId(Random.nextLong), lieferposition.produzentId, lieferposition.produzentKurzzeichen, lieferplanung.id, lieferplanung.nr, lieferung.datum, None, 0, DateTime.now, userId, DateTime.now, userId)
-                        newBs += (lieferposition.produzentId, create.lieferplanungId, lieferung.datum) -> bestellung
-                      }
+                    if (!newBs.isDefinedAt((lieferposition.produzentId, create.lieferplanungId, lieferung.datum))) {
+                      val bestellung = Bestellung(BestellungId(Random.nextLong), lieferposition.produzentId, lieferposition.produzentKurzzeichen, lieferplanung.id, lieferplanung.nr, lieferung.datum, None, 0, DateTime.now, userId, DateTime.now, userId)
+                      newBs += (lieferposition.produzentId, create.lieferplanungId, lieferung.datum) -> bestellung
                     }
 
                     newBs.get((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) map { bestellung =>
@@ -471,7 +469,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                             lieferposition.einheit,
                             lieferposition.menge.get,
                             lieferposition.preis,
-                            lieferposition.anzahl, 
+                            lieferposition.anzahl,
                             DateTime.now,
                             userId,
                             DateTime.now,
@@ -499,6 +497,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             case (_, bestellposition) =>
               writeRepository.insertEntity[Bestellposition, BestellpositionId](bestellposition)
           }
+        case _ =>
+          logger.error(s"Lieferplanung with id ${create.lieferplanungId} not found.")
       }
     }
   }
