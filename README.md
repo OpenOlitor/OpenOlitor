@@ -1,4 +1,4 @@
-[![AUR](https://img.shields.io/aur/license/yaourt.svg?maxAge=2592000)]((https://raw.githubusercontent.com/OpenOlitor
+[![AUR](https://img.shields.io/aur/license/yaourt.svg?maxAge=2592000)](https://raw.githubusercontent.com/OpenOlitor
 /OpenOlitor/master/LICENSE)
 
 # OpenOlitor
