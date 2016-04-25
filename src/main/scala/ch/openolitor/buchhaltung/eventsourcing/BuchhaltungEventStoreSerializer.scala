@@ -10,8 +10,8 @@ import ch.openolitor.core.domain.EntityStoreJsonProtocol
 
 trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol {
   //V1 persisters
-  implicit val rechnungModifyPersister = persister[RechnungModify]("kunde-modify")
-  implicit val rechnungIdPersister = persister[RechnungId]("kunde-id")
+  implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
+  implicit val rechnungIdPersister = persister[RechnungId]("rechnung-id")
 
   val buchhaltungPersisters = List(
     rechnungModifyPersister,

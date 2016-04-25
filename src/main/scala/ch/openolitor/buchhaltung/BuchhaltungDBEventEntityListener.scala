@@ -67,15 +67,12 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
   }
 
   def handleRechnungModified(rechnung: Rechnung, orig: Rechnung)(implicit userId: UserId) = {
-    ???
   }
 
   def handleRechnungDeleted(rechnung: Rechnung)(implicit userId: UserId) = {
-    ???
   }
 
   def handleRechnungCreated(rechnung: Rechnung)(implicit userId: UserId) = {
-    ???
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](

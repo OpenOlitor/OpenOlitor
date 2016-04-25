@@ -377,7 +377,7 @@ object V1Scripts {
       	ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       logger.debug(s"oo-system: cleanupDatabase - end - stammdaten")
       Success(true)
     }
@@ -398,20 +398,20 @@ object V1Scripts {
         kunde_id BIGINT not null, 
         abo_id BIGINT not null,
         titel varchar(100),
-        betrag DECIMAL(8,2),
+        waehrung varchar(10) not null,
+        betrag DECIMAL(8,2) not null,
         einbezahlter_betrag DECIMAL(8,2),
-        rechnungs_datum datetime,
-        faelligkeits_datum datetime,
+        rechnungs_datum datetime not null,
+        faelligkeits_datum datetime not null,
         eingangs_datum datetime,
-        status varchar(10),
-        referenz_nummer varchar(27),
-        esr_nummer varchar(54),
-        strasse varchar(50),
+        status varchar(10) not null,
+        referenz_nummer varchar(27) not null,
+        esr_nummer varchar(54) not null,
+        strasse varchar(50) not null,
         haus_nummer varchar(10), 
         adress_zusatz varchar(100), 
         plz varchar(5) not null, 
         ort varchar(50) not null, 
-        bemerkungen varchar(512), 
         erstelldat datetime not null, 
         ersteller BIGINT not null, 
         modifidat datetime not null, 
