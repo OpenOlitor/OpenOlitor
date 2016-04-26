@@ -154,7 +154,7 @@ class DataImportParser extends Actor with ActorLogging {
           //match column indexes
           val Seq(indexId, indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
             indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
-            indexSaldoMindestbestand, adminProzente) = indexes
+            indexSaldoMindestbestand, indexAdminProzente, indexWirdGeplant) = indexes
 
           val idLong = row.value[Long](indexId)
 
@@ -173,7 +173,8 @@ class DataImportParser extends Actor with ActorLogging {
               farbCode = row.value[String](indexFarbCode),
               zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
               saldoMindestbestand = row.value[Int](indexSaldoMindestbestand),
-              adminProzente = row.value[BigDecimal](adminProzente)))
+              adminProzente = row.value[BigDecimal](indexAdminProzente),
+              wirdGeplant = row.value[Boolean](indexWirdGeplant)))
     }
   }
 

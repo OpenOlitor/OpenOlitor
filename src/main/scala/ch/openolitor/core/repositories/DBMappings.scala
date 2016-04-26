@@ -33,7 +33,8 @@ trait DBMappings extends BaseParameter
   with Parameters23
   with Parameters24
   with Parameters25
-  with Parameters26 {
+  with Parameters26
+  with Parameters27{
   import TypeBinder._
 
   def baseIdTypeBinder[T <: BaseId](implicit f: Long => T): TypeBinder[T] = long.map(l => f(l))

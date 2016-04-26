@@ -25,8 +25,8 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
-import ch.openolitor.core.scalax.Product26
-import ch.openolitor.core.scalax.Tuple26
+import ch.openolitor.core.scalax.Product27
+import ch.openolitor.core.scalax.Tuple27
 import ch.openolitor.core.JSONSerializable
 
 sealed trait Vertriebskanal {
@@ -56,7 +56,7 @@ case class Depot(id: DepotId,
   ort: String,
   aktiv: Boolean,
   oeffnungszeiten: Option[String],
-  //farbCode: Option[String],
+  farbCode: Option[String],
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   beschreibung: Option[String],
@@ -71,7 +71,7 @@ case class Depot(id: DepotId,
 
 object Depot {
   def unapply(d: Depot) = {
-    Some(Tuple26(
+    Some(Tuple27(
       d.id: DepotId,
       d.name: String,
       d.kurzzeichen: String,
@@ -89,7 +89,7 @@ object Depot {
       d.ort: String,
       d.aktiv: Boolean,
       d.oeffnungszeiten: Option[String],
-      //farbCode: Option[String],
+      d.farbCode: Option[String],
       d.iban: Option[String], //maybe use dedicated type
       d.bank: Option[String],
       d.beschreibung: Option[String],

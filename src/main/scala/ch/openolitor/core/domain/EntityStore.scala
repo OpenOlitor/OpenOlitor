@@ -267,6 +267,10 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
       handleEntityInsert[CustomKundentypCreate, CustomKundentypId](userId, entity, CustomKundentypId.apply)
     case e @ InsertEntityCommand(userId, entity: LieferungAbotypCreate) =>
       handleEntityInsert[LieferungAbotypCreate, LieferungId](userId, entity, LieferungId.apply)
+    case e @ InsertEntityCommand(userId, entity: LieferplanungCreate) =>
+      handleEntityInsert[LieferplanungCreate, LieferplanungId](userId, entity, LieferplanungId.apply)  
+    case e @ InsertEntityCommand(userId, entity: BestellungenCreate) =>
+      handleEntityInsert[BestellungenCreate, BestellungId](userId, entity, BestellungId.apply)   
     case e @ InsertEntityCommand(userId, entity: PendenzModify) =>
       handleEntityInsert[PendenzModify, PendenzId](userId, entity, PendenzId.apply)
     case e @ InsertEntityCommand(userId, entity: PersonCreate) =>

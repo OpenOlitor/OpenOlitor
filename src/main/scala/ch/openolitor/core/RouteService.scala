@@ -65,6 +65,7 @@ import scala.reflect.ClassTag
 import ch.openolitor.buchhaltung.BuchhaltungRoutes
 import ch.openolitor.buchhaltung.DefaultBuchhaltungRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungRoutes
+import com.typesafe.scalalogging.LazyLogging
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -163,7 +164,7 @@ trait RouteServiceActor
 }
 
 // this trait defines our service behavior independently from the service actor
-trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport with FileStoreComponent {
+trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport with FileStoreComponent with LazyLogging {
 
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
