@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.scalax.Tuple23
 
 sealed trait RechnungStatus
 case object Erstellt extends RechnungStatus
@@ -47,6 +48,7 @@ case class Rechnung(
   kundeId: KundeId,
   aboId: AboId,
   titel: String,
+  anzahlLieferungen: Int,
   waehrung: Waehrung,
   betrag: BigDecimal,
   einbezahlterBetrag: Option[BigDecimal],
@@ -68,11 +70,41 @@ case class Rechnung(
   modifidat: DateTime,
   modifikator: UserId) extends BaseEntity[RechnungId]
 
+object Rechnung {
+  def unapply(entity: Rechnung) = {
+    Some(Tuple23(
+      entity.id,
+      entity.kundeId,
+      entity.aboId,
+      entity.titel,
+      entity.anzahlLieferungen,
+      entity.waehrung,
+      entity.betrag,
+      entity.einbezahlterBetrag,
+      entity.rechnungsDatum,
+      entity.faelligkeitsDatum,
+      entity.eingangsDatum,
+      entity.status,
+      entity.referenzNummer,
+      entity.esrNummer,
+      entity.strasse,
+      entity.hausNummer,
+      entity.adressZusatz,
+      entity.plz,
+      entity.ort,
+      entity.erstelldat,
+      entity.ersteller,
+      entity.modifidat,
+      entity.modifikator))
+  }
+}
+
 case class RechnungDetail(
   id: RechnungId,
   kunde: Kunde,
   abo: Abo,
   titel: String,
+  anzahlLieferungen: Int,
   waehrung: Waehrung,
   betrag: BigDecimal,
   einbezahlterBetrag: Option[BigDecimal],
@@ -98,6 +130,7 @@ case class RechnungModify(
   kundeId: KundeId,
   aboId: AboId,
   titel: String,
+  anzahlLieferungen: Int,
   waehrung: Waehrung,
   betrag: BigDecimal,
   einbezahlterBetrag: Option[BigDecimal],

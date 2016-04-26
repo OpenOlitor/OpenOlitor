@@ -67,6 +67,7 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
         column.kundeId -> rechnung.kundeId,
         column.aboId -> rechnung.aboId,
         column.titel -> rechnung.titel,
+        column.anzahlLieferungen -> rechnung.anzahlLieferungen,
         column.waehrung -> rechnung.waehrung,
         column.betrag -> rechnung.betrag,
         column.einbezahlterBetrag -> rechnung.einbezahlterBetrag,
