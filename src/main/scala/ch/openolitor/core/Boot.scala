@@ -59,17 +59,18 @@ import scala.util._
 import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
 import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 
-case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext, dbSeeds: Map[Class[_], Long])
+case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
+
+case class BuchhaltungConfig(rechnungIdLength: Int, kundeIdLength: Int, teilnehmernummer: String, referenznummerPrefix: String)
+
+case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer, dbSeeds: Map[Class[_], Long], buchhaltungConfig: BuchhaltungConfig) {
+  val configKey = s"openolitor.${key}"
+
+  def wsUri = s"ws://$interface:$wsPort"
+  def uri = s"http://$interface:$port"
+}
 
 object Boot extends App with LazyLogging {
-
-  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer, dbSeeds: Map[Class[_], Long]) {
-    val configKey = s"openolitor.${key}"
-
-    def wsUri = s"ws://$interface:$wsPort"
-    def uri = s"http://$interface:$port"
-  }
-
   case class MandantSystem(config: MandantConfiguration, system: ActorSystem)
 
   def freePort: Int = synchronized {
@@ -117,14 +118,26 @@ object Boot extends App with LazyLogging {
         val wsPort = config.getIntOption(s"openolitor.$mandant.webservicePort").getOrElse(freePort)
         val name = config.getStringOption(s"openolitor.$mandant.name").getOrElse(mandant)
 
-        MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(config))
+        val buchhaltungConfig = BuchhaltungConfig(
+          config.getIntOption(s"openolitor.$mandant.buchhaltung.rechnung-id-length").getOrElse(6),
+          config.getIntOption(s"openolitor.$mandant.buchhaltung.kunde-id-length").getOrElse(6),
+          config.getStringOption(s"openolitor.$mandant.buchhaltung.referenznummer-prefix").getOrElse(""),
+          config.getStringOption(s"openolitor.$mandant.buchhaltung.referenznummer-prefix").getOrElse(""))
+
+        MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(config), buchhaltungConfig)
     }).getOrElse {
       //default if no list of mandanten is configured
       val ifc = rootInterface
       val port = rootPort
       val wsPort = config.getIntOption("openolitor.webservicePort").getOrElse(9001)
 
-      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(config)))
+      val buchhaltungConfig = BuchhaltungConfig(
+        config.getIntOption(s"openolitor.buchhaltung.rechnung-id-length").getOrElse(6),
+        config.getIntOption(s"openolitor.buchhaltung.kunde-id-length").getOrElse(6),
+        config.getStringOption(s"openolitor.buchhaltung.referenznummer-prefix").getOrElse(""),
+        config.getStringOption(s"openolitor.buchhaltung.referenznummer-prefix").getOrElse(""))
+
+      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(config), buchhaltungConfig))
     }
   }
 
@@ -193,7 +206,7 @@ object Boot extends App with LazyLogging {
     mappings.toMap
   }
 
-  def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant.key, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant), mandant.dbSeeds)
+  def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant))
 
   def connectionPoolContext(mandant: MandantConfiguration) = MandantDBs(mandant.configKey).connectionPoolContext
 

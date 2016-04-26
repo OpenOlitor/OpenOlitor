@@ -26,10 +26,17 @@ import org.specs2.mutable._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
+import ch.openolitor.core.MandantConfiguration
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.BuchhaltungConfig
 
 class BuchhaltungInsertServiceSpec extends Specification {
   "BuchhaltungInsertService" should {
-    val service = new DefaultBuchhaltungInsertService(null, null)
+    val config = SystemConfig(MandantConfiguration(
+      "", "", "", 0, 0, Map(),
+      BuchhaltungConfig(6, 5, "777777777", "")), null, null)
+
+    val service = new DefaultBuchhaltungInsertService(config, null)
 
     "calculate correct checksum according to definition matrix" in {
       service.calculateChecksum("00000001290381204712347234".toList map (_.asDigit)) === 0
