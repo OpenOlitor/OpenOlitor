@@ -43,6 +43,7 @@ import ch.openolitor.core.Boot
 import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
+import ch.openolitor.util.DateTimeUtil._
 
 trait StammdatenReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
@@ -346,8 +347,10 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs))
-      .map((abo, abw, lieferungen) =>
-        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> abw, "lieferdaten" -> lieferungen)).single.future
+      .map((abo, abw, lieferungen) => {
+        val sortedAbw = abw.sortBy(_.datum)
+        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen)
+      }).single.future
   }
 
   def getHeimlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[HeimlieferungAboDetail]] = {
@@ -361,8 +364,10 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs))
-      .map((abo, abw, lieferungen) =>
-        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> abw, "lieferdaten" -> lieferungen)).single.future
+      .map((abo, abw, lieferungen) => {
+        val sortedAbw = abw.sortBy(_.datum)
+        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen)
+      }).single.future
   }
 
   def getPostlieferungAbo(id: AboId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostlieferungAboDetail]] = {
@@ -376,8 +381,10 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs))
-      .map((abo, abw, lieferungen) =>
-        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> abw, "lieferdaten" -> lieferungen)).single.future
+      .map((abo, abw, lieferungen) => {
+        val sortedAbw = abw.sortBy(_.datum)
+        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen)
+      }).single.future
   }
 
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]] = {

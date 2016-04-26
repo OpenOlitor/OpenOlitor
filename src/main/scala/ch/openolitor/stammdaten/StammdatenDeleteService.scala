@@ -57,6 +57,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: AbotypId) => deleteAbotyp(id)
+    case EntityDeletedEvent(meta, id: AbwesenheitId) => deleteAbwesenheit(id)
     case EntityDeletedEvent(meta, id: PersonId) => deletePerson(id)
     case EntityDeletedEvent(meta, id: KundeId) => deleteKunde(id)
     case EntityDeletedEvent(meta, id: DepotId) => deleteDepot(id)
@@ -77,6 +78,16 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
 
       writeRepository.deleteEntity[Abotyp, AbotypId](id, { abotyp: Abotyp => abotyp.anzahlAbonnenten == 0 })
+    }
+  }
+
+  def deleteAbwesenheit(id: AbwesenheitId) = {
+    DB autoCommit { implicit session =>
+      writeRepository.deleteEntity[Abwesenheit, AbwesenheitId](id, { abw: Abwesenheit =>
+        writeRepository.getById(lieferungMapping, abw.lieferungId).map { lieferung: Lieferung =>
+          lieferung.status == Offen
+        }.getOrElse(false)
+      })
     }
   }
 
@@ -105,7 +116,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       writeRepository.deleteEntity[Depot, DepotId](id, { depot: Depot => depot.anzahlAbonnenten == 0 })
     }
   }
-  
+
   def deletePendenz(id: PendenzId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Pendenz, PendenzId](id)
@@ -149,31 +160,31 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       writeRepository.deleteEntity[Lieferung, LieferungId](id, { lieferung: Lieferung => lieferung.status == Offen })
     }
   }
-  
+
   def deleteProdukt(id: ProduktId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Produkt, ProduktId](id)
     }
   }
-  
+
   def deleteProduzent(id: ProduzentId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Produzent, ProduzentId](id)
     }
   }
-  
+
   def deleteProduktekategorie(id: ProduktekategorieId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Produktekategorie, ProduktekategorieId](id)
     }
   }
-  
+
   def deleteProduktProduktekategorie(id: ProduktProduktekategorieId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[ProduktProduktekategorie, ProduktProduktekategorieId](id)
     }
   }
-  
+
   def deleteTour(id: TourId) = {
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Tour, TourId](id)
