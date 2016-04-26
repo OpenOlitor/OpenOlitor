@@ -394,7 +394,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.saldoInRechnung -> parameter(depotlieferungAbo.saldoInRechnung),
         column.letzteLieferung -> parameter(depotlieferungAbo.letzteLieferung),
         column.anzahlAbwesenheiten -> parameter(depotlieferungAbo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(depotlieferungAbo.anzahlAbwesenheiten))
+        column.anzahlLieferungen -> parameter(depotlieferungAbo.anzahlLieferungen))
     }
   }
 
@@ -423,7 +423,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.saldoInRechnung -> parameter(heimlieferungAbo.saldoInRechnung),
         column.letzteLieferung -> parameter(heimlieferungAbo.letzteLieferung),
         column.anzahlAbwesenheiten -> parameter(heimlieferungAbo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(heimlieferungAbo.anzahlAbwesenheiten))
+        column.anzahlLieferungen -> parameter(heimlieferungAbo.anzahlLieferungen))
     }
   }
 
@@ -450,7 +450,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.saldoInRechnung -> parameter(postlieferungAbo.saldoInRechnung),
         column.letzteLieferung -> parameter(postlieferungAbo.letzteLieferung),
         column.anzahlAbwesenheiten -> parameter(postlieferungAbo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(postlieferungAbo.anzahlAbwesenheiten))
+        column.anzahlLieferungen -> parameter(postlieferungAbo.anzahlLieferungen))
     }
   }
 

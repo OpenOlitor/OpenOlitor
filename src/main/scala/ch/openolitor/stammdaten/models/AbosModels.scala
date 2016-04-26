@@ -114,7 +114,8 @@ case class DepotlieferungAboDetail(id: AboId,
   modifidat: DateTime,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
-  lieferdaten: Seq[Lieferung]) extends AboDetail with JSONSerializable
+  lieferdaten: Seq[Lieferung],
+  abotyp: Option[Abotyp]) extends AboDetail with JSONSerializable
 
 case class DepotlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -170,7 +171,8 @@ case class HeimlieferungAboDetail(id: AboId,
   modifidat: DateTime,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
-  lieferdaten: Seq[Lieferung]) extends AboDetail with JSONSerializable
+  lieferdaten: Seq[Lieferung],
+  abotyp: Option[Abotyp]) extends AboDetail with JSONSerializable
 
 case class HeimlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -222,7 +224,8 @@ case class PostlieferungAboDetail(id: AboId,
   modifidat: DateTime,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
-  lieferdaten: Seq[Lieferung]) extends AboDetail with JSONSerializable
+  lieferdaten: Seq[Lieferung],
+  abotyp: Option[Abotyp]) extends AboDetail with JSONSerializable
 
 case class PostlieferungAboModify(kundeId: KundeId,
   kunde: String,

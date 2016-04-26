@@ -341,15 +341,17 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(depotlieferungAboMapping as depotlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(depotlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
-        .where.eq(depotlieferungAbo.id, parameter(id)).and.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet))
+        .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
+        .where.eq(depotlieferungAbo.id, parameter(id)).and.withRoundBracket { _.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet)) }
     }
       .one(depotlieferungAboMapping(depotlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
-        rs => lieferungMapping.opt(lieferung)(rs))
-      .map((abo, abw, lieferungen) => {
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs))
+      .map((abo, abw, lieferungen, aboTyp) => {
         val sortedAbw = abw.sortBy(_.datum)
-        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen)
+        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
       }).single.future
   }
 
@@ -359,14 +361,16 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(heimlieferungAboMapping as heimlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(heimlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(lieferungMapping as lieferung).on(heimlieferungAbo.abotypId, lieferung.abotypId)
-        .where.eq(heimlieferungAbo.id, parameter(id)).and.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet))
+        .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
+        .where.eq(heimlieferungAbo.id, parameter(id)).and.withRoundBracket { _.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet)) }
     }.one(heimlieferungAboMapping(heimlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
-        rs => lieferungMapping.opt(lieferung)(rs))
-      .map((abo, abw, lieferungen) => {
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs))
+      .map((abo, abw, lieferungen, aboTyp) => {
         val sortedAbw = abw.sortBy(_.datum)
-        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen)
+        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
       }).single.future
   }
 
@@ -376,14 +380,16 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(postlieferungAboMapping as postlieferungAbo)
         .leftJoin(abwesenheitMapping as abwesenheit).on(postlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(lieferungMapping as lieferung).on(postlieferungAbo.abotypId, lieferung.abotypId)
-        .where.eq(postlieferungAbo.id, parameter(id)).and.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet))
+        .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
+        .where.eq(postlieferungAbo.id, parameter(id)).and.withRoundBracket { _.isNull(lieferung.id).or.not.eq(lieferung.status, parameter(Bearbeitet)) }
     }.one(postlieferungAboMapping(postlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
-        rs => lieferungMapping.opt(lieferung)(rs))
-      .map((abo, abw, lieferungen) => {
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs))
+      .map((abo, abw, lieferungen, aboTyp) => {
         val sortedAbw = abw.sortBy(_.datum)
-        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen)
+        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
       }).single.future
   }
 
