@@ -34,6 +34,7 @@ import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
 import scala.concurrent.ExecutionContext.Implicits.global;
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.buchhaltung.models.Rechnung
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -73,7 +74,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(userId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(userId)
 
     case e @ EntityCreated(userId, entity: Pendenz) => handlePendenzCreated(entity)(userId)
-    
+
+    case e @ EntityCreated(userId, entity: Rechnung) => handleRechnungCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Rechnung) => handleRechnungDeleted(entity)(userId)
+
     case x => //log.debug(s"receive unused event $x")
   }
 
@@ -124,12 +128,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     log.debug(s"Kunde ${kunde.bezeichnung} modified, handle CustomKundentypen. Orig: ${orig.typen} -> modified: ${kunde.typen}. Removed typen:${removed}, added typen:${added}")
 
     handleKundentypenChanged(removed, added)
-    
+
     //TODO Update kundeBezeichnung on attached Pendenzen
-//    modifyEntity[Pendenz, PendenzId](kunde.id, { pendenz =>
-//      log.debug(s"Update kundeBezeichnung on all Pendenzen:${pendenz.id}")
-//      pendenz.copy(kundeBezeichnung = kunde.bezeichnung)
-//    })
+    //    modifyEntity[Pendenz, PendenzId](kunde.id, { pendenz =>
+    //      log.debug(s"Update kundeBezeichnung on all Pendenzen:${pendenz.id}")
+    //      pendenz.copy(kundeBezeichnung = kunde.bezeichnung)
+    //    })
   }
 
   def handleKundeDeleted(kunde: Kunde)(implicit userId: UserId) = {
@@ -139,7 +143,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def handleKundeCreated(kunde: Kunde)(implicit userId: UserId) = {
     handleKundentypenChanged(Set(), kunde.typen)
   }
-  
+
   def handlePendenzCreated(pendenz: Pendenz)(implicit userId: UserId) = {
     modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
       log.debug(s"Add pendenz count to kunde:${kunde.id}")
@@ -170,6 +174,36 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       }
     }
 
+  }
+
+  def handleRechnungDeleted(rechnung: Rechnung)(implicit userId: UserId) = {
+    modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
+      abo.copy(
+        saldoInRechnung = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+    })
+    modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
+      abo.copy(
+        saldoInRechnung = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+    })
+    modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
+      abo.copy(
+        saldoInRechnung = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+    })
+  }
+
+  def handleRechnungCreated(rechnung: Rechnung)(implicit userId: UserId) = {
+    modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
+      abo.copy(
+        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen)
+    })
+    modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
+      abo.copy(
+        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen)
+    })
+    modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
+      abo.copy(
+        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen)
+    })
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
