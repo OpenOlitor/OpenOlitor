@@ -102,7 +102,7 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   def newId[E, I <: BaseId](clOf: Class[_ <: BaseId])(implicit f: Long => I): I = {
     val id: Long = state.dbSeeds.get(clOf).map { id =>
       id.id + 1
-    }.getOrElse(sysConfig.dbSeeds.get(clOf).getOrElse(1L))
+    }.getOrElse(sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
     log.debug(s"newId:$clOf -> $id")
     id
   }
@@ -268,9 +268,9 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
     case e @ InsertEntityCommand(userId, entity: LieferungAbotypCreate) =>
       handleEntityInsert[LieferungAbotypCreate, LieferungId](userId, entity, LieferungId.apply)
     case e @ InsertEntityCommand(userId, entity: LieferplanungCreate) =>
-      handleEntityInsert[LieferplanungCreate, LieferplanungId](userId, entity, LieferplanungId.apply)  
+      handleEntityInsert[LieferplanungCreate, LieferplanungId](userId, entity, LieferplanungId.apply)
     case e @ InsertEntityCommand(userId, entity: BestellungenCreate) =>
-      handleEntityInsert[BestellungenCreate, BestellungId](userId, entity, BestellungId.apply)   
+      handleEntityInsert[BestellungenCreate, BestellungId](userId, entity, BestellungId.apply)
     case e @ InsertEntityCommand(userId, entity: PendenzModify) =>
       handleEntityInsert[PendenzModify, PendenzId](userId, entity, PendenzId.apply)
     case e @ InsertEntityCommand(userId, entity: PersonCreate) =>

@@ -59,17 +59,16 @@ import scala.util._
 import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
 import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 
-case class SystemConfig(mandant: String, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext, dbSeeds: Map[Class[_], Long])
+case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
+
+case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer, dbSeeds: Map[Class[_], Long]) {
+  val configKey = s"openolitor.${key}"
+
+  def wsUri = s"ws://$interface:$wsPort"
+  def uri = s"http://$interface:$port"
+}
 
 object Boot extends App with LazyLogging {
-
-  case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer, dbSeeds: Map[Class[_], Long]) {
-    val configKey = s"openolitor.${key}"
-
-    def wsUri = s"ws://$interface:$wsPort"
-    def uri = s"http://$interface:$port"
-  }
-
   case class MandantSystem(config: MandantConfiguration, system: ActorSystem)
 
   def freePort: Int = synchronized {
@@ -193,7 +192,7 @@ object Boot extends App with LazyLogging {
     mappings.toMap
   }
 
-  def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant.key, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant), mandant.dbSeeds)
+  def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant))
 
   def connectionPoolContext(mandant: MandantConfiguration) = MandantDBs(mandant.configKey).connectionPoolContext
 

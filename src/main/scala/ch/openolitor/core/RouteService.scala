@@ -69,7 +69,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandant, ConfigFactory.load)
+    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load)
 }
 
 trait RouteServiceComponent {

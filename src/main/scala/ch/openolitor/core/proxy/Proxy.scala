@@ -31,7 +31,6 @@ import ch.openolitor.core.DefaultRouteService
 import ch.openolitor.core.CORSSupport
 import ch.openolitor.core.ActorReferences
 import scalaz.NonEmptyList
-import ch.openolitor.core.Boot.MandantConfiguration
 import ch.openolitor.core.Boot.MandantSystem
 import org.jfarcand.wcs.WebSocket
 import spray.can.Http
@@ -77,10 +76,10 @@ object ProxyServiceActor {
  * the websocket or service redirect url using their actor system
  */
 class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
-  extends Actor
-  with ActorLogging
-  with HttpService
-  with CORSSupport {
+    extends Actor
+    with ActorLogging
+    with HttpService
+    with CORSSupport {
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
