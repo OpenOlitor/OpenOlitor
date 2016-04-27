@@ -288,7 +288,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${lieferungMapping.table}  (
         id varchar(36) not null, 
         abotyp_id varchar(36) not null, 
@@ -306,7 +306,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${lieferpositionMapping.table}  (
         id varchar(36) not null, 
         lieferung_id varchar(36) not null, 
@@ -322,7 +322,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${bestellungMapping.table}  (
         id varchar(36) not null, 
         produzent_id varchar(36) not null, 
@@ -335,7 +335,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${bestellpositionMapping.table}  (
         id varchar(36) not null, 
         bestellung_id varchar(36) not null, 
@@ -464,6 +464,7 @@ object V1Scripts {
         kunde_id BIGINT not null, 
         abo_id BIGINT not null,
         titel varchar(100),
+        anzahl_lieferungen INT not null,
         waehrung varchar(10) not null,
         betrag DECIMAL(8,2) not null,
         einbezahlter_betrag DECIMAL(8,2),
