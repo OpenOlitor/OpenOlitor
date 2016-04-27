@@ -107,7 +107,7 @@ object V1Scripts {
       	v_email varchar(100), 
       	strasse varchar(50), 
       	haus_nummer varchar(10), 
-      	plz varchar(5) not null, 
+      	plz varchar(10) not null, 
       	ort varchar(50) not null, 
       	aktiv varchar(1), 
       	oeffnungszeiten varchar(200), 
@@ -161,13 +161,13 @@ object V1Scripts {
       	strasse varchar(50) not null, 
       	haus_nummer varchar(10), 
       	adress_zusatz varchar(100), 
-      	plz varchar(5) not null, 
+      	plz varchar(10) not null, 
       	ort varchar(50) not null, 
       	bemerkungen varchar(512), 
       	strasse_lieferung varchar(50), 
       	haus_nummer_lieferung varchar(10), 
       	adress_zusatz_lieferung varchar(100), 
-      	plz_lieferung varchar(5), 
+      	plz_lieferung varchar(10), 
       	ort_lieferung varchar(50), 
       	typen varchar(200), 
       	anzahl_abos int not null, 
@@ -288,7 +288,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${lieferungMapping.table}  (
         id varchar(36) not null, 
         abotyp_id varchar(36) not null, 
@@ -306,7 +306,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${lieferpositionMapping.table}  (
         id varchar(36) not null, 
         lieferung_id varchar(36) not null, 
@@ -322,7 +322,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${bestellungMapping.table}  (
         id varchar(36) not null, 
         produzent_id varchar(36) not null, 
@@ -335,7 +335,7 @@ object V1Scripts {
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       sql"""create table ${bestellpositionMapping.table}  (
         id varchar(36) not null, 
         bestellung_id varchar(36) not null, 
@@ -382,7 +382,7 @@ object V1Scripts {
       	strasse varchar(50), 
       	haus_nummer varchar(10), 
       	adress_zusatz varchar(100), 
-      	plz varchar(5) not null, 
+      	plz varchar(10) not null, 
       	ort varchar(50) not null, 
       	bemerkungen varchar(1000), 
       	email varchar(100) not null, 
@@ -405,7 +405,7 @@ object V1Scripts {
       	strasse varchar(50), 
       	haus_nummer varchar(10), 
       	adress_zusatz varchar(100), 
-      	plz varchar(5), 
+      	plz varchar(10), 
       	ort varchar(50), 
       	preise_sichtbar varchar(1) not null, 
       	preise_editierbar varchar(1) not null, 
@@ -476,7 +476,7 @@ object V1Scripts {
         strasse varchar(50) not null,
         haus_nummer varchar(10), 
         adress_zusatz varchar(100), 
-        plz varchar(5) not null, 
+        plz varchar(10) not null, 
         ort varchar(50) not null, 
         erstelldat datetime not null, 
         ersteller BIGINT not null, 
