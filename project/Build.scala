@@ -1,13 +1,17 @@
 import sbt._
 import Keys._
 
+import scalariform.formatter.preferences._
+import com.typesafe.sbt.SbtScalariform
+import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+
 object BuildSettings {
   val specs2V = "2.4.17" // based on spray 1.3.x built in support 
   val akkaV = "2.4.+"
   val sprayV = "1.3.+"
   val scalalikeV = "2.3.+"
  
-  val buildSettings = Defaults.defaultSettings ++ Seq(
+  val buildSettings = SbtScalariform.scalariformSettings ++ Seq(
     organization := "ch.openolitor.scalamacros",
     version := "1.0.0",
     scalaVersion := "2.11.7",
