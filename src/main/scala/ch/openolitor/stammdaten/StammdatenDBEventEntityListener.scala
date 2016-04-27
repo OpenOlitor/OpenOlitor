@@ -68,6 +68,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleAboDeleted(entity)(userId)
     case e @ EntityCreated(userId, entity: Abo) => handleAboCreated(entity)(userId)
     case e @ EntityDeleted(userId, entity: Abo) => handleAboDeleted(entity)(userId)
+    case e @ EntityCreated(userId, entity: Abwesenheit) => handleAbwesenheitCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Abwesenheit) => handleAbwesenheitDeleted(entity)(userId)
 
     case e @ EntityCreated(userId, entity: Kunde) => handleKundeCreated(entity)(userId)
     case e @ EntityDeleted(userId, entity: Kunde) => handleKundeDeleted(entity)(userId)
@@ -142,6 +144,58 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleKundeCreated(kunde: Kunde)(implicit userId: UserId) = {
     handleKundentypenChanged(Set(), kunde.typen)
+  }
+
+  def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit userId: UserId) = {
+    //TODO: calculate geschaeftsjahr key based on project configuration
+    val geschaeftsjahrKey = abw.datum.year.getAsText
+
+    modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
+      val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
+      log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
+      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+    })
+    modifyEntity[HeimlieferungAbo, AboId](abw.aboId, { abo =>
+      val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
+      log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
+      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+    })
+    modifyEntity[PostlieferungAbo, AboId](abw.aboId, { abo =>
+      val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
+      log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
+      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+    })
+
+    modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
+      log.debug(s"Remove abwesenheit from lieferung:${lieferung.id}")
+      lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten - 1)
+    })
+  }
+
+  def handleAbwesenheitCreated(abw: Abwesenheit)(implicit userId: UserId) = {
+    //TODO: calculate geschaeftsjahr key based on project configuration
+    val geschaeftsjahrKey = abw.datum.year().getAsText
+
+    modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
+      val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+      log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
+      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+    })
+    modifyEntity[HeimlieferungAbo, AboId](abw.aboId, { abo =>
+      val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+      log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
+      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+    })
+    modifyEntity[PostlieferungAbo, AboId](abw.aboId, { abo =>
+      val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+      log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
+      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+    })
+
+    modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
+      log.debug(s"Add abwesenheit to lieferung:${lieferung.id}")
+      lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + 1)
+    })
   }
 
   def handlePendenzCreated(pendenz: Pendenz)(implicit userId: UserId) = {

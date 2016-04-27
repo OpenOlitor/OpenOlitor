@@ -34,10 +34,11 @@ trait DBMappings extends BaseParameter
   with Parameters24
   with Parameters25
   with Parameters26
-  with Parameters27{
+  with Parameters27 {
   import TypeBinder._
 
   def baseIdTypeBinder[T <: BaseId](implicit f: Long => T): TypeBinder[T] = long.map(l => f(l))
+  def optionBaseIdTypeBinder[T <: BaseId](implicit f: Long => T): TypeBinder[Option[T]] = optionLong.map(_.map(f))
   def toStringSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value.toString }
   def seqSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Seq[V]] { def apply(values: Seq[V]): Any = values map (binder) mkString (",") }
   def setSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Set[V]] { def apply(values: Set[V]): Any = values map (binder) mkString (",") }
