@@ -101,30 +101,30 @@ trait AktivRange {
 case class AbotypId(id: Long) extends BaseId
 
 case class Abotyp(id: AbotypId,
-                  name: String,
-                  beschreibung: Option[String],
-                  lieferrhythmus: Rhythmus,
-                  aktivVon: Option[DateTime],
-                  aktivBis: Option[DateTime],
-                  preis: BigDecimal,
-                  preiseinheit: Preiseinheit,
-                  laufzeit: Option[Int],
-                  laufzeiteinheit: Laufzeiteinheit,
-                  anzahlAbwesenheiten: Option[Int],
-                  farbCode: String,
-                  zielpreis: Option[BigDecimal],
-                  saldoMindestbestand: Int,
-                  adminProzente: BigDecimal,
-                  wirdGeplant: Boolean,
-                  //Zusatzinformationen
-                  anzahlAbonnenten: Int,
-                  letzteLieferung: Option[DateTime],
-                  waehrung: Waehrung,
-                  //modification flags
-                  erstelldat: DateTime,
-                  ersteller: UserId,
-                  modifidat: DateTime,
-                  modifikator: UserId) extends BaseEntity[AbotypId] with AktivRange with Product
+  name: String,
+  beschreibung: Option[String],
+  lieferrhythmus: Rhythmus,
+  aktivVon: Option[DateTime],
+  aktivBis: Option[DateTime],
+  preis: BigDecimal,
+  preiseinheit: Preiseinheit,
+  laufzeit: Option[Int],
+  laufzeiteinheit: Laufzeiteinheit,
+  anzahlAbwesenheiten: Option[Int],
+  farbCode: String,
+  zielpreis: Option[BigDecimal],
+  guthabenMindestbestand: Int,
+  adminProzente: BigDecimal,
+  wirdGeplant: Boolean,
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  letzteLieferung: Option[DateTime],
+  waehrung: Waehrung,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId) extends BaseEntity[AbotypId] with AktivRange with Product
 
 object Abotyp {
   def unapply(a: Abotyp) = {
@@ -142,7 +142,7 @@ object Abotyp {
       a.anzahlAbwesenheiten,
       a.farbCode,
       a.zielpreis,
-      a.saldoMindestbestand,
+      a.guthabenMindestbestand,
       a.adminProzente,
       a.wirdGeplant,
       a.anzahlAbonnenten,
@@ -170,6 +170,6 @@ case class AbotypModify(
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
-  saldoMindestbestand: Int,
+  guthabenMindestbestand: Int,
   adminProzente: BigDecimal,
   wirdGeplant: Boolean) extends AktivRange with JSONSerializable

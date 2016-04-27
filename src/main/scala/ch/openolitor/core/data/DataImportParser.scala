@@ -172,7 +172,7 @@ class DataImportParser extends Actor with ActorLogging {
               anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
               farbCode = row.value[String](indexFarbCode),
               zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
-              saldoMindestbestand = row.value[Int](indexSaldoMindestbestand),
+              guthabenMindestbestand = row.value[Int](indexSaldoMindestbestand),
               adminProzente = row.value[BigDecimal](indexAdminProzente),
               wirdGeplant = row.value[Boolean](indexWirdGeplant)))
     }

@@ -261,15 +261,15 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         case pt => sys.error(s"Unknown treemap:$pt")
       }
   }
-  implicit val depotaboFormat = jsonFormat19(DepotlieferungAbo)
-  implicit val depotaboDetailFormat = jsonFormat22(DepotlieferungAboDetail)
-  implicit val depotaboModifyFormat = jsonFormat9(DepotlieferungAboModify)
-  implicit val heimlieferungAboFormat = jsonFormat19(HeimlieferungAbo)
-  implicit val heimlieferungAboDetailFormat = jsonFormat22(HeimlieferungAboDetail)
-  implicit val heimlieferungAboModifyFormat = jsonFormat9(HeimlieferungAboModify)
-  implicit val postlieferungAboFormat = jsonFormat17(PostlieferungAbo)
-  implicit val postlieferungAboDetailFormat = jsonFormat20(PostlieferungAboDetail)
-  implicit val postlieferungAboModifyFormat = jsonFormat7(PostlieferungAboModify)
+  implicit val depotaboFormat = autoProductFormat[DepotlieferungAbo]
+  implicit val depotaboDetailFormat = autoProductFormat[DepotlieferungAboDetail]
+  implicit val depotaboModifyFormat = autoProductFormat[DepotlieferungAboModify]
+  implicit val heimlieferungAboFormat = autoProductFormat[HeimlieferungAbo]
+  implicit val heimlieferungAboDetailFormat = autoProductFormat[HeimlieferungAboDetail]
+  implicit val heimlieferungAboModifyFormat = autoProductFormat[HeimlieferungAboModify]
+  implicit val postlieferungAboFormat = autoProductFormat[PostlieferungAbo]
+  implicit val postlieferungAboDetailFormat = autoProductFormat[PostlieferungAboDetail]
+  implicit val postlieferungAboModifyFormat = autoProductFormat[PostlieferungAboModify]
 
   implicit val aboDetailFormat = new RootJsonFormat[AboDetail] {
     def write(obj: AboDetail): JsValue =
