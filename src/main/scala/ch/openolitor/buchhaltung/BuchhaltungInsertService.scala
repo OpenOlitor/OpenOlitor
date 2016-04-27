@@ -55,9 +55,14 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   self: BuchhaltungRepositoryComponent =>
 
   val Divisor = 10
-  val ReferneznummerLength = 26
+  val ReferenznummerLength = 26
   val BetragLength = 10
   val TeilnehmernummerLength = 9
+
+  val RechnungIdLength = sysConfig.mandantConfiguration.buchhaltungConfig.rechnungIdLength
+  val KundeIdLength = sysConfig.mandantConfiguration.buchhaltungConfig.kundeIdLength
+  val Teilnehmernummer = sysConfig.mandantConfiguration.buchhaltungConfig.teilnehmernummer
+  val ReferenznummerPrefix = sysConfig.mandantConfiguration.buchhaltungConfig.referenznummerPrefix
 
   val belegarten = Map[Waehrung, String](CHF -> "01", EUR -> "21")
 
@@ -96,22 +101,22 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
    * Generieren einer Referenznummer, die die Kundennummer und Rechnungsnummer enthält.
    */
   def generateReferenzNummer(rechnung: RechnungModify, id: RechnungId): String = {
-    // TODO use a configurable pattern
-    val filled = ("%026d".format(0) + s"${rechnung.kundeId.id}${id.id}") takeRight (ReferneznummerLength)
+    val zeroesLength = ReferenznummerLength - ReferenznummerPrefix.size
+    val zeroes = s"%0${zeroesLength}d".format(0)
+    val filled = (s"$ReferenznummerPrefix$zeroes${rechnung.kundeId.id}${id.id}") takeRight (ReferenznummerLength)
     val checksum = calculateChecksum(filled.toList map (_.asDigit))
 
     s"$filled$checksum"
   }
 
   def generateEsrNummer(rechnung: RechnungModify, referenzNummer: String): String = {
-    // TODO read teilnehmernummer from config
-    val teilnehmernummer = "777777777"
     val bc = belegarten(rechnung.waehrung)
-    val betrag = (s"%0${BetragLength}d".format(0) + s"${(rechnung.betrag * 100).toBigInt}") takeRight (BetragLength)
+    val zeroes = s"%0${BetragLength}d".format(0)
+    val betrag = (s"$zeroes${(rechnung.betrag * 100).toBigInt}") takeRight (BetragLength)
     val checksum = calculateChecksum((bc + betrag).toList map (_.asDigit))
-    val filledTeilnehmernummer = (s"%0${TeilnehmernummerLength}d".format(0) + teilnehmernummer) takeRight (TeilnehmernummerLength)
+    val filledTeilnehmernummer = (s"%0${TeilnehmernummerLength}d".format(0) + Teilnehmernummer) takeRight (TeilnehmernummerLength)
 
-    s"$bc$betrag$checksum>$referenzNummer+ $teilnehmernummer>"
+    s"$bc$betrag$checksum>$referenzNummer+ $Teilnehmernummer>"
   }
 
   def calculateChecksum(digits: List[Int], buffer: Int = 0): Int = digits match {
