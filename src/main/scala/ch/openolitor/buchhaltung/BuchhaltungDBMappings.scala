@@ -64,24 +64,24 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
     override def updateParameters(rechnung: Rechnung) = {
       super.updateParameters(rechnung) ++ Seq(
-        column.kundeId -> rechnung.kundeId,
-        column.aboId -> rechnung.aboId,
-        column.titel -> rechnung.titel,
-        column.anzahlLieferungen -> rechnung.anzahlLieferungen,
-        column.waehrung -> rechnung.waehrung,
-        column.betrag -> rechnung.betrag,
-        column.einbezahlterBetrag -> rechnung.einbezahlterBetrag,
-        column.rechnungsDatum -> rechnung.rechnungsDatum,
-        column.faelligkeitsDatum -> rechnung.faelligkeitsDatum,
-        column.eingangsDatum -> rechnung.eingangsDatum,
-        column.status -> rechnung.status,
-        column.referenzNummer -> rechnung.referenzNummer,
-        column.esrNummer -> rechnung.esrNummer,
-        column.strasse -> rechnung.strasse,
-        column.hausNummer -> rechnung.hausNummer,
-        column.adressZusatz -> rechnung.adressZusatz,
-        column.plz -> rechnung.plz,
-        column.ort -> rechnung.ort)
+        column.kundeId -> parameter(rechnung.kundeId),
+        column.aboId -> parameter(rechnung.aboId),
+        column.titel -> parameter(rechnung.titel),
+        column.anzahlLieferungen -> parameter(rechnung.anzahlLieferungen),
+        column.waehrung -> parameter(rechnung.waehrung),
+        column.betrag -> parameter(rechnung.betrag),
+        column.einbezahlterBetrag -> parameter(rechnung.einbezahlterBetrag),
+        column.rechnungsDatum -> parameter(rechnung.rechnungsDatum),
+        column.faelligkeitsDatum -> parameter(rechnung.faelligkeitsDatum),
+        column.eingangsDatum -> parameter(rechnung.eingangsDatum),
+        column.status -> parameter(rechnung.status),
+        column.referenzNummer -> parameter(rechnung.referenzNummer),
+        column.esrNummer -> parameter(rechnung.esrNummer),
+        column.strasse -> parameter(rechnung.strasse),
+        column.hausNummer -> parameter(rechnung.hausNummer),
+        column.adressZusatz -> parameter(rechnung.adressZusatz),
+        column.plz -> parameter(rechnung.plz),
+        column.ort -> parameter(rechnung.ort))
     }
   }
 }

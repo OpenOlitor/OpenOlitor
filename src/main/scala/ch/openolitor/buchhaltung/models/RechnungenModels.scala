@@ -33,11 +33,12 @@ sealed trait RechnungStatus
 case object Erstellt extends RechnungStatus
 case object Verschickt extends RechnungStatus
 case object Bezahlt extends RechnungStatus
+case object MahnungVerschickt extends RechnungStatus
 case object Storniert extends RechnungStatus
 
 object RechnungStatus {
   def apply(value: String): RechnungStatus = {
-    Vector(Erstellt, Verschickt, Bezahlt, Storniert).find(_.toString == value).getOrElse(Erstellt)
+    Vector(Erstellt, Verschickt, Bezahlt, MahnungVerschickt, Storniert).find(_.toString == value).getOrElse(Erstellt)
   }
 }
 

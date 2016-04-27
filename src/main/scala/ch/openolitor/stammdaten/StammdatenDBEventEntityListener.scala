@@ -35,7 +35,7 @@ import ch.openolitor.core.repositories.SqlBinder
 import scala.concurrent.ExecutionContext.Implicits.global;
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models.Rechnung
-import ch.openolitor.buchhaltung.models.Bezahlt
+import ch.openolitor.buchhaltung.models.{ Erstellt, Bezahlt }
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -80,7 +80,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ EntityCreated(userId, entity: Rechnung)            => handleRechnungCreated(entity)(userId)
     case e @ EntityDeleted(userId, entity: Rechnung)            => handleRechnungDeleted(entity)(userId)
-    case e @ EntityModified(userId, entity: Rechnung, orig: Rechnung) if (entity.status == Bezahlt) =>
+    case e @ EntityModified(userId, entity: Rechnung, orig: Rechnung) if (orig.status == Erstellt && entity.status == Bezahlt) =>
       handleRechnungBezahlt(entity, orig)(userId)
 
     case x => //log.debug(s"receive unused event $x")
@@ -236,48 +236,51 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def handleRechnungDeleted(rechnung: Rechnung)(implicit userId: UserId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen)
     })
     modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen)
     })
     modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen)
     })
   }
 
   def handleRechnungCreated(rechnung: Rechnung)(implicit userId: UserId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen)
     })
     modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen)
     })
     modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen)
     })
   }
 
   def handleRechnungBezahlt(rechnung: Rechnung, orig: Rechnung)(implicit userId: UserId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen,
-        saldo = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
+        guthaben = abo.guthaben + rechnung.anzahlLieferungen,
+        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
     })
     modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen,
-        saldo = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
+        guthaben = abo.guthaben + rechnung.anzahlLieferungen,
+        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
     })
     modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        saldoInRechnung = abo.saldoInRechnung - rechnung.anzahlLieferungen,
-        saldo = abo.saldoInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
+        guthaben = abo.guthaben + rechnung.anzahlLieferungen,
+        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
     })
   }
 
