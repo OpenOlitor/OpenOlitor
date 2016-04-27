@@ -29,9 +29,9 @@ import scalikejdbc._
  * Mandant specific dbs
  */
 case class MandantDBs(configKey: String) extends DBs
-  with TypesafeConfigReader
-  with StandardTypesafeConfig
-  with EnvPrefix {
+    with TypesafeConfigReader
+    with StandardTypesafeConfig
+    with EnvPrefix {
 
   override val env = Option(configKey)
 

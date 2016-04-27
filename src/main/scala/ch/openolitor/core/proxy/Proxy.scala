@@ -61,7 +61,8 @@ trait Proxy extends LazyLogging {
   def updateRequest(uri: Uri, updateUri: (RequestContext, Uri) => Uri): RequestContext => HttpRequest =
     ctx => ctx.request.copy(
       uri = updateUri(ctx, uri),
-      headers = stripHeader(ctx.request.headers))
+      headers = stripHeader(ctx.request.headers)
+    )
 
   def proxyToUnmatchedPath(uri: Uri)(implicit system: ActorSystem): Route = proxyRequest(updateRequest(uri, updateUriUnmatchedPath))
 }

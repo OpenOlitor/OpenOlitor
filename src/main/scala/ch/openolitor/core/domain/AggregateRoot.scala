@@ -49,8 +49,8 @@ trait AggregateRoot extends PersistentActor with ActorLogging {
 
   def updateState(evt: PersistetEvent): Unit
   def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
-  
-  def afterRecoveryCompleted(): Unit = {}  
+
+  def afterRecoveryCompleted(): Unit = {}
 
   def now = System.currentTimeMillis
 
@@ -71,7 +71,7 @@ trait AggregateRoot extends PersistentActor with ActorLogging {
     case SnapshotOffer(metadata, state: State) =>
       restoreFromSnapshot(metadata, state)
       log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted => 
+    case RecoveryCompleted =>
       afterRecoveryCompleted()
   }
 }

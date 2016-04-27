@@ -125,5 +125,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     projektModifyPersiter,
     projektIdPersister,
     abwesenheitCreatePersister,
-    abwesenheitIdPersister)
+    abwesenheitIdPersister
+  )
 }

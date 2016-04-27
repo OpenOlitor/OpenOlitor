@@ -169,8 +169,9 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   val userId: UserId
   implicit val timeout = Timeout(5.seconds)
 
-  def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit um: FromRequestUnmarshaller[E],
-                                                                       tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
+  def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit
+    um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         created(request)(entity)
@@ -192,8 +193,9 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def update[E <: AnyRef: ClassTag, I <: BaseId](id: I)(implicit um: FromRequestUnmarshaller[E],
-                                                        tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
+  def update[E <: AnyRef: ClassTag, I <: BaseId](id: I)(implicit
+    um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 
@@ -250,7 +252,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
       details.map {
         case (content, fileName) =>
           onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
-            case Left(e)         => onError.map(_(e)).getOrElse(complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}"))
+            case Left(e) => onError.map(_(e)).getOrElse(complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}"))
             case Right(metadata) => onUpload(id, metadata)
           }
       } getOrElse {
@@ -265,6 +267,7 @@ class DefaultRouteServiceActor(
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val mandant: String,
-  override val config: Config)
+  override val config: Config
+)
     extends RouteServiceActor
     with DefaultRouteServiceComponent

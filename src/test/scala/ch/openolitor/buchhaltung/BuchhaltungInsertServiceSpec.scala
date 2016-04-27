@@ -34,7 +34,8 @@ class BuchhaltungInsertServiceSpec extends Specification {
   "BuchhaltungInsertService" should {
     val config = SystemConfig(MandantConfiguration(
       "", "", "", 0, 0, Map(),
-      BuchhaltungConfig(6, 5, "777777777", "")), null, null)
+      BuchhaltungConfig(6, 5, "777777777", "")
+    ), null, null)
 
     val service = new DefaultBuchhaltungInsertService(config, null)
 
@@ -74,7 +75,8 @@ class BuchhaltungInsertServiceSpec extends Specification {
         None,
         None,
         "3000",
-        "Bern")
+        "Bern"
+      )
 
       service.generateReferenzNummer(rechnung, RechnungId(777)) === "000000000000000000001237772"
     }
@@ -95,7 +97,8 @@ class BuchhaltungInsertServiceSpec extends Specification {
         None,
         None,
         "3000",
-        "Bern")
+        "Bern"
+      )
 
       val referenzNummer = service.generateReferenzNummer(rechnung, RechnungId(555))
       service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>000000000000000000003215552+ 777777777>"

@@ -27,7 +27,7 @@ import scalikejdbc._
 
 trait TestDB {
   val url = "jdbc:h2:mem:test"
-  
+
   ConnectionPool.singleton(url, "", "")
   implicit val ctx = MultipleConnectionPoolContext(ConnectionPool.DEFAULT_NAME -> ConnectionPool())
 }

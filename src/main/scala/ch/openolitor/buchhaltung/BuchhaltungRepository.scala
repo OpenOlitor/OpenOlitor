@@ -83,7 +83,8 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
         rs => kundeMapping.opt(kunde)(rs),
         rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
-        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs))
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs)
+      )
       .map({ (rechnung, kunden, pl, hl, dl) =>
         val kunde = kunden.head
         val abo = (pl ++ hl ++ dl).head

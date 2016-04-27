@@ -30,9 +30,9 @@ object ProxyWorker {
  * normal httprequest to a httpserver
  */
 class ProxyWorker(val serverConnection: ActorRef, val routeMap: Map[String, MandantSystem], val wsHandler: WebsocketHandler)
-  extends HttpServiceActor
-  with websocket.WebSocketServerWorker
-  with Proxy {
+    extends HttpServiceActor
+    with websocket.WebSocketServerWorker
+    with Proxy {
   //Use system's dispatcher as ExecutionContext
   import context.dispatcher
 
@@ -153,10 +153,12 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap: Map[String, Mand
 
       //start ping-poing to keep websocket connection alive
       cancellable =
-        Some(context.system.scheduler.schedule(90 seconds,
+        Some(context.system.scheduler.schedule(
+          90 seconds,
           90 seconds,
           self,
-          "Ping"))
+          "Ping"
+        ))
 
       wsClient
     }

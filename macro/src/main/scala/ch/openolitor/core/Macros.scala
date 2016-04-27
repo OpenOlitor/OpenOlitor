@@ -31,7 +31,8 @@ object Macros {
   def copyFrom[S, D](dest: S, from: D, mapping: (String, Any)*): S = macro copyFromImpl[S, D]
 
   def copyFromImpl[S: c.WeakTypeTag, D: c.WeakTypeTag](c: Context)(
-    dest: c.Expr[S], from: c.Expr[D], mapping: c.Expr[(String, Any)]*): c.Expr[S] = {
+    dest: c.Expr[S], from: c.Expr[D], mapping: c.Expr[(String, Any)]*
+  ): c.Expr[S] = {
     import c.universe._
 
     val fromTree = reify(from.splice).tree
@@ -73,13 +74,15 @@ object Macros {
 
     c.Expr[S](Apply(
       Select(tree, copy),
-      copyParams))
+      copyParams
+    ))
   }
 
   def copyTo[S, D](source: S, mapping: (String, Any)*): D = macro copyToImpl[S, D]
 
   def copyToImpl[S: c.WeakTypeTag, D: c.WeakTypeTag](c: Context)(
-    source: c.Expr[S], mapping: c.Expr[(String, Any)]*): c.Expr[D] = {
+    source: c.Expr[S], mapping: c.Expr[(String, Any)]*
+  ): c.Expr[D] = {
     import c.universe._
 
     val sourceTree = reify(source.splice).tree

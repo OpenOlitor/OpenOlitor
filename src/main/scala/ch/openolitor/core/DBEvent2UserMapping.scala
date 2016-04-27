@@ -37,9 +37,11 @@ object DBEvent2UserMapping extends DefaultJsonProtocol {
 
   implicit def dbEventCreateWriter[E <: BaseEntity[_ <: BaseId]](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
     def write(obj: DBEvent[E]): JsValue =
-      JsObject("type" -> JsString(obj.productPrefix),
+      JsObject(
+        "type" -> JsString(obj.productPrefix),
         "entity" -> JsString(obj.entity.productPrefix),
-        "data" -> writer.write(obj.entity))
+        "data" -> writer.write(obj.entity)
+      )
   }
 }
 
@@ -105,10 +107,10 @@ class DBEvent2UserMapping extends Actor
 
     case e @ EntityCreated(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
     case e @ EntityDeleted(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
-    
+
     case e @ EntityCreated(userId, entity: Lieferplanung) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
     case e @ EntityModified(userId, entity: Lieferplanung, _) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
-    
+
     case e @ EntityCreated(userId, entity: Bestellung) => send(userId, e.asInstanceOf[DBEvent[Bestellung]])
 
     case e @ EntityCreated(userId, entity: Depotlieferung) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])

@@ -38,7 +38,8 @@ package events {
           JsObject(
             "key" -> JsString(persisted.key),
             "version" -> JsNumber(persisted.version),
-            "data" -> data)
+            "data" -> data
+          )
         case _ => throw new IllegalArgumentException(s"No persister found for entity:${entity}")
       }
     }
@@ -61,8 +62,8 @@ package events {
   }
 
   class EntityInsertEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters)
-    extends PersistedEventPersister[EntityInsertedEvent[BaseId, AnyRef], V]("entity-inserted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
-    with LazyLogging {
+      extends PersistedEventPersister[EntityInsertedEvent[BaseId, AnyRef], V]("entity-inserted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
+      with LazyLogging {
 
     def toBytes(t: EntityInsertedEvent[BaseId, AnyRef]): ByteString = {
       //build custom json
@@ -75,7 +76,8 @@ package events {
       fromJson(JsObject(
         "meta" -> meta,
         "id" -> id,
-        "entity" -> entity))
+        "entity" -> entity
+      ))
     }
 
     def fromBytes(bytes: ByteString): EntityInsertedEvent[BaseId, AnyRef] = {
@@ -93,8 +95,8 @@ package events {
   }
 
   class EntityUpdatedEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters)
-    extends PersistedEventPersister[EntityUpdatedEvent[BaseId, AnyRef], V]("entity-updated", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
-    with LazyLogging {
+      extends PersistedEventPersister[EntityUpdatedEvent[BaseId, AnyRef], V]("entity-updated", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
+      with LazyLogging {
 
     def toBytes(t: EntityUpdatedEvent[BaseId, AnyRef]): ByteString = {
       //build custom json
@@ -108,7 +110,8 @@ package events {
       val json = JsObject(
         "meta" -> meta,
         "id" -> id,
-        "entity" -> entity)
+        "entity" -> entity
+      )
       fromJson(json)
     }
 
@@ -126,7 +129,7 @@ package events {
   }
 
   class EntityDeletedEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters)
-    extends PersistedEventPersister[EntityDeletedEvent[BaseId], V]("entity-deleted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+      extends PersistedEventPersister[EntityDeletedEvent[BaseId], V]("entity-deleted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
 
     def toBytes(t: EntityDeletedEvent[BaseId]): ByteString = {
       //build custom json
@@ -135,7 +138,8 @@ package events {
 
       fromJson(JsObject(
         "meta" -> meta,
-        "id" -> id))
+        "id" -> id
+      ))
     }
 
     def fromBytes(bytes: ByteString): EntityDeletedEvent[BaseId] = {

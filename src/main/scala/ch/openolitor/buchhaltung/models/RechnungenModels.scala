@@ -69,7 +69,8 @@ case class Rechnung(
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[RechnungId]
+  modifikator: UserId
+) extends BaseEntity[RechnungId]
 
 object Rechnung {
   def unapply(entity: Rechnung) = {
@@ -96,7 +97,8 @@ object Rechnung {
       entity.erstelldat,
       entity.ersteller,
       entity.modifidat,
-      entity.modifikator))
+      entity.modifikator
+    ))
   }
 }
 
@@ -125,7 +127,8 @@ case class RechnungDetail(
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends JSONSerializable
+  modifikator: UserId
+) extends JSONSerializable
 
 case class RechnungModify(
   kundeId: KundeId,
@@ -142,4 +145,5 @@ case class RechnungModify(
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: String,
-  ort: String) extends JSONSerializable
+  ort: String
+) extends JSONSerializable

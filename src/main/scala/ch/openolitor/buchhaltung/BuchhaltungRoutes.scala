@@ -86,6 +86,7 @@ class DefaultBuchhaltungRoutes(
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val fileStore: FileStore,
-  override val actorRefFactory: ActorRefFactory)
+  override val actorRefFactory: ActorRefFactory
+)
     extends BuchhaltungRoutes
     with DefaultBuchhaltungRepositoryComponent

@@ -26,7 +26,8 @@ import ch.openolitor.core.scalax._
 
 trait Parameters23 extends BaseParameter {
   def parameters[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23](params: Tuple23[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23])(
-    implicit binder1: SqlBinder[T1],
+    implicit
+    binder1: SqlBinder[T1],
     binder2: SqlBinder[T2],
     binder3: SqlBinder[T3],
     binder4: SqlBinder[T4],
@@ -48,8 +49,10 @@ trait Parameters23 extends BaseParameter {
     binder20: SqlBinder[T20],
     binder21: SqlBinder[T21],
     binder22: SqlBinder[T22],
-    binder23: SqlBinder[T23]) = {
-    Tuple23(parameter(params._1),
+    binder23: SqlBinder[T23]
+  ) = {
+    Tuple23(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -71,6 +74,7 @@ trait Parameters23 extends BaseParameter {
       parameter(params._20),
       parameter(params._21),
       parameter(params._22),
-      parameter(params._23)).productIterator.toSeq
+      parameter(params._23)
+    ).productIterator.toSeq
   }
 }

@@ -45,7 +45,7 @@ trait SprayDeserializers {
   def long2BaseIdConverter[T <: BaseId](implicit f: Long => T) = new Deserializer[Long, T] {
     def apply(value: Long) = {
       try {
-        Right(f(value))        
+        Right(f(value))
       } catch {
         case e: Exception =>
           Left(MalformedContent(s"'$value' is not a valid id:$e"))

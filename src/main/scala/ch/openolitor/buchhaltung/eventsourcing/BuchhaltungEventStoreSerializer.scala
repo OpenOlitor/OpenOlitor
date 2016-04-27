@@ -15,5 +15,6 @@ trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with Entit
 
   val buchhaltungPersisters = List(
     rechnungModifyPersister,
-    rechnungIdPersister)
+    rechnungIdPersister
+  )
 }

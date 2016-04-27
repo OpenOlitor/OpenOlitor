@@ -30,11 +30,11 @@ import ch.openolitor.core.models.UserId
 import scala.collection.immutable.TreeMap
 
 trait DBMappings extends BaseParameter
-  with Parameters23
-  with Parameters24
-  with Parameters25
-  with Parameters26
-  with Parameters27 {
+    with Parameters23
+    with Parameters24
+    with Parameters25
+    with Parameters26
+    with Parameters27 {
   import TypeBinder._
 
   def baseIdTypeBinder[T <: BaseId](implicit f: Long => T): TypeBinder[T] = long.map(l => f(l))
@@ -68,103 +68,134 @@ trait DBMappings extends BaseParameter
   implicit val userIdSqlBinder = baseIdSqlBinder[UserId]
 
   def parameters[A](params: Tuple1[A])(
-    implicit binder0: SqlBinder[A]) = {
+    implicit
+    binder0: SqlBinder[A]
+  ) = {
     Tuple1(parameter(params._1)).productIterator.toSeq
   }
 
   def parameters[A, B](params: Tuple2[A, B])(
-    implicit binder0: SqlBinder[A],
-    binder1: SqlBinder[B]) = {
-    Tuple2(parameter(params._1),
-      parameter(params._2)).productIterator.toSeq
+    implicit
+    binder0: SqlBinder[A],
+    binder1: SqlBinder[B]
+  ) = {
+    Tuple2(
+      parameter(params._1),
+      parameter(params._2)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C](params: Tuple3[A, B, C])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
-    binder2: SqlBinder[C]) = {
-    Tuple3(parameter(params._1),
+    binder2: SqlBinder[C]
+  ) = {
+    Tuple3(
+      parameter(params._1),
       parameter(params._2),
-      parameter(params._3)).productIterator.toSeq
+      parameter(params._3)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D](params: Tuple4[A, B, C, D])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
-    binder3: SqlBinder[D]) = {
-    Tuple4(parameter(params._1),
+    binder3: SqlBinder[D]
+  ) = {
+    Tuple4(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
-      parameter(params._4)).productIterator.toSeq
+      parameter(params._4)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E](params: Tuple5[A, B, C, D, E])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
-    binder4: SqlBinder[E]) = {
-    Tuple5(parameter(params._1),
+    binder4: SqlBinder[E]
+  ) = {
+    Tuple5(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
-      parameter(params._5)).productIterator.toSeq
+      parameter(params._5)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F](params: Tuple6[A, B, C, D, E, F])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
     binder4: SqlBinder[E],
-    binder5: SqlBinder[F]) = {
-    Tuple6(parameter(params._1),
+    binder5: SqlBinder[F]
+  ) = {
+    Tuple6(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
       parameter(params._5),
-      parameter(params._6)).productIterator.toSeq
+      parameter(params._6)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G](params: Tuple7[A, B, C, D, E, F, G])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
     binder4: SqlBinder[E],
     binder5: SqlBinder[F],
-    binder6: SqlBinder[G]) = {
-    Tuple7(parameter(params._1),
+    binder6: SqlBinder[G]
+  ) = {
+    Tuple7(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
       parameter(params._5),
       parameter(params._6),
-      parameter(params._7)).productIterator.toSeq
+      parameter(params._7)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H](params: Tuple8[A, B, C, D, E, F, G, H])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
     binder4: SqlBinder[E],
     binder5: SqlBinder[F],
     binder6: SqlBinder[G],
-    binder7: SqlBinder[H]) = {
-    Tuple8(parameter(params._1),
+    binder7: SqlBinder[H]
+  ) = {
+    Tuple8(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
       parameter(params._5),
       parameter(params._6),
       parameter(params._7),
-      parameter(params._8)).productIterator.toSeq
+      parameter(params._8)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I](params: Tuple9[A, B, C, D, E, F, G, H, I])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -172,8 +203,10 @@ trait DBMappings extends BaseParameter
     binder5: SqlBinder[F],
     binder6: SqlBinder[G],
     binder7: SqlBinder[H],
-    binder8: SqlBinder[I]) = {
-    Tuple9(parameter(params._1),
+    binder8: SqlBinder[I]
+  ) = {
+    Tuple9(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -181,11 +214,13 @@ trait DBMappings extends BaseParameter
       parameter(params._6),
       parameter(params._7),
       parameter(params._8),
-      parameter(params._9)).productIterator.toSeq
+      parameter(params._9)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J](params: Tuple10[A, B, C, D, E, F, G, H, I, J])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -194,8 +229,10 @@ trait DBMappings extends BaseParameter
     binder6: SqlBinder[G],
     binder7: SqlBinder[H],
     binder8: SqlBinder[I],
-    binder9: SqlBinder[J]) = {
-    Tuple10(parameter(params._1),
+    binder9: SqlBinder[J]
+  ) = {
+    Tuple10(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -204,11 +241,13 @@ trait DBMappings extends BaseParameter
       parameter(params._7),
       parameter(params._8),
       parameter(params._9),
-      parameter(params._10)).productIterator.toSeq
+      parameter(params._10)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K](params: Tuple11[A, B, C, D, E, F, G, H, I, J, K])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -218,8 +257,10 @@ trait DBMappings extends BaseParameter
     binder7: SqlBinder[H],
     binder8: SqlBinder[I],
     binder9: SqlBinder[J],
-    binder10: SqlBinder[K]) = {
-    Tuple11(parameter(params._1),
+    binder10: SqlBinder[K]
+  ) = {
+    Tuple11(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -229,11 +270,13 @@ trait DBMappings extends BaseParameter
       parameter(params._8),
       parameter(params._9),
       parameter(params._10),
-      parameter(params._11)).productIterator.toSeq
+      parameter(params._11)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L](params: Tuple12[A, B, C, D, E, F, G, H, I, J, K, L])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -244,8 +287,10 @@ trait DBMappings extends BaseParameter
     binder8: SqlBinder[I],
     binder9: SqlBinder[J],
     binder10: SqlBinder[K],
-    binder11: SqlBinder[L]) = {
-    Tuple12(parameter(params._1),
+    binder11: SqlBinder[L]
+  ) = {
+    Tuple12(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -256,11 +301,13 @@ trait DBMappings extends BaseParameter
       parameter(params._9),
       parameter(params._10),
       parameter(params._11),
-      parameter(params._12)).productIterator.toSeq
+      parameter(params._12)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M](params: Tuple13[A, B, C, D, E, F, G, H, I, J, K, L, M])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -272,8 +319,10 @@ trait DBMappings extends BaseParameter
     binder9: SqlBinder[J],
     binder10: SqlBinder[K],
     binder11: SqlBinder[L],
-    binder12: SqlBinder[M]) = {
-    Tuple13(parameter(params._1),
+    binder12: SqlBinder[M]
+  ) = {
+    Tuple13(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -285,11 +334,13 @@ trait DBMappings extends BaseParameter
       parameter(params._10),
       parameter(params._11),
       parameter(params._12),
-      parameter(params._13)).productIterator.toSeq
+      parameter(params._13)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N](params: Tuple14[A, B, C, D, E, F, G, H, I, J, K, L, M, N])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -302,8 +353,10 @@ trait DBMappings extends BaseParameter
     binder10: SqlBinder[K],
     binder11: SqlBinder[L],
     binder12: SqlBinder[M],
-    binder13: SqlBinder[N]) = {
-    Tuple14(parameter(params._1),
+    binder13: SqlBinder[N]
+  ) = {
+    Tuple14(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -316,11 +369,13 @@ trait DBMappings extends BaseParameter
       parameter(params._11),
       parameter(params._12),
       parameter(params._13),
-      parameter(params._14)).productIterator.toSeq
+      parameter(params._14)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O](params: Tuple15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -334,8 +389,10 @@ trait DBMappings extends BaseParameter
     binder11: SqlBinder[L],
     binder12: SqlBinder[M],
     binder13: SqlBinder[N],
-    binder14: SqlBinder[O]) = {
-    Tuple15(parameter(params._1),
+    binder14: SqlBinder[O]
+  ) = {
+    Tuple15(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -349,11 +406,13 @@ trait DBMappings extends BaseParameter
       parameter(params._12),
       parameter(params._13),
       parameter(params._14),
-      parameter(params._15)).productIterator.toSeq
+      parameter(params._15)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P](params: Tuple16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -368,8 +427,10 @@ trait DBMappings extends BaseParameter
     binder12: SqlBinder[M],
     binder13: SqlBinder[N],
     binder14: SqlBinder[O],
-    binder15: SqlBinder[P]) = {
-    Tuple16(parameter(params._1),
+    binder15: SqlBinder[P]
+  ) = {
+    Tuple16(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -384,11 +445,13 @@ trait DBMappings extends BaseParameter
       parameter(params._13),
       parameter(params._14),
       parameter(params._15),
-      parameter(params._16)).productIterator.toSeq
+      parameter(params._16)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q](params: Tuple17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -404,8 +467,10 @@ trait DBMappings extends BaseParameter
     binder13: SqlBinder[N],
     binder14: SqlBinder[O],
     binder15: SqlBinder[P],
-    binder16: SqlBinder[Q]) = {
-    Tuple17(parameter(params._1),
+    binder16: SqlBinder[Q]
+  ) = {
+    Tuple17(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -421,11 +486,13 @@ trait DBMappings extends BaseParameter
       parameter(params._14),
       parameter(params._15),
       parameter(params._16),
-      parameter(params._17)).productIterator.toSeq
+      parameter(params._17)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R](params: Tuple18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -442,8 +509,10 @@ trait DBMappings extends BaseParameter
     binder14: SqlBinder[O],
     binder15: SqlBinder[P],
     binder16: SqlBinder[Q],
-    binder17: SqlBinder[R]) = {
-    Tuple18(parameter(params._1),
+    binder17: SqlBinder[R]
+  ) = {
+    Tuple18(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -460,11 +529,13 @@ trait DBMappings extends BaseParameter
       parameter(params._15),
       parameter(params._16),
       parameter(params._17),
-      parameter(params._18)).productIterator.toSeq
+      parameter(params._18)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S](params: Tuple19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -482,8 +553,10 @@ trait DBMappings extends BaseParameter
     binder15: SqlBinder[P],
     binder16: SqlBinder[Q],
     binder17: SqlBinder[R],
-    binder18: SqlBinder[S]) = {
-    Tuple19(parameter(params._1),
+    binder18: SqlBinder[S]
+  ) = {
+    Tuple19(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -501,11 +574,13 @@ trait DBMappings extends BaseParameter
       parameter(params._16),
       parameter(params._17),
       parameter(params._18),
-      parameter(params._19)).productIterator.toSeq
+      parameter(params._19)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T](params: Tuple20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -524,8 +599,10 @@ trait DBMappings extends BaseParameter
     binder16: SqlBinder[Q],
     binder17: SqlBinder[R],
     binder18: SqlBinder[S],
-    binder19: SqlBinder[T]) = {
-    Tuple20(parameter(params._1),
+    binder19: SqlBinder[T]
+  ) = {
+    Tuple20(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -544,11 +621,13 @@ trait DBMappings extends BaseParameter
       parameter(params._17),
       parameter(params._18),
       parameter(params._19),
-      parameter(params._20)).productIterator.toSeq
+      parameter(params._20)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U](params: Tuple21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -568,8 +647,10 @@ trait DBMappings extends BaseParameter
     binder17: SqlBinder[R],
     binder18: SqlBinder[S],
     binder19: SqlBinder[T],
-    binder20: SqlBinder[U]) = {
-    Tuple21(parameter(params._1),
+    binder20: SqlBinder[U]
+  ) = {
+    Tuple21(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -589,11 +670,13 @@ trait DBMappings extends BaseParameter
       parameter(params._18),
       parameter(params._19),
       parameter(params._20),
-      parameter(params._21)).productIterator.toSeq
+      parameter(params._21)
+    ).productIterator.toSeq
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V](params: Tuple22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V])(
-    implicit binder0: SqlBinder[A],
+    implicit
+    binder0: SqlBinder[A],
     binder1: SqlBinder[B],
     binder2: SqlBinder[C],
     binder3: SqlBinder[D],
@@ -614,8 +697,10 @@ trait DBMappings extends BaseParameter
     binder18: SqlBinder[S],
     binder19: SqlBinder[T],
     binder20: SqlBinder[U],
-    binder21: SqlBinder[V]) = {
-    Tuple22(parameter(params._1),
+    binder21: SqlBinder[V]
+  ) = {
+    Tuple22(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -636,6 +721,7 @@ trait DBMappings extends BaseParameter
       parameter(params._19),
       parameter(params._20),
       parameter(params._21),
-      parameter(params._22)).productIterator.toSeq
+      parameter(params._22)
+    ).productIterator.toSeq
   }
 }

@@ -27,7 +27,8 @@ object FileType {
     GeneriertMahnung,
     GeneriertBestellung,
     ProjektStammdaten,
-    EsrDaten)
+    EsrDaten
+  )
 
   def apply(value: String): FileType = {
     AllFileTypes.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)

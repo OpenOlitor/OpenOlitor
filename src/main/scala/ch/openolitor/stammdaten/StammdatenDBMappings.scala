@@ -152,7 +152,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(Abotyp.unapply(entity).get)
 
     override def updateParameters(abotyp: Abotyp) = {
-      super.updateParameters(abotyp) ++ Seq(column.name -> parameter(abotyp.name),
+      super.updateParameters(abotyp) ++ Seq(
+        column.name -> parameter(abotyp.name),
         column.beschreibung -> parameter(abotyp.beschreibung),
         column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
         column.aktivVon -> parameter(abotyp.aktivVon),
@@ -167,7 +168,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
         column.waehrung -> parameter(abotyp.waehrung),
-        column.guthabenMindestbestand -> parameter(abotyp.guthabenMindestbestand))
+        column.guthabenMindestbestand -> parameter(abotyp.guthabenMindestbestand)
+      )
     }
   }
 
@@ -183,9 +185,11 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(CustomKundentyp.unapply(entity).get)
 
     override def updateParameters(typ: CustomKundentyp) = {
-      super.updateParameters(typ) ++ Seq(column.kundentyp -> parameter(typ.kundentyp),
+      super.updateParameters(typ) ++ Seq(
+        column.kundentyp -> parameter(typ.kundentyp),
         column.beschreibung -> parameter(typ.beschreibung),
-        column.anzahlVerknuepfungen -> parameter(typ.anzahlVerknuepfungen))
+        column.anzahlVerknuepfungen -> parameter(typ.anzahlVerknuepfungen)
+      )
     }
   }
 
@@ -201,7 +205,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(Kunde.unapply(entity).get)
 
     override def updateParameters(kunde: Kunde) = {
-      super.updateParameters(kunde) ++ Seq(column.bezeichnung -> parameter(kunde.bezeichnung),
+      super.updateParameters(kunde) ++ Seq(
+        column.bezeichnung -> parameter(kunde.bezeichnung),
         column.strasse -> parameter(kunde.strasse),
         column.hausNummer -> parameter(kunde.hausNummer),
         column.adressZusatz -> parameter(kunde.adressZusatz),
@@ -215,7 +220,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.bemerkungen -> parameter(kunde.bemerkungen),
         column.anzahlAbos -> parameter(kunde.anzahlAbos),
         column.anzahlPendenzen -> parameter(kunde.anzahlPendenzen),
-        column.anzahlPersonen -> parameter(kunde.anzahlPersonen))
+        column.anzahlPersonen -> parameter(kunde.anzahlPersonen)
+      )
     }
   }
 
@@ -231,7 +237,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(Person.unapply(entity).get)
 
     override def updateParameters(person: Person) = {
-      super.updateParameters(person) ++ Seq(column.kundeId -> parameter(person.kundeId),
+      super.updateParameters(person) ++ Seq(
+        column.kundeId -> parameter(person.kundeId),
         column.anrede -> parameter(person.anrede),
         column.name -> parameter(person.name),
         column.vorname -> parameter(person.vorname),
@@ -240,7 +247,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.telefonMobil -> parameter(person.telefonMobil),
         column.telefonFestnetz -> parameter(person.telefonFestnetz),
         column.bemerkungen -> parameter(person.bemerkungen),
-        column.sort -> parameter(person.sort))
+        column.sort -> parameter(person.sort)
+      )
     }
   }
 
@@ -256,12 +264,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(Pendenz.unapply(entity).get)
 
     override def updateParameters(pendenz: Pendenz) = {
-      super.updateParameters(pendenz) ++ Seq(column.kundeId -> parameter(pendenz.kundeId),
+      super.updateParameters(pendenz) ++ Seq(
+        column.kundeId -> parameter(pendenz.kundeId),
         column.kundeBezeichnung -> parameter(pendenz.kundeBezeichnung),
         column.datum -> parameter(pendenz.datum),
         column.bemerkung -> parameter(pendenz.bemerkung),
         column.status -> parameter(pendenz.status),
-        column.generiert -> parameter(pendenz.generiert))
+        column.generiert -> parameter(pendenz.generiert)
+      )
     }
   }
 
@@ -277,7 +287,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(Lieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Lieferung) = {
-      super.updateParameters(lieferung) ++ Seq(column.abotypId -> parameter(lieferung.abotypId),
+      super.updateParameters(lieferung) ++ Seq(
+        column.abotypId -> parameter(lieferung.abotypId),
         column.abotypBeschrieb -> parameter(lieferung.abotypBeschrieb),
         column.vertriebsartId -> parameter(lieferung.vertriebsartId),
         column.vertriebsartBeschrieb -> parameter(lieferung.vertriebsartBeschrieb),
@@ -287,7 +298,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.anzahlLieferungen -> parameter(lieferung.anzahlLieferungen),
         column.preisTotal -> parameter(lieferung.preisTotal),
         column.lieferplanungId -> parameter(lieferung.lieferplanungId),
-        column.lieferplanungNr -> parameter(lieferung.lieferplanungNr))
+        column.lieferplanungNr -> parameter(lieferung.lieferplanungNr)
+      )
     }
   }
 
@@ -302,9 +314,11 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Lieferplanung): Seq[Any] = parameters(Lieferplanung.unapply(entity).get)
 
     override def updateParameters(lieferplanung: Lieferplanung) = {
-      super.updateParameters(lieferplanung) ++ Seq(column.nr -> parameter(lieferplanung.nr),
+      super.updateParameters(lieferplanung) ++ Seq(
+        column.nr -> parameter(lieferplanung.nr),
         column.bemerkungen -> parameter(lieferplanung.bemerkungen),
-        column.status -> parameter(lieferplanung.status))
+        column.status -> parameter(lieferplanung.status)
+      )
     }
   }
 
@@ -319,7 +333,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Lieferposition): Seq[Any] = parameters(Lieferposition.unapply(entity).get)
 
     override def updateParameters(lieferposition: Lieferposition) = {
-      super.updateParameters(lieferposition) ++ Seq(column.produktId -> parameter(lieferposition.produktId),
+      super.updateParameters(lieferposition) ++ Seq(
+        column.produktId -> parameter(lieferposition.produktId),
         column.produktBeschrieb -> parameter(lieferposition.produktBeschrieb),
         column.produzentId -> parameter(lieferposition.produzentId),
         column.produzentKurzzeichen -> parameter(lieferposition.produzentKurzzeichen),
@@ -327,7 +342,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.einheit -> parameter(lieferposition.einheit),
         column.menge -> parameter(lieferposition.menge),
         column.preis -> parameter(lieferposition.preis),
-        column.anzahl -> parameter(lieferposition.anzahl))
+        column.anzahl -> parameter(lieferposition.anzahl)
+      )
     }
   }
 
@@ -342,12 +358,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Bestellung): Seq[Any] = parameters(Bestellung.unapply(entity).get)
 
     override def updateParameters(bestellung: Bestellung) = {
-      super.updateParameters(bestellung) ++ Seq(column.produzentId -> parameter(bestellung.produzentId),
+      super.updateParameters(bestellung) ++ Seq(
+        column.produzentId -> parameter(bestellung.produzentId),
         column.produzentKurzzeichen -> parameter(bestellung.produzentKurzzeichen),
         column.lieferplanungId -> parameter(bestellung.lieferplanungId),
         column.lieferplanungNr -> parameter(bestellung.lieferplanungNr),
         column.datumAbrechnung -> parameter(bestellung.datumAbrechnung),
-        column.preisTotal -> parameter(bestellung.preisTotal))
+        column.preisTotal -> parameter(bestellung.preisTotal)
+      )
     }
   }
 
@@ -362,13 +380,15 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Bestellposition): Seq[Any] = parameters(Bestellposition.unapply(entity).get)
 
     override def updateParameters(bestellposition: Bestellposition) = {
-      super.updateParameters(bestellposition) ++ Seq(column.produktId -> parameter(bestellposition.produktId),
+      super.updateParameters(bestellposition) ++ Seq(
+        column.produktId -> parameter(bestellposition.produktId),
         column.produktBeschrieb -> parameter(bestellposition.produktBeschrieb),
         column.preisEinheit -> parameter(bestellposition.preisEinheit),
         column.einheit -> parameter(bestellposition.einheit),
         column.menge -> parameter(bestellposition.menge),
         column.preis -> parameter(bestellposition.preis),
-        column.anzahl -> parameter(bestellposition.anzahl))
+        column.anzahl -> parameter(bestellposition.anzahl)
+      )
     }
   }
 
@@ -383,8 +403,10 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Tour): Seq[Any] = parameters(Tour.unapply(entity).get)
 
     override def updateParameters(tour: Tour) = {
-      super.updateParameters(tour) ++ Seq(column.name -> parameter(tour.name),
-        column.beschreibung -> parameter(tour.beschreibung))
+      super.updateParameters(tour) ++ Seq(
+        column.name -> parameter(tour.name),
+        column.beschreibung -> parameter(tour.beschreibung)
+      )
     }
   }
 
@@ -399,7 +421,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)
 
     override def updateParameters(depot: Depot) = {
-      super.updateParameters(depot) ++ Seq(column.name -> parameter(depot.name),
+      super.updateParameters(depot) ++ Seq(
+        column.name -> parameter(depot.name),
         column.kurzzeichen -> parameter(depot.kurzzeichen),
         column.apName -> parameter(depot.apName),
         column.apVorname -> parameter(depot.apVorname),
@@ -420,7 +443,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.bank -> parameter(depot.bank),
         column.beschreibung -> parameter(depot.beschreibung),
         column.anzahlAbonnenten -> parameter(depot.anzahlAbonnenten),
-        column.anzahlAbonnentenMax -> parameter(depot.anzahlAbonnentenMax))
+        column.anzahlAbonnentenMax -> parameter(depot.anzahlAbonnentenMax)
+      )
     }
   }
 
@@ -435,8 +459,10 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Heimlieferung): Seq[Any] = parameters(Heimlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Heimlieferung) = {
-      super.updateParameters(lieferung) ++ Seq(column.liefertag -> parameter(lieferung.liefertag),
-        column.tourId -> parameter(lieferung.tourId))
+      super.updateParameters(lieferung) ++ Seq(
+        column.liefertag -> parameter(lieferung.liefertag),
+        column.tourId -> parameter(lieferung.tourId)
+      )
     }
   }
 
@@ -452,8 +478,10 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(Depotlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Depotlieferung) = {
-      super.updateParameters(lieferung) ++ Seq(column.liefertag -> parameter(lieferung.liefertag),
-        column.depotId -> parameter(lieferung.depotId))
+      super.updateParameters(lieferung) ++ Seq(
+        column.liefertag -> parameter(lieferung.liefertag),
+        column.depotId -> parameter(lieferung.depotId)
+      )
     }
   }
 
@@ -486,7 +514,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.guthabenInRechnung -> parameter(abo.guthabenInRechnung),
         column.letzteLieferung -> parameter(abo.letzteLieferung),
         column.anzahlAbwesenheiten -> parameter(abo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen))
+        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen)
+      )
     }
   }
 
@@ -503,7 +532,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(depotlieferungAbo) ++ Seq(
         column.depotId -> parameter(depotlieferungAbo.depotId),
         column.depotName -> parameter(depotlieferungAbo.depotName),
-        column.liefertag -> parameter(depotlieferungAbo.liefertag))
+        column.liefertag -> parameter(depotlieferungAbo.liefertag)
+      )
     }
   }
 
@@ -521,7 +551,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(heimlieferungAbo) ++ Seq(
         column.tourId -> parameter(heimlieferungAbo.tourId),
         column.tourName -> parameter(heimlieferungAbo.tourName),
-        column.liefertag -> parameter(heimlieferungAbo.liefertag))
+        column.liefertag -> parameter(heimlieferungAbo.liefertag)
+      )
     }
   }
 
@@ -537,7 +568,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
       super.updateParameters(postlieferungAbo) ++ Seq(
-        column.liefertag -> parameter(postlieferungAbo.liefertag))
+        column.liefertag -> parameter(postlieferungAbo.liefertag)
+      )
     }
   }
 
@@ -560,7 +592,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.standardmenge -> parameter(produkt.standardmenge),
         column.einheit -> parameter(produkt.einheit),
         column.preis -> parameter(produkt.preis),
-        column.produzenten -> parameter(produkt.produzenten))
+        column.produzenten -> parameter(produkt.produzenten)
+      )
     }
   }
 
@@ -593,7 +626,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.mwst -> parameter(produzent.mwst),
         column.mwstSatz -> parameter(produzent.mwstSatz),
         column.mwstNr -> parameter(produzent.mwstNr),
-        column.aktiv -> parameter(produzent.aktiv))
+        column.aktiv -> parameter(produzent.aktiv)
+      )
     }
   }
 
@@ -609,7 +643,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(produktekategorie: Produktekategorie) = {
       super.updateParameters(produktekategorie) ++ Seq(
-        column.beschreibung -> parameter(produktekategorie.beschreibung))
+        column.beschreibung -> parameter(produktekategorie.beschreibung)
+      )
     }
   }
 
@@ -633,7 +668,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.ort -> parameter(projekt.ort),
         column.preiseSichtbar -> parameter(projekt.preiseSichtbar),
         column.preiseEditierbar -> parameter(projekt.preiseEditierbar),
-        column.waehrung -> parameter(projekt.waehrung))
+        column.waehrung -> parameter(projekt.waehrung)
+      )
     }
   }
 
@@ -650,7 +686,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     override def updateParameters(projekt: ProduktProduzent) = {
       super.updateParameters(projekt) ++ Seq(
         column.produktId -> parameter(projekt.produktId),
-        column.produzentId -> parameter(projekt.produzentId))
+        column.produzentId -> parameter(projekt.produzentId)
+      )
     }
   }
 
@@ -667,7 +704,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     override def updateParameters(produktkat: ProduktProduktekategorie) = {
       super.updateParameters(produktkat) ++ Seq(
         column.produktId -> parameter(produktkat.produktId),
-        column.produktekategorieId -> parameter(produktkat.produktekategorieId))
+        column.produktekategorieId -> parameter(produktkat.produktekategorieId)
+      )
     }
   }
 
@@ -686,7 +724,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.aboId -> parameter(entity.aboId),
         column.lieferungId -> parameter(entity.lieferungId),
         column.datum -> parameter(entity.datum),
-        column.bemerkung -> parameter(entity.bemerkung))
+        column.bemerkung -> parameter(entity.bemerkung)
+      )
     }
   }
 }
