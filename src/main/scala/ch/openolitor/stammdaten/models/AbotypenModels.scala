@@ -100,7 +100,8 @@ trait AktivRange {
 
 case class AbotypId(id: Long) extends BaseId
 
-case class Abotyp(id: AbotypId,
+case class Abotyp(
+  id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
@@ -124,7 +125,8 @@ case class Abotyp(id: AbotypId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[AbotypId] with AktivRange with Product
+  modifikator: UserId
+) extends BaseEntity[AbotypId] with AktivRange with Product
 
 object Abotyp {
   def unapply(a: Abotyp) = {
@@ -151,7 +153,8 @@ object Abotyp {
       a.erstelldat,
       a.ersteller,
       a.modifidat,
-      a.modifikator))
+      a.modifikator
+    ))
   }
 }
 
@@ -172,4 +175,5 @@ case class AbotypModify(
   zielpreis: Option[BigDecimal],
   guthabenMindestbestand: Int,
   adminProzente: BigDecimal,
-  wirdGeplant: Boolean) extends AktivRange with JSONSerializable
+  wirdGeplant: Boolean
+) extends AktivRange with JSONSerializable

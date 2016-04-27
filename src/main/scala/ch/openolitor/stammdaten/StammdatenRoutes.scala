@@ -292,7 +292,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             complete("Logo uploaded")
           })
       }
-      
+
   lazy val lieferplanungRoute =
     path("lieferplanungen") {
       get(list(readRepository.getLieferplanungen)) ~
@@ -301,16 +301,16 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath) { id =>
         get(detail(readRepository.getLieferplanung(id))) ~
           (put | post)(update[LieferplanungModify, LieferplanungId](id))
-    } ~
-    path("lieferplanungen" / lieferplanungIdPath / "lieferungen") { lieferplanungId =>
-      get(list(readRepository.getLieferungen(lieferplanungId)))
-    } ~
-    path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
-      (put | post)(update[LieferungModify, LieferungId](lieferungId))
-    }
-    path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
-      get(list(readRepository.getBestellungen(lieferplanungId)))
-    } ~
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen") { lieferplanungId =>
+        get(list(readRepository.getLieferungen(lieferplanungId)))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
+        (put | post)(update[LieferungModify, LieferungId](lieferungId))
+      }
+  path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
+    get(list(readRepository.getBestellungen(lieferplanungId)))
+  } ~
     path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / "create") { lieferplanungId =>
       post(create[BestellungenCreate, BestellungId](BestellungId.apply _))
     } ~
@@ -324,6 +324,7 @@ class DefaultStammdatenRoutes(
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val fileStore: FileStore,
-  override val actorRefFactory: ActorRefFactory)
+  override val actorRefFactory: ActorRefFactory
+)
     extends StammdatenRoutes
     with DefaultStammdatenRepositoryComponent

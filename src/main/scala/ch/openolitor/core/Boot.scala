@@ -122,7 +122,8 @@ object Boot extends App with LazyLogging {
           config.getIntOption(s"openolitor.$mandant.buchhaltung.rechnung-id-length").getOrElse(6),
           config.getIntOption(s"openolitor.$mandant.buchhaltung.kunde-id-length").getOrElse(6),
           config.getStringOption(s"openolitor.$mandant.buchhaltung.referenznummer-prefix").getOrElse(""),
-          config.getStringOption(s"openolitor.$mandant.buchhaltung.referenznummer-prefix").getOrElse(""))
+          config.getStringOption(s"openolitor.$mandant.buchhaltung.referenznummer-prefix").getOrElse("")
+        )
 
         MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(config), buchhaltungConfig)
     }).getOrElse {
@@ -135,7 +136,8 @@ object Boot extends App with LazyLogging {
         config.getIntOption(s"openolitor.buchhaltung.rechnung-id-length").getOrElse(6),
         config.getIntOption(s"openolitor.buchhaltung.kunde-id-length").getOrElse(6),
         config.getStringOption(s"openolitor.buchhaltung.referenznummer-prefix").getOrElse(""),
-        config.getStringOption(s"openolitor.buchhaltung.referenznummer-prefix").getOrElse(""))
+        config.getStringOption(s"openolitor.buchhaltung.referenznummer-prefix").getOrElse("")
+      )
 
       NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(config), buchhaltungConfig))
     }

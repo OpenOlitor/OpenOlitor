@@ -67,19 +67,19 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(userId, entity: DepotlieferungAbo) =>
       handleDepotlieferungAboDeleted(entity)(userId)
       handleAboDeleted(entity)(userId)
-    case e @ EntityCreated(userId, entity: Abo)                 => handleAboCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Abo)                 => handleAboDeleted(entity)(userId)
-    case e @ EntityCreated(userId, entity: Abwesenheit)         => handleAbwesenheitCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Abwesenheit)         => handleAbwesenheitDeleted(entity)(userId)
+    case e @ EntityCreated(userId, entity: Abo) => handleAboCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Abo) => handleAboDeleted(entity)(userId)
+    case e @ EntityCreated(userId, entity: Abwesenheit) => handleAbwesenheitCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Abwesenheit) => handleAbwesenheitDeleted(entity)(userId)
 
-    case e @ EntityCreated(userId, entity: Kunde)               => handleKundeCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Kunde)               => handleKundeDeleted(entity)(userId)
+    case e @ EntityCreated(userId, entity: Kunde) => handleKundeCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Kunde) => handleKundeDeleted(entity)(userId)
     case e @ EntityModified(userId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(userId)
 
-    case e @ EntityCreated(userId, entity: Pendenz)             => handlePendenzCreated(entity)(userId)
+    case e @ EntityCreated(userId, entity: Pendenz) => handlePendenzCreated(entity)(userId)
 
-    case e @ EntityCreated(userId, entity: Rechnung)            => handleRechnungCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Rechnung)            => handleRechnungDeleted(entity)(userId)
+    case e @ EntityCreated(userId, entity: Rechnung) => handleRechnungCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Rechnung) => handleRechnungDeleted(entity)(userId)
     case e @ EntityModified(userId, entity: Rechnung, orig: Rechnung) if (orig.status == Erstellt && entity.status == Bezahlt) =>
       handleRechnungBezahlt(entity, orig)(userId)
 
@@ -236,30 +236,36 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def handleRechnungDeleted(rechnung: Rechnung)(implicit userId: UserId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen
+      )
     })
     modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen
+      )
     })
     modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen
+      )
     })
   }
 
   def handleRechnungCreated(rechnung: Rechnung)(implicit userId: UserId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen
+      )
     })
     modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen
+      )
     })
     modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen)
+        guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen
+      )
     })
   }
 
@@ -268,24 +274,28 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       abo.copy(
         guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
         guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
+        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
+      )
     })
     modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
         guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
         guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
+        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
+      )
     })
     modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
         guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
         guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
+        guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
+      )
     })
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
-    id: I, mod: E => E)(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
+    id: I, mod: E => E
+  )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(syntax, id) map { result =>
         val copy = mod(result)

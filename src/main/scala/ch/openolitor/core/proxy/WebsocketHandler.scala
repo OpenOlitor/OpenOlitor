@@ -40,7 +40,7 @@ import com.ning.http.client.providers.netty.handler.ConnectionStrategy
 import java.util.concurrent.Executors
 
 class WebsocketHandler {
-  
+
   val wsOptions = new Options
   wsOptions.idleTimeout = 24 * 60 * 60000 // request timeout to whole day
   val wsClient: WebSocket = createWebsocket(wsOptions)

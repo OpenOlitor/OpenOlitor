@@ -73,7 +73,8 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
     client.listObjects(listRequest) map {
       _.fold(
         e => Left(FileStoreError("Could not get file ids.")),
-        ol => Right(ol.getObjectSummaries.toList.map(s => FileStoreFileId(s.getKey))))
+        ol => Right(ol.getObjectSummaries.toList.map(s => FileStoreFileId(s.getKey)))
+      )
     }
   }
 
@@ -81,7 +82,8 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
     client.getObject(new GetObjectRequest(bucketName(bucket), id)) map {
       _.fold(
         e => Left(FileStoreError(s"Could not get file. ${e}")),
-        o => Right(FileStoreFile(transform(o.getObjectMetadata.getUserMetadata.toMap), o.getObjectContent)))
+        o => Right(FileStoreFile(transform(o.getObjectMetadata.getUserMetadata.toMap), o.getObjectContent))
+      )
     }
   }
 
@@ -89,7 +91,8 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
     client.putObject(new PutObjectRequest(bucketName(bucket), id.getOrElse(generateId), file, transform(metadata))) map {
       _.fold(
         e => Left(FileStoreError(s"Could not put file. ${e}")),
-        o => Right(metadata))
+        o => Right(metadata)
+      )
     }
   }
 
@@ -97,7 +100,8 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
     client.deleteObject(new DeleteObjectRequest(bucketName(bucket), id)) map {
       _.fold(
         e => Left(FileStoreError("Could not delete file.")),
-        o => Right(FileStoreSuccess()))
+        o => Right(FileStoreSuccess())
+      )
     }
   }
 

@@ -205,7 +205,8 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       JsObject(defaultFormat.write(obj)
         .asJsObject.fields +
         (flag -> JsBoolean(
-          obj.aktiv)))
+          obj.aktiv
+        )))
     }
 
     def read(json: JsValue): E = defaultFormat.read(json)

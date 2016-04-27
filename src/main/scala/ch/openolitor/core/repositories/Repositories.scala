@@ -54,10 +54,12 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
   /**
    * Declare update parameters for this entity used on update. Is by default an empty set
    */
-  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(column.erstelldat -> parameter(entity.erstelldat),
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
+    column.erstelldat -> parameter(entity.erstelldat),
     column.ersteller -> parameter(entity.ersteller),
     column.modifidat -> parameter(entity.modifidat),
-    column.modifikator -> parameter(entity.modifikator))
+    column.modifikator -> parameter(entity.modifikator)
+  )
 }
 
 trait ParameterBinderMapping[A] {
@@ -75,7 +77,8 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
   type Validator[E] = E => Boolean
   val TrueValidator: Validator[Any] = x => true
 
-  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit session: DBSession,
+  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
+    session: DBSession,
     binder: SqlBinder[I]): Option[E] = {
     val alias = syntax.syntax("x")
     val idx = alias.id
@@ -86,7 +89,8 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     }.map(syntax.apply(alias)).single.apply()
   }
 
-  def insertEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit session: DBSession,
+  def insertEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
+    session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
     user: UserId) = {
@@ -102,7 +106,8 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
         publish(EntityCreated(user, entity))
     }
   }
-  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit session: DBSession,
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
+    session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
     user: UserId) = {
@@ -117,14 +122,16 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     }
   }
 
-  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Validator[E])(implicit session: DBSession,
+  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Validator[E])(implicit
+    session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
     user: UserId): Option[E] = {
     deleteEntity[E, I](id, Some(validator))
   }
 
-  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Option[Validator[E]] = None)(implicit session: DBSession,
+  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Option[Validator[E]] = None)(implicit
+    session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
     user: UserId): Option[E] = {

@@ -27,13 +27,13 @@ import scalikejdbc.TypeBinder._
 import ch.openolitor.core.models._
 
 trait CoreDBMappings extends DBMappings {
-  
+
   implicit val dbschemaIdBinder: TypeBinder[DBSchemaId] = baseIdTypeBinder(DBSchemaId.apply _)
   implicit val evolutionStatusTypeBinder: TypeBinder[EvolutionStatus] = string.map(EvolutionStatus.apply)
-  
+
   implicit val dbSchemaIdSqlBinder = baseIdSqlBinder[DBSchemaId]
   implicit val evolutionStatusBinder = toStringSqlBinder[EvolutionStatus]
-  
+
   implicit val dbSchemaMapping = new BaseEntitySQLSyntaxSupport[DBSchema] {
     override val tableName = "DBSchema"
 
@@ -47,9 +47,9 @@ trait CoreDBMappings extends DBMappings {
 
     override def updateParameters(schema: DBSchema) = {
       Seq(
-          column.revision -> parameter(schema.revision),
-          column.status -> parameter(schema.status)
-        )
+        column.revision -> parameter(schema.revision),
+        column.status -> parameter(schema.status)
+      )
     }
   }
 }

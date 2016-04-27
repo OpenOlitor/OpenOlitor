@@ -494,5 +494,6 @@ object V1Scripts {
 
   val scripts = Seq(
     StammdatenDBInitializationScript,
-    BuchhaltungDBInitializationScript)
+    BuchhaltungDBInitializationScript
+  )
 }

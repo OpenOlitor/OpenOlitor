@@ -186,7 +186,8 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
         rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
         rs => personMapping.opt(person)(rs),
-        rs => pendenzMapping.opt(pendenz)(rs))
+        rs => pendenzMapping.opt(pendenz)(rs)
+      )
       .map({ (kunde, pl, hl, dl, personen, pendenzen) =>
         val abos = pl ++ hl ++ dl
 
@@ -369,7 +370,8 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => abotypMapping.opt(aboTyp)(rs))
+        rs => abotypMapping.opt(aboTyp)(rs)
+      )
       .map((abo, abw, lieferungen, aboTyp) => {
         val sortedAbw = abw.sortBy(_.datum)
         copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
@@ -388,7 +390,8 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => abotypMapping.opt(aboTyp)(rs))
+        rs => abotypMapping.opt(aboTyp)(rs)
+      )
       .map((abo, abw, lieferungen, aboTyp) => {
         val sortedAbw = abw.sortBy(_.datum)
         copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
@@ -407,7 +410,8 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => abotypMapping.opt(aboTyp)(rs))
+        rs => abotypMapping.opt(aboTyp)(rs)
+      )
       .map((abo, abw, lieferungen, aboTyp) => {
         val sortedAbw = abw.sortBy(_.datum)
         copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)

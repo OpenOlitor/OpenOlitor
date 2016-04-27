@@ -30,7 +30,8 @@ import ch.openolitor.core.JSONSerializable
 
 case class KundeId(id: Long) extends BaseId
 
-case class Kunde(id: KundeId,
+case class Kunde(
+  id: KundeId,
   bezeichnung: String,
   strasse: String,
   hausNummer: Option[String],
@@ -52,9 +53,11 @@ case class Kunde(id: KundeId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[KundeId]
+  modifikator: UserId
+) extends BaseEntity[KundeId]
 
-case class KundeDetail(id: KundeId,
+case class KundeDetail(
+  id: KundeId,
   bezeichnung: String,
   strasse: String,
   hausNummer: Option[String],
@@ -79,7 +82,8 @@ case class KundeDetail(id: KundeId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends JSONSerializable
+  modifikator: UserId
+) extends JSONSerializable
 
 case class KundeModify(
   bezeichnung: Option[String],
@@ -96,7 +100,8 @@ case class KundeModify(
   ortLieferung: Option[String],
   typen: Set[KundentypId],
   pendenzen: Seq[PendenzModify],
-  ansprechpersonen: Seq[PersonModify]) extends JSONSerializable
+  ansprechpersonen: Seq[PersonModify]
+) extends JSONSerializable
 
 sealed trait Anrede extends Product
 case object Herr extends Anrede
@@ -109,7 +114,8 @@ object Anrede {
 }
 
 case class PersonId(id: Long) extends BaseId
-case class Person(id: PersonId,
+case class Person(
+  id: PersonId,
   kundeId: KundeId,
   anrede: Option[Anrede],
   name: String,
@@ -124,34 +130,37 @@ case class Person(id: PersonId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[PersonId]
+  modifikator: UserId
+) extends BaseEntity[PersonId]
 
 case class KundeSummary(id: KundeId, kunde: String) extends Product
 
 case class PersonModify(
-  id: Option[PersonId],
-  anrede: Option[Anrede],
-  name: String,
-  vorname: String,
-  email: Option[String],
-  emailAlternative: Option[String],
-  telefonMobil: Option[String],
-  telefonFestnetz: Option[String],
-  bemerkungen: Option[String]) extends JSONSerializable {
+    id: Option[PersonId],
+    anrede: Option[Anrede],
+    name: String,
+    vorname: String,
+    email: Option[String],
+    emailAlternative: Option[String],
+    telefonMobil: Option[String],
+    telefonFestnetz: Option[String],
+    bemerkungen: Option[String]
+) extends JSONSerializable {
   def fullName = vorname + ' ' + name
 }
 
 case class PersonCreate(
-  kundeId: KundeId,
-  anrede: Option[Anrede],
-  name: String,
-  vorname: String,
-  email: Option[String],
-  emailAlternative: Option[String],
-  telefonMobil: Option[String],
-  telefonFestnetz: Option[String],
-  bemerkungen: Option[String],
-  sort: Int) extends JSONSerializable {
+    kundeId: KundeId,
+    anrede: Option[Anrede],
+    name: String,
+    vorname: String,
+    email: Option[String],
+    emailAlternative: Option[String],
+    telefonMobil: Option[String],
+    telefonFestnetz: Option[String],
+    bemerkungen: Option[String],
+    sort: Int
+) extends JSONSerializable {
   def fullName = vorname + ' ' + name
 }
 
@@ -168,7 +177,8 @@ object PendenzStatus {
 
 case class PendenzId(id: Long) extends BaseId
 
-case class Pendenz(id: PendenzId,
+case class Pendenz(
+  id: PendenzId,
   kundeId: KundeId,
   kundeBezeichnung: String,
   datum: DateTime,
@@ -179,9 +189,12 @@ case class Pendenz(id: PendenzId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[PendenzId]
+  modifikator: UserId
+) extends BaseEntity[PendenzId]
 
-case class PendenzModify(id: Option[PendenzId],
+case class PendenzModify(
+  id: Option[PendenzId],
   datum: DateTime,
   bemerkung: Option[String],
-  status: PendenzStatus) extends JSONSerializable
+  status: PendenzStatus
+) extends JSONSerializable

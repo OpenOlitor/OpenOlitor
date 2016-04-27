@@ -34,7 +34,8 @@ case class BaseProduzentId(id: String)
 
 case class ProduzentId(id: Long) extends BaseId
 
-case class Produzent(id: ProduzentId,
+case class Produzent(
+  id: ProduzentId,
   name: String,
   vorname: Option[String],
   kurzzeichen: String,
@@ -57,7 +58,8 @@ case class Produzent(id: ProduzentId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[ProduzentId]
+  modifikator: UserId
+) extends BaseEntity[ProduzentId]
 
 object Produzent {
   def unapply(p: Produzent) = {
@@ -85,7 +87,8 @@ object Produzent {
       p.erstelldat: DateTime,
       p.ersteller: UserId,
       p.modifidat: DateTime,
-      p.modifikator: UserId))
+      p.modifikator: UserId
+    ))
   }
 }
 
@@ -107,4 +110,5 @@ case class ProduzentModify(
   mwst: Boolean,
   mwstSatz: Option[BigDecimal],
   mwstNr: Option[String],
-  aktiv: Boolean) extends JSONSerializable
+  aktiv: Boolean
+) extends JSONSerializable

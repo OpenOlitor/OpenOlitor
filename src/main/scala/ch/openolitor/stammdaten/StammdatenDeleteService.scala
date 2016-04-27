@@ -41,14 +41,14 @@ object StammdatenDeleteService {
 }
 
 class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
+    extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Delete Anweisungen für das Stammdaten Modul
  */
 class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent[_]]
-  with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
+    with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
   import EntityStore._
 

@@ -25,8 +25,9 @@ package ch.openolitor.core.repositories
 import ch.openolitor.core.scalax._
 
 trait Parameters27 extends BaseParameter {
-  def parameters[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27](params: Tuple27 [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27])(
-    implicit binder1: SqlBinder[T1],
+  def parameters[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27](params: Tuple27[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27])(
+    implicit
+    binder1: SqlBinder[T1],
     binder2: SqlBinder[T2],
     binder3: SqlBinder[T3],
     binder4: SqlBinder[T4],
@@ -52,8 +53,10 @@ trait Parameters27 extends BaseParameter {
     binder24: SqlBinder[T24],
     binder25: SqlBinder[T25],
     binder26: SqlBinder[T26],
-    binder27: SqlBinder[T27]) = {
-    Tuple27(parameter(params._1),
+    binder27: SqlBinder[T27]
+  ) = {
+    Tuple27(
+      parameter(params._1),
       parameter(params._2),
       parameter(params._3),
       parameter(params._4),
@@ -79,6 +82,7 @@ trait Parameters27 extends BaseParameter {
       parameter(params._24),
       parameter(params._25),
       parameter(params._26),
-      parameter(params._27)).productIterator.toSeq
+      parameter(params._27)
+    ).productIterator.toSeq
   }
 }

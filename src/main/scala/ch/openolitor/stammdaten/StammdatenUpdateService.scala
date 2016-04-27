@@ -44,7 +44,7 @@ object StammdatenUpdateService {
 }
 
 class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
-  extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
+    extends StammdatenUpdateService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
@@ -360,7 +360,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       }
     }
   }
-  
+
   def updateLieferplanung(meta: EventMetadata, id: LieferplanungId, update: LieferplanungModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
@@ -370,7 +370,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       }
     }
   }
-  
+
   def updateLieferung(meta: EventMetadata, id: LieferungId, update: LieferungModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(lieferungMapping, id) map { lieferung =>

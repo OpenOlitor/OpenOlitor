@@ -39,7 +39,8 @@ sealed trait VertriebskanalDetail extends Vertriebskanal with JSONSerializable {
 
 case class DepotId(id: Long) extends BaseId
 
-case class Depot(id: DepotId,
+case class Depot(
+  id: DepotId,
   name: String,
   kurzzeichen: String,
   apName: Option[String],
@@ -67,7 +68,8 @@ case class Depot(id: DepotId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[DepotId] with Vertriebskanal
+  modifikator: UserId
+) extends BaseEntity[DepotId] with Vertriebskanal
 
 object Depot {
   def unapply(d: Depot) = {
@@ -100,7 +102,8 @@ object Depot {
       d.erstelldat: DateTime,
       d.ersteller: UserId,
       d.modifidat: DateTime,
-      d.modifikator: UserId))
+      d.modifikator: UserId
+    ))
   }
 }
 
@@ -125,11 +128,13 @@ case class DepotModify(
   iban: Option[String], //maybe use dedicated type
   bank: Option[String],
   beschreibung: Option[String],
-  anzahlAbonnentenMax: Option[Int]) extends JSONSerializable
+  anzahlAbonnentenMax: Option[Int]
+) extends JSONSerializable
 
 case class DepotSummary(
   id: DepotId,
-  name: String) extends JSONSerializable
+  name: String
+) extends JSONSerializable
 
 case class TourId(id: Long) extends BaseId
 
@@ -141,8 +146,10 @@ case class Tour(
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[TourId] with Vertriebskanal
+  modifikator: UserId
+) extends BaseEntity[TourId] with Vertriebskanal
 
 case class TourModify(
   name: String,
-  beschreibung: Option[String]) extends JSONSerializable
+  beschreibung: Option[String]
+) extends JSONSerializable

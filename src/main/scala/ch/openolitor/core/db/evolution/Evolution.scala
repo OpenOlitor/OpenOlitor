@@ -59,14 +59,18 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
         val dbIds = Seq(
           adjustSeed[Abotyp, AbotypId](seeds, abotypMapping)(AbotypId.apply),
           adjustSeed[Depot, DepotId](seeds, depotMapping)(DepotId.apply),
-          adjustSeeds[VertriebsartId](seeds,
+          adjustSeeds[VertriebsartId](
+            seeds,
             maxId[Depotlieferung, VertriebsartId](depotlieferungMapping),
             maxId[Heimlieferung, VertriebsartId](heimlieferungMapping),
-            maxId[Postlieferung, VertriebsartId](postlieferungMapping))(VertriebsartId.apply),
-          adjustSeeds[AboId](seeds,
+            maxId[Postlieferung, VertriebsartId](postlieferungMapping)
+          )(VertriebsartId.apply),
+          adjustSeeds[AboId](
+            seeds,
             maxId[DepotlieferungAbo, AboId](depotlieferungAboMapping),
             maxId[HeimlieferungAbo, AboId](heimlieferungAboMapping),
-            maxId[PostlieferungAbo, AboId](postlieferungAboMapping))(AboId.apply),
+            maxId[PostlieferungAbo, AboId](postlieferungAboMapping)
+          )(AboId.apply),
           adjustSeed[Kunde, KundeId](seeds, kundeMapping)(KundeId.apply),
           adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping)(CustomKundentypId.apply),
           adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping)(LieferungId.apply),
@@ -77,7 +81,8 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
           adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping)(ProduktProduzentId.apply),
           adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping)(ProduktekategorieId.apply),
           adjustSeed[Projekt, ProjektId](seeds, projektMapping)(ProjektId.apply),
-          adjustSeed[Tour, TourId](seeds, tourMapping)(TourId.apply)).flatten
+          adjustSeed[Tour, TourId](seeds, tourMapping)(TourId.apply)
+        ).flatten
 
         Success(seeds ++ dbIds.toMap)
       } catch {

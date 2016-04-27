@@ -74,7 +74,8 @@ sealed trait AboModify extends JSONSerializable {
   val ende: Option[DateTime]
 }
 
-case class DepotlieferungAbo(id: AboId,
+case class DepotlieferungAbo(
+  id: AboId,
   kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -95,9 +96,11 @@ case class DepotlieferungAbo(id: AboId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends Abo
+  modifikator: UserId
+) extends Abo
 
-case class DepotlieferungAboDetail(id: AboId,
+case class DepotlieferungAboDetail(
+  id: AboId,
   kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -121,9 +124,11 @@ case class DepotlieferungAboDetail(id: AboId,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]) extends AboDetail
+  abotyp: Option[Abotyp]
+) extends AboDetail
 
-case class DepotlieferungAboModify(kundeId: KundeId,
+case class DepotlieferungAboModify(
+  kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
@@ -131,9 +136,11 @@ case class DepotlieferungAboModify(kundeId: KundeId,
   depotName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime]) extends AboModify
+  ende: Option[DateTime]
+) extends AboModify
 
-case class HeimlieferungAbo(id: AboId,
+case class HeimlieferungAbo(
+  id: AboId,
   kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -154,9 +161,11 @@ case class HeimlieferungAbo(id: AboId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends Abo
+  modifikator: UserId
+) extends Abo
 
-case class HeimlieferungAboDetail(id: AboId,
+case class HeimlieferungAboDetail(
+  id: AboId,
   kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -180,9 +189,11 @@ case class HeimlieferungAboDetail(id: AboId,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]) extends AboDetail
+  abotyp: Option[Abotyp]
+) extends AboDetail
 
-case class HeimlieferungAboModify(kundeId: KundeId,
+case class HeimlieferungAboModify(
+  kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
@@ -190,9 +201,11 @@ case class HeimlieferungAboModify(kundeId: KundeId,
   tourName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime]) extends AboModify
+  ende: Option[DateTime]
+) extends AboModify
 
-case class PostlieferungAbo(id: AboId,
+case class PostlieferungAbo(
+  id: AboId,
   kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -211,9 +224,11 @@ case class PostlieferungAbo(id: AboId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends Abo
+  modifikator: UserId
+) extends Abo
 
-case class PostlieferungAboDetail(id: AboId,
+case class PostlieferungAboDetail(
+  id: AboId,
   kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
@@ -235,19 +250,23 @@ case class PostlieferungAboDetail(id: AboId,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]) extends AboDetail
+  abotyp: Option[Abotyp]
+) extends AboDetail
 
-case class PostlieferungAboModify(kundeId: KundeId,
+case class PostlieferungAboModify(
+  kundeId: KundeId,
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime]) extends AboModify
+  ende: Option[DateTime]
+) extends AboModify
 
 case class AbwesenheitId(id: Long) extends BaseId
 
-case class Abwesenheit(id: AbwesenheitId,
+case class Abwesenheit(
+  id: AbwesenheitId,
   aboId: AboId,
   lieferungId: LieferungId,
   datum: DateTime,
@@ -256,15 +275,18 @@ case class Abwesenheit(id: AbwesenheitId,
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[AbwesenheitId] with JSONSerializable
+  modifikator: UserId
+) extends BaseEntity[AbwesenheitId] with JSONSerializable
 
 case class AbwesenheitModify(
   lieferungId: LieferungId,
   datum: DateTime,
-  bemerkung: Option[String]) extends JSONSerializable
+  bemerkung: Option[String]
+) extends JSONSerializable
 
 case class AbwesenheitCreate(
   aboId: AboId,
   lieferungId: LieferungId,
   datum: DateTime,
-  bemerkung: Option[String]) extends JSONSerializable
+  bemerkung: Option[String]
+) extends JSONSerializable

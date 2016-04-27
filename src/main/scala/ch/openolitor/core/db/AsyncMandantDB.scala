@@ -30,9 +30,9 @@ import scalikejdbc.async._
  * Mandant specific dbs for async scalikejdbc framework
  */
 case class AsyncMandantDBs(configKey: String) extends DBs
-  with TypesafeConfigReader
-  with StandardTypesafeConfig
-  with EnvPrefix {
+    with TypesafeConfigReader
+    with StandardTypesafeConfig
+    with EnvPrefix {
 
   override val env = Option(configKey)
 

@@ -82,7 +82,8 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
     val referenzNummer = generateReferenzNummer(entity, id)
     val esrNummer = generateEsrNummer(entity, referenzNummer)
 
-    val typ = copyTo[RechnungModify, Rechnung](entity,
+    val typ = copyTo[RechnungModify, Rechnung](
+      entity,
       "id" -> id,
       "status" -> Erstellt,
       "referenzNummer" -> referenzNummer,
@@ -90,7 +91,8 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
-      "modifikator" -> meta.originator)
+      "modifikator" -> meta.originator
+    )
 
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Rechnung, RechnungId](typ)

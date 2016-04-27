@@ -59,183 +59,182 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseKunden(kunde2PersonenMapping: Map[Long, Seq[PersonModify]]) = {
-    parse("id", Seq("id", "bezeichnung", "strasse", "hausNummer", "plz", "ort", "bemerkungen")) {
-      indexes =>
-        row =>
-          //match column indexes
-          val Seq(indexKundeId, indexBezeichnung, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexBemerkungen) =
-            indexes
+    parse("id", Seq("id", "bezeichnung", "strasse", "hausNummer", "plz", "ort", "bemerkungen")) { indexes => row =>
+      //match column indexes
+      val Seq(indexKundeId, indexBezeichnung, indexStrasse, indexHausNummer, indexPlz, indexOrt, indexBemerkungen) =
+        indexes
 
-          val kundeIdLong = row.value[Long](indexKundeId)
-          val personen = kunde2PersonenMapping.get(kundeIdLong).getOrElse(sys.error(s"Kunde id $kundeIdLong does not reference any person. At least one person is required"))
+      val kundeIdLong = row.value[Long](indexKundeId)
+      val personen = kunde2PersonenMapping.get(kundeIdLong).getOrElse(sys.error(s"Kunde id $kundeIdLong does not reference any person. At least one person is required"))
 
-          (KundeId(kundeIdLong),
-            KundeModify(
-              bezeichnung = row.value[Option[String]](indexBezeichnung),
-              strasse = row.value[String](indexStrasse),
-              hausNummer = row.value[Option[String]](indexHausNummer),
-              adressZusatz = None,
-              plz = row.value[String](indexPlz),
-              ort = row.value[String](indexOrt),
-              bemerkungen = row.value[Option[String]](indexBemerkungen),
-              strasseLieferung = None,
-              hausNummerLieferung = None,
-              adressZusatzLieferung = None,
-              plzLieferung = None,
-              ortLieferung = None,
-              //TODO: parse personentypen as well
-              typen = Set(Vereinsmitglied.kundentyp),
-              ansprechpersonen = personen,
-              pendenzen = List.empty))
+      (
+        KundeId(kundeIdLong),
+        KundeModify(
+          bezeichnung = row.value[Option[String]](indexBezeichnung),
+          strasse = row.value[String](indexStrasse),
+          hausNummer = row.value[Option[String]](indexHausNummer),
+          adressZusatz = None,
+          plz = row.value[String](indexPlz),
+          ort = row.value[String](indexOrt),
+          bemerkungen = row.value[Option[String]](indexBemerkungen),
+          strasseLieferung = None,
+          hausNummerLieferung = None,
+          adressZusatzLieferung = None,
+          plzLieferung = None,
+          ortLieferung = None,
+          //TODO: parse personentypen as well
+          typen = Set(Vereinsmitglied.kundentyp),
+          ansprechpersonen = personen,
+          pendenzen = List.empty
+        )
+      )
     }
   }
 
   def parsePersonen = {
     parseSubEntities("kundeId", Seq("anrede", "name", "vorname", "email", "emailAlternative",
-      "telefonMobil", "telefonFestnetz", "bemerkungen")) {
-      indexes =>
-        row =>
-          //match column indexes
-          val Seq(indexAnrede, indexName, indexVorname, indexEmail, indexEmailAlternative, indexTelefonMobil, indexTelefonFestnetz, indexBemerkungen) =
-            indexes
+      "telefonMobil", "telefonFestnetz", "bemerkungen")) { indexes => row =>
+      //match column indexes
+      val Seq(indexAnrede, indexName, indexVorname, indexEmail, indexEmailAlternative, indexTelefonMobil, indexTelefonFestnetz, indexBemerkungen) =
+        indexes
 
-          PersonModify(None,
-            anrede = row.value[Option[String]](indexAnrede).map(Anrede.apply),
-            name = row.value[String](indexName),
-            vorname = row.value[String](indexVorname),
-            email = row.value[Option[String]](indexEmail),
-            emailAlternative = row.value[Option[String]](indexEmailAlternative),
-            telefonMobil = row.value[Option[String]](indexTelefonMobil),
-            telefonFestnetz = row.value[Option[String]](indexTelefonFestnetz),
-            bemerkungen = row.value[Option[String]](indexBemerkungen))
+      PersonModify(
+        None,
+        anrede = row.value[Option[String]](indexAnrede).map(Anrede.apply),
+        name = row.value[String](indexName),
+        vorname = row.value[String](indexVorname),
+        email = row.value[Option[String]](indexEmail),
+        emailAlternative = row.value[Option[String]](indexEmailAlternative),
+        telefonMobil = row.value[Option[String]](indexTelefonMobil),
+        telefonFestnetz = row.value[Option[String]](indexTelefonFestnetz),
+        bemerkungen = row.value[Option[String]](indexBemerkungen)
+      )
     }
   }
 
   val parseDepots = {
-    parse("id", Seq("id", "name", "kurzzeichen", "aktiv", "farbCode")) {
-      indexes =>
-        row =>
-          //match column indexes
-          val Seq(indexId, indexName, indexKurzzeichen, indexAktiv, indexFarbCode) = indexes
+    parse("id", Seq("id", "name", "kurzzeichen", "aktiv", "farbCode")) { indexes => row =>
+      //match column indexes
+      val Seq(indexId, indexName, indexKurzzeichen, indexAktiv, indexFarbCode) = indexes
 
-          val idLong = row.value[Long](indexId)
+      val idLong = row.value[Long](indexId)
 
-          (DepotId(idLong),
-            DepotModify(
-              name = row.value[String](indexName),
-              kurzzeichen = row.value[String](indexKurzzeichen),
-              apName = None,
-              apVorname = None,
-              apTelefon = None,
-              apEmail = None,
-              vName = None,
-              vVorname = None,
-              vTelefon = None,
-              vEmail = None,
-              strasse = None,
-              hausNummer = None,
-              plz = "",
-              ort = "",
-              aktiv = row.value[Boolean](indexAktiv),
-              oeffnungszeiten = None,
-              farbCode = row.value[Option[String]](indexFarbCode),
-              iban = None,
-              bank = None,
-              beschreibung = None,
-              anzahlAbonnentenMax = None))
+      (
+        DepotId(idLong),
+        DepotModify(
+          name = row.value[String](indexName),
+          kurzzeichen = row.value[String](indexKurzzeichen),
+          apName = None,
+          apVorname = None,
+          apTelefon = None,
+          apEmail = None,
+          vName = None,
+          vVorname = None,
+          vTelefon = None,
+          vEmail = None,
+          strasse = None,
+          hausNummer = None,
+          plz = "",
+          ort = "",
+          aktiv = row.value[Boolean](indexAktiv),
+          oeffnungszeiten = None,
+          farbCode = row.value[Option[String]](indexFarbCode),
+          iban = None,
+          bank = None,
+          beschreibung = None,
+          anzahlAbonnentenMax = None
+        )
+      )
     }
   }
 
   val parseAbotypen = {
     parse("id", Seq("id", "name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
-      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand", "admin_prozente")) {
-      indexes =>
-        row =>
-          //match column indexes
-          val Seq(indexId, indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
-            indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
-            indexSaldoMindestbestand, indexAdminProzente, indexWirdGeplant) = indexes
+      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand", "admin_prozente")) { indexes => row =>
+      //match column indexes
+      val Seq(indexId, indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
+        indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
+        indexSaldoMindestbestand, indexAdminProzente, indexWirdGeplant) = indexes
 
-          val idLong = row.value[Long](indexId)
+      val idLong = row.value[Long](indexId)
 
-          (AbotypId(idLong),
-            AbotypModify(
-              name = row.value[String](indexName),
-              beschreibung = row.value[Option[String]](indexBeschreibung),
-              lieferrhythmus = Rhythmus(row.value[String](indexlieferrhytmus)),
-              aktivVon = row.value[Option[DateTime]](indexAktivVon),
-              aktivBis = row.value[Option[DateTime]](indexAktivBis),
-              preis = row.value[BigDecimal](indexPreis),
-              preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
-              laufzeit = row.value[Option[Int]](indexLaufzeit),
-              laufzeiteinheit = Laufzeiteinheit(row.value[String](indexLaufzeiteinheit)),
-              anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
-              farbCode = row.value[String](indexFarbCode),
-              zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
-              guthabenMindestbestand = row.value[Int](indexSaldoMindestbestand),
-              adminProzente = row.value[BigDecimal](indexAdminProzente),
-              wirdGeplant = row.value[Boolean](indexWirdGeplant)))
+      (
+        AbotypId(idLong),
+        AbotypModify(
+          name = row.value[String](indexName),
+          beschreibung = row.value[Option[String]](indexBeschreibung),
+          lieferrhythmus = Rhythmus(row.value[String](indexlieferrhytmus)),
+          aktivVon = row.value[Option[DateTime]](indexAktivVon),
+          aktivBis = row.value[Option[DateTime]](indexAktivBis),
+          preis = row.value[BigDecimal](indexPreis),
+          preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
+          laufzeit = row.value[Option[Int]](indexLaufzeit),
+          laufzeiteinheit = Laufzeiteinheit(row.value[String](indexLaufzeiteinheit)),
+          anzahlAbwesenheiten = row.value[Option[Int]](indexAnzahlAbwesenheiten),
+          farbCode = row.value[String](indexFarbCode),
+          zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
+          guthabenMindestbestand = row.value[Int](indexSaldoMindestbestand),
+          adminProzente = row.value[BigDecimal](indexAdminProzente),
+          wirdGeplant = row.value[Boolean](indexWirdGeplant)
+        )
+      )
     }
   }
 
   //TODO: parse vertriebsarten
 
   def parseAbos(kundeIdMapping: Map[Long, KundeId], abotypIdMapping: Map[Long, AbotypId], depotIdMapping: Map[Long, DepotId]) = {
-    parse("kundeId", Seq("id", "kundeId", "kunde", "abotypId", "abotypName", "depotId", "depotName", "start", "ende")) {
-      indexes =>
-        row =>
-          //match column indexes
-          val Seq(indexId, kundeIdIndex, kundeIndex, abotypIdIndex, abotypNameIndex, depotIdIndex, depotNameIndex, startIndex, endeIndex) = indexes
+    parse("kundeId", Seq("id", "kundeId", "kunde", "abotypId", "abotypName", "depotId", "depotName", "start", "ende")) { indexes => row =>
+      //match column indexes
+      val Seq(indexId, kundeIdIndex, kundeIndex, abotypIdIndex, abotypNameIndex, depotIdIndex, depotNameIndex, startIndex, endeIndex) = indexes
 
-          val idLong = row.value[Long](indexId)
-          val kundeIdInt = row.value[Long](kundeIdIndex)
-          val abotypIdInt = row.value[Long](abotypIdIndex)
-          val depotIdOpt = row.value[Option[Long]](depotIdIndex)
+      val idLong = row.value[Long](indexId)
+      val kundeIdInt = row.value[Long](kundeIdIndex)
+      val abotypIdInt = row.value[Long](abotypIdIndex)
+      val depotIdOpt = row.value[Option[Long]](depotIdIndex)
 
-          val kunde = row.value[String](kundeIndex)
-          val abotypName = row.value[String](abotypNameIndex)
-          val depotName = row.value[String](abotypNameIndex)
-          val start = row.value[DateTime](startIndex)
-          val ende = row.value[Option[DateTime]](endeIndex)
+      val kunde = row.value[String](kundeIndex)
+      val abotypName = row.value[String](abotypNameIndex)
+      val depotName = row.value[String](abotypNameIndex)
+      val start = row.value[DateTime](startIndex)
+      val ende = row.value[Option[DateTime]](endeIndex)
 
-          val kundeId = kundeIdMapping.getOrElse(kundeIdInt, sys.error(s"Kunde id $kundeIdInt referenced from abo not found"))
-          val abotypId = abotypIdMapping.getOrElse(abotypIdInt, sys.error(s"Abotyp id $abotypIdInt referenced from abo not found"))
-          depotIdOpt.map { depotIdInt =>
-            val depotId = depotIdMapping.getOrElse(depotIdInt, sys.error(s"Dept id $depotIdInt referenced from abo not found"))
+      val kundeId = kundeIdMapping.getOrElse(kundeIdInt, sys.error(s"Kunde id $kundeIdInt referenced from abo not found"))
+      val abotypId = abotypIdMapping.getOrElse(abotypIdInt, sys.error(s"Abotyp id $abotypIdInt referenced from abo not found"))
+      depotIdOpt.map { depotIdInt =>
+        val depotId = depotIdMapping.getOrElse(depotIdInt, sys.error(s"Dept id $depotIdInt referenced from abo not found"))
 
-            //TODO: read lieferzeitpunkt
-            (AboId(idLong),
-              DepotlieferungAboModify(kundeId, kunde, abotypId, abotypName, depotId, depotName, Montag, start, ende).asInstanceOf[AboModify])
-          }.getOrElse(sys.error(s"Unknown abotyp: no depot specified"))
+        //TODO: read lieferzeitpunkt
+        (
+          AboId(idLong),
+          DepotlieferungAboModify(kundeId, kunde, abotypId, abotypName, depotId, depotName, Montag, start, ende).asInstanceOf[AboModify]
+        )
+      }.getOrElse(sys.error(s"Unknown abotyp: no depot specified"))
     }
   }
 
-  def parse[E, I <: BaseId](idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => (I, E)) = {
-    name: String =>
-      table: Table =>
-        var idMapping = Map[Long, I]()
-        val parseResult = parseImpl(name, table, idCol, colNames)(entityFactory) {
-          case (id, (entityId, entity)) =>
-            idMapping = idMapping + (id -> entityId)
-            Some(ImportEntityResult(entityId, entity))
-        }
-        (parseResult, idMapping)
+  def parse[E, I <: BaseId](idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => (I, E)) = { name: String => table: Table =>
+    var idMapping = Map[Long, I]()
+    val parseResult = parseImpl(name, table, idCol, colNames)(entityFactory) {
+      case (id, (entityId, entity)) =>
+        idMapping = idMapping + (id -> entityId)
+        Some(ImportEntityResult(entityId, entity))
+    }
+    (parseResult, idMapping)
   }
 
-  def parseSubEntities[E](idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => (E)) = {
-    name: String =>
-      table: Table =>
-        var entityMap = Map[Long, Seq[E]]()
-        parseImpl(name, table, idCol, colNames)(entityFactory) { (id, entity) =>
-          val newList = entityMap.get(id).map { values =>
-            values :+ entity
-          }.getOrElse {
-            Seq(entity)
-          }
-          entityMap = entityMap + (id -> newList)
-          None
-        }
-        entityMap
+  def parseSubEntities[E](idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => (E)) = { name: String => table: Table =>
+    var entityMap = Map[Long, Seq[E]]()
+    parseImpl(name, table, idCol, colNames)(entityFactory) { (id, entity) =>
+      val newList = entityMap.get(id).map { values =>
+        values :+ entity
+      }.getOrElse {
+        Seq(entity)
+      }
+      entityMap = entityMap + (id -> newList)
+      None
+    }
+    entityMap
   }
 
   def parseImpl[E, P, R](name: String, table: Table, idCol: String, colNames: Seq[String])(entityFactory: Seq[Int] => Row => P)(resultHandler: (Long, P) => Option[R]): List[R] = {
@@ -296,7 +295,8 @@ object DataImportParser {
     kunden: List[ImportEntityResult[KundeModify, KundeId]],
     abotypen: List[ImportEntityResult[AbotypModify, AbotypId]],
     depots: List[ImportEntityResult[DepotModify, DepotId]],
-    abos: List[ImportEntityResult[AboModify, AboId]])
+    abos: List[ImportEntityResult[AboModify, AboId]]
+  )
 
   def props(): Props = Props(classOf[DataImportParser])
 

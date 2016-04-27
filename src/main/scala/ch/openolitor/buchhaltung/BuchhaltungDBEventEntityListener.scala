@@ -78,7 +78,8 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
-    id: I, mod: E => E)(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
+    id: I, mod: E => E
+  )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
     DB autoCommit { implicit session =>
       writeRepository.getById(syntax, id) map { result =>
         val copy = mod(result)
