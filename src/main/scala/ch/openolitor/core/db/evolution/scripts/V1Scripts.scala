@@ -467,6 +467,7 @@ object V1Scripts {
         kunde_id BIGINT not null, 
         abo_id BIGINT not null,
         titel varchar(100),
+        anzahl_lieferungen INT not null,
         waehrung varchar(10) not null,
         betrag DECIMAL(8,2) not null,
         einbezahlter_betrag DECIMAL(8,2),

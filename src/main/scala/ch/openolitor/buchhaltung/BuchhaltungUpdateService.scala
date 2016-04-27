@@ -62,10 +62,14 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
 
   def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(rechnungMapping, id) map { abotyp =>
+      writeRepository.getById(rechnungMapping, id) map { entity =>
         //map all updatable fields
-        val copy = copyFrom(abotyp, update)
-        writeRepository.updateEntity[Rechnung, RechnungId](copy)
+        val copy = copyFrom(entity, update)
+        if (entity.status == Erstellt && update.einbezahlterBetrag.isDefined && update.eingangsDatum.isDefined) {
+          writeRepository.updateEntity[Rechnung, RechnungId](copy.copy(status = Bezahlt))
+        } else {
+          writeRepository.updateEntity[Rechnung, RechnungId](copy)
+        }
       }
     }
   }
