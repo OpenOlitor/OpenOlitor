@@ -70,7 +70,7 @@ trait Kundentyp {
 }
 
 case class CustomKundentyp(
-  id: CustomKundentypId,
+    id: CustomKundentypId,
     override val kundentyp: KundentypId,
     override val beschreibung: Option[String],
     anzahlVerknuepfungen: Int,

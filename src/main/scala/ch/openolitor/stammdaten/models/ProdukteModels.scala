@@ -71,7 +71,7 @@ case class BaseProduktekategorieId(id: String)
 case class ProduktekategorieId(id: Long) extends BaseId
 
 case class Produktekategorie(
-  id: ProduktekategorieId,
+    id: ProduktekategorieId,
     val beschreibung: String,
     //modification flags
     erstelldat: DateTime,
