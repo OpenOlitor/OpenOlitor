@@ -29,6 +29,8 @@ import spray.json._
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.StammdatenReadRepository
+import ch.openolitor.buchhaltung.models.Rechnung
+import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 
 object DBEvent2UserMapping extends DefaultJsonProtocol {
   def props(): Props = Props(classOf[DBEvent2UserMapping])
@@ -44,7 +46,11 @@ object DBEvent2UserMapping extends DefaultJsonProtocol {
 /**
  * Redirect all dbevents to the client itself
  */
-class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver with StammdatenJsonProtocol {
+class DBEvent2UserMapping extends Actor
+    with ActorLogging
+    with ClientReceiver
+    with StammdatenJsonProtocol
+    with BuchhaltungJsonProtocol {
   import DBEvent2UserMapping._
 
   override val system = context.system
@@ -99,6 +105,11 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver wi
 
     case e @ EntityCreated(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
     case e @ EntityDeleted(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
+    
+    case e @ EntityCreated(userId, entity: Lieferplanung) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
+    case e @ EntityModified(userId, entity: Lieferplanung, _) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
+    
+    case e @ EntityCreated(userId, entity: Bestellung) => send(userId, e.asInstanceOf[DBEvent[Bestellung]])
 
     case e @ EntityCreated(userId, entity: Depotlieferung) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
     case e @ EntityModified(userId, entity: Depotlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
@@ -126,6 +137,10 @@ class DBEvent2UserMapping extends Actor with ActorLogging with ClientReceiver wi
 
     case e @ EntityCreated(userId, entity: Projekt) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
     case e @ EntityModified(userId, entity: Projekt, _) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
+
+    case e @ EntityCreated(userId, entity: Rechnung) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
+    case e @ EntityModified(userId, entity: Rechnung, _) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
+    case e @ EntityDeleted(userId, entity: Rechnung) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
 
     case x => log.debug(s"receive unknown event $x")
   }

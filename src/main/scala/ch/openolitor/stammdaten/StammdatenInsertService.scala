@@ -38,6 +38,9 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
 import scala.collection.immutable.TreeMap
+import scalaz._
+import Scalaz._
+import scala.util.Random
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -91,6 +94,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createProjekt(meta, id, projekt)
     case EntityInsertedEvent(meta, id: AbwesenheitId, abw: AbwesenheitCreate) =>
       createAbwesenheit(meta, id, abw)
+    case EntityInsertedEvent(meta, id: LieferplanungId, lieferplanungCreateData: LieferplanungCreate) =>
+      createLieferplanung(meta, id, lieferplanungCreateData)
+    case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungenCreate) =>
+      createBestellungen(meta, id, bestellungCreateData)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.error(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
@@ -151,17 +158,41 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit userId: UserId = meta.originator) = {
-    val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
-      "anzahlAbwesenheiten" -> ZERO,
-      "status" -> Offen,
-      "erstelldat" -> meta.timestamp,
-      "ersteller" -> meta.originator,
-      "modifidat" -> meta.timestamp,
-      "modifikator" -> meta.originator)
+    readRepository.getAbotypDetail(lieferung.abotypId) map {
+      case Some(abotyp) =>
+        readRepository.getVertriebsart(lieferung.vertriebsartId) map {
+          case Some(vertriebsart) =>
+            val vaBeschrieb = vertriebsart match {
+              case dl: DepotlieferungDetail => dl.depot.name
+              case hl: HeimlieferungDetail => hl.tour.name
+              case pl: PostlieferungDetail => ""
+            }
+            val atBeschrieb = abotyp.beschreibung.getOrElse("")
 
-    DB autoCommit { implicit session =>
-      //create lieferung
-      writeRepository.insertEntity[Lieferung, LieferungId](insert)
+            val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
+              "abotypBeschrieb" -> atBeschrieb,
+              "vertriebsartBeschrieb" -> vaBeschrieb,
+              "anzahlAbwesenheiten" -> ZERO,
+              "durchschnittspreis" -> ZERO,
+              "anzahlLieferungen" -> ZERO,
+              "preisTotal" -> ZERO,
+              "status" -> Offen,
+              "lieferplanungId" -> None,
+              "lieferplanungNr" -> None,
+              "erstelldat" -> meta.timestamp,
+              "ersteller" -> meta.originator,
+              "modifidat" -> meta.timestamp,
+              "modifikator" -> meta.originator)
+
+            DB autoCommit { implicit session =>
+              //create lieferung
+              writeRepository.insertEntity[Lieferung, LieferungId](insert)
+            }
+          case _ =>
+            logger.error(s"Vertriebsart with id ${lieferung.vertriebsartId} not found.")
+        }
+      case _ =>
+        logger.error(s"Abotyp with id ${lieferung.abotypId} not found.")
     }
   }
 
@@ -216,7 +247,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createDepot(meta: EventMetadata, id: DepotId, create: DepotModify)(implicit userId: UserId = meta.originator) = {
     val depot = copyTo[DepotModify, Depot](create,
       "id" -> id,
-      "farbCode" -> "",
       "anzahlAbonnenten" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
@@ -351,6 +381,139 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Abwesenheit, AbwesenheitId](abw)
+    }
+  }
+
+  def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit userId: UserId = meta.originator) = {
+    val insert = readRepository.getLatestLieferplanung map {
+      case Some(latestLP) => {
+        val newNr = latestLP.nr + 1
+        val lp = copyTo[LieferplanungCreate, Lieferplanung](lieferplanung,
+          "id" -> lieferplanungId,
+          "nr" -> newNr,
+          "erstelldat" -> meta.timestamp,
+          "ersteller" -> meta.originator,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> meta.originator)
+        (lp, newNr)
+      }
+      case None => {
+        val firstNr = 1
+        val lp = copyTo[LieferplanungCreate, Lieferplanung](lieferplanung,
+          "id" -> lieferplanungId,
+          "nr" -> firstNr,
+          "erstelldat" -> meta.timestamp,
+          "ersteller" -> meta.originator,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> meta.originator)
+        (lp, firstNr)
+      }
+    }
+    insert map {
+      _ match {
+        case (obj: Lieferplanung, nr: Int) =>
+          DB autoCommit { implicit session =>
+            //create lieferplanung
+            writeRepository.insertEntity[Lieferplanung, LieferplanungId](obj)
+          }
+          //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
+          readRepository.getLieferungenNext() map {
+            _ foreach {
+              lieferung =>
+                val lpId = Some(lieferplanungId)
+                val lpNr = Some(obj.nr)
+                val lObj = copyTo[Lieferung, Lieferung](lieferung,
+                  "lieferplanungId" -> lpId,
+                  "lieferplanungNr" -> lpNr)
+                DB autoCommit { implicit session =>
+                  //update Lieferung
+                  writeRepository.updateEntity[Lieferung, LieferungId](lObj)
+                }
+
+            }
+          }
+      }
+    }
+  }
+
+  def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungenCreate)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is added)
+      readRepository.getBestellpositionenByLieferplan(create.lieferplanungId) foreach {
+        _ foreach {
+          position => writeRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)
+        }
+      }
+      //fetch corresponding Lieferungen and generate Bestellungen
+      val newBs = collection.mutable.Map[Tuple3[ProduzentId, LieferplanungId, DateTime], Bestellung]()
+      val newBPs = collection.mutable.Map[Tuple2[BestellungId, ProduktId], Bestellposition]()
+      readRepository.getLieferplanung(create.lieferplanungId) map {
+        case Some(lieferplanung) =>
+          readRepository.getLieferpositionenByLieferplan(create.lieferplanungId) map {
+            _ map {
+              lieferposition =>
+                {
+                  writeRepository.getById(lieferungMapping, lieferposition.lieferungId) map { lieferung =>
+                    // enhance or create bestellung by produzentT
+                    if (!newBs.isDefinedAt((lieferposition.produzentId, create.lieferplanungId, lieferung.datum))) {
+                      val bestellung = Bestellung(BestellungId(Random.nextLong), lieferposition.produzentId, lieferposition.produzentKurzzeichen, lieferplanung.id, lieferplanung.nr, lieferung.datum, None, 0, DateTime.now, userId, DateTime.now, userId)
+                      newBs += (lieferposition.produzentId, create.lieferplanungId, lieferung.datum) -> bestellung
+                    }
+
+                    newBs.get((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) map { bestellung =>
+                      //fetch or create bestellposition by produkt
+                      val bp = newBPs.get((bestellung.id, lieferposition.produktId)) match {
+                        case Some(existingBP) => {
+                          val newMenge = existingBP.menge + lieferposition.menge.get
+                          val newPreis = existingBP.preis |+| lieferposition.preis
+                          val newAnzahl = existingBP.anzahl + lieferposition.anzahl
+                          val copyBP = copyTo[Bestellposition, Bestellposition](existingBP,
+                            "menge" -> newMenge,
+                            "preis" -> newPreis,
+                            "anzahl" -> newAnzahl)
+                          copyBP
+                        }
+                        case None => {
+                          //create bestellposition
+                          val bestellposition = Bestellposition(BestellpositionId(Random.nextLong),
+                            bestellung.id,
+                            lieferposition.produktId,
+                            lieferposition.produktBeschrieb,
+                            lieferposition.preisEinheit,
+                            lieferposition.einheit,
+                            lieferposition.menge.get,
+                            lieferposition.preis,
+                            lieferposition.anzahl,
+                            DateTime.now,
+                            userId,
+                            DateTime.now,
+                            userId)
+                          bestellposition
+                        }
+                      }
+                      newBPs += (bestellung.id, lieferposition.produktId) -> bp
+                      val newPreisTotal = bp.preis.get |+| bestellung.preisTotal
+                      val copyB = copyTo[Bestellung, Bestellung](bestellung,
+                        "preisTotal" -> newPreisTotal)
+                    }
+                  }
+                }
+            }
+
+          }
+
+          //jetzt die neuen objekte kreieren
+          newBs foreach {
+            case (_, bestellung) =>
+              writeRepository.insertEntity[Bestellung, BestellungId](bestellung)
+          }
+          newBPs foreach {
+            case (_, bestellposition) =>
+              writeRepository.insertEntity[Bestellposition, BestellpositionId](bestellposition)
+          }
+        case _ =>
+          logger.error(s"Lieferplanung with id ${create.lieferplanungId} not found.")
+      }
     }
   }
 }

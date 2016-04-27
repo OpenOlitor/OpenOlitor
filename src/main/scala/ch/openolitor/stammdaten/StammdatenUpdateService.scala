@@ -72,6 +72,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: ProduktekategorieId, entity: ProduktekategorieModify) => updateProduktekategorie(meta, id, entity)
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify) => updateTour(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungModify) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
@@ -355,6 +357,26 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(projekt, update, "modifidat" -> meta.timestamp, "modifikator" -> userId)
         writeRepository.updateEntity[Projekt, ProjektId](copy)
+      }
+    }
+  }
+  
+  def updateLieferplanung(meta: EventMetadata, id: LieferplanungId, update: LieferplanungModify)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferplanung, update, "modifidat" -> meta.timestamp, "modifikator" -> userId)
+        writeRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
+      }
+    }
+  }
+  
+  def updateLieferung(meta: EventMetadata, id: LieferungId, update: LieferungModify)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      writeRepository.getById(lieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, update, "modifidat" -> meta.timestamp, "modifikator" -> userId)
+        writeRepository.updateEntity[Lieferung, LieferungId](copy)
       }
     }
   }

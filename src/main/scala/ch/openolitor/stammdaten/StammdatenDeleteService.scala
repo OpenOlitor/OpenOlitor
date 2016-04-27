@@ -85,7 +85,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       writeRepository.deleteEntity[Abwesenheit, AbwesenheitId](id, { abw: Abwesenheit =>
         writeRepository.getById(lieferungMapping, abw.lieferungId).map { lieferung: Lieferung =>
-          lieferung.status == Offen
+          lieferung.lieferplanungId.isEmpty
         }.getOrElse(false)
       })
     }
@@ -157,7 +157,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteLieferung(id: LieferungId) = {
     DB autoCommit { implicit session =>
-      writeRepository.deleteEntity[Lieferung, LieferungId](id, { lieferung: Lieferung => lieferung.status == Offen })
+      writeRepository.deleteEntity[Lieferung, LieferungId](id, { lieferung: Lieferung => lieferung.lieferplanungId == None })
     }
   }
 

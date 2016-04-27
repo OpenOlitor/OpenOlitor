@@ -37,6 +37,7 @@ import ch.openolitor.core.Macros._
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 
 object BuchhaltungInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungInsertService = new DefaultBuchhaltungInsertService(sysConfig, system)
@@ -53,7 +54,15 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
     with BuchhaltungDBMappings {
   self: BuchhaltungRepositoryComponent =>
 
-  val ZERO = 0
+  val Divisor = 10
+  val ReferneznummerLength = 26
+  val BetragLength = 10
+  val TeilnehmernummerLength = 9
+
+  val belegarten = Map[Waehrung, String](CHF -> "01", EUR -> "21")
+
+  // ESR checksum nach "Prüfzifferberechnung Modulo 10, rekursiv"
+  val checkSumDefinition = List(0, 9, 4, 6, 8, 2, 7, 1, 3, 5)
 
   val handle: Handle = {
     case EntityInsertedEvent(meta, id: RechnungId, entity: RechnungModify) =>
@@ -65,7 +74,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   }
 
   def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungModify)(implicit userId: UserId = meta.originator) = {
-    val referenzNummer = generateReferenzNummer(entity)
+    val referenzNummer = generateReferenzNummer(entity, id)
     val esrNummer = generateEsrNummer(entity, referenzNummer)
 
     val typ = copyTo[RechnungModify, Rechnung](entity,
@@ -79,16 +88,36 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       "modifikator" -> meta.originator)
 
     DB autoCommit { implicit session =>
-      //create abotyp
       writeRepository.insertEntity[Rechnung, RechnungId](typ)
     }
   }
 
-  def generateReferenzNummer(rechnung: RechnungModify): String = {
-    ???
+  /**
+   * Generieren einer Referenznummer, die die Kundennummer und Rechnungsnummer enthält.
+   */
+  def generateReferenzNummer(rechnung: RechnungModify, id: RechnungId): String = {
+    // TODO use a configurable pattern
+    val filled = ("%026d".format(0) + s"${rechnung.kundeId.id}${id.id}") takeRight (ReferneznummerLength)
+    val checksum = calculateChecksum(filled.toList map (_.asDigit))
+
+    s"$filled$checksum"
   }
 
-  def generateEsrNummer(rechnung: RechnungModify, esrNummer: String): String = {
-    ???
+  def generateEsrNummer(rechnung: RechnungModify, referenzNummer: String): String = {
+    // TODO read teilnehmernummer from config
+    val teilnehmernummer = "777777777"
+    val bc = belegarten(rechnung.waehrung)
+    val betrag = (s"%0${BetragLength}d".format(0) + s"${(rechnung.betrag * 100).toBigInt}") takeRight (BetragLength)
+    val checksum = calculateChecksum((bc + betrag).toList map (_.asDigit))
+    val filledTeilnehmernummer = (s"%0${TeilnehmernummerLength}d".format(0) + teilnehmernummer) takeRight (TeilnehmernummerLength)
+
+    s"$bc$betrag$checksum>$referenzNummer+ $teilnehmernummer>"
+  }
+
+  def calculateChecksum(digits: List[Int], buffer: Int = 0): Int = digits match {
+    case Nil =>
+      (Divisor - buffer) % Divisor
+    case d :: tail =>
+      calculateChecksum(tail, checkSumDefinition((buffer + d) % Divisor))
   }
 }

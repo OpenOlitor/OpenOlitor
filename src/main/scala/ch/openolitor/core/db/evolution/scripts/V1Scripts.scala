@@ -48,13 +48,18 @@ object V1Scripts {
       sql"drop table if exists ${depotlieferungAboMapping.table}".execute.apply()
       sql"drop table if exists ${heimlieferungAboMapping.table}".execute.apply()
       sql"drop table if exists ${postlieferungAboMapping.table}".execute.apply()
+      sql"drop table if exists ${lieferplanungMapping.table}".execute.apply()
       sql"drop table if exists ${lieferungMapping.table}".execute.apply()
+      sql"drop table if exists ${lieferpositionMapping.table}".execute.apply()
+      sql"drop table if exists ${bestellungMapping.table}".execute.apply()
+      sql"drop table if exists ${bestellpositionMapping.table}".execute.apply()
       sql"drop table if exists ${produktMapping.table}".execute.apply()
       sql"drop table if exists ${produktekategorieMapping.table}".execute.apply()
       sql"drop table if exists ${produzentMapping.table}".execute.apply()
       sql"drop table if exists ${projektMapping.table}".execute.apply()
       sql"drop table if exists ${produktProduzentMapping.table}".execute.apply()
       sql"drop table if exists ${produktProduktekategorieMapping.table}".execute.apply()
+      sql"drop table if exists ${abwesenheitMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables - stammdaten")
       //create tables
@@ -106,7 +111,7 @@ object V1Scripts {
       	ort varchar(50) not null, 
       	aktiv varchar(1), 
       	oeffnungszeiten varchar(200), 
-      	/*farb_code varchar(20),*/ 
+      	farb_code varchar(20), 
       	iban varchar(34), 
       	bank varchar(50), 
       	beschreibung varchar(200), 
@@ -141,6 +146,7 @@ object V1Scripts {
       	zielpreis DECIMAL(7,2), 
       	saldo_mindestbestand int, 
       	admin_prozente DECIMAL(5,2), 
+      	wird_geplant varchar(1) not null,
       	anzahl_abonnenten INT not null, 
       	letzte_lieferung datetime default null, 
       	waehrung varchar(10), 
@@ -273,14 +279,74 @@ object V1Scripts {
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
 
+      sql"""create table ${lieferplanungMapping.table}  (
+        id varchar(36) not null, 
+        nr int not null, 
+        bemerkungen varchar(2000), 
+        status varchar(50) not null,
+        erstelldat datetime not null, 
+        ersteller BIGINT not null, 
+        modifidat datetime not null, 
+        modifikator BIGINT not null)""".execute.apply()
+        
       sql"""create table ${lieferungMapping.table}  (
-      	id BIGINT not null,
-      	abotyp_id BIGINT not null, 
-      	vertriebsart_id BIGINT not null,
-      	datum datetime not null, 
-      	anzahl_abwesenheiten int not null,
-      	status varchar(50) not null, 
-      	erstelldat datetime not null, 
+        id varchar(36) not null, 
+        abotyp_id varchar(36) not null, 
+        abotyp_beschrieb varchar(100) not null, 
+        vertriebsart_id varchar(36) not null, 
+        vertriebsart_beschrieb varchar(100) not null, 
+        datum datetime not null, 
+        anzahl_abwesenheiten int not null, 
+        durchschnittspreis DECIMAL(7,2) not null, 
+        anzahl_lieferungen int not null, 
+        preis_total DECIMAL(7,2) not null, 
+        lieferplanung_id varchar(36), 
+        lieferplanung_nr int,
+        erstelldat datetime not null, 
+        ersteller BIGINT not null, 
+        modifidat datetime not null, 
+        modifikator BIGINT not null)""".execute.apply()
+        
+      sql"""create table ${lieferpositionMapping.table}  (
+        id varchar(36) not null, 
+        lieferung_id varchar(36) not null, 
+        produkt_id varchar(36) not null, 
+        produkt_beschrieb varchar(100) not null, 
+        produzent_id varchar(36) not null, 
+        produzent_kurzzeichen varchar(6) not null, 
+        preis_einheit DECIMAL(7,2), 
+        einheit varchar(20) not null, 
+        menge DECIMAL(7,2) not null, 
+        preis DECIMAL(7,2), anzahl int not null,
+        erstelldat datetime not null, 
+        ersteller BIGINT not null, 
+        modifidat datetime not null, 
+        modifikator BIGINT not null)""".execute.apply()
+        
+      sql"""create table ${bestellungMapping.table}  (
+        id varchar(36) not null, 
+        produzent_id varchar(36) not null, 
+        produzent_kurzzeichen varchar(6) not null, 
+        lieferplanung_id varchar(36) not null, 
+        lieferplanung_nr int not null, 
+        datum_abrechnung datetime default null, 
+        preis_total DECIMAL(7,2) not null,
+        erstelldat datetime not null, 
+        ersteller BIGINT not null, 
+        modifidat datetime not null, 
+        modifikator BIGINT not null)""".execute.apply()
+        
+      sql"""create table ${bestellpositionMapping.table}  (
+        id varchar(36) not null, 
+        bestellung_id varchar(36) not null, 
+        produkt_id varchar(36) not null, 
+        produkt_beschrieb varchar(100) not null, 
+        preis_einheit DECIMAL(7,2), 
+        einheit varchar(20) not null, 
+        menge DECIMAL(7,2), 
+        preis DECIMAL(7,2),
+        anzahl int not null,
+        erstelldat datetime not null, 
         ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
@@ -377,7 +443,7 @@ object V1Scripts {
       	ersteller BIGINT not null, 
         modifidat datetime not null, 
         modifikator BIGINT not null)""".execute.apply()
-        
+
       logger.debug(s"oo-system: cleanupDatabase - end - stammdaten")
       Success(true)
     }
@@ -398,20 +464,20 @@ object V1Scripts {
         kunde_id BIGINT not null, 
         abo_id BIGINT not null,
         titel varchar(100),
-        betrag DECIMAL(8,2),
+        waehrung varchar(10) not null,
+        betrag DECIMAL(8,2) not null,
         einbezahlter_betrag DECIMAL(8,2),
-        rechnungs_datum datetime,
-        faelligkeits_datum datetime,
+        rechnungs_datum datetime not null,
+        faelligkeits_datum datetime not null,
         eingangs_datum datetime,
-        status varchar(10),
-        referenz_nummer varchar(27),
-        esr_nummer varchar(54),
-        strasse varchar(50),
+        status varchar(10) not null,
+        referenz_nummer varchar(27) not null,
+        esr_nummer varchar(54) not null,
+        strasse varchar(50) not null,
         haus_nummer varchar(10), 
         adress_zusatz varchar(100), 
         plz varchar(5) not null, 
         ort varchar(50) not null, 
-        bemerkungen varchar(512), 
         erstelldat datetime not null, 
         ersteller BIGINT not null, 
         modifidat datetime not null, 
