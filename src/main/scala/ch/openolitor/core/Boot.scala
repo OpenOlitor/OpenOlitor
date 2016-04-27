@@ -79,9 +79,9 @@ object Boot extends App with LazyLogging {
       socket.getLocalPort()
     }.opt.getOrElse(sys.error(s"Couldn't aquire new free server port"))
   }
-  println(s"application_name: " + System.getenv("application_config"))
-  println(s"config-file java prop: " + System.getProperty("config-file"))
-  println(s"port: " + System.getenv("PORT"))
+  logger.debug(s"application_name: " + System.getenv("application_config"))
+  logger.debug(s"config-file java prop: " + System.getProperty("config-file"))
+  logger.debug(s"port: " + System.getenv("PORT"))
 
   val config = ConfigFactory.load
 
@@ -100,7 +100,7 @@ object Boot extends App with LazyLogging {
 
   lazy val rootPort = config.getStringOption("openolitor.port").getOrElse(nonConfigPort).toInt
 
-  println(s"rootPort: " + rootPort)
+  logger.debug(s"rootPort: " + rootPort)
 
   lazy val rootInterface = config.getStringOption("openolitor.interface").getOrElse("0.0.0.0")
   val proxyService = config.getBooleanOption("openolitor.run-proxy-service").getOrElse(false)
