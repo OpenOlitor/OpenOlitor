@@ -47,14 +47,14 @@ object StammdatenInsertService {
 }
 
 class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
+  extends StammdatenInsertService(sysConfig) with DefaultStammdatenRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
  */
 class StammdatenInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware
-    with StammdatenDBMappings {
+  with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
   val ZERO = 0
@@ -92,14 +92,16 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createTour(meta, id, tour)
     case EntityInsertedEvent(meta, id: ProjektId, projekt: ProjektModify) =>
       createProjekt(meta, id, projekt)
+    case EntityInsertedEvent(meta, id: AbwesenheitId, abw: AbwesenheitCreate) =>
+      createAbwesenheit(meta, id, abw)
     case EntityInsertedEvent(meta, id: LieferplanungId, lieferplanungCreateData: LieferplanungCreate) =>
       createLieferplanung(meta, id, lieferplanungCreateData)
     case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungenCreate) =>
       createBestellungen(meta, id, bestellungCreateData)
     case EntityInsertedEvent(meta, id, entity) =>
-      logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
+      logger.error(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
-      logger.warn(s"Unknown event:$e")
+      logger.error(s"Unknown event:$e")
   }
 
   def createAbotyp(meta: EventMetadata, id: AbotypId, abotyp: AbotypModify)(implicit userId: UserId = meta.originator) = {
@@ -162,8 +164,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           case Some(vertriebsart) =>
             val vaBeschrieb = vertriebsart match {
               case dl: DepotlieferungDetail => dl.depot.name
-              case hl: HeimlieferungDetail  => hl.tour.name
-              case pl: PostlieferungDetail  => ""
+              case hl: HeimlieferungDetail => hl.tour.name
+              case pl: PostlieferungDetail => ""
             }
             val atBeschrieb = abotyp.beschreibung.getOrElse("")
 
@@ -367,6 +369,18 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifikator" -> meta.originator)
     DB autoCommit { implicit session =>
       writeRepository.insertEntity[Projekt, ProjektId](projekt)
+    }
+  }
+
+  def createAbwesenheit(meta: EventMetadata, id: AbwesenheitId, create: AbwesenheitCreate)(implicit userId: UserId = meta.originator) = {
+    val abw = copyTo[AbwesenheitCreate, Abwesenheit](create,
+      "id" -> id,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator)
+    DB autoCommit { implicit session =>
+      writeRepository.insertEntity[Abwesenheit, AbwesenheitId](abw)
     }
   }
 

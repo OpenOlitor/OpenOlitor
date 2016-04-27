@@ -46,7 +46,6 @@ trait Proxy extends LazyLogging {
 
   private def proxyRequest(updateRequest: RequestContext => HttpRequest)(implicit system: ActorSystem): Route =
     ctx => {
-      logger.debug(s"proxyRequest:$ctx, ${ctx.responder}")
       IO(UHttp)(system) tell (updateRequest(ctx), ctx.responder)
     }
 
@@ -94,7 +93,6 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   override def receive = {
     // handle every new connection in an own handler
     case Http.Connected(remoteAddress, localAddress) =>
-      log.debug(s"Connected:$remoteAddress, $localAddress")
       val serverConnection = sender()
 
       val conn = context.actorOf(ProxyWorker.props(serverConnection, routeMap, websocketHandler))
