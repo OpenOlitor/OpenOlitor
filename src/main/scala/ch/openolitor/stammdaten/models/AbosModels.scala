@@ -33,26 +33,30 @@ case class AboId(id: Long) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
   val abotypId: AbotypId
+  val abotypName: String
   val kundeId: KundeId
   val kunde: String
   val start: DateTime
   val ende: Option[DateTime]
-  val saldo: Int
-  val saldoInRechnung: Int
+  val guthabenVertraglich: Option[Int]
+  val guthaben: Int
+  val guthabenInRechnung: Int
   val letzteLieferung: Option[DateTime]
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
   val anzahlLieferungen: TreeMap[String, Int]
 }
 
-sealed trait AboDetail {
+sealed trait AboDetail extends JSONSerializable {
   val abotypId: AbotypId
+  val abotypName: String
   val kundeId: KundeId
   val kunde: String
   val start: DateTime
   val ende: Option[DateTime]
-  val saldo: Int
-  val saldoInRechnung: Int
+  val guthabenVertraglich: Option[Int]
+  val guthaben: Int
+  val guthabenInRechnung: Int
   val letzteLieferung: Option[DateTime]
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
@@ -79,13 +83,14 @@ case class DepotlieferungAbo(id: AboId,
   depotName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None,
-  saldo: Int = 0,
-  saldoInRechnung: Int = 0,
-  letzteLieferung: Option[DateTime] = None,
+  ende: Option[DateTime],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
   //calculated fields
-  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
-  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -101,13 +106,14 @@ case class DepotlieferungAboDetail(id: AboId,
   depotName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None,
-  saldo: Int = 0,
-  saldoInRechnung: Int = 0,
-  letzteLieferung: Option[DateTime] = None,
+  ende: Option[DateTime],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
   //calculated fields
-  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
-  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -115,7 +121,7 @@ case class DepotlieferungAboDetail(id: AboId,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]) extends AboDetail with JSONSerializable
+  abotyp: Option[Abotyp]) extends AboDetail
 
 case class DepotlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -125,7 +131,7 @@ case class DepotlieferungAboModify(kundeId: KundeId,
   depotName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None) extends AboModify
+  ende: Option[DateTime]) extends AboModify
 
 case class HeimlieferungAbo(id: AboId,
   kundeId: KundeId,
@@ -136,13 +142,14 @@ case class HeimlieferungAbo(id: AboId,
   tourName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None,
-  saldo: Int = 0,
-  saldoInRechnung: Int = 0,
-  letzteLieferung: Option[DateTime] = None,
+  ende: Option[DateTime],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
   //calculated fields
-  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
-  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -158,13 +165,14 @@ case class HeimlieferungAboDetail(id: AboId,
   tourName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None,
-  saldo: Int = 0,
-  saldoInRechnung: Int = 0,
-  letzteLieferung: Option[DateTime] = None,
+  ende: Option[DateTime],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
   //calculated fields
-  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
-  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -172,7 +180,7 @@ case class HeimlieferungAboDetail(id: AboId,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]) extends AboDetail with JSONSerializable
+  abotyp: Option[Abotyp]) extends AboDetail
 
 case class HeimlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -182,7 +190,7 @@ case class HeimlieferungAboModify(kundeId: KundeId,
   tourName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None) extends AboModify
+  ende: Option[DateTime]) extends AboModify
 
 case class PostlieferungAbo(id: AboId,
   kundeId: KundeId,
@@ -191,13 +199,14 @@ case class PostlieferungAbo(id: AboId,
   abotypName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None,
-  saldo: Int = 0,
-  saldoInRechnung: Int = 0,
-  letzteLieferung: Option[DateTime] = None,
+  ende: Option[DateTime],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
   //calculated fields
-  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
-  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -211,13 +220,14 @@ case class PostlieferungAboDetail(id: AboId,
   abotypName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None,
-  saldo: Int = 0,
-  saldoInRechnung: Int = 0,
-  letzteLieferung: Option[DateTime] = None,
+  ende: Option[DateTime],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
   //calculated fields
-  anzahlAbwesenheiten: TreeMap[String, Int] = TreeMap(),
-  anzahlLieferungen: TreeMap[String, Int] = TreeMap(),
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -225,7 +235,7 @@ case class PostlieferungAboDetail(id: AboId,
   modifikator: UserId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]) extends AboDetail with JSONSerializable
+  abotyp: Option[Abotyp]) extends AboDetail
 
 case class PostlieferungAboModify(kundeId: KundeId,
   kunde: String,
@@ -233,7 +243,7 @@ case class PostlieferungAboModify(kundeId: KundeId,
   abotypName: String,
   liefertag: Lieferzeitpunkt,
   start: DateTime,
-  ende: Option[DateTime] = None) extends AboModify
+  ende: Option[DateTime]) extends AboModify
 
 case class AbwesenheitId(id: Long) extends BaseId
 

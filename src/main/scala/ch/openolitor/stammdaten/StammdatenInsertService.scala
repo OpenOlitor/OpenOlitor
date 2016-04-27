@@ -264,8 +264,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         case create: DepotlieferungAboModify =>
           writeRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](create,
             "id" -> id,
-            "saldo" -> ZERO,
-            "saldoInRechnung" -> ZERO,
+            "guthabenVertraglich" -> None,
+            "guthaben" -> ZERO,
+            "guthabenInRechnung" -> ZERO,
             "letzteLieferung" -> None,
             "anzahlAbwesenheiten" -> emptyMap,
             "anzahlLieferungen" -> emptyMap,
@@ -275,8 +276,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             "modifikator" -> meta.originator))
         case create: HeimlieferungAboModify =>
           writeRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](create,
-            "id" -> id, "saldo" -> ZERO,
-            "saldoInRechnung" -> ZERO,
+            "id" -> id,
+            "guthabenVertraglich" -> None,
+            "guthaben" -> ZERO,
+            "guthabenInRechnung" -> ZERO,
             "letzteLieferung" -> None,
             "anzahlAbwesenheiten" -> emptyMap,
             "anzahlLieferungen" -> emptyMap,
@@ -286,8 +289,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             "modifikator" -> meta.originator))
         case create: PostlieferungAboModify =>
           writeRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](create,
-            "id" -> id, "saldo" -> ZERO,
-            "saldoInRechnung" -> ZERO,
+            "id" -> id,
+            "guthabenVertraglich" -> None,
+            "guthaben" -> ZERO,
+            "guthabenInRechnung" -> ZERO,
             "letzteLieferung" -> None,
             "anzahlAbwesenheiten" -> emptyMap,
             "anzahlLieferungen" -> emptyMap,
