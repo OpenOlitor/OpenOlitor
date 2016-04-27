@@ -472,7 +472,25 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
-  implicit val depotlieferungAboMapping = new BaseEntitySQLSyntaxSupport[DepotlieferungAbo] {
+  trait BaseAboMapping[A <: Abo] extends BaseEntitySQLSyntaxSupport[A] {
+    override def updateParameters(abo: A) = {
+      super.updateParameters(abo) ++ Seq(
+        column.kundeId -> parameter(abo.kundeId),
+        column.kunde -> parameter(abo.kunde),
+        column.abotypId -> parameter(abo.abotypId),
+        column.abotypName -> parameter(abo.abotypName),
+        column.start -> parameter(abo.start),
+        column.ende -> parameter(abo.ende),
+        column.guthabenVertraglich -> parameter(abo.guthabenVertraglich),
+        column.guthaben -> parameter(abo.guthaben),
+        column.guthabenInRechnung -> parameter(abo.guthabenInRechnung),
+        column.letzteLieferung -> parameter(abo.letzteLieferung),
+        column.anzahlAbwesenheiten -> parameter(abo.anzahlAbwesenheiten),
+        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen))
+    }
+  }
+
+  implicit val depotlieferungAboMapping = new BaseAboMapping[DepotlieferungAbo] {
     override val tableName = "DepotlieferungAbo"
 
     override lazy val columns = autoColumns[DepotlieferungAbo]()
@@ -483,24 +501,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(depotlieferungAbo: DepotlieferungAbo) = {
       super.updateParameters(depotlieferungAbo) ++ Seq(
-        column.kundeId -> parameter(depotlieferungAbo.kundeId),
-        column.kunde -> parameter(depotlieferungAbo.kunde),
-        column.abotypId -> parameter(depotlieferungAbo.abotypId),
-        column.abotypName -> parameter(depotlieferungAbo.abotypName),
         column.depotId -> parameter(depotlieferungAbo.depotId),
         column.depotName -> parameter(depotlieferungAbo.depotName),
-        column.liefertag -> parameter(depotlieferungAbo.liefertag),
-        column.start -> parameter(depotlieferungAbo.start),
-        column.ende -> parameter(depotlieferungAbo.ende),
-        column.saldo -> parameter(depotlieferungAbo.saldo),
-        column.saldoInRechnung -> parameter(depotlieferungAbo.saldoInRechnung),
-        column.letzteLieferung -> parameter(depotlieferungAbo.letzteLieferung),
-        column.anzahlAbwesenheiten -> parameter(depotlieferungAbo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(depotlieferungAbo.anzahlLieferungen))
+        column.liefertag -> parameter(depotlieferungAbo.liefertag))
     }
   }
 
-  implicit val heimlieferungAboMapping = new BaseEntitySQLSyntaxSupport[HeimlieferungAbo] {
+  implicit val heimlieferungAboMapping = new BaseAboMapping[HeimlieferungAbo] {
     override val tableName = "HeimlieferungAbo"
 
     override lazy val columns = autoColumns[HeimlieferungAbo]()
@@ -512,24 +519,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(heimlieferungAbo: HeimlieferungAbo) = {
       super.updateParameters(heimlieferungAbo) ++ Seq(
-        column.kundeId -> parameter(heimlieferungAbo.kundeId),
-        column.kunde -> parameter(heimlieferungAbo.kunde),
-        column.abotypId -> parameter(heimlieferungAbo.abotypId),
-        column.abotypName -> parameter(heimlieferungAbo.abotypName),
         column.tourId -> parameter(heimlieferungAbo.tourId),
         column.tourName -> parameter(heimlieferungAbo.tourName),
-        column.liefertag -> parameter(heimlieferungAbo.liefertag),
-        column.start -> parameter(heimlieferungAbo.start),
-        column.ende -> parameter(heimlieferungAbo.ende),
-        column.saldo -> parameter(heimlieferungAbo.saldo),
-        column.saldoInRechnung -> parameter(heimlieferungAbo.saldoInRechnung),
-        column.letzteLieferung -> parameter(heimlieferungAbo.letzteLieferung),
-        column.anzahlAbwesenheiten -> parameter(heimlieferungAbo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(heimlieferungAbo.anzahlLieferungen))
+        column.liefertag -> parameter(heimlieferungAbo.liefertag))
     }
   }
 
-  implicit val postlieferungAboMapping = new BaseEntitySQLSyntaxSupport[PostlieferungAbo] {
+  implicit val postlieferungAboMapping = new BaseAboMapping[PostlieferungAbo] {
     override val tableName = "PostlieferungAbo"
 
     override lazy val columns = autoColumns[PostlieferungAbo]()
@@ -541,18 +537,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
       super.updateParameters(postlieferungAbo) ++ Seq(
-        column.kundeId -> parameter(postlieferungAbo.kundeId),
-        column.kunde -> parameter(postlieferungAbo.kunde),
-        column.abotypId -> parameter(postlieferungAbo.abotypId),
-        column.abotypName -> parameter(postlieferungAbo.abotypName),
-        column.liefertag -> parameter(postlieferungAbo.liefertag),
-        column.start -> parameter(postlieferungAbo.start),
-        column.ende -> parameter(postlieferungAbo.ende),
-        column.saldo -> parameter(postlieferungAbo.saldo),
-        column.saldoInRechnung -> parameter(postlieferungAbo.saldoInRechnung),
-        column.letzteLieferung -> parameter(postlieferungAbo.letzteLieferung),
-        column.anzahlAbwesenheiten -> parameter(postlieferungAbo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(postlieferungAbo.anzahlLieferungen))
+        column.liefertag -> parameter(postlieferungAbo.liefertag))
     }
   }
 

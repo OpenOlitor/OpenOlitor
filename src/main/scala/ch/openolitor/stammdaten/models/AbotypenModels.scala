@@ -119,40 +119,39 @@ case class Abotyp(id: AbotypId,
   //Zusatzinformationen
   anzahlAbonnenten: Int,
   letzteLieferung: Option[DateTime],
-  waehrung: Waehrung = CHF,
+  waehrung: Waehrung,
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
   modifikator: UserId) extends BaseEntity[AbotypId] with AktivRange with Product
-  
+
 object Abotyp {
   def unapply(a: Abotyp) = {
     Some(Tuple23(
-        a.id,
-        a.name,
-        a.beschreibung,
-        a.lieferrhythmus,
-        a.aktivVon,
-        a.aktivBis,
-        a.preis,
-        a.preiseinheit,
-        a.laufzeit,
-        a.laufzeiteinheit,
-        a.anzahlAbwesenheiten,
-        a.farbCode,
-        a.zielpreis,
-        a.saldoMindestbestand,
-        a.adminProzente,
-        a.wirdGeplant,
-        a.anzahlAbonnenten,
-        a.letzteLieferung,
-        a.waehrung,
-        a.erstelldat,
-        a.ersteller,
-        a.modifidat,
-        a.modifikator
-        ))
+      a.id,
+      a.name,
+      a.beschreibung,
+      a.lieferrhythmus,
+      a.aktivVon,
+      a.aktivBis,
+      a.preis,
+      a.preiseinheit,
+      a.laufzeit,
+      a.laufzeiteinheit,
+      a.anzahlAbwesenheiten,
+      a.farbCode,
+      a.zielpreis,
+      a.saldoMindestbestand,
+      a.adminProzente,
+      a.wirdGeplant,
+      a.anzahlAbonnenten,
+      a.letzteLieferung,
+      a.waehrung,
+      a.erstelldat,
+      a.ersteller,
+      a.modifidat,
+      a.modifikator))
   }
 }
 
