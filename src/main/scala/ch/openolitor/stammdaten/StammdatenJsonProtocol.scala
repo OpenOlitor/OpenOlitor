@@ -64,6 +64,21 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
+  implicit val fristeinheitFormat = new JsonFormat[Fristeinheit] {
+    def write(obj: Fristeinheit): JsValue =
+      obj match {
+        case Wochenfrist => JsString("Woche")
+        case Monatsfrist => JsString("Monat")
+      }
+
+    def read(json: JsValue): Fristeinheit =
+      json match {
+        case JsString("Woche") => Wochenfrist
+        case JsString("Monat") => Monatsfrist
+        case pe => sys.error(s"Unknown Fristeinheit:$pe")
+      }
+  }
+
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
@@ -213,7 +228,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   }
 
   implicit val abotypFormat = enhanceWithBooleanFlag[Abotyp]("aktiv")
-  implicit val abotypModifyFormat = jsonFormat15(AbotypModify)
 
   implicit val systemKundentypFormat = new JsonFormat[SystemKundentyp] {
     def write(obj: SystemKundentyp): JsValue =

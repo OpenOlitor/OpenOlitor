@@ -28,7 +28,7 @@ import ch.openolitor.core.models._
 import scalikejdbc._
 import java.util.UUID
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.scalax.Tuple23
+import ch.openolitor.core.scalax.Tuple24
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -100,6 +100,12 @@ trait AktivRange {
 
 case class AbotypId(id: Long) extends BaseId
 
+sealed trait Fristeinheit
+case object Wochenfrist extends Fristeinheit
+case object Monatsfrist extends Fristeinheit
+
+case class Frist(wert: Int, einheit: Fristeinheit) extends Product with JSONSerializable
+
 case class Abotyp(
   id: AbotypId,
   name: String,
@@ -111,6 +117,7 @@ case class Abotyp(
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],
   laufzeiteinheit: Laufzeiteinheit,
+  kuendigungsfrist: Option[Frist],
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
@@ -130,7 +137,7 @@ case class Abotyp(
 
 object Abotyp {
   def unapply(a: Abotyp) = {
-    Some(Tuple23(
+    Some(Tuple24(
       a.id,
       a.name,
       a.beschreibung,
@@ -141,6 +148,7 @@ object Abotyp {
       a.preiseinheit,
       a.laufzeit,
       a.laufzeiteinheit,
+      a.kuendigungsfrist,
       a.anzahlAbwesenheiten,
       a.farbCode,
       a.zielpreis,
@@ -170,6 +178,7 @@ case class AbotypModify(
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],
   laufzeiteinheit: Laufzeiteinheit,
+  kuendigungsfrist: Option[Frist],
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],

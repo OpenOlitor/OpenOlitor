@@ -142,6 +142,7 @@ object V1Scripts {
         preiseinheit varchar(20) not null,
         laufzeit int,
         laufzeiteinheit varchar(50),
+        kuendigungsfrist varchar(50),
         anzahl_abwesenheiten int, farb_code varchar(20),
         zielpreis DECIMAL(7,2),
         guthaben_mindestbestand int,
