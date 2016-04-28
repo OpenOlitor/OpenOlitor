@@ -118,7 +118,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
     val checksum = calculateChecksum((bc + betrag).toList map (_.asDigit))
     val filledTeilnehmernummer = (s"%0${TeilnehmernummerLength}d".format(0) + Teilnehmernummer) takeRight (TeilnehmernummerLength)
 
-    s"$bc$betrag$checksum>$referenzNummer+ $Teilnehmernummer>"
+    s"$bc$betrag$checksum>$referenzNummer+ $filledTeilnehmernummer>"
   }
 
   def calculateChecksum(digits: List[Int], buffer: Int = 0): Int = digits match {

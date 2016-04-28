@@ -104,4 +104,36 @@ class BuchhaltungInsertServiceSpec extends Specification {
       service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>000000000000000000003215552+ 777777777>"
     }
   }
+
+  "BuchhaltungInsertService" should {
+    val config = SystemConfig(MandantConfiguration(
+      "", "", "", 0, 0, Map(),
+      BuchhaltungConfig(6, 5, "132", "")
+    ), null, null)
+
+    val service = new DefaultBuchhaltungInsertService(config, null)
+
+    "fill teilnehmernummer from right" in {
+      val rechnung = RechnungModify(
+        KundeId(321),
+        AboId(565656),
+        "titel",
+        5,
+        CHF,
+        20.57,
+        None,
+        new DateTime,
+        new DateTime,
+        None,
+        "street",
+        None,
+        None,
+        "3000",
+        "Bern"
+      )
+
+      val referenzNummer = service.generateReferenzNummer(rechnung, RechnungId(555))
+      service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>000000000000000000003215552+ 000000132>"
+    }
+  }
 }
