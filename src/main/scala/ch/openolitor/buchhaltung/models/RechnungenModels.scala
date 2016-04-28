@@ -164,6 +164,7 @@ case class RechnungModify(
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime,
   eingangsDatum: Option[DateTime],
+  status: RechnungStatus,
   strasse: String,
   hausNummer: Option[String],
   adressZusatz: Option[String],
