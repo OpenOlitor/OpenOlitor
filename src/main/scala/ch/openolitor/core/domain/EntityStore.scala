@@ -78,6 +78,8 @@ object EntityStore {
 
   // other actor messages
   case object CheckDBEvolution
+
+  case object UserCommandFailed
 }
 
 //json protocol
@@ -336,6 +338,7 @@ trait EntityStore extends AggregateRoot
           persist(resultingEvent)(afterEventPersisted)
         case Failure(e) =>
           log.error(s"There was an error proccessing the command:$command, error:${e.getMessage}")
+          sender ! UserCommandFailed
       }
       if (result.isEmpty) {
         log.error(s"created => Received unknown command or no module handler handled the command:$command")
