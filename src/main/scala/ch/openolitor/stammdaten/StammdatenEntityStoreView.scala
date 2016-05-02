@@ -60,4 +60,6 @@ trait StammdatenEntityStoreViewComponent extends EntityStoreViewComponent {
   override val insertService = StammdatenInsertService(sysConfig, system)
   override val updateService = StammdatenUpdateService(sysConfig, system)
   override val deleteService = StammdatenDeleteService(sysConfig, system)
+
+  override val aktionenService = StammdatenAktionenService(sysConfig, system)
 }

@@ -20,33 +20,42 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.eventsourcing
+package ch.openolitor.stammdaten
 
-import stamina._
-import stamina.json._
-import ch.openolitor.buchhaltung._
-import ch.openolitor.buchhaltung.models._
+import ch.openolitor.core._
+import ch.openolitor.core.db._
+import ch.openolitor.core.domain._
+import ch.openolitor.core.models._
+import ch.openolitor.stammdaten._
+import ch.openolitor.stammdaten.models._
+import java.util.UUID
+import scalikejdbc.DB
+import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.core.domain.EntityStoreJsonProtocol
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
-import zangelo.spray.json.AutoProductFormats
-import ch.openolitor.core.JSONSerializable
+import akka.actor.ActorSystem
+import ch.openolitor.core.Macros._
+import scala.concurrent.ExecutionContext.Implicits.global
+import org.joda.time.DateTime
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 
-trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
-  //V1 persisters
-  implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
-  implicit val rechnungVerschicktEventPersister = persister[RechnungVerschicktEvent]("rechnung-verschickt-event")
-  implicit val rechnungMahnungVerschicktEventPersister = persister[RechnungMahnungVerschicktEvent]("rechnung-mahnung-verschickt-event")
-  implicit val rechnungBezahltEventPersister = persister[RechnungBezahltEvent]("rechnung-bezahlt-event")
-  implicit val rechnungStorniertEventPersister = persister[RechnungStorniertEvent]("rechnung-storniert-event")
-  implicit val rechnungIdPersister = persister[RechnungId]("rechnung-id")
+object StammdatenAktionenService {
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system)
+}
 
-  val buchhaltungPersisters = List(
-    rechnungModifyPersister,
-    rechnungIdPersister,
-    rechnungVerschicktEventPersister,
-    rechnungMahnungVerschicktEventPersister,
-    rechnungBezahltEventPersister,
-    rechnungStorniertEventPersister
-  )
+class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
+    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenRepositoryComponent {
+}
+
+/**
+ * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
+ */
+class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistetEvent] with LazyLogging with AsyncConnectionPoolContextAware
+    with StammdatenDBMappings {
+  self: StammdatenRepositoryComponent =>
+
+  val handle: Handle = {
+    case e =>
+      logger.warn(s"Unknown event:$e")
+  }
 }

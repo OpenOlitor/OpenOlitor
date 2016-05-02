@@ -164,10 +164,14 @@ case class RechnungModify(
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime,
   eingangsDatum: Option[DateTime],
-  status: RechnungStatus,
   strasse: String,
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: String,
   ort: String
+) extends JSONSerializable
+
+case class RechnungModifyBezahlt(
+  einbezahlterBetrag: BigDecimal,
+  eingangsDatum: DateTime
 ) extends JSONSerializable

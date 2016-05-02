@@ -69,5 +69,5 @@ object EventStoreSerializer extends EntityStoreJsonProtocol
   val entityUpdatedEventPersister = new EntityUpdatedEventPersister[V1](entityPersisters)
   val entityDeletedEventPersister = new EntityDeletedEventPersister[V1](entityPersisters)
 
-  val eventStorePersisters = List(entityStoreInitializedPersister, entityInsertEventPersister, entityUpdatedEventPersister, entityDeletedEventPersister)
+  val eventStorePersisters = List(entityStoreInitializedPersister, entityInsertEventPersister, entityUpdatedEventPersister, entityDeletedEventPersister) ++ stammdatenPersisters ++ buchhaltungPersisters
 }

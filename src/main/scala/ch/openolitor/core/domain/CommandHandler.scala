@@ -20,33 +20,14 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.eventsourcing
+package ch.openolitor.core.domain
 
-import stamina._
-import stamina.json._
-import ch.openolitor.buchhaltung._
-import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.core.domain.EntityStoreJsonProtocol
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
-import zangelo.spray.json.AutoProductFormats
-import ch.openolitor.core.JSONSerializable
+import scala.util.Try
 
-trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
-  //V1 persisters
-  implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
-  implicit val rechnungVerschicktEventPersister = persister[RechnungVerschicktEvent]("rechnung-verschickt-event")
-  implicit val rechnungMahnungVerschicktEventPersister = persister[RechnungMahnungVerschicktEvent]("rechnung-mahnung-verschickt-event")
-  implicit val rechnungBezahltEventPersister = persister[RechnungBezahltEvent]("rechnung-bezahlt-event")
-  implicit val rechnungStorniertEventPersister = persister[RechnungStorniertEvent]("rechnung-storniert-event")
-  implicit val rechnungIdPersister = persister[RechnungId]("rechnung-id")
-
-  val buchhaltungPersisters = List(
-    rechnungModifyPersister,
-    rechnungIdPersister,
-    rechnungVerschicktEventPersister,
-    rechnungMahnungVerschicktEventPersister,
-    rechnungBezahltEventPersister,
-    rechnungStorniertEventPersister
-  )
+/**
+ * Used for handling custom module specific commands.
+ * Validates the preconditions for a given command and returns resulting events.
+ */
+trait CommandHandler {
+  def handle(meta: EventMetadata): UserCommand => Option[Try[PersistetEvent]]
 }

@@ -20,33 +20,24 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.eventsourcing
+package ch.openolitor.core.domain
 
-import stamina._
-import stamina.json._
-import ch.openolitor.buchhaltung._
-import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.core.domain.EntityStoreJsonProtocol
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
-import zangelo.spray.json.AutoProductFormats
-import ch.openolitor.core.JSONSerializable
+import ch.openolitor.stammdaten.StammdatenCommandHandler
+import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
+import ch.openolitor.buchhaltung.BuchhaltungCommandHandler
+import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
+import akka.actor.ActorSystem
+import ch.openolitor.core.SystemConfig
 
-trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
-  //V1 persisters
-  implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
-  implicit val rechnungVerschicktEventPersister = persister[RechnungVerschicktEvent]("rechnung-verschickt-event")
-  implicit val rechnungMahnungVerschicktEventPersister = persister[RechnungMahnungVerschicktEvent]("rechnung-mahnung-verschickt-event")
-  implicit val rechnungBezahltEventPersister = persister[RechnungBezahltEvent]("rechnung-bezahlt-event")
-  implicit val rechnungStorniertEventPersister = persister[RechnungStorniertEvent]("rechnung-storniert-event")
-  implicit val rechnungIdPersister = persister[RechnungId]("rechnung-id")
+trait CommandHandlerComponent {
+  val stammdatenCommandHandler: StammdatenCommandHandler
+  val buchhaltungCommandHandler: BuchhaltungCommandHandler
+}
 
-  val buchhaltungPersisters = List(
-    rechnungModifyPersister,
-    rechnungIdPersister,
-    rechnungVerschicktEventPersister,
-    rechnungMahnungVerschicktEventPersister,
-    rechnungBezahltEventPersister,
-    rechnungStorniertEventPersister
-  )
+trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
+  val sysConfig: SystemConfig
+  val system: ActorSystem
+
+  override val stammdatenCommandHandler: StammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
+  override val buchhaltungCommandHandler: BuchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
 }
