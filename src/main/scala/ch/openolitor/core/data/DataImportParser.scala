@@ -77,11 +77,14 @@ class DataImportParser extends Actor with ActorLogging {
           plz = row.value[String](indexPlz),
           ort = row.value[String](indexOrt),
           bemerkungen = row.value[Option[String]](indexBemerkungen),
+          abweichendeLieferadresse = false,
+          bezeichnungLieferung = None,
           strasseLieferung = None,
           hausNummerLieferung = None,
           adressZusatzLieferung = None,
           plzLieferung = None,
           ortLieferung = None,
+          zusatzinfoLieferung = None,
           //TODO: parse personentypen as well
           typen = Set(Vereinsmitglied.kundentyp),
           ansprechpersonen = personen,
@@ -150,13 +153,14 @@ class DataImportParser extends Actor with ActorLogging {
 
   val parseAbotypen = {
     parse("id", Seq("id", "name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
-      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand", "admin_prozente")) { indexes => row =>
+      "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "saldo_mindestbestand", "admin_prozente", "wird_geplant", "kuendigungsfrist", "vertrag")) { indexes => row =>
       //match column indexes
       val Seq(indexId, indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
         indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
-        indexSaldoMindestbestand, indexAdminProzente, indexWirdGeplant) = indexes
+        indexSaldoMindestbestand, indexAdminProzente, indexWirdGeplant, indexKuendigungsfrist, indexVertrag) = indexes
 
       val idLong = row.value[Long](indexId)
+      val fristeinheitPattern = """(\d+)(M|W)""".r
 
       (
         AbotypId(idLong),
@@ -175,7 +179,15 @@ class DataImportParser extends Actor with ActorLogging {
           zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
           guthabenMindestbestand = row.value[Int](indexSaldoMindestbestand),
           adminProzente = row.value[BigDecimal](indexAdminProzente),
-          wirdGeplant = row.value[Boolean](indexWirdGeplant)
+          wirdGeplant = row.value[Boolean](indexWirdGeplant),
+          kuendigungsfrist = row.value[Option[String]](indexKuendigungsfrist).map {
+            case fristeinheitPattern(wert, "W") => Frist(wert.toInt, Wochenfrist)
+            case fristeinheitPattern(wert, "M") => Frist(wert.toInt, Monatsfrist)
+          },
+          vertragslaufzeit = row.value[Option[String]](indexVertrag).map {
+            case fristeinheitPattern(wert, "W") => Frist(wert.toInt, Wochenfrist)
+            case fristeinheitPattern(wert, "M") => Frist(wert.toInt, Monatsfrist)
+          }
         )
       )
     }

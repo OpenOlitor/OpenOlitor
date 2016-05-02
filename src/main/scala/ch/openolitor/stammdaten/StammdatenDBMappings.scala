@@ -42,6 +42,8 @@ import scala.collection.immutable.TreeMap
 trait StammdatenDBMappings extends DBMappings with LazyLogging {
   import TypeBinder._
 
+  val fristeinheitPattern = """(\d+)(M|W)""".r
+
   // DB type binders for read operations
   implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder(TourId.apply _)
   implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder(DepotId.apply _)
@@ -81,6 +83,11 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val liefereinheitypeBinder: TypeBinder[Liefereinheit] = string.map(Liefereinheit.apply)
   implicit val liefersaisonTypeBinder: TypeBinder[Liefersaison] = string.map(Liefersaison.apply)
   implicit val anredeTypeBinder: TypeBinder[Anrede] = string.map(Anrede.apply)
+  implicit val fristOptionTypeBinder: TypeBinder[Option[Frist]] = string.map {
+    case fristeinheitPattern(wert, "W") => Some(Frist(wert.toInt, Wochenfrist))
+    case fristeinheitPattern(wert, "M") => Some(Frist(wert.toInt, Monatsfrist))
+    case _ => None
+  }
 
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
@@ -138,6 +145,16 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
   implicit val lieferplanungIdOptionBinder = optionSqlBinder[LieferplanungId]
   implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
+  implicit val fristeSqlBinder = new SqlBinder[Frist] {
+    def apply(frist: Frist): Any = {
+      val einheit = frist.einheit match {
+        case Wochenfrist => "W"
+        case Monatsfrist => "M"
+      }
+      s"${frist.wert}$einheit"
+    }
+  }
+  implicit val fristOptionSqlBinder = optionSqlBinder[Frist]
 
   implicit val stringSeqSqlBinder = seqSqlBinder[String]
 
@@ -160,6 +177,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.aktivBis -> parameter(abotyp.aktivBis),
         column.laufzeit -> parameter(abotyp.laufzeit),
         column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
+        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
         column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
         column.preis -> parameter(abotyp.preis),
         column.preiseinheit -> parameter(abotyp.preiseinheit),
@@ -212,10 +230,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.adressZusatz -> parameter(kunde.adressZusatz),
         column.plz -> parameter(kunde.plz),
         column.ort -> parameter(kunde.ort),
+        column.abweichendeLieferadresse -> parameter(kunde.abweichendeLieferadresse),
+        column.bezeichnungLieferung -> parameter(kunde.bezeichnungLieferung),
         column.strasseLieferung -> parameter(kunde.strasseLieferung),
         column.hausNummerLieferung -> parameter(kunde.hausNummerLieferung),
         column.plzLieferung -> parameter(kunde.plzLieferung),
         column.ortLieferung -> parameter(kunde.ortLieferung),
+        column.adressZusatzLieferung -> parameter(kunde.adressZusatzLieferung),
+        column.zusatzinfoLieferung -> parameter(kunde.zusatzinfoLieferung),
         column.typen -> parameter(kunde.typen),
         column.bemerkungen -> parameter(kunde.bemerkungen),
         column.anzahlAbos -> parameter(kunde.anzahlAbos),
