@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import java.util.Date
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.scalax.Tuple24
 
 case class KundeId(id: Long) extends BaseId
 
@@ -39,11 +40,14 @@ case class Kunde(
   plz: String,
   ort: String,
   bemerkungen: Option[String],
+  abweichendeLieferadresse: Boolean,
+  bezeichnungLieferung: Option[String],
   strasseLieferung: Option[String],
   hausNummerLieferung: Option[String],
   adressZusatzLieferung: Option[String],
   plzLieferung: Option[String],
   ortLieferung: Option[String],
+  zusatzinfoLieferung: Option[String],
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
@@ -56,6 +60,37 @@ case class Kunde(
   modifikator: UserId
 ) extends BaseEntity[KundeId]
 
+object Kunde {
+  def unapply(k: Kunde) = Some(Tuple24(
+    k.id: KundeId,
+    k.bezeichnung: String,
+    k.strasse: String,
+    k.hausNummer: Option[String],
+    k.adressZusatz: Option[String],
+    k.plz: String,
+    k.ort: String,
+    k.bemerkungen: Option[String],
+    k.abweichendeLieferadresse: Boolean,
+    k.bezeichnungLieferung: Option[String],
+    k.strasseLieferung: Option[String],
+    k.hausNummerLieferung: Option[String],
+    k.adressZusatzLieferung: Option[String],
+    k.plzLieferung: Option[String],
+    k.ortLieferung: Option[String],
+    k.zusatzinfoLieferung: Option[String],
+    k.typen: Set[KundentypId],
+    //Zusatzinformationen
+    k.anzahlAbos: Int,
+    k.anzahlPendenzen: Int,
+    k.anzahlPersonen: Int,
+    //modification flags
+    k.erstelldat: DateTime,
+    k.ersteller: UserId,
+    k.modifidat: DateTime,
+    k.modifikator: UserId
+  ))
+}
+
 case class KundeDetail(
   id: KundeId,
   bezeichnung: String,
@@ -65,11 +100,14 @@ case class KundeDetail(
   plz: String,
   ort: String,
   bemerkungen: Option[String],
+  abweichendeLieferadresse: Boolean,
+  bezeichnungLieferung: Option[String],
   strasseLieferung: Option[String],
   hausNummerLieferung: Option[String],
   adressZusatzLieferung: Option[String],
   plzLieferung: Option[String],
   ortLieferung: Option[String],
+  zusatzinfoLieferung: Option[String],
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
@@ -93,11 +131,14 @@ case class KundeModify(
   plz: String,
   ort: String,
   bemerkungen: Option[String],
+  abweichendeLieferadresse: Boolean,
+  bezeichnungLieferung: Option[String],
   strasseLieferung: Option[String],
   hausNummerLieferung: Option[String],
   adressZusatzLieferung: Option[String],
   plzLieferung: Option[String],
   ortLieferung: Option[String],
+  zusatzinfoLieferung: Option[String],
   typen: Set[KundentypId],
   pendenzen: Seq[PendenzModify],
   ansprechpersonen: Seq[PersonModify]
