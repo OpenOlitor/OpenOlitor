@@ -23,7 +23,7 @@
 package ch.openolitor.stammdaten
 
 import ch.openolitor.core.domain.CommandHandler
-import ch.openolitor.core.domain.PersistetEvent
+import ch.openolitor.core.domain.PersistentEvent
 import ch.openolitor.core.domain.UserCommand
 import scala.util.Try
 import ch.openolitor.core.domain.EventMetadata
@@ -33,7 +33,7 @@ import akka.actor.ActorSystem
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
-  override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistetEvent]] = {
+  override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]] = {
     case _ => None
   }
 }

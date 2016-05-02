@@ -76,7 +76,6 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(readRepository.getRechnungDetail(id))) ~
-          (put | post)(update[RechnungModify, RechnungId](id)) ~
           delete(remove(id))
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "verschicken") { id =>
@@ -93,23 +92,35 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       }
 
   def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(userId, id)) { result =>
-      complete("")
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status Verschickt")
+      case _ =>
+        complete("")
     }
   }
   def mahnungVerschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungMahnungVerschickenCommand(userId, id)) { result =>
-      complete("")
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungMahnungVerschickenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status MahnungVerschickt")
+      case _ =>
+        complete("")
     }
   }
   def bezahlen(id: RechnungId, entity: RechnungModifyBezahlt)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungBezahlenCommand(userId, id, entity)) { result =>
-      complete("")
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungBezahlenCommand(userId, id, entity)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status Bezahlt")
+      case _ =>
+        complete("")
     }
   }
   def stornieren(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungStornierenCommand(userId, id)) { result =>
-      complete("")
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungStornierenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status Storniert")
+      case _ =>
+        complete("")
     }
   }
 }

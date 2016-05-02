@@ -67,17 +67,19 @@ object EntityStore {
   case class DeleteEntityCommand(originator: UserId, id: BaseId) extends UserCommand
 
   //events raised by this aggregateroot
-  case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
-  case class EntityInsertedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent {
+  case class EntityStoreInitialized(meta: EventMetadata) extends PersistentEvent
+  case class EntityInsertedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistentEvent {
     val idType = id.getClass
   }
-  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistetEvent {
+  case class EntityUpdatedEvent[I <: BaseId, E <: AnyRef](meta: EventMetadata, id: I, entity: E) extends PersistentEvent {
     val idType = id.getClass
   }
-  case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistetEvent
+  case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistentEvent
 
   // other actor messages
   case object CheckDBEvolution
+
+  case object UserCommandFailed
 }
 
 //json protocol
@@ -127,7 +129,7 @@ trait EntityStore extends AggregateRoot
    *
    * @param evt Event to apply
    */
-  override def updateState(evt: PersistetEvent): Unit = {
+  override def updateState(evt: PersistentEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
       case EntityStoreInitialized(_) =>
@@ -336,6 +338,7 @@ trait EntityStore extends AggregateRoot
           persist(resultingEvent)(afterEventPersisted)
         case Failure(e) =>
           log.error(s"There was an error proccessing the command:$command, error:${e.getMessage}")
+          sender ! UserCommandFailed
       }
       if (result.isEmpty) {
         log.error(s"created => Received unknown command or no module handler handled the command:$command")

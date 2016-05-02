@@ -30,7 +30,7 @@ import ch.openolitor._
 import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.domain._
 
-trait EventService[E <: PersistetEvent] {
+trait EventService[E <: PersistentEvent] {
   type Handle = (E => Unit)
   val handle: Handle
 }
@@ -44,7 +44,7 @@ trait EntityStoreViewComponent extends Actor {
   val updateService: EventService[EntityUpdatedEvent[_, _]]
   val deleteService: EventService[EntityDeletedEvent[_]]
 
-  val aktionenService: EventService[PersistetEvent]
+  val aktionenService: EventService[PersistentEvent]
 
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
     case _: Exception => Restart
@@ -86,7 +86,7 @@ trait EntityStoreView extends PersistentView with ActorLogging {
       deleteService.handle(e)
     case Startup =>
       log.debug("Received startup command")
-    case e: PersistetEvent =>
+    case e: PersistentEvent =>
       // handle custom events
       aktionenService.handle(e)
   }
