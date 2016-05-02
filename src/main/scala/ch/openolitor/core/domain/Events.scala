@@ -27,7 +27,7 @@ import org.joda.time.DateTime
 
 case class EventMetadata(originator: UserId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
 
-trait PersistetEvent extends Serializable {
+trait PersistentEvent extends Serializable {
   val meta: EventMetadata
 }
 

@@ -35,7 +35,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 package events {
 
-  sealed abstract class PersistedEventPersister[T <: PersistetEvent: ClassTag, V <: Version: VersionInfo](key: String, entityPersisters: Persisters) extends Persister[T, V](key) with LazyLogging {
+  sealed abstract class PersistedEventPersister[T <: PersistentEvent: ClassTag, V <: Version: VersionInfo](key: String, entityPersisters: Persisters) extends Persister[T, V](key) with LazyLogging {
 
     def persist(t: T): Persisted = {
       Persisted(key, currentVersion, toBytes(t))

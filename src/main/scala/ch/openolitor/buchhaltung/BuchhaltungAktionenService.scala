@@ -55,7 +55,7 @@ class DefaultBuchhaltungAktionenService(sysConfig: SystemConfig, override val sy
 /**
  * Actor zum Verarbeiten der Aktionen für das Buchhaltung Modul
  */
-class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistetEvent] with LazyLogging with AsyncConnectionPoolContextAware
+class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with BuchhaltungDBMappings {
   self: BuchhaltungRepositoryComponent =>
 

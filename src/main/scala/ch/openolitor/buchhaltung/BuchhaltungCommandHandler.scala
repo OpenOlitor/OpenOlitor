@@ -24,7 +24,7 @@ package ch.openolitor.buchhaltung
 
 import ch.openolitor.core.domain.CommandHandler
 import ch.openolitor.core.domain.EventMetadata
-import ch.openolitor.core.domain.PersistetEvent
+import ch.openolitor.core.domain.PersistentEvent
 import ch.openolitor.buchhaltung.models.RechnungId
 import ch.openolitor.buchhaltung.models.RechnungModify
 import ch.openolitor.core.models.UserId
@@ -46,17 +46,17 @@ object BuchhaltungCommandHandler {
   case class RechnungBezahlenCommand(originator: UserId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
   case class RechnungStornierenCommand(originator: UserId, id: RechnungId) extends UserCommand
 
-  case class RechnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistetEvent with JSONSerializable
-  case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistetEvent with JSONSerializable
-  case class RechnungBezahltEvent(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt) extends PersistetEvent with JSONSerializable
-  case class RechnungStorniertEvent(meta: EventMetadata, id: RechnungId) extends PersistetEvent with JSONSerializable
+  case class RechnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
+  case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
+  case class RechnungBezahltEvent(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt) extends PersistentEvent with JSONSerializable
+  case class RechnungStorniertEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
 }
 
 trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware {
   self: BuchhaltungRepositoryComponent =>
   import BuchhaltungCommandHandler._
 
-  override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistetEvent]] = {
+  override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]] = {
     case RechnungVerschickenCommand(userId, id: RechnungId) =>
       DB readOnly { implicit session =>
         writeRepository.getById(rechnungMapping, id) map { rechnung =>

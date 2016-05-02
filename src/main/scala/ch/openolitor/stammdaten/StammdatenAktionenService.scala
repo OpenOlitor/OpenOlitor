@@ -50,7 +50,7 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
 /**
  * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
  */
-class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistetEvent] with LazyLogging with AsyncConnectionPoolContextAware
+class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with StammdatenDBMappings {
   self: StammdatenRepositoryComponent =>
 
