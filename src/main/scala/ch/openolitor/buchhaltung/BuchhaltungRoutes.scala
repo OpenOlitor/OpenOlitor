@@ -76,7 +76,6 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(readRepository.getRechnungDetail(id))) ~
-          (put | post)(update[RechnungModify, RechnungId](id)) ~
           delete(remove(id))
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "verschicken") { id =>
