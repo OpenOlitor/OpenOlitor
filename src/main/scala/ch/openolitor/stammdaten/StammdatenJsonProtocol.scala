@@ -67,14 +67,14 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val fristeinheitFormat = new JsonFormat[Fristeinheit] {
     def write(obj: Fristeinheit): JsValue =
       obj match {
-        case Wochenfrist => JsString("Woche")
-        case Monatsfrist => JsString("Monat")
+        case Wochenfrist => JsString("Wochen")
+        case Monatsfrist => JsString("Monate")
       }
 
     def read(json: JsValue): Fristeinheit =
       json match {
-        case JsString("Woche") => Wochenfrist
-        case JsString("Monat") => Monatsfrist
+        case JsString("Wochen") => Wochenfrist
+        case JsString("Monate") => Monatsfrist
         case pe => sys.error(s"Unknown Fristeinheit:$pe")
       }
   }
