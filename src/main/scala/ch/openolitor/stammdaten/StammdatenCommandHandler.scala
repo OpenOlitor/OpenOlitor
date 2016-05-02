@@ -20,33 +20,24 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.eventsourcing
+package ch.openolitor.stammdaten
 
-import stamina._
-import stamina.json._
-import ch.openolitor.buchhaltung._
-import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.core.domain.EntityStoreJsonProtocol
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
-import zangelo.spray.json.AutoProductFormats
-import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.domain.CommandHandler
+import ch.openolitor.core.domain.PersistetEvent
+import ch.openolitor.core.domain.UserCommand
+import scala.util.Try
+import ch.openolitor.core.domain.EventMetadata
+import ch.openolitor.core.SystemConfig
+import akka.actor.ActorSystem
 
-trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
-  //V1 persisters
-  implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
-  implicit val rechnungVerschicktEventPersister = persister[RechnungVerschicktEvent]("rechnung-verschickt-event")
-  implicit val rechnungMahnungVerschicktEventPersister = persister[RechnungMahnungVerschicktEvent]("rechnung-mahnung-verschickt-event")
-  implicit val rechnungBezahltEventPersister = persister[RechnungBezahltEvent]("rechnung-bezahlt-event")
-  implicit val rechnungStorniertEventPersister = persister[RechnungStorniertEvent]("rechnung-storniert-event")
-  implicit val rechnungIdPersister = persister[RechnungId]("rechnung-id")
+trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings {
+  self: StammdatenRepositoryComponent =>
 
-  val buchhaltungPersisters = List(
-    rechnungModifyPersister,
-    rechnungIdPersister,
-    rechnungVerschicktEventPersister,
-    rechnungMahnungVerschicktEventPersister,
-    rechnungBezahltEventPersister,
-    rechnungStorniertEventPersister
-  )
+  override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistetEvent]] = {
+    case _ => None
+  }
+}
+
+class DefaultStammdatenCommandHandler(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenCommandHandler
+    with DefaultStammdatenRepositoryComponent {
 }

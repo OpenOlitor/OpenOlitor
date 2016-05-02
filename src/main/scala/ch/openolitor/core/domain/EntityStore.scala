@@ -55,16 +55,16 @@ object EntityStore {
   val persistenceId = "entity-store"
 
   case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], BaseId]) extends State
-  def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[EntityStore], sysConfig, evolution)
+  def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultEntityStore], sysConfig, evolution)
 
   //base commands
-  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends Command {
+  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends UserCommand {
     val entityType = entity.getClass
   }
-  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends Command {
+  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends UserCommand {
     val entityType = entity.getClass
   }
-  case class DeleteEntityCommand(originator: UserId, id: BaseId) extends Command
+  case class DeleteEntityCommand(originator: UserId, id: BaseId) extends UserCommand
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistetEvent
@@ -88,9 +88,14 @@ trait EntityStoreJsonProtocol extends BaseJsonProtocol {
   implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)
 }
 
-class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) extends AggregateRoot with ConnectionPoolContextAware {
+trait EntityStore extends AggregateRoot
+    with ConnectionPoolContextAware
+    with CommandHandlerComponent {
+
   import EntityStore._
   import AggregateRoot._
+
+  val evolution: Evolution
 
   log.debug(s"EntityStore: created")
 
@@ -98,6 +103,8 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
 
   type S = EventStoreState
   override var state: EventStoreState = EventStoreState(0, 0, Map())
+
+  lazy val moduleCommandHandlers = List(stammdatenCommandHandler, buchhaltungCommandHandler)
 
   def newId[E, I <: BaseId](clOf: Class[_ <: BaseId])(implicit f: Long => I): I = {
     val id: Long = state.dbSeeds.get(clOf).map { id =>
@@ -321,8 +328,20 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
     case GetState =>
       log.debug(s"created => GetState")
       sender ! state
+    case command: UserCommand =>
+      val result = (moduleCommandHandlers map (_.handle(metadata(command.originator))(command))).flatten map {
+        case Success(resultingEvent) =>
+          log.debug(s"handled command: $command in module specific command handler.")
+          state = incState
+          persist(resultingEvent)(afterEventPersisted)
+        case Failure(e) =>
+          log.error(s"There was an error proccessing the command:$command, error:${e.getMessage}")
+      }
+      if (result.isEmpty) {
+        log.error(s"created => Received unknown command or no module handler handled the command:$command")
+      }
     case other =>
-      log.error(s"created => Received unknown command:$other")
+      log.error(s"received unknown command:$other")
   }
 
   def metadata(userId: UserId) = {
@@ -346,4 +365,9 @@ class EntityStore(override val sysConfig: SystemConfig, evolution: Evolution) ex
   }
 
   override val receiveCommand = uninitialized
+}
+
+class DefaultEntityStore(override val sysConfig: SystemConfig, override val evolution: Evolution) extends EntityStore
+    with DefaultCommandHandlerComponent {
+  val system = context.system
 }

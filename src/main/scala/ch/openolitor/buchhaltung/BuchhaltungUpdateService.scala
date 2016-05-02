@@ -65,11 +65,7 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
       writeRepository.getById(rechnungMapping, id) map { entity =>
         //map all updatable fields
         val copy = copyFrom(entity, update)
-        if (entity.status == Erstellt && update.einbezahlterBetrag.isDefined && update.eingangsDatum.isDefined) {
-          writeRepository.updateEntity[Rechnung, RechnungId](copy.copy(status = Bezahlt))
-        } else {
-          writeRepository.updateEntity[Rechnung, RechnungId](copy)
-        }
+        writeRepository.updateEntity[Rechnung, RechnungId](copy)
       }
     }
   }

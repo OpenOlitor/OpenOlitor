@@ -60,4 +60,6 @@ trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
   override val insertService = BuchhaltungInsertService(sysConfig, system)
   override val updateService = BuchhaltungUpdateService(sysConfig, system)
   override val deleteService = BuchhaltungDeleteService(sysConfig, system)
+
+  override val aktionenService = BuchhaltungAktionenService(sysConfig, system)
 }

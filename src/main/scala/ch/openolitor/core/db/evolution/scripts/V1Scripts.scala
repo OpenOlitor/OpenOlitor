@@ -479,7 +479,7 @@ object V1Scripts {
         rechnungs_datum datetime not null,
         faelligkeits_datum datetime not null,
         eingangs_datum datetime,
-        status varchar(10) not null,
+        status varchar(20) not null,
         referenz_nummer varchar(27) not null,
         esr_nummer varchar(54) not null,
         strasse varchar(50) not null,

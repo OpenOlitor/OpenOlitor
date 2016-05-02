@@ -25,11 +25,17 @@ package ch.openolitor.core.domain
 import akka.persistence._
 import akka.actor._
 import java.util.UUID
+import ch.openolitor.core.models.UserId
+
+trait State
+
+trait Command
+
+trait UserCommand extends Command {
+  val originator: UserId
+}
 
 object AggregateRoot {
-  trait State
-  trait Command
-
   case object KillAggregate extends Command
 
   case object GetState extends Command

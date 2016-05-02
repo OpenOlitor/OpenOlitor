@@ -78,7 +78,40 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
         get(detail(readRepository.getRechnungDetail(id))) ~
           (put | post)(update[RechnungModify, RechnungId](id)) ~
           delete(remove(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "verschicken") { id =>
+        (post)(verschicken(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "mahnungverschicken") { id =>
+        (post)(mahnungVerschicken(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "bezahlen") { id =>
+        (post)(entity(as[RechnungModifyBezahlt]) { entity => bezahlen(id, entity) })
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "stornieren") { id =>
+        (post)(stornieren(id))
       }
+
+  def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(userId, id)) { result =>
+      complete("")
+    }
+  }
+  def mahnungVerschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungMahnungVerschickenCommand(userId, id)) { result =>
+      complete("")
+    }
+  }
+  def bezahlen(id: RechnungId, entity: RechnungModifyBezahlt)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungBezahlenCommand(userId, id, entity)) { result =>
+      complete("")
+    }
+  }
+  def stornieren(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungStornierenCommand(userId, id)) { result =>
+      complete("")
+    }
+  }
 }
 
 class DefaultBuchhaltungRoutes(
