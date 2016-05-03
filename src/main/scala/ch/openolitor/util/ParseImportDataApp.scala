@@ -28,6 +28,7 @@ import ch.openolitor.core.data.DataImportParser._
 import java.io.File
 import scala.reflect.runtime.universe._
 import ch.openolitor.core.models._
+import java.io.FileInputStream
 
 /**
  * App starting the dataimportparser itself printing results to console
@@ -56,7 +57,7 @@ object ParseImportDataApp extends App {
 
     override def preStart(): Unit = {
       print("Sending parse command to parser")
-      parser ! ParseSpreadsheet(file)
+      parser ! ParseSpreadsheet(new FileInputStream(file))
     }
 
     def print[E <: BaseEntity[_]: TypeTag](resultList: List[E]): Unit = {

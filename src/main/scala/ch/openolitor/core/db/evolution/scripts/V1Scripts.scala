@@ -497,8 +497,10 @@ object V1Scripts {
     }
   }
 
-  val scripts = Seq(
+  val dbInitializationScripts = Seq(
     StammdatenDBInitializationScript,
     BuchhaltungDBInitializationScript
   )
+
+  val scripts = dbInitializationScripts
 }

@@ -20,10 +20,41 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.status
+package ch.openolitor.core.system
 
-import spray.json.DefaultJsonProtocol
+import spray.routing._
+import spray.http._
+import spray.http.MediaTypes._
+import spray.httpx.marshalling.ToResponseMarshallable._
+import spray.httpx.SprayJsonSupport._
+import spray.routing.Directive.pimpApply
+import spray.json._
+import spray.json.DefaultJsonProtocol._
+import ch.openolitor.core._
+import scala.util.Properties
 
-object StatusJsonProtocol extends DefaultJsonProtocol {
-  implicit val statusFormat = jsonFormat1(Status)
+case class Status(buildNr: String)
+
+trait StatusRoutes extends HttpService with DefaultRouteService {
+
+  import StatusJsonProtocol._
+
+  val statusRoute =
+    pathPrefix("status") {
+      statusRoutes()
+    }
+
+  /**
+   * Project Status routes
+   */
+  def statusRoutes(): Route =
+    path("staticInfo") {
+      get {
+        respondWithMediaType(`application/json`) {
+          complete {
+            Status(Properties.envOrElse("application_buildnr", "dev"))
+          }
+        }
+      }
+    }
 }

@@ -55,7 +55,7 @@ import scala.util._
 import ch.openolitor.core.BaseJsonProtocol.IdResponse
 import stamina.Persister
 import stamina.json.JsonPersister
-import ch.openolitor.status.StatusRoutes
+import ch.openolitor.core.system.StatusRoutes
 import java.io.ByteArrayInputStream
 import ch.openolitor.core.filestore._
 import spray.routing.StandardRoute
@@ -66,6 +66,8 @@ import ch.openolitor.buchhaltung.BuchhaltungRoutes
 import ch.openolitor.buchhaltung.DefaultBuchhaltungRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungRoutes
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.system.DefaultSystemRouteService
+import ch.openolitor.core.system.SystemRouteService
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -80,13 +82,15 @@ trait RouteServiceComponent {
   val fileStore: FileStore
   val actorRefFactory: ActorRefFactory
 
-  val stammdatenRoute: Route
-  val buchhaltungRoute: Route
+  val stammdatenRouteService: StammdatenRoutes
+  val buchhaltungRouteService: BuchhaltungRoutes
+  val systemRouteService: SystemRouteService
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent {
-  override lazy val stammdatenRoute = new DefaultStammdatenRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory).stammdatenRoute
-  override lazy val buchhaltungRoute = new DefaultBuchhaltungRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory).buchhaltungRoute
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, sysConfig, system, actorRefFactory)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -102,8 +106,6 @@ trait RouteServiceActor
     with BaseJsonProtocol {
   self: RouteServiceComponent =>
 
-  var error: Option[Throwable] = None
-
   //initially run db evolution  
   override def preStart() = {
     runDBEvolution()
@@ -117,23 +119,9 @@ trait RouteServiceActor
   // other things here, like request stream processing
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
+  statusRoute
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ statusRoute ~ stammdatenRoute ~ buchhaltungRoute ~ fileStoreRoute))
-
-  val systemRoutes = pathPrefix("admin") {
-    systemRoute()
-  }
-
-  def systemRoute(): Route =
-    path("status") {
-      get {
-        error map { e =>
-          complete(StatusCodes.BadRequest, e)
-        } getOrElse {
-          complete("Ok")
-        }
-      }
-    }
+  val initializedDB = runRoute(cors(helloWorldRoute ~ systemRouteService.systemRoutes ~ stammdatenRouteService.stammdatenRoute ~ buchhaltungRouteService.buchhaltungRoute ~ fileStoreRoute))
 
   val dbEvolutionRoutes =
     pathPrefix("db") {
@@ -157,7 +145,7 @@ trait RouteServiceActor
         complete("")
       case Failure(e) =>
         logger.warn(s"db evolution failed", e)
-        error = Some(e)
+        systemRouteService.handleError(e)
         complete(StatusCodes.BadRequest, e)
     }
   }

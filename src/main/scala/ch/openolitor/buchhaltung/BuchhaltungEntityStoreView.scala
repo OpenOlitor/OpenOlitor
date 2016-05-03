@@ -45,7 +45,6 @@ trait BuchhaltungEntityStoreView extends EntityStoreView
   override val module = "buchhaltung"
 
   def initializeEntityStoreView = {
-    writeRepository.cleanupDatabase
   }
 }
 
