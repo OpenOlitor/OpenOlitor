@@ -31,7 +31,7 @@ import ch.openolitor.core.SystemConfig
 import akka.actor.ActorSystem
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings {
-  self: StammdatenRepositoryComponent =>
+  self: StammdatenWriteRepositoryComponent =>
 
   override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]] = {
     case _ => None
@@ -39,5 +39,5 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 }
 
 class DefaultStammdatenCommandHandler(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenCommandHandler
-    with DefaultStammdatenRepositoryComponent {
+    with DefaultStammdatenWriteRepositoryComponent {
 }

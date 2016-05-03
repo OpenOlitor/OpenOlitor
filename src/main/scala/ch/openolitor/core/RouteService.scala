@@ -27,7 +27,6 @@ import ch.openolitor.helloworld.HelloWorldRoutes
 import ch.openolitor.stammdaten.StammdatenRoutes
 import ch.openolitor.stammdaten.DefaultStammdatenRoutes
 import spray.routing.HttpService
-import ch.openolitor.stammdaten.DefaultStammdatenRepositoryComponent
 import ch.openolitor.core._
 import ch.openolitor.core.models._
 import spray.httpx.marshalling._
@@ -63,7 +62,6 @@ import akka.util.ByteString
 import ch.openolitor.stammdaten.StreamSupport
 import scala.reflect.ClassTag
 import ch.openolitor.buchhaltung.BuchhaltungRoutes
-import ch.openolitor.buchhaltung.DefaultBuchhaltungRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungRoutes
 import com.typesafe.scalalogging.LazyLogging
 
@@ -85,8 +83,8 @@ trait RouteServiceComponent {
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent {
-  override lazy val stammdatenRoute = new DefaultStammdatenRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory).stammdatenRoute
-  override lazy val buchhaltungRoute = new DefaultBuchhaltungRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory).buchhaltungRoute
+  override lazy val stammdatenRoute = new DefaultStammdatenRoutes(entityStore, sysConfig, fileStore, actorRefFactory).stammdatenRoute
+  override lazy val buchhaltungRoute = new DefaultBuchhaltungRoutes(entityStore, sysConfig, fileStore, actorRefFactory).buchhaltungRoute
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)

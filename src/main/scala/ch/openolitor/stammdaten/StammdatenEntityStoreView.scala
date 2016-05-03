@@ -33,19 +33,19 @@ object StammdatenEntityStoreView {
 }
 
 class DefaultStammdatenEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends StammdatenEntityStoreView
-  with DefaultStammdatenRepositoryComponent
+  with DefaultStammdatenWriteRepositoryComponent
 
 /**
  * Zusammenfügen des Componenten (cake pattern) zu der persistentView
  */
 trait StammdatenEntityStoreView extends EntityStoreView
     with StammdatenEntityStoreViewComponent with ConnectionPoolContextAware {
-  self: StammdatenRepositoryComponent =>
+  self: StammdatenWriteRepositoryComponent =>
 
   override val module = "stammdaten"
 
   def initializeEntityStoreView = {
-    writeRepository.cleanupDatabase
+    stammdatenWriteRepository.cleanupDatabase
   }
 }
 

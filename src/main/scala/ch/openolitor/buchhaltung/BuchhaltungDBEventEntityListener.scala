@@ -41,13 +41,13 @@ object BuchhaltungDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungDBEventEntityListener], sysConfig, system)
 }
 
-class DefaultBuchhaltungDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends BuchhaltungDBEventEntityListener(sysConfig) with DefaultBuchhaltungRepositoryComponent
+class DefaultBuchhaltungDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends BuchhaltungDBEventEntityListener(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent
 
 /**
  * Listen on DBEvents and adjust calculated fields within this module
  */
 class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with BuchhaltungDBMappings with AsyncConnectionPoolContextAware {
-  this: BuchhaltungRepositoryComponent =>
+  this: BuchhaltungWriteRepositoryComponent =>
   import BuchhaltungDBEventEntityListener._
 
   override def preStart() {
@@ -81,9 +81,9 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
     id: I, mod: E => E
   )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(syntax, id) map { result =>
+      buchhaltungWriteRepository.getById(syntax, id) map { result =>
         val copy = mod(result)
-        writeRepository.updateEntity[E, I](copy)
+        buchhaltungWriteRepository.updateEntity[E, I](copy)
       }
     }
   }
