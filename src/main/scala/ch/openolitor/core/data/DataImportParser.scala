@@ -65,8 +65,11 @@ class DataImportParser extends Actor with ActorLogging {
     val (lieferplanungen, _) = doc.withSheet("Lieferplanungen")(parseLieferplanungen)
     val (vertriebsarten, _) = doc.withSheet("Vertriebsarten")(parseVertriebsarten)
     val (lieferungen, _) = doc.withSheet("Lieferungen")(parseLieferungen(abotypen, vertriebsarten, abwesenheiten, lieferplanungen))
-    val (produkte, _) = doc.withSheet("Produkte")(parseProdukte)
     val (produzenten, _) = doc.withSheet("Produzenten")(parseProduzenten)
+    val (produktkategorien, _) = doc.withSheet("Produktkategorien")(parseProduktekategorien)
+    val (produktProduzenten, _) = doc.withSheet("ProduktProduzenten")(parseProdukteProduzenten)
+    val (produktProduktekategorien, _) = doc.withSheet("ProduktProduktkategorien")(parseProdukteProduktkategorien)
+    val (produkte, _) = doc.withSheet("Produkte")(parseProdukte(produzenten, produktProduzenten, produktkategorien, produktProduktekategorien))
     val (lieferpositionen, _) = doc.withSheet("Lieferpositionen")(parseLieferpositionen(produkte, produzenten))
     val (bestellungen, _) = doc.withSheet("Bestellungen")(parseBestellungen(produzenten, lieferplanungen))
     val (bestellpositionen, _) = doc.withSheet("Bestellpositionen")(parseBestellpositionen(produkte))
@@ -393,25 +396,88 @@ class DataImportParser extends Actor with ActorLogging {
     }
   }
 
-  def parseProdukte = {
-    parse[Produkt, ProduktId]("id", Seq("name", "verfuegbar_von", "verfuegbar_bis", "kategorien", "standard_menge", "einheit",
-      "preis", "produzenten") ++ modifiCols) { id =>
+  def parseProdukteProduzenten = {
+    parse[ProduktProduzent, ProduktProduzentId]("id", Seq("produkt_id", "produzent_id") ++ modifiCols) { id =>
       indexes => row =>
         //match column indexes
-        val Seq(indexName, indexVerfuegbarVon, indexVerfuegbarBis, indexKategorien, indexStandardMenge, indexEinheit,
-          indexPreis, indexProduzenten) = indexes
+        val Seq(indexProduktId, indexProduzentId) = indexes
         val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
+        ProduktProduzent(
+          ProduktProduzentId(id),
+          produktId = ProduktId(row.value[Long](indexProduktId)),
+          produzentId = ProduzentId(row.value[Long](indexProduzentId)),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
+    }
+  }
+
+  def parseProdukteProduktkategorien = {
+    parse[ProduktProduktekategorie, ProduktProduktekategorieId]("id", Seq("produkt_id", "produktekategorie_id") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexProduktId, indexProduktekategorieId) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        ProduktProduktekategorie(
+          ProduktProduktekategorieId(id),
+          produktId = ProduktId(row.value[Long](indexProduktId)),
+          produktekategorieId = ProduktekategorieId(row.value[Long](indexProduktekategorieId)),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
+    }
+  }
+
+  def parseProduktekategorien = {
+    parse[Produktekategorie, ProduktekategorieId]("id", Seq("beschreibung") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexBeschreibung) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        Produktekategorie(
+          ProduktekategorieId(id),
+          beschreibung = row.value[String](indexBeschreibung),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
+    }
+  }
+
+  def parseProdukte(produzenten: List[Produzent], produktProduzenten: List[ProduktProduzent], produktkategorien: List[Produktekategorie], produktProduktekategorien: List[ProduktProduktekategorie]) = {
+    parse[Produkt, ProduktId]("id", Seq("name", "verfuegbar_von", "verfuegbar_bis", "standard_menge", "einheit",
+      "preis") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexName, indexVerfuegbarVon, indexVerfuegbarBis, indexStandardMenge, indexEinheit,
+          indexPreis) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        val produktId = ProduktId(id)
+        val produzentenIds = produktProduzenten.filter(_.produktId == produktId).map(_.produzentId)
+        val produzentenName = produzenten.filter(p => produzentenIds.contains(p.id)).map(_.name)
+
+        val kategorienIds = produktProduktekategorien.filter(_.produktId == produktId).map(_.produktekategorieId)
+        val kategorien = produktkategorien.filter(p => kategorienIds.contains(p.id)).map(_.beschreibung)
+
         Produkt(
-          id = ProduktId(id),
+          produktId,
           name = row.value[String](indexName),
           verfuegbarVon = Liefersaison(row.value[String](indexVerfuegbarVon)),
           verfuegbarBis = Liefersaison(row.value[String](indexVerfuegbarBis)),
-          kategorien = row.value[Seq[String]](indexKategorien),
+          kategorien,
           standardmenge = row.value[Option[BigDecimal]](indexStandardMenge),
           einheit = Liefereinheit(row.value[String](indexEinheit)),
           preis = row.value[BigDecimal](indexPreis),
-          produzenten = row.value[Seq[String]](indexProduzenten),
+          produzentenName,
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = UserId(row.value[Long](indexErsteller)),
