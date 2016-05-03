@@ -44,7 +44,8 @@ case class Projekt(
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[ProjektId]
+  modifikator: UserId
+) extends BaseEntity[ProjektId]
 
 case class ProjektModify(
   bezeichnung: String,
@@ -55,7 +56,8 @@ case class ProjektModify(
   ort: Option[String],
   preiseSichtbar: Boolean = true,
   preiseEditierbar: Boolean = false,
-  waehrung: Waehrung = CHF) extends JSONSerializable
+  waehrung: Waehrung = CHF
+) extends JSONSerializable
 
 case class KundentypId(id: String)
 
@@ -68,15 +70,16 @@ trait Kundentyp {
 }
 
 case class CustomKundentyp(
-  id: CustomKundentypId,
-  override val kundentyp: KundentypId,
-  override val beschreibung: Option[String],
-  anzahlVerknuepfungen: Int,
-  //modification flags
-  erstelldat: DateTime,
-  ersteller: UserId,
-  modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[CustomKundentypId] with Kundentyp {
+    id: CustomKundentypId,
+    override val kundentyp: KundentypId,
+    override val beschreibung: Option[String],
+    anzahlVerknuepfungen: Int,
+    //modification flags
+    erstelldat: DateTime,
+    ersteller: UserId,
+    modifidat: DateTime,
+    modifikator: UserId
+) extends BaseEntity[CustomKundentypId] with Kundentyp {
   override def system = false
 }
 

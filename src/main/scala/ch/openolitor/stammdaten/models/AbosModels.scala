@@ -82,7 +82,6 @@ case class DepotlieferungAbo(
   abotypName: String,
   depotId: DepotId,
   depotName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime],
   guthabenVertraglich: Option[Int],
@@ -107,7 +106,6 @@ case class DepotlieferungAboDetail(
   abotypName: String,
   depotId: DepotId,
   depotName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime],
   guthabenVertraglich: Option[Int],
@@ -134,7 +132,6 @@ case class DepotlieferungAboModify(
   abotypName: String,
   depotId: DepotId,
   depotName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime]
 ) extends AboModify
@@ -147,7 +144,6 @@ case class HeimlieferungAbo(
   abotypName: String,
   tourId: TourId,
   tourName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime],
   guthabenVertraglich: Option[Int],
@@ -172,7 +168,6 @@ case class HeimlieferungAboDetail(
   abotypName: String,
   tourId: TourId,
   tourName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime],
   guthabenVertraglich: Option[Int],
@@ -199,7 +194,6 @@ case class HeimlieferungAboModify(
   abotypName: String,
   tourId: TourId,
   tourName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime]
 ) extends AboModify
@@ -210,7 +204,6 @@ case class PostlieferungAbo(
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime],
   guthabenVertraglich: Option[Int],
@@ -233,7 +226,6 @@ case class PostlieferungAboDetail(
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime],
   guthabenVertraglich: Option[Int],
@@ -258,7 +250,6 @@ case class PostlieferungAboModify(
   kunde: String,
   abotypId: AbotypId,
   abotypName: String,
-  liefertag: Lieferzeitpunkt,
   start: DateTime,
   ende: Option[DateTime]
 ) extends AboModify

@@ -72,16 +72,29 @@ object ParseImportDataApp extends App {
     }
 
     def receive = {
-      case ImportResult(projekt, kunden, personen, abotypen, depots, tours, abos, pendenzen) =>
+      case r: ImportResult =>
         print("Received import result")
-        print(projekt)
-        print(kunden)
-        print(personen)
-        print(abotypen)
-        print(depots)
-        print(tours)
-        print(abos)
-        print(pendenzen)
+        print(r.projekt)
+        print(r.kundentypen)
+        print(r.kunden)
+        print(r.personen)
+        print(r.pendenzen)
+        print(r.touren)
+        print(r.depots)
+        print(r.abotypen)
+        print(r.vertriebsarten)
+        print(r.lieferungen)
+        print(r.lieferplanungen)
+        print(r.lieferpositionen)
+        print(r.abos)
+        print(r.abwesenheiten)
+        print(r.produkte)
+        print(r.produktekategorien)
+        print(r.produktProduktekategorien)
+        print(r.produzenten)
+        print(r.produktProduzenten)
+        print(r.bestellungen)
+        print(r.bestellpositionen)
         print("Parsing finished")
         context.system.shutdown
       case Terminated(_) =>
