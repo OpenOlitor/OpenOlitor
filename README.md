@@ -1,5 +1,9 @@
 [![AUR](https://img.shields.io/aur/license/yaourt.svg?maxAge=2592000)](https://raw.githubusercontent.com/OpenOlitor/OpenOlitor/master/LICENSE)
 
+Falls du Fragen hast oder dich mit uns über OpenOlitor austauschen möchtest: Komm in den Gitter-Chat!
+
+[![Gitter](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/OpenOlitor)
+
 # OpenOlitor
 Administrationsplattform für Vertragslandwirtschaftsprojekte
 Plateforme d'administration pour des projets d’agriculture contractuelle de proximité
@@ -36,6 +40,11 @@ Nach dem Release der ersten Version wird die Roadmap durch den Version "OpenOlit
 ## Kontakt
 Weitere Informationen und Auskünfte könnten unter folgender Email-Adresse eingeholt werden:
 info [at] openolitor.ch
+
+### Français
+
+Si tu as de questions où quand tu veux entrer en contact avec les développeur de OpenOlitor: Viens nous voir dans le chat Gitter !
+[![Gitter](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/OpenOlitor)
 
 ## But du projet
 A l'heure actuelle, il existe en Suisse une cinquantaine de projets d'agriculture contractuelle de proximité (ACP). Environ dix nouveaux projets se constituent chaque année. La plupart des projets sont représentés dans la FRACP - Fédération romande de l'agriculture contractuelle de proximité ainsi que dans le VRL - Verband regionale Vertragslandwirtschaft.
