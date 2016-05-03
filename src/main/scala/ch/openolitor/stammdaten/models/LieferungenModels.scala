@@ -39,12 +39,26 @@ object LieferungStatus {
   }
 }
 
+sealed trait KorbStatus
+
+case object WirdGeliefert extends KorbStatus
+case object Geliefert extends KorbStatus
+case object FaelltAusAbwesend extends KorbStatus
+case object FaelltAusSaldoZuTief extends KorbStatus
+
+object KorbStatus {
+  def apply(value: String): KorbStatus = {
+    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief).find(_.toString == value).getOrElse(WirdGeliefert)
+  }
+}
+
 case class LieferplanungId(id: Long) extends BaseId
 
 case class Lieferplanung(
   id: LieferplanungId,
   nr: Int,
   bemerkungen: Option[String],
+  abotypDepotTour: String,
   status: LieferungStatus,
   //modification flags
   erstelldat: DateTime,
@@ -61,7 +75,7 @@ case class LieferplanungModify(
 
 case class LieferplanungCreate(
   bemerkungen: Option[String] = None,
-  status: LieferungStatus = Offen
+  status: LieferungStatus
 ) extends JSONSerializable
 
 case class LieferungId(id: Long) extends BaseId
@@ -76,6 +90,9 @@ case class Lieferung(
   anzahlAbwesenheiten: Int,
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
+  anzahlKoerbeZuLiefern: Int,
+  anzahlKoerbeNichtZuLiefern: Int,
+  zielpreis: Option[BigDecimal],
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
   lieferplanungNr: Option[Int],
@@ -100,8 +117,6 @@ case class LieferungModify(
   lieferplanungId: Option[LieferplanungId],
   lieferplanungNr: Option[Int]
 ) extends JSONSerializable
-
-//case class LieferungModify(datum: DateTime) extends JSONSerializable
 
 case class LieferungAbotypCreate(
   abotypId: AbotypId,
@@ -204,3 +219,17 @@ case class BestellpositionModify(
   preis: Option[BigDecimal],
   anzahl: Int
 ) extends JSONSerializable
+
+case class KorbId(id: Long) extends BaseId
+
+case class Korb(
+  id: KorbId,
+  lieferungId: LieferungId,
+  aboId: AboId,
+  status: KorbStatus,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId
+) extends BaseEntity[KorbId]

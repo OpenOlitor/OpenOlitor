@@ -41,6 +41,7 @@ import scala.collection.immutable.TreeMap
 import scalaz._
 import Scalaz._
 import scala.util.Random
+import scala.collection.immutable.Nil
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -169,7 +170,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               case hl: HeimlieferungDetail => hl.tour.name
               case pl: PostlieferungDetail => ""
             }
-            val atBeschrieb = abotyp.beschreibung.getOrElse("")
+            val atBeschrieb = abotyp.name
 
             val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
               "abotypBeschrieb" -> atBeschrieb,
@@ -177,6 +178,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               "anzahlAbwesenheiten" -> ZERO,
               "durchschnittspreis" -> ZERO,
               "anzahlLieferungen" -> ZERO,
+              "anzahlKoerbeZuLiefern" -> ZERO,
+              "anzahlKoerbeNichtZuLiefern" -> ZERO,
+              "zielpreis" -> abotyp.zielpreis,
               "preisTotal" -> ZERO,
               "status" -> Offen,
               "lieferplanungId" -> None,
@@ -431,6 +435,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit userId: UserId = meta.originator) = {
+    val defaultAbotypDepotTour = ""
     val insert = stammdatenReadRepository.getLatestLieferplanung map {
       case Some(latestLP) => {
         val newNr = latestLP.nr + 1
@@ -438,6 +443,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           lieferplanung,
           "id" -> lieferplanungId,
           "nr" -> newNr,
+          "abotypDepotTour" -> defaultAbotypDepotTour,
           "erstelldat" -> meta.timestamp,
           "ersteller" -> meta.originator,
           "modifidat" -> meta.timestamp,
@@ -451,6 +457,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           lieferplanung,
           "id" -> lieferplanungId,
           "nr" -> firstNr,
+          "abotypDepotTour" -> defaultAbotypDepotTour,
           "erstelldat" -> meta.timestamp,
           "ersteller" -> meta.originator,
           "modifidat" -> meta.timestamp,
@@ -467,9 +474,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](obj)
           }
           //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
-          stammdatenReadRepository.getLieferungenNext() map {
-            _ foreach {
+          var abotypDepotTourF = stammdatenReadRepository.getLieferungenNext() map {
+            _ map {
               lieferung =>
+                logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
                 val lpId = Some(lieferplanungId)
                 val lpNr = Some(obj.nr)
                 val lObj = copyTo[Lieferung, Lieferung](
@@ -481,8 +489,21 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                   //update Lieferung
                   stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lObj)
                 }
-
+                lObj.abotypBeschrieb + " " + lObj.vertriebsartBeschrieb
             }
+          }
+          abotypDepotTourF map {
+            abotypDepotTour =>
+              val abotypDepotTourStr = abotypDepotTour filter { _.nonEmpty } mkString ", "
+              val updatedObj = copyTo[Lieferplanung, Lieferplanung](
+                obj,
+                "abotypDepotTour" -> abotypDepotTourStr
+              )
+
+              DB autoCommit { implicit session =>
+                //update lieferplanung
+                stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
+              }
           }
       }
     }

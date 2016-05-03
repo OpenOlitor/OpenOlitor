@@ -351,15 +351,15 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
     }
   }
 
-  implicit val lieferungAbotypCreateFormat = jsonFormat3(LieferungAbotypCreate)
-  implicit val lieferungModifyFormat = jsonFormat12(LieferungModify)
-  implicit val lieferplanungModifyFormat = jsonFormat3(LieferplanungModify)
+  implicit val lieferungAbotypCreateFormat = autoProductFormat[LieferungAbotypCreate]
+  implicit val lieferungModifyFormat = autoProductFormat[LieferungModify]
+  implicit val lieferplanungModifyFormat = autoProductFormat[LieferplanungModify]
   implicit val lieferplanungCreateFormat = jsonFormat2(LieferplanungCreate)
-  implicit val lieferpositionModifyFormat = jsonFormat10(LieferpositionModify)
-  implicit val bestellungModifyFormat = jsonFormat7(BestellungModify)
-  implicit val bestellungenCreateFormat = jsonFormat1(BestellungenCreate)
-  implicit val bestellpositionModifyFormat = jsonFormat8(BestellpositionModify)
+  implicit val lieferpositionModifyFormat = autoProductFormat[LieferpositionModify]
+  implicit val bestellungModifyFormat = autoProductFormat[BestellungModify]
+  implicit val bestellungenCreateFormat = autoProductFormat[BestellungenCreate]
+  implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
 
-  implicit val projektFormat = jsonFormat14(Projekt)
-  implicit val projektModifyFormat = jsonFormat9(ProjektModify)
+  implicit val projektFormat = autoProductFormat[Projekt]
+  implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 }

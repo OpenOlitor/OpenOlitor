@@ -42,7 +42,7 @@ class EventStoreSerializer extends StaminaAkkaSerializer(EventStoreSerializer.ev
     with BuchhaltungEventStoreSerializer {
 
   override def toBinary(obj: AnyRef): Array[Byte] = {
-    logger.debug(s"EventStoreSerielizer: toBinary: $obj")
+    logger.debug(s"EventStoreSerializer: toBinary: $obj")
     try {
       super.toBinary(obj)
     } catch {
