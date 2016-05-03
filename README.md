@@ -41,7 +41,7 @@ Nach dem Release der ersten Version wird die Roadmap durch den Version "OpenOlit
 Weitere Informationen und Auskünfte könnten unter folgender Email-Adresse eingeholt werden:
 info [at] openolitor.ch
 
-### Français
+# Français
 
 Si tu as de questions où quand tu veux entrer en contact avec les développeur de OpenOlitor: Viens nous voir dans le chat Gitter !
 [![Gitter](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/OpenOlitor)
