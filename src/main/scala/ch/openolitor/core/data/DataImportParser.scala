@@ -68,6 +68,8 @@ class DataImportParser extends Actor with ActorLogging {
     val (produkte, _) = doc.withSheet("Produkte")(parseProdukte)
     val (produzenten, _) = doc.withSheet("Produzenten")(parseProduzenten)
     val (lieferpositionen, _) = doc.withSheet("Lieferpositionen")(parseLieferpositionen(produkte, produzenten))
+    val (bestellungen, _) = doc.withSheet("Bestellungen")(parseBestellungen(produzenten, lieferplanungen))
+    val (bestellpositionen, _) = doc.withSheet("Bestellpositionen")(parseBestellpositionen(produkte))
 
     ImportResult(projekt, kunden, personen, abotypen, depots, tours, abos, pendenzen)
   }
@@ -532,11 +534,8 @@ class DataImportParser extends Actor with ActorLogging {
         }
 
         val abwesenheitByLieferung = abwesenheiten.filter(_.lieferungId == lieferungId)
-        //TODO: calculate durchschnittspreis
         val durchschnittspreis = row.value[BigDecimal](indexDurchschnittspreis)
-        //TODO: calculate anzahlLieferungen
         val anzahlLieferungen = row.value[Int](indexAnzahlLieferungen)
-        //TODO: calculate preisTotal
         val preisTotal = row.value[BigDecimal](indexPreisTotal)
 
         val lieferplanungId = row.value[Option[Long]](indexLieferplanungId).map(LieferplanungId)
@@ -562,8 +561,6 @@ class DataImportParser extends Actor with ActorLogging {
           modifikator = UserId(row.value[Long](indexModifikator)))
     }
   }
-
-  //TODO: parse vertriebsarten
 
   def parseAbos(kundeIdMapping: Map[Long, KundeId], kunden: List[Kunde], abotypIdMapping: Map[Long, AbotypId],
     abotypen: List[Abotyp], depotIdMapping: Map[Long, DepotId], depots: List[Depot],
@@ -626,6 +623,66 @@ class DataImportParser extends Actor with ActorLogging {
                 anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
             }
           }
+    }
+  }
+
+  def parseBestellungen(produzenten: List[Produzent], lieferplanungen: List[Lieferplanung]) = {
+    parse[Bestellung, BestellungId]("id", Seq("produzent_id", "lieferplanung_id", "datum", "datum_abrechnung", "preis_total") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexProduzentId, indexLieferplanungId, indexDatum, indexDatumAbrechnung, indexPreisTotal) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        val produzentId = ProduzentId(row.value[Long](indexProduzentId))
+        val produzent = produzenten.find(_.id == produzentId).getOrElse(sys.error(s"No produzent found with id $produzentId"))
+
+        val lieferplanungId = LieferplanungId(row.value[Long](indexLieferplanungId))
+        val lieferplanungNr = lieferplanungen.find(_.id == id).getOrElse(sys.error(s"No lieferplanung found for id $id")).nr
+
+        Bestellung(
+          id = BestellungId(id),
+          produzentId = produzentId,
+          produzentKurzzeichen = produzent.kurzzeichen,
+          lieferplanungId,
+          lieferplanungNr,
+          datum = row.value[DateTime](indexDatum),
+          datumAbrechnung = row.value[Option[DateTime]](indexDatumAbrechnung),
+          preisTotal = row.value[BigDecimal](indexPreisTotal),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
+    }
+  }
+
+  def parseBestellpositionen(produkte: List[Produkt]) = {
+    parse[Bestellposition, BestellpositionId]("id", Seq("bestellung_id", "produkt_id", "preis_einheit", "einheit", "menge", "preis",
+      "anzahl") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexBestellungId, indexProduktId, indexPreisEinheit, indexEinheit, indexMenge, indexPreis, indexAnzahl) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        val produktId = ProduktId(row.value[Long](indexProduktId))
+        val produkt = produkte.find(_.id == produktId).getOrElse(sys.error(s"No produkt found for id $produktId"))
+
+        Bestellposition(
+          BestellpositionId(id),
+          bestellungId = BestellungId(row.value[Long](indexBestellungId)),
+          produktId,
+          //TODO: verify
+          produktBeschrieb = produkt.name,
+          preisEinheit = row.value[Option[BigDecimal]](indexPreisEinheit),
+          einheit = Liefereinheit(row.value[String](indexEinheit)),
+          menge = row.value[BigDecimal](indexMenge),
+          preis = row.value[Option[BigDecimal]](indexPreis),
+          anzahl = row.value[Int](indexAnzahl),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
     }
   }
 
