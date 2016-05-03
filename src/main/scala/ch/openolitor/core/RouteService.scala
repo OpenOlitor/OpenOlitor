@@ -90,7 +90,7 @@ trait RouteServiceComponent {
 trait DefaultRouteServiceComponent extends RouteServiceComponent {
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, sysConfig, system, actorRefFactory)
+  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, sysConfig, system, fileStore, actorRefFactory)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -119,7 +119,6 @@ trait RouteServiceActor
   // other things here, like request stream processing
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
-  statusRoute
 
   val initializedDB = runRoute(cors(helloWorldRoute ~ systemRouteService.systemRoutes ~ stammdatenRouteService.stammdatenRoute ~ buchhaltungRouteService.buchhaltungRoute ~ fileStoreRoute))
 

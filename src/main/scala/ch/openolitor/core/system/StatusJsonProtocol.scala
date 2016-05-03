@@ -24,6 +24,6 @@ package ch.openolitor.core.system
 
 import spray.json.DefaultJsonProtocol
 
-object StatusJsonProtocol extends DefaultJsonProtocol {
+trait StatusJsonProtocol extends DefaultJsonProtocol {
   implicit val statusFormat = jsonFormat1(Status)
 }

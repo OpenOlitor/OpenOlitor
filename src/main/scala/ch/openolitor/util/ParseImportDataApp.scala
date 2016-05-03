@@ -73,7 +73,7 @@ object ParseImportDataApp extends App {
     }
 
     def receive = {
-      case r: ImportResult =>
+      case r: ParseResult =>
         print("Received import result")
         print(r.projekt)
         print(r.kundentypen)
@@ -98,6 +98,8 @@ object ParseImportDataApp extends App {
         print(r.bestellpositionen)
         print("Parsing finished")
         context.system.shutdown
+      case ParseError(error) =>
+        log.error(s"Couldn't parse file", error)
       case Terminated(_) =>
         log.info("{} has terminated, shutting down system", parser.path)
         context.system.shutdown

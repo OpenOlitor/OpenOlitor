@@ -43,7 +43,7 @@ import java.io.InputStream
 
 object DataImportService {
   case class ImportData(clearDatabaseBeforeImport: Boolean, document: InputStream)
-  case class ImportResult()
+  case class ImportResult(error: Option[String], result: Map[String, Int])
 
   def props(): Props = Props(classOf[DataImportService])
 }
@@ -72,69 +72,82 @@ trait DataImportService extends Actor with ActorLogging
   }
 
   val waitForResult: Receive = {
-    case ImportResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, lieferungen,
+    case e: ParseError =>
+      originator.map(_ ! e)
+    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, lieferungen,
       lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
       produzenten, produktProduzenten, bestellungen, bestellpositionen) =>
-      DB localTx { implicit session =>
-        //clear database
-        if (clearBeforeImport) {
-          log.debug(s"Clear database before importing...")
-          V1Scripts.dbInitializationScripts map { script =>
-            script.execute
+      try {
+        DB localTx { implicit session =>
+          //clear database
+          if (clearBeforeImport) {
+            log.debug(s"Clear database before importing...")
+            V1Scripts.dbInitializationScripts map { script =>
+              script.execute
+            }
           }
+
+          //import entities
+          //TODO: get userid from login
+          implicit val userId = Boot.systemUserId
+          log.debug(s"Start importing data")
+          log.debug(s"Import Projekt...")
+          var result = Map[String, Int]()
+          insertEntity[Projekt, ProjektId](projekt)
+          result = result + ("Projekt" -> 1)
+
+          result = importEntityList[CustomKundentyp, CustomKundentypId]("Kundentypen", kundentypen, result)
+          result = importEntityList[Person, PersonId]("Personen", personen, result)
+          result = importEntityList[Kunde, KundeId]("Kunden", kunden, result)
+          result = importEntityList[Pendenz, PendenzId]("Pendenzen", pendenzen, result)
+          result = importEntityList[Tour, TourId]("Touren", touren, result)
+          result = importEntityList[Depot, DepotId]("Depots", depots, result)
+          result = importEntityList[Abotyp, AbotypId]("Abotypen", abotypen, result)
+
+          log.debug(s"Import ${vertriebsarten.length} Vertriebsarten...")
+          vertriebsarten.map {
+            case dl: Depotlieferung =>
+              insertEntity[Depotlieferung, VertriebsartId](dl)
+            case hl: Heimlieferung =>
+              insertEntity[Heimlieferung, VertriebsartId](hl)
+            case pl: Postlieferung =>
+              insertEntity[Postlieferung, VertriebsartId](pl)
+          }
+          result = result + ("Vertriebsarten" -> vertriebsarten.length)
+
+          result = importEntityList[Lieferung, LieferungId]("Lieferungen", lieferungen, result)
+          result = importEntityList[Lieferplanung, LieferplanungId]("Lieferplanungen", lieferplanungen, result)
+          result = importEntityList[Lieferposition, LieferpositionId]("Lieferpositionen", lieferpositionen, result)
+
+          log.debug(s"Import ${abos.length} Abos...")
+          abos.map {
+            case dl: DepotlieferungAbo =>
+              insertEntity[DepotlieferungAbo, AboId](dl)
+            case hl: HeimlieferungAbo =>
+              insertEntity[HeimlieferungAbo, AboId](hl)
+            case pl: PostlieferungAbo =>
+              insertEntity[PostlieferungAbo, AboId](pl)
+          }
+          result = result + ("Abos" -> abos.length)
+
+          result = importEntityList[Abwesenheit, AbwesenheitId]("Abwesenheiten", abwesenheiten, result)
+          result = importEntityList[Produkt, ProduktId]("Produkte", produkte, result)
+          result = importEntityList[Produktekategorie, ProduktekategorieId]("Produktekategorien", produktekategorien, result)
+          result = importEntityList[ProduktProduktekategorie, ProduktProduktekategorieId]("ProduktProduktekategorien", produktProduktekategorien, result)
+          result = importEntityList[Produzent, ProduzentId]("Produzenten", produzenten, result)
+          result = importEntityList[ProduktProduzent, ProduktProduzentId]("ProduktProduzenten", produktProduzenten, result)
+          result = importEntityList[Bestellung, BestellungId]("Bestellungen", bestellungen, result)
+          result = importEntityList[Bestellposition, BestellpositionId]("Bestellpositionen", bestellpositionen, result)
+
+          originator.map(_ ! ImportResult(None, result))
         }
-
-        //import entities
-        //TODO: get userid from login
-        implicit val userId = Boot.systemUserId
-        log.debug(s"Start importing data")
-        log.debug(s"Import Projekt...")
-        insertEntity[Projekt, ProjektId](projekt)
-
-        importEntityList[CustomKundentyp, CustomKundentypId]("Kundentypen", kundentypen)
-        importEntityList[Person, PersonId]("Personen", personen)
-        importEntityList[Kunde, KundeId]("Kunden", kunden)
-        importEntityList[Pendenz, PendenzId]("Pendenzen", pendenzen)
-        importEntityList[Tour, TourId]("Touren", touren)
-        importEntityList[Depot, DepotId]("Depots", depots)
-        importEntityList[Abotyp, AbotypId]("Abotypen", abotypen)
-
-        log.debug(s"Import ${vertriebsarten.length} Vertriebsarten...")
-        vertriebsarten.map {
-          case dl: Depotlieferung =>
-            insertEntity[Depotlieferung, VertriebsartId](dl)
-          case hl: Heimlieferung =>
-            insertEntity[Heimlieferung, VertriebsartId](hl)
-          case pl: Postlieferung =>
-            insertEntity[Postlieferung, VertriebsartId](pl)
-        }
-
-        importEntityList[Lieferung, LieferungId]("Lieferungen", lieferungen)
-        importEntityList[Lieferplanung, LieferplanungId]("Lieferplanungen", lieferplanungen)
-        importEntityList[Lieferposition, LieferpositionId]("Lieferpositionen", lieferpositionen)
-
-        log.debug(s"Import ${abos.length} Abos...")
-        abos.map {
-          case dl: DepotlieferungAbo =>
-            insertEntity[DepotlieferungAbo, AboId](dl)
-          case hl: HeimlieferungAbo =>
-            insertEntity[HeimlieferungAbo, AboId](hl)
-          case pl: PostlieferungAbo =>
-            insertEntity[PostlieferungAbo, AboId](pl)
-        }
-
-        importEntityList[Abwesenheit, AbwesenheitId]("Abwesenheiten", abwesenheiten)
-        importEntityList[Produkt, ProduktId]("Produkte", produkte)
-        importEntityList[Produktekategorie, ProduktekategorieId]("Produktekategorien", produktekategorien)
-        importEntityList[ProduktProduktekategorie, ProduktProduktekategorieId]("ProduktProduktekategorien", produktProduktekategorien)
-        importEntityList[Produzent, ProduzentId]("Produzenten", produzenten)
-        importEntityList[ProduktProduzent, ProduktProduzentId]("ProduktProduzenten", produktProduzenten)
-        importEntityList[Bestellung, BestellungId]("Bestellungen", bestellungen)
-        importEntityList[Bestellposition, BestellpositionId]("Bestellpositionen", bestellpositionen)
+      } catch {
+        case t: Throwable =>
+          originator.map(_ ! ImportResult(Option(t.getMessage), Map()))
       }
   }
 
-  def importEntityList[E <: BaseEntity[I], I <: BaseId](name: String, entities: List[E])(implicit
+  def importEntityList[E <: BaseEntity[I], I <: BaseId](name: String, entities: List[E], result: Map[String, Int])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
@@ -143,5 +156,6 @@ trait DataImportService extends Actor with ActorLogging
     entities.map { entity =>
       insertEntity[E, I](entity)
     }
+    result + (name -> entities.length)
   }
 }

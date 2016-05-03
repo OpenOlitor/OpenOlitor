@@ -23,11 +23,12 @@
 package ch.openolitor.core.data
 
 import ch.openolitor.core.models._
+
 import ch.openolitor.stammdaten.models._
 import org.odftoolkit.simple._
 import org.odftoolkit.simple.table._
 import scala.collection.JavaConversions._
-import scala.reflect.runtime.universe._
+import scala.reflect.runtime.universe.{ Try => UTry, _ }
 import java.util.Date
 import akka.actor._
 import java.io.File
@@ -37,6 +38,9 @@ import org.joda.time.format.DateTimeFormat
 import ch.openolitor.util.DateTimeUtil
 import scala.collection.immutable.TreeMap
 import java.io.InputStream
+import scala.util._
+
+case class ParseException(msg: String) extends Exception
 
 class DataImportParser extends Actor with ActorLogging {
   import DataImportParser._
@@ -44,61 +48,75 @@ class DataImportParser extends Actor with ActorLogging {
   val receive: Receive = {
     case ParseSpreadsheet(file) =>
       val rec = sender
-      rec ! importData(file)
+      try {
+        importData(file) match {
+          case Success(result) =>
+            rec ! result
+          case Failure(error) =>
+            log.warning("Couldn't import data", error)
+            rec ! ParseError(error)
+        }
+      } catch {
+        case t: Throwable =>
+          log.warning("Couldn't import data", t)
+          rec ! ParseError(t)
+      }
   }
 
   val modifiCols = Seq("erstelldat", "ersteller", "modifidat", "modifikator")
 
-  def importData(file: InputStream): ImportResult = {
+  def importData(file: InputStream): Try[ParseResult] = {
     val doc = SpreadsheetDocument.loadDocument(file)
 
     //parse all sections
-    val (projekte, _) = doc.withSheet("Projekt")(parseProjekte)
-    val projekt = projekte.head
-    val (personen, _) = doc.withSheet("Personen")(parsePersonen)
-    val (kunden, kundeIdMapping) = doc.withSheet("Kunden")(parseKunden(personen))
-    val (pendenzen, _) = doc.withSheet("Pendenzen")(parsePendenzen(kunden))
-    val (tours, tourIdMapping) = doc.withSheet("Touren")(parseTours)
-    val (abotypen, abotypIdMapping) = doc.withSheet("Abotypen")(parseAbotypen)
-    val (depots, depotIdMapping) = doc.withSheet("Depots")(parseDepots)
-    val (abwesenheiten, _) = doc.withSheet("Abwesenheiten")(parseAbwesenheit)
-    val (abos, _) = doc.withSheet("Abos")(parseAbos(kundeIdMapping, kunden, abotypIdMapping, abotypen, depotIdMapping, depots, tourIdMapping, tours, abwesenheiten))
-    val (lieferplanungen, _) = doc.withSheet("Lieferplanungen")(parseLieferplanungen)
-    val (vertriebsarten, _) = doc.withSheet("Vertriebsarten")(parseVertriebsarten)
-    val (lieferungen, _) = doc.withSheet("Lieferungen")(parseLieferungen(abotypen, vertriebsarten, abwesenheiten, lieferplanungen, depots, tours))
-    val (produzenten, _) = doc.withSheet("Produzenten")(parseProduzenten)
-    val (produktkategorien, _) = doc.withSheet("Produktekategorien")(parseProduktekategorien)
-    val (produktProduzenten, _) = doc.withSheet("ProduktProduzenten")(parseProdukteProduzenten)
-    val (produktProduktekategorien, _) = doc.withSheet("ProduktProduktkategorien")(parseProdukteProduktkategorien)
-    val (produkte, _) = doc.withSheet("Produkte")(parseProdukte(produzenten, produktProduzenten, produktkategorien, produktProduktekategorien))
-    val (lieferpositionen, _) = doc.withSheet("Lieferpositionen")(parseLieferpositionen(produkte, produzenten))
-    val (bestellungen, _) = doc.withSheet("Bestellungen")(parseBestellungen(produzenten, lieferplanungen))
-    val (bestellpositionen, _) = doc.withSheet("Bestellpositionen")(parseBestellpositionen(produkte))
-    val (customKundentypen, _) = doc.withSheet("Kundentypen")(parseCustomKundentypen)
-
-    ImportResult(
-      projekt,
-      customKundentypen,
-      kunden,
-      personen,
-      pendenzen,
-      tours,
-      depots,
-      abotypen,
-      vertriebsarten,
-      lieferungen,
-      lieferplanungen,
-      lieferpositionen,
-      abos,
-      abwesenheiten,
-      produkte,
-      produktkategorien,
-      produktProduktekategorien,
-      produzenten,
-      produktProduzenten,
-      bestellungen,
-      bestellpositionen
-    )
+    for {
+      (projekte, _) <- Try(doc.withSheet("Projekt")(parseProjekte))
+      projekt = projekte.head
+      (personen, _) <- Try(doc.withSheet("Personen")(parsePersonen))
+      (kunden, kundeIdMapping) <- Try(doc.withSheet("Kunden")(parseKunden(personen)))
+      (pendenzen, _) <- Try(doc.withSheet("Pendenzen")(parsePendenzen(kunden)))
+      (tours, tourIdMapping) <- Try(doc.withSheet("Touren")(parseTours))
+      (abotypen, abotypIdMapping) <- Try(doc.withSheet("Abotypen")(parseAbotypen))
+      (depots, depotIdMapping) <- Try(doc.withSheet("Depots")(parseDepots))
+      (abwesenheiten, _) <- Try(doc.withSheet("Abwesenheiten")(parseAbwesenheit))
+      (abos, _) <- Try(doc.withSheet("Abos")(parseAbos(kundeIdMapping, kunden, abotypIdMapping, abotypen, depotIdMapping, depots, tourIdMapping, tours, abwesenheiten)))
+      (lieferplanungen, _) <- Try(doc.withSheet("Lieferplanungen")(parseLieferplanungen))
+      (vertriebsarten, _) <- Try(doc.withSheet("Vertriebsarten")(parseVertriebsarten))
+      (lieferungen, _) <- Try(doc.withSheet("Lieferungen")(parseLieferungen(abotypen, vertriebsarten, abwesenheiten, lieferplanungen, depots, tours)))
+      (produzenten, _) <- Try(doc.withSheet("Produzenten")(parseProduzenten))
+      (produktkategorien, _) <- Try(doc.withSheet("Produktekategorien")(parseProduktekategorien))
+      (produktProduzenten, _) <- Try(doc.withSheet("ProduktProduzenten")(parseProdukteProduzenten))
+      (produktProduktekategorien, _) <- Try(doc.withSheet("ProduktProduktkategorien")(parseProdukteProduktkategorien))
+      (produkte, _) <- Try(doc.withSheet("Produkte")(parseProdukte(produzenten, produktProduzenten, produktkategorien, produktProduktekategorien)))
+      (lieferpositionen, _) <- Try(doc.withSheet("Lieferpositionen")(parseLieferpositionen(produkte, produzenten)))
+      (bestellungen, _) <- Try(doc.withSheet("Bestellungen")(parseBestellungen(produzenten, lieferplanungen)))
+      (bestellpositionen, _) <- Try(doc.withSheet("Bestellpositionen")(parseBestellpositionen(produkte)))
+      (customKundentypen, _) <- Try(doc.withSheet("Kundentypen")(parseCustomKundentypen))
+    } yield {
+      ParseResult(
+        projekt,
+        customKundentypen,
+        kunden,
+        personen,
+        pendenzen,
+        tours,
+        depots,
+        abotypen,
+        vertriebsarten,
+        lieferungen,
+        lieferplanungen,
+        lieferpositionen,
+        abos,
+        abwesenheiten,
+        produkte,
+        produktkategorien,
+        produktProduktekategorien,
+        produzenten,
+        produktProduzenten,
+        bestellungen,
+        bestellpositionen
+      )
+    }
   }
 
   def parseProjekte = {
@@ -146,7 +164,7 @@ class DataImportParser extends Actor with ActorLogging {
       val kundeId = KundeId(id)
       val personenByKundeId = personen.filter(_.kundeId == kundeId)
       if (personenByKundeId.isEmpty) {
-        sys.error(s"Kunde id $kundeId does not reference any person. At least one person is required")
+        throw ParseException(s"Kunde id $kundeId does not reference any person. At least one person is required")
       }
       Kunde(
         kundeId,
@@ -219,8 +237,7 @@ class DataImportParser extends Actor with ActorLogging {
         val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
         val kundeId = KundeId(row.value[Long](indexKundeId))
-        val kunde = kunden.find(_.id == kundeId).headOption.getOrElse(sys.error(s"Kunde not found with id $kundeId"))
-
+        val kunde = kunden.find(_.id == kundeId).headOption.getOrElse(throw ParseException(s"Kunde not found with id $kundeId"))
         Pendenz(
           id = PendenzId(id),
           kundeId = kundeId,
@@ -248,8 +265,6 @@ class DataImportParser extends Actor with ActorLogging {
         indexAktiv, indexOeffnungszeiten, indexFarbCode, indexIBAN, indexBank, indexBeschreibung, indexMaxAbonnenten,
         indexAnzahlAbonnenten) = indexes.take(22)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
-
-      //val abos = depot2AbosMapping.get(id).getOrElse(Seq())
 
       Depot(
         id = DepotId(id),
@@ -579,10 +594,9 @@ class DataImportParser extends Actor with ActorLogging {
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val produktId = ProduktId(row.value[Long](indexProduktId))
-      val produkt = produkte.find(_.id == produktId).getOrElse(sys.error(s"No produkt found for id $produktId"))
-
       val produzentId = ProduzentId(row.value[Long](indexProduzentId))
-      val produzent = produzenten.find(_.id == produzentId).getOrElse(sys.error(s"No produzent found for id $produzentId"))
+      val produkt = produkte.find(_.id == produktId).getOrElse(throw ParseException(s"No produkt found for id $produktId"))
+      val produzent = produzenten.find(_.id == produzentId).getOrElse(throw ParseException(s"No produzent found for id $produzentId"))
 
       Lieferposition(
         id = LieferpositionId(id),
@@ -617,15 +631,15 @@ class DataImportParser extends Actor with ActorLogging {
 
       val lieferungId = LieferungId(id)
       val abotypId = AbotypId(row.value[Long](indexAbotypId))
-      val abotyp = abotypen.find(_.id == abotypId).getOrElse(sys.error(s"No abotyp found for id:$abotypId"))
+      val abotyp = abotypen.find(_.id == abotypId).getOrElse(throw ParseException(s"No abotyp found for id:$abotypId"))
       val vertriebsartId = VertriebsartId(row.value[Long](indexVertriebsartId))
-      val vertriebsart = vertriebsarten.find(_.id == vertriebsartId).getOrElse(sys.error(s"No vertriebsart found for id $vertriebsartId"))
+      val vertriebsart = vertriebsarten.find(_.id == vertriebsartId).getOrElse(throw ParseException(s"No vertriebsart found for id $vertriebsartId"))
 
       val vaBeschrieb = vertriebsart match {
         case dl: Depotlieferung =>
-          depots.find(_.id == dl.depotId).getOrElse(sys.error(s"No depot found for id ${dl.depotId}")).name
+          depots.find(_.id == dl.depotId).getOrElse(throw ParseException(s"No depot found for id ${dl.depotId}")).name
         case hl: Heimlieferung =>
-          touren.find(_.id == hl.tourId).getOrElse(sys.error(s"No tour found for id ${hl.tourId}")).name
+          touren.find(_.id == hl.tourId).getOrElse(throw ParseException(s"No tour found for id ${hl.tourId}")).name
         case pl: Postlieferung => ""
       }
 
@@ -635,7 +649,7 @@ class DataImportParser extends Actor with ActorLogging {
       val preisTotal = row.value[BigDecimal](indexPreisTotal)
 
       val lieferplanungId = row.value[Option[Long]](indexLieferplanungId).map(LieferplanungId)
-      val lieferplanungNr = lieferplanungId.map(id => lieferplanungen.find(_.id == id).getOrElse(sys.error(s"No lieferplanung found for id $id")).nr)
+      val lieferplanungNr = lieferplanungId.map(id => lieferplanungen.find(_.id == id).getOrElse(throw ParseException(s"No lieferplanung found for id $id")).nr)
 
       Lieferung(
         id = lieferungId,
@@ -692,22 +706,22 @@ class DataImportParser extends Actor with ActorLogging {
         val modifidat = row.value[DateTime](indexModifidat)
         val modifikator = UserId(row.value[Long](indexModifikator))
 
-        val kundeId = kundeIdMapping.getOrElse(kundeIdInt, sys.error(s"Kunde id $kundeIdInt referenced from abo not found"))
-        val kunde = kunden.filter(_.id == kundeId).headOption.map(_.bezeichnung).getOrElse(sys.error(s"Kunde not found for id:$kundeId"))
-        val abotypId = abotypIdMapping.getOrElse(abotypIdInt, sys.error(s"Abotyp id $abotypIdInt referenced from abo not found"))
-        val abotypName = abotypen.filter(_.id == abotypId).headOption.map(_.name).getOrElse(sys.error(s"Abotyp not found for id:$abotypId"))
+        val kundeId = kundeIdMapping.getOrElse(kundeIdInt, throw ParseException(s"Kunde id $kundeIdInt referenced from abo not found"))
+        val kunde = kunden.filter(_.id == kundeId).headOption.map(_.bezeichnung).getOrElse(throw ParseException(s"Kunde not found for id:$kundeId"))
+        val abotypId = abotypIdMapping.getOrElse(abotypIdInt, throw ParseException(s"Abotyp id $abotypIdInt referenced from abo not found"))
+        val abotypName = abotypen.filter(_.id == abotypId).headOption.map(_.name).getOrElse(throw ParseException(s"Abotyp not found for id:$abotypId"))
         val depotIdOpt = row.value[Option[Long]](depotIdIndex)
         val tourIdOpt = row.value[Option[Long]](tourIdIndex)
 
         depotIdOpt.map { depotIdInt =>
-          val depotId = depotIdMapping.getOrElse(depotIdInt, sys.error(s"Depot id $depotIdInt referenced from abo not found"))
+          val depotId = depotIdMapping.getOrElse(depotIdInt, throw ParseException(s"Depot id $depotIdInt referenced from abo not found"))
           val depotName = depots.filter(_.id == depotId).headOption.map(_.name).getOrElse(s"Depot not found with id:$depotId")
           DepotlieferungAbo(aboId, kundeId, kunde, abotypId, abotypName, depotId, depotName,
             start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
             anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
         }.getOrElse {
           tourIdOpt.map { tourIdInt =>
-            val tourId = tourIdMapping.getOrElse(tourIdInt, sys.error(s"Tour id tourIdInt referenced from abo not found"))
+            val tourId = tourIdMapping.getOrElse(tourIdInt, throw ParseException(s"Tour id tourIdInt referenced from abo not found"))
             val tourName = tours.filter(_.id == tourId).headOption.map(_.name).getOrElse(s"Tour not found with id:$tourId")
             HeimlieferungAbo(aboId, kundeId, kunde, abotypId, abotypName, tourId, tourName,
               start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
@@ -728,10 +742,10 @@ class DataImportParser extends Actor with ActorLogging {
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val produzentId = ProduzentId(row.value[Long](indexProduzentId))
-      val produzent = produzenten.find(_.id == produzentId).getOrElse(sys.error(s"No produzent found with id $produzentId"))
+      val produzent = produzenten.find(_.id == produzentId).getOrElse(throw ParseException(s"No produzent found with id $produzentId"))
 
       val lieferplanungId = LieferplanungId(row.value[Long](indexLieferplanungId))
-      val lieferplanungNr = lieferplanungen.find(_.id == id).getOrElse(sys.error(s"No lieferplanung found for id $id")).nr
+      val lieferplanungNr = lieferplanungen.find(_.id == id).getOrElse(throw ParseException(s"No lieferplanung found for id $id")).nr
 
       Bestellung(
         id = BestellungId(id),
@@ -759,7 +773,7 @@ class DataImportParser extends Actor with ActorLogging {
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val produktId = ProduktId(row.value[Long](indexProduktId))
-      val produkt = produkte.find(_.id == produktId).getOrElse(sys.error(s"No produkt found for id $produktId"))
+      val produkt = produkte.find(_.id == produktId).getOrElse(throw ParseException(s"No produkt found for id $produktId"))
 
       Bestellposition(
         BestellpositionId(id),
@@ -840,7 +854,6 @@ class DataImportParser extends Actor with ActorLogging {
       val optId = row.value[Option[Long]](indexId)
       optId.map { id =>
         val result = entityFactory(id)(otherIndexes)(row)
-
         resultHandler(id, result)
       }.getOrElse(None)
     }).flatten
@@ -850,7 +863,7 @@ class DataImportParser extends Actor with ActorLogging {
     log.debug(s"columnIndexes for:$names")
     val headerMap = headerMappings(header, names, maxCols.getOrElse(names.size * 2))
     names.map { name =>
-      headerMap.get(name.toLowerCase.trim).getOrElse(sys.error(s"Missing column '$name' in sheet '$sheet'"))
+      headerMap.get(name.toLowerCase.trim).getOrElse(throw ParseException(s"Missing column '$name' in sheet '$sheet'"))
     }
   }
 
@@ -877,7 +890,8 @@ object DataImportParser {
 
   case class ParseSpreadsheet(file: InputStream)
   case class ImportEntityResult[E, I <: BaseId](id: I, entity: E)
-  case class ImportResult(
+  case class ParseError(error: Throwable)
+  case class ParseResult(
     projekt: Projekt,
     kundentypen: List[CustomKundentyp],
     kunden: List[Kunde],
@@ -914,7 +928,7 @@ object DataImportParser {
     }
 
     def withSheet[R](name: String)(f: String => Table => R): R = {
-      sheet(name).map(t => f(name)(t)).getOrElse(sys.error(s"Missing sheet '$name'"))
+      sheet(name).map(t => f(name)(t)).getOrElse(throw ParseException(s"Missing sheet '$name'"))
     }
   }
 
@@ -927,7 +941,7 @@ object DataImportParser {
         case t if t =:= typeOf[Boolean] => self.getStringValue match {
           case "true" | "1" | "x" | "X" => true
           case "false" | "0" => false
-          case x => sys.error(s"Unsupported boolean format:$x")
+          case x => throw ParseException(s"Unsupported boolean format:$x")
         }
 
         case t if t =:= typeOf[String] => self.getStringValue
@@ -945,7 +959,7 @@ object DataImportParser {
         case t if t =:= typeOf[Float] => self.getStringValue.toFloat
         case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
         case _ =>
-          sys.error(s"Unsupported format:$typ")
+          throw ParseException(s"Unsupported format:$typ")
       }).asInstanceOf[T]
     }
 
