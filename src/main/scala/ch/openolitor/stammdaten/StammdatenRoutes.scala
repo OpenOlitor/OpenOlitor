@@ -23,7 +23,6 @@
 package ch.openolitor.stammdaten
 
 import spray.routing._
-
 import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
@@ -53,12 +52,16 @@ import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
 import akka.actor._
+import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with StammdatenJsonProtocol
-    with StammdatenEventStoreSerializer {
-  self: StammdatenReadRepositoryComponent with FileStoreComponent =>
+    with StammdatenEventStoreSerializer
+    with BuchhaltungJsonProtocol {
+  self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
   implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
@@ -149,6 +152,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "personen" / personIdPath) { (kundeId, personId) =>
         delete(remove(personId))
+      } ~
+      path("kunden" / kundeIdPath / "rechnungen") { (kundeId) =>
+        get(list(buchhaltungReadRepository.getKundenRechnungen(kundeId)))
       }
 
   lazy val kundentypenRoute =
@@ -327,3 +333,4 @@ class DefaultStammdatenRoutes(
 )
     extends StammdatenRoutes
     with DefaultStammdatenReadRepositoryComponent
+    with DefaultBuchhaltungReadRepositoryComponent
