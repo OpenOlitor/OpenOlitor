@@ -62,6 +62,12 @@ class DataImportParser extends Actor with ActorLogging {
     val (depots, depotIdMapping) = doc.withSheet("Depots")(parseDepots)
     val (abwesenheiten, _) = doc.withSheet("Abwesenheiten")(parseAbwesenheit)
     val (abos, _) = doc.withSheet("Abos")(parseAbos(kundeIdMapping, kunden, abotypIdMapping, abotypen, depotIdMapping, depots, tourIdMapping, tours, abwesenheiten))
+    val (lieferplanungen, _) = doc.withSheet("Lieferplanungen")(parseLieferplanungen)
+    val (vertriebsarten, _) = doc.withSheet("Vertriebsarten")(parseVertriebsarten)
+    val (lieferungen, _) = doc.withSheet("Lieferungen")(parseLieferungen(abotypen, vertriebsarten, abwesenheiten, lieferplanungen))
+    val (produkte, _) = doc.withSheet("Produkte")(parseProdukte)
+    val (produzenten, _) = doc.withSheet("Produzenten")(parseProduzenten)
+    val (lieferpositionen, _) = doc.withSheet("Lieferpositionen")(parseLieferpositionen(produkte, produzenten))
 
     ImportResult(projekt, kunden, personen, abotypen, depots, tours, abos, pendenzen)
   }
@@ -344,7 +350,113 @@ class DataImportParser extends Actor with ActorLogging {
     }
   }
 
-  def partLieferplanungen() = {
+  def parseVertriebsarten = {
+    parse[Vertriebsart, VertriebsartId]("id", Seq("abotyp_id", "depot_id", "tour_id", "liefertag") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexAbotypId, indexDepotId, indexTourId, indexLieferzeitpunkt) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        val vertriebsartId = VertriebsartId(id)
+        val abotypId = AbotypId(row.value[Long](indexAbotypId))
+        val depotIdOpt = row.value[Option[Long]](indexDepotId).map(DepotId)
+        val tourIdOpt = row.value[Option[Long]](indexTourId).map(TourId)
+        val liefertag = Lieferzeitpunkt(row.value[String](indexLieferzeitpunkt))
+
+        depotIdOpt.map { depotId =>
+          Depotlieferung(vertriebsartId,
+            abotypId, depotId, liefertag,
+            //modification flags
+            erstelldat = row.value[DateTime](indexErstelldat),
+            ersteller = UserId(row.value[Long](indexErsteller)),
+            modifidat = row.value[DateTime](indexModifidat),
+            modifikator = UserId(row.value[Long](indexModifikator)))
+        }.getOrElse {
+          tourIdOpt.map { tourId =>
+            Heimlieferung(vertriebsartId, abotypId, tourId, liefertag,
+              //modification flags
+              erstelldat = row.value[DateTime](indexErstelldat),
+              ersteller = UserId(row.value[Long](indexErsteller)),
+              modifidat = row.value[DateTime](indexModifidat),
+              modifikator = UserId(row.value[Long](indexModifikator)))
+          }.getOrElse {
+            Postlieferung(vertriebsartId, abotypId, liefertag,
+              //modification flags
+              erstelldat = row.value[DateTime](indexErstelldat),
+              ersteller = UserId(row.value[Long](indexErsteller)),
+              modifidat = row.value[DateTime](indexModifidat),
+              modifikator = UserId(row.value[Long](indexModifikator)))
+          }
+        }
+    }
+  }
+
+  def parseProdukte = {
+    parse[Produkt, ProduktId]("id", Seq("name", "verfuegbar_von", "verfuegbar_bis", "kategorien", "standard_menge", "einheit",
+      "preis", "produzenten") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexName, indexVerfuegbarVon, indexVerfuegbarBis, indexKategorien, indexStandardMenge, indexEinheit,
+          indexPreis, indexProduzenten) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        Produkt(
+          id = ProduktId(id),
+          name = row.value[String](indexName),
+          verfuegbarVon = Liefersaison(row.value[String](indexVerfuegbarVon)),
+          verfuegbarBis = Liefersaison(row.value[String](indexVerfuegbarBis)),
+          kategorien = row.value[Seq[String]](indexKategorien),
+          standardmenge = row.value[Option[BigDecimal]](indexStandardMenge),
+          einheit = Liefereinheit(row.value[String](indexEinheit)),
+          preis = row.value[BigDecimal](indexPreis),
+          produzenten = row.value[Seq[String]](indexProduzenten),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
+    }
+  }
+
+  def parseProduzenten = {
+    parse[Produzent, ProduzentId]("id", Seq("name", "vorname", "kurzzeichen", "strasse", "haus_nummer", "adress_zusatz",
+      "plz", "ort", "bemerkung", "email", "telefon_mobil", "telefon_festnetz", "iban", "bank", "mwst", "mwst_satz", "mwst_nr", "aktiv") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexName, indexVorname, indexKurzzeichen, indexStrasse, indexHausNummer, indexAdressZusatz,
+          indexPlz, indexOrt, indexBemerkung, indexEmail, indexTelefonMobil, indexTelefonFestnetz, indexIban, indexBank, indexMwst,
+          indexMwstSatz, indexMwstNr, indexAktiv) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        Produzent(
+          id = ProduzentId(id),
+          name = row.value[String](indexName),
+          vorname = row.value[Option[String]](indexVorname),
+          kurzzeichen = row.value[String](indexKurzzeichen),
+          strasse = row.value[Option[String]](indexStrasse),
+          hausNummer = row.value[Option[String]](indexHausNummer),
+          adressZusatz = row.value[Option[String]](indexAdressZusatz),
+          plz = row.value[String](indexPlz),
+          ort = row.value[String](indexOrt),
+          bemerkungen = row.value[Option[String]](indexBemerkung),
+          email = row.value[String](indexEmail),
+          telefonMobil = row.value[Option[String]](indexTelefonMobil),
+          telefonFestnetz = row.value[Option[String]](indexTelefonFestnetz),
+          iban = row.value[Option[String]](indexIban),
+          bank = row.value[Option[String]](indexBank),
+          mwst = row.value[Boolean](indexMwst),
+          mwstSatz = row.value[Option[BigDecimal]](indexMwstSatz),
+          mwstNr = row.value[Option[String]](indexMwstNr),
+          aktiv = row.value[Boolean](indexAktiv),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
+    }
+  }
+
+  def parseLieferplanungen = {
     parse[Lieferplanung, LieferplanungId]("id", Seq("nr", "bemerkung", "status") ++ modifiCols) { id =>
       indexes => row =>
         //match column indexes
@@ -364,7 +476,7 @@ class DataImportParser extends Actor with ActorLogging {
     }
   }
 
-  def partLieferpositionen(produkte: List[Produkt], produzenten: List[Produzent]) = {
+  def parseLieferpositionen(produkte: List[Produkt], produzenten: List[Produzent]) = {
     parse[Lieferposition, LieferpositionId]("id", Seq("lieferung_id", "produkt_id", "produzent_id", "preis_einheit", "liefereinheit", "menge", "preis", "anzahl") ++ modifiCols) { id =>
       indexes => row =>
         //match column indexes
