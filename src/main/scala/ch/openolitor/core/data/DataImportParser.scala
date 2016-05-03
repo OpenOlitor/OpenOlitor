@@ -73,6 +73,7 @@ class DataImportParser extends Actor with ActorLogging {
     val (lieferpositionen, _) = doc.withSheet("Lieferpositionen")(parseLieferpositionen(produkte, produzenten))
     val (bestellungen, _) = doc.withSheet("Bestellungen")(parseBestellungen(produzenten, lieferplanungen))
     val (bestellpositionen, _) = doc.withSheet("Bestellpositionen")(parseBestellpositionen(produkte))
+    val (customKundentypen, _) = doc.withSheet("Kundentypen")(parseCustomKundentypen)
 
     ImportResult(projekt, kunden, personen, abotypen, depots, tours, abos, pendenzen)
   }
@@ -744,6 +745,26 @@ class DataImportParser extends Actor with ActorLogging {
           menge = row.value[BigDecimal](indexMenge),
           preis = row.value[Option[BigDecimal]](indexPreis),
           anzahl = row.value[Int](indexAnzahl),
+          //modification flags
+          erstelldat = row.value[DateTime](indexErstelldat),
+          ersteller = UserId(row.value[Long](indexErsteller)),
+          modifidat = row.value[DateTime](indexModifidat),
+          modifikator = UserId(row.value[Long](indexModifikator)))
+    }
+  }
+
+  def parseCustomKundentypen = {
+    parse[CustomKundentyp, CustomKundentypId]("id", Seq("kundentyp", "beschreibung", "anzahl_verknuepfungen") ++ modifiCols) { id =>
+      indexes => row =>
+        //match column indexes
+        val Seq(indexKundentyp, indexBeschreibung, indexAnzahlVerknuepfungen) = indexes
+        val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+        CustomKundentyp(
+          CustomKundentypId(id),
+          kundentyp = KundentypId(row.value[String](indexKundentyp)),
+          beschreibung = row.value[Option[String]](indexBeschreibung),
+          anzahlVerknuepfungen = row.value[Int](indexAnzahlVerknuepfungen),
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = UserId(row.value[Long](indexErsteller)),
