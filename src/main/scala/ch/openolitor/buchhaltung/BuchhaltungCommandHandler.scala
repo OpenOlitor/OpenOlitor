@@ -53,13 +53,13 @@ object BuchhaltungCommandHandler {
 }
 
 trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware {
-  self: BuchhaltungRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
   import BuchhaltungCommandHandler._
 
   override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]] = {
     case RechnungVerschickenCommand(userId, id: RechnungId) =>
       DB readOnly { implicit session =>
-        writeRepository.getById(rechnungMapping, id) map { rechnung =>
+        buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Erstellt =>
               Success(RechnungVerschicktEvent(meta, id))
@@ -71,7 +71,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 
     case RechnungMahnungVerschickenCommand(userId, id: RechnungId) =>
       DB readOnly { implicit session =>
-        writeRepository.getById(rechnungMapping, id) map { rechnung =>
+        buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt =>
               Success(RechnungMahnungVerschicktEvent(meta, id))
@@ -83,7 +83,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 
     case RechnungBezahlenCommand(userId, id: RechnungId, entity: RechnungModifyBezahlt) =>
       DB readOnly { implicit session =>
-        writeRepository.getById(rechnungMapping, id) map { rechnung =>
+        buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt | MahnungVerschickt =>
               Success(RechnungBezahltEvent(meta, id, entity))
@@ -95,7 +95,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 
     case RechnungStornierenCommand(userId, id: RechnungId) =>
       DB readOnly { implicit session =>
-        writeRepository.getById(rechnungMapping, id) map { rechnung =>
+        buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Bezahlt =>
               Failure(new InvalidStateException("Rechnung must not be in status Bezahlt in order to transition to Storniert"))
@@ -109,5 +109,5 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 }
 
 class DefaultBuchhaltungCommandHandler(override val sysConfig: SystemConfig, override val system: ActorSystem) extends BuchhaltungCommandHandler
-    with DefaultBuchhaltungRepositoryComponent {
+    with DefaultBuchhaltungWriteRepositoryComponent {
 }

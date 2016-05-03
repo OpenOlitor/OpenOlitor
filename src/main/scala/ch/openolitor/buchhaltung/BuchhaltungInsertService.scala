@@ -44,7 +44,7 @@ object BuchhaltungInsertService {
 }
 
 class DefaultBuchhaltungInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungInsertService(sysConfig) with DefaultBuchhaltungRepositoryComponent {
+    extends BuchhaltungInsertService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent {
 }
 
 /**
@@ -52,7 +52,7 @@ class DefaultBuchhaltungInsertService(sysConfig: SystemConfig, override val syst
  */
 class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware
     with BuchhaltungDBMappings {
-  self: BuchhaltungRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
 
   val Divisor = 10
   val ReferenznummerLength = 26
@@ -95,7 +95,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
     )
 
     DB autoCommit { implicit session =>
-      writeRepository.insertEntity[Rechnung, RechnungId](typ)
+      buchhaltungWriteRepository.insertEntity[Rechnung, RechnungId](typ)
     }
   }
 

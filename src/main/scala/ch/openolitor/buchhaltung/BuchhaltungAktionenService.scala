@@ -49,7 +49,7 @@ object BuchhaltungAktionenService {
 }
 
 class DefaultBuchhaltungAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungAktionenService(sysConfig) with DefaultBuchhaltungRepositoryComponent {
+    extends BuchhaltungAktionenService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent {
 }
 
 /**
@@ -57,7 +57,7 @@ class DefaultBuchhaltungAktionenService(sysConfig: SystemConfig, override val sy
  */
 class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with BuchhaltungDBMappings {
-  self: BuchhaltungRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
 
   val handle: Handle = {
     case RechnungVerschicktEvent(meta, id: RechnungId) =>
@@ -74,9 +74,9 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(rechnungMapping, id) map { rechnung =>
+      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Erstellt == rechnung.status) {
-          writeRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Verschickt))
+          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Verschickt))
         }
       }
     }
@@ -84,9 +84,9 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungMahnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(rechnungMapping, id) map { rechnung =>
+      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Verschickt == rechnung.status) {
-          writeRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = MahnungVerschickt))
+          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = MahnungVerschickt))
         }
       }
     }
@@ -94,9 +94,9 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungBezahlen(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(rechnungMapping, id) map { rechnung =>
+      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Verschickt == rechnung.status || MahnungVerschickt == rechnung.status) {
-          writeRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(
+          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(
             einbezahlterBetrag = Some(entity.einbezahlterBetrag),
             eingangsDatum = Some(entity.eingangsDatum),
             status = Bezahlt
@@ -108,9 +108,9 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungStornieren(meta: EventMetadata, id: RechnungId)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(rechnungMapping, id) map { rechnung =>
+      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Bezahlt != rechnung.status) {
-          writeRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Storniert))
+          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Storniert))
         }
       }
     }

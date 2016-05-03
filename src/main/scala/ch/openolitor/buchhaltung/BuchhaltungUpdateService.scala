@@ -43,14 +43,14 @@ object BuchhaltungUpdateService {
 }
 
 class DefaultBuchhaltungUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungUpdateService(sysConfig) with DefaultBuchhaltungRepositoryComponent {
+    extends BuchhaltungUpdateService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Buchhaltung Moduls
  */
 class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware with BuchhaltungDBMappings {
-  self: BuchhaltungRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: RechnungId, entity: RechnungModify) => updateRechnung(meta, id, entity)
@@ -62,10 +62,10 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
 
   def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(rechnungMapping, id) map { entity =>
+      buchhaltungWriteRepository.getById(rechnungMapping, id) map { entity =>
         //map all updatable fields
         val copy = copyFrom(entity, update)
-        writeRepository.updateEntity[Rechnung, RechnungId](copy)
+        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](copy)
       }
     }
   }

@@ -22,40 +22,10 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
-import ch.openolitor.core._
-import ch.openolitor.core.db._
-import ch.openolitor.core.domain._
-import ch.openolitor.core.models._
-import ch.openolitor.stammdaten._
-import ch.openolitor.stammdaten.models._
-import java.util.UUID
-import scalikejdbc.DB
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.domain.EntityStore._
-import akka.actor.ActorSystem
-import ch.openolitor.core.Macros._
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.joda.time.DateTime
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
-
-object StammdatenAktionenService {
-  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system)
+trait StammdatenReadRepositoryComponent {
+  val stammdatenReadRepository: StammdatenReadRepository
 }
 
-class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenWriteRepositoryComponent {
-}
-
-/**
- * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
- */
-class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
-    with StammdatenDBMappings {
-  self: StammdatenWriteRepositoryComponent =>
-
-  val handle: Handle = {
-    case e =>
-      logger.warn(s"Unknown event:$e")
-  }
+trait DefaultStammdatenReadRepositoryComponent extends StammdatenReadRepositoryComponent {
+  override val stammdatenReadRepository: StammdatenReadRepository = new StammdatenReadRepositoryImpl
 }

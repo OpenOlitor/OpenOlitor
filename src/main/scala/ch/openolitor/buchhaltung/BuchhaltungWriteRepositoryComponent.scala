@@ -24,14 +24,12 @@ package ch.openolitor.buchhaltung
 
 import akka.actor.ActorSystem
 
-trait BuchhaltungRepositoryComponent {
-  val writeRepository: BuchhaltungWriteRepository
-  val readRepository: BuchhaltungReadRepository
+trait BuchhaltungWriteRepositoryComponent {
+  val buchhaltungWriteRepository: BuchhaltungWriteRepository
 }
 
-trait DefaultBuchhaltungRepositoryComponent extends BuchhaltungRepositoryComponent {
+trait DefaultBuchhaltungWriteRepositoryComponent extends BuchhaltungWriteRepositoryComponent {
   val system: ActorSystem
 
-  override val writeRepository: BuchhaltungWriteRepository = new BuchhaltungWriteRepositoryImpl(system)
-  override val readRepository: BuchhaltungReadRepository = new BuchhaltungReadRepositoryImpl
+  override val buchhaltungWriteRepository: BuchhaltungWriteRepository = new BuchhaltungWriteRepositoryImpl(system)
 }

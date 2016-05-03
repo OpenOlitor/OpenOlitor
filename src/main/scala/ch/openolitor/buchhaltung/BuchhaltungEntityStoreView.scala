@@ -33,19 +33,19 @@ object BuchhaltungEntityStoreView {
 }
 
 class DefaultBuchhaltungEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends BuchhaltungEntityStoreView
-  with DefaultBuchhaltungRepositoryComponent
+  with DefaultBuchhaltungWriteRepositoryComponent
 
 /**
  * Zusammenfügen des Componenten (cake pattern) zu der persistentView
  */
 trait BuchhaltungEntityStoreView extends EntityStoreView
     with BuchhaltungEntityStoreViewComponent with ConnectionPoolContextAware {
-  self: BuchhaltungRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
 
   override val module = "buchhaltung"
 
   def initializeEntityStoreView = {
-    writeRepository.cleanupDatabase
+    buchhaltungWriteRepository.cleanupDatabase
   }
 }
 

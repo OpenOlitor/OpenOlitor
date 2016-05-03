@@ -58,7 +58,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with BuchhaltungJsonProtocol
     with BuchhaltungEventStoreSerializer {
-  self: BuchhaltungRepositoryComponent with FileStoreComponent =>
+  self: BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
 
@@ -71,11 +71,11 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 
   lazy val rechnungenRoute =
     path("rechnungen") {
-      get(list(readRepository.getRechnungen)) ~
+      get(list(buchhaltungReadRepository.getRechnungen)) ~
         post(create[RechnungModify, RechnungId](RechnungId.apply _))
     } ~
       path("rechnungen" / rechnungIdPath) { id =>
-        get(detail(readRepository.getRechnungDetail(id))) ~
+        get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
           delete(remove(id))
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "verschicken") { id =>
@@ -128,9 +128,8 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 class DefaultBuchhaltungRoutes(
   override val entityStore: ActorRef,
   override val sysConfig: SystemConfig,
-  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )
     extends BuchhaltungRoutes
-    with DefaultBuchhaltungRepositoryComponent
+    with DefaultBuchhaltungReadRepositoryComponent
