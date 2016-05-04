@@ -23,12 +23,13 @@
 package ch.openolitor.stammdaten.eventsourcing
 
 import stamina._
-
 import stamina.json._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.domain.EntityStoreJsonProtocol
+import ch.openolitor.stammdaten.models.LieferungPlanungAdd
+import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 
 trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol {
   //V1 persisters
@@ -72,10 +73,13 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferungAbotypCreatePersister = persister[LieferungAbotypCreate]("lieferung-abotyp-create")
   implicit val lieferungIdPersister = persister[LieferungId]("lieferung-id")
   implicit val lieferungModifyPersister = persister[LieferungModify]("lieferung-modify")
+  implicit val lieferungPlanungAddPersister = persister[LieferungPlanungAdd]("lieferung-planungadd-modify")
+  implicit val lieferungPlanungRemovePersister = persister[LieferungPlanungRemove]("lieferung-planungremove-modify")
   implicit val lieferplanungModifyPersister = persister[LieferplanungModify]("lieferplanung-modify")
   implicit val lieferplanungCreatePersister = persister[LieferplanungCreate]("lieferplanung-create")
   implicit val lieferplanungIdPersister = persister[LieferplanungId]("lieferplanung-id")
   implicit val lieferpositionModifyPersister = persister[LieferpositionModify]("lieferposition-modify")
+  implicit val lieferpositionenCreatePersister = persister[LieferpositionenCreate]("lieferpositionen-create")
   implicit val lieferpositionIdPersister = persister[LieferpositionId]("lieferposition-id")
   implicit val bestellungenCreatePersister = persister[BestellungenCreate]("bestellungen-create")
   implicit val bestellungModifyPersister = persister[BestellungModify]("bestellung-modify")
@@ -126,10 +130,13 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferungAbotypCreatePersister,
     lieferungIdPersister,
     lieferungModifyPersister,
+    lieferungPlanungAddPersister,
+    lieferungPlanungRemovePersister,
     lieferplanungModifyPersister,
     lieferplanungIdPersister,
     lieferplanungCreatePersister,
     lieferpositionModifyPersister,
+    lieferpositionenCreatePersister,
     lieferpositionIdPersister,
     bestellungenCreatePersister,
     bestellungModifyPersister,

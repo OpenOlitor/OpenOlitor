@@ -207,7 +207,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(vertriebsartId))
       } ~
       path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath / "lieferungen") { (abotypId, vertriebsartId) =>
-        get(list(stammdatenReadRepository.getOffeneLieferungen(abotypId, vertriebsartId))) ~
+        get(list(stammdatenReadRepository.getUngeplanteLieferungen(abotypId, vertriebsartId))) ~
           post {
             requestInstance { request =>
               entity(as[LieferungAbotypCreate]) { entity =>
@@ -315,7 +315,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(stammdatenReadRepository.getNichtInkludierteAbotypenLieferungen(lieferplanungId)))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
-        (put | post)(update[LieferungModify, LieferungId](lieferungId))
+        (put | post)(update[LieferungPlanungAdd, LieferungId](lieferungId)) ~
+          delete(update(lieferungId, LieferungPlanungRemove()))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
+        (put | post)(create[LieferpositionenCreate, LieferpositionId](LieferpositionId.apply _))
       }
   path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
     get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))

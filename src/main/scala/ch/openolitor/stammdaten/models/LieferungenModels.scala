@@ -119,6 +119,12 @@ case class LieferungModify(
   lieferplanungNr: Option[Int]
 ) extends JSONSerializable
 
+case class LieferungPlanungAdd(
+  lieferplanungId: LieferplanungId
+) extends JSONSerializable
+
+case class LieferungPlanungRemove() extends JSONSerializable
+
 case class LieferungAbotypCreate(
   abotypId: AbotypId,
   vertriebsartId: VertriebsartId,
@@ -157,6 +163,11 @@ case class LieferpositionModify(
   menge: Option[BigDecimal],
   preis: Option[BigDecimal],
   anzahl: Int
+) extends JSONSerializable
+
+case class LieferpositionenCreate(
+  lieferungId: LieferungId,
+  lieferpositionen: List[LieferpositionModify]
 ) extends JSONSerializable
 
 case class BestellungId(id: Long) extends BaseId

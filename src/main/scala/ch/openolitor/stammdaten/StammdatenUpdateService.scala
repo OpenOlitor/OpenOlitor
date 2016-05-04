@@ -38,6 +38,8 @@ import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.UUID
 import ch.openolitor.core.models.UserId
+import ch.openolitor.stammdaten.models.LieferungPlanungAdd
+import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -72,8 +74,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: ProduktekategorieId, entity: ProduktekategorieModify) => updateProduktekategorie(meta, id, entity)
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify) => updateTour(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: LieferungId, entity: Lieferung) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
-    case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungModify) => updateLieferung(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungAdd) => addLieferungPlanung(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
+
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
@@ -86,6 +91,21 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
         stammdatenWriteRepository.updateEntity[Abotyp, AbotypId](copy)
+      }
+    }
+
+    stammdatenReadRepository.getUngeplanteLieferungen(id) map { lieferungen =>
+      lieferungen map { lieferung =>
+        DB autoCommit { implicit session =>
+          //update einiger Felder auf den Lieferungen
+          val updatedLieferung = copyTo[Lieferung, Lieferung](
+            lieferung,
+            "zielpreis" -> update.zielpreis,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> userId
+          )
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
+        }
       }
     }
   }
@@ -361,6 +381,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  def updateLieferung(meta: EventMetadata, id: LieferungId, update: Lieferung)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, update, "modifidat" -> meta.timestamp, "modifikator" -> userId)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+      }
+    }
+  }
+
   def updateLieferplanung(meta: EventMetadata, id: LieferplanungId, update: LieferplanungModify)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
@@ -371,13 +401,37 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def updateLieferung(meta: EventMetadata, id: LieferungId, update: LieferungModify)(implicit userId: UserId = meta.originator) = {
+  def addLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungAdd)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferplanungMapping, update.lieferplanungId) map { lieferplanung =>
+        stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
+          val lpId = Some(update.lieferplanungId)
+          //map lieferplanungId und Nr
+          val copy = copyFrom(lieferung, update,
+            "lieferplanungId" -> lpId,
+            "lieferplanungnr" -> lieferplanung.nr,
+            "status" -> Offen,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> userId)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+        }
+      }
+    }
+  }
+
+  def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
         //map all updatable fields
-        val copy = copyFrom(lieferung, update, "modifidat" -> meta.timestamp, "modifikator" -> userId)
+        val copy = copyFrom(lieferung, update,
+          "lieferplanungId" -> None,
+          "lieferplanungnr" -> None,
+          "status" -> Ungeplant,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> userId)
         stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
       }
     }
   }
+
 }
