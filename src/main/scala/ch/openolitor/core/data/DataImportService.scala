@@ -42,22 +42,30 @@ import ch.openolitor.core.repositories.SqlBinder
 import java.io.InputStream
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.SystemConfig
+import ch.openolitor.buchhaltung.BuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.DefaultBuchhaltungWriteRepositoryComponent
 
 object DataImportService {
   case class ImportData(clearDatabaseBeforeImport: Boolean, document: InputStream)
   case class ImportResult(error: Option[String], result: Map[String, Int])
 
-  def props(sysConfig: SystemConfig): Props = Props(classOf[DataImportService], sysConfig)
+  def props(sysConfig: SystemConfig): Props = Props(classOf[DefaultDataImportService], sysConfig)
 }
 
 trait DataImportServiceComponent {
 }
 
-class DataImportService(override val sysConfig: SystemConfig) extends Actor with ActorLogging
+class DefaultDataImportService(override val sysConfig: SystemConfig) extends DataImportService
+  with DefaultStammdatenWriteRepositoryComponent
+  with DefaultBuchhaltungWriteRepositoryComponent
+
+trait DataImportService extends Actor with ActorLogging
     with BaseWriteRepository
     with StammdatenDBMappings
     with BuchhaltungDBMappings
-    with ConnectionPoolContextAware {
+    with ConnectionPoolContextAware
+    with StammdatenWriteRepositoryComponent
+    with BuchhaltungWriteRepositoryComponent {
 
   import DataImportService._
   import DataImportParser._
@@ -88,9 +96,8 @@ class DataImportService(override val sysConfig: SystemConfig) extends Actor with
           //clear database
           if (clearBeforeImport) {
             log.debug(s"Clear database before importing...")
-            V1Scripts.dbInitializationScripts map { script =>
-              script.execute
-            }
+            stammdatenWriteRepository.cleanupDatabase
+            buchhaltungWriteRepository.cleanupDatabase
           }
 
           //import entities
