@@ -20,29 +20,20 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.zahlungsimport
 
-import spray.json._
-import ch.openolitor.core.models._
-import java.util.UUID
-import org.joda.time._
-import org.joda.time.format._
-import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.StammdatenJsonProtocol
-import ch.openolitor.buchhaltung.models._
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.JSONSerializable
-import zangelo.spray.json.AutoProductFormats
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
+import ch.openolitor.buchhaltung.zahlungsimport.esr.EsrRecordTyp3
+import ch.openolitor.buchhaltung.zahlungsimport.esr.EsrTotalRecordTyp3
 
-/**
- * JSON Format deklarationen für das Modul Buchhaltung
- */
-trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
+class ZahlungsImportParseException(message: String) extends Exception(message)
 
-  implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
-  implicit val zahlungsImportStatusFormat = enumFormat(ZahlungsImportStatus.apply)
-
-  //id formats
-  implicit val rechnungIdFormat = baseIdFormat(RechnungId)
-  implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
+class ZahlungsImportParser {
+  def parse(line: String): ZahlungsImportRecord = line.trim match {
+    case EsrRecordTyp3(record) =>
+      record
+    case EsrTotalRecordTyp3(record) =>
+      record
+  }
 }

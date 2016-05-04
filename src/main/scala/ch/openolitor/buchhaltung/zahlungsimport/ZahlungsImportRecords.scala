@@ -20,29 +20,9 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.zahlungsimport
 
-import spray.json._
-import ch.openolitor.core.models._
-import java.util.UUID
-import org.joda.time._
-import org.joda.time.format._
-import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.StammdatenJsonProtocol
-import ch.openolitor.buchhaltung.models._
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.JSONSerializable
-import zangelo.spray.json.AutoProductFormats
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
-/**
- * JSON Format deklarationen für das Modul Buchhaltung
- */
-trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
-
-  implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
-  implicit val zahlungsImportStatusFormat = enumFormat(ZahlungsImportStatus.apply)
-
-  //id formats
-  implicit val rechnungIdFormat = baseIdFormat(RechnungId)
-  implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
-}
+trait ZahlungsImportRecord

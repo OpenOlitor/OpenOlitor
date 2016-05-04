@@ -20,29 +20,49 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.zahlungsimport.esr
 
-import spray.json._
-import ch.openolitor.core.models._
-import java.util.UUID
-import org.joda.time._
-import org.joda.time.format._
-import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.StammdatenJsonProtocol
-import ch.openolitor.buchhaltung.models._
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.JSONSerializable
-import zangelo.spray.json.AutoProductFormats
+import org.joda.time.DateTime
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
+import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
 
-/**
- * JSON Format deklarationen für das Modul Buchhaltung
- */
-trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
-
-  implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
-  implicit val zahlungsImportStatusFormat = enumFormat(ZahlungsImportStatus.apply)
-
-  //id formats
-  implicit val rechnungIdFormat = baseIdFormat(RechnungId)
-  implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
+object EsrTotalRecordTyp3Transaktionsartcode {
+  def apply(c: String): Transaktionsart = c match {
+    case "999" => Gutschrift // Gutschrift/Korrektur
+    case "995" => Storno
+  }
 }
+
+case class EsrTotalRecordTyp3(
+  transaktionsartcode: Transaktionsart,
+  teilnehmerNummer: String,
+  sortierSchluessel: String,
+  betrag: BigDecimal,
+  anzahlTransaktionen: Int,
+  erstellungsDatumMedium: DateTime,
+  preiseFuerEinzahlungen: BigDecimal,
+  nachbearbeitungEsrPlus: BigDecimal,
+  reserve: String
+) extends ZahlungsImportRecord
+
+object EsrTotalRecordTyp3 {
+  private val R = """(\w{3})(\d{9})(\d{27})(\d{12})(\d{12})(\d{6})(\d{9})(\d{9})([\w\s]{0,13})""".r
+
+  def unapply(line: String): Option[EsrTotalRecordTyp3] = line match {
+    case R(transaktionsartcode, teilnehmernummer, sortierSchluessel, betrag, anzahlTransaktionen, erstellungsDatumMedium, preiseFuerEinzahlungen, nachbearbeitungEsrPlus, reserve) =>
+      Some(EsrTotalRecordTyp3(
+        EsrTotalRecordTyp3Transaktionsartcode(transaktionsartcode),
+        teilnehmernummer,
+        sortierSchluessel,
+        BigDecimal(betrag.toInt, Scale),
+        anzahlTransaktionen.toInt,
+        DateTime.parse(erstellungsDatumMedium, Format),
+        BigDecimal(preiseFuerEinzahlungen.toInt, Scale),
+        BigDecimal(nachbearbeitungEsrPlus.toInt, Scale),
+        reserve
+      ))
+    case _ =>
+      None
+  }
+}
+
