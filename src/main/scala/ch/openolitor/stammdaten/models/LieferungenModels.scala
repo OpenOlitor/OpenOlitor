@@ -29,13 +29,14 @@ import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus
 
+case object Ungeplant extends LieferungStatus
 case object Offen extends LieferungStatus
 case object InBearbeitung extends LieferungStatus
 case object Bearbeitet extends LieferungStatus
 
 object LieferungStatus {
   def apply(value: String): LieferungStatus = {
-    Vector(Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
+    Vector(Ungeplant, Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
   }
 }
 
@@ -74,7 +75,7 @@ case class LieferplanungModify(
 ) extends JSONSerializable
 
 case class LieferplanungCreate(
-  bemerkungen: Option[String] = None,
+  bemerkungen: Option[String],
   status: LieferungStatus
 ) extends JSONSerializable
 
@@ -87,6 +88,7 @@ case class Lieferung(
   vertriebsartId: VertriebsartId,
   vertriebsartBeschrieb: String,
   datum: DateTime,
+  status: LieferungStatus,
   anzahlAbwesenheiten: Int,
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
@@ -108,9 +110,8 @@ case class LieferungModify(
   abotypBeschrieb: String,
   vertriebsartId: VertriebsartId,
   vertriebsartBeschrieb: String,
-  datum: DateTime,
-  anzahlAbwesenheiten: Int,
   status: LieferungStatus,
+  datum: DateTime,
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
   preisTotal: BigDecimal,

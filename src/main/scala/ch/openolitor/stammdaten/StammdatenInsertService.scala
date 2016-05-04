@@ -182,7 +182,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               "anzahlKoerbeNichtZuLiefern" -> ZERO,
               "zielpreis" -> abotyp.zielpreis,
               "preisTotal" -> ZERO,
-              "status" -> Offen,
+              "status" -> Ungeplant,
               "lieferplanungId" -> None,
               "lieferplanungNr" -> None,
               "erstelldat" -> meta.timestamp,
@@ -443,6 +443,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           lieferplanung,
           "id" -> lieferplanungId,
           "nr" -> newNr,
+          "status" -> Offen,
           "abotypDepotTour" -> defaultAbotypDepotTour,
           "erstelldat" -> meta.timestamp,
           "ersteller" -> meta.originator,
@@ -483,7 +484,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 val lObj = copyTo[Lieferung, Lieferung](
                   lieferung,
                   "lieferplanungId" -> lpId,
-                  "lieferplanungNr" -> lpNr
+                  "lieferplanungNr" -> lpNr,
+                  "status" -> Offen
                 )
                 DB autoCommit { implicit session =>
                   //update Lieferung

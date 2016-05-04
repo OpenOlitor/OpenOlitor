@@ -694,7 +694,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.preiseSichtbar -> parameter(projekt.preiseSichtbar),
         column.preiseEditierbar -> parameter(projekt.preiseEditierbar),
         column.emailErforderlich -> parameter(projekt.emailErforderlich),
-        column.waehrung -> parameter(projekt.waehrung)
+        column.waehrung -> parameter(projekt.waehrung),
+        column.geschaeftsjahrMonat -> parameter(projekt.geschaeftsjahrMonat),
+        column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag)
       )
     }
   }
