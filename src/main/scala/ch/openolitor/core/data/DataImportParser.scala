@@ -121,11 +121,11 @@ class DataImportParser extends Actor with ActorLogging {
 
   def parseProjekte = {
     parse[Projekt, ProjektId]("id", Seq("bezeichnung", "strasse", "haus_nummer", "adress_zusatz", "plz", "ort",
-      "preise_sichtbar", "preise_editierbar", "waehrung") ++ modifiCols) { id => indexes =>
+      "preise_sichtbar", "preise_editierbar", "email_erforderlich", "waehrung", "geschaeftsjahr_monat", "geschaeftsjahr_tag") ++ modifiCols) { id => indexes =>
       row =>
         //match column indexes
         val Seq(indexBezeichnung, indexStrasse, indexHausNummer, indexAdressZusatz, indexPlz, indexOrt, indexPreiseSichtbar,
-          indexPreiseEditierbar, indexWaehrung) = indexes.take(9)
+          indexPreiseEditierbar, indexEmailErforderlich, indexWaehrung, indexGeschaeftsjahrMonat, indexGeschaeftsjahrTag) = indexes.take(12)
         val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
         Projekt(
@@ -138,7 +138,10 @@ class DataImportParser extends Actor with ActorLogging {
           ort = row.value[Option[String]](indexOrt),
           preiseSichtbar = row.value[Boolean](indexPreiseSichtbar),
           preiseEditierbar = row.value[Boolean](indexPreiseEditierbar),
+          emailErforderlich = row.value[Boolean](indexEmailErforderlich),
           waehrung = Waehrung(row.value[String](indexWaehrung)),
+          geschaeftsjahrMonat = row.value[Int](indexGeschaeftsjahrMonat),
+          geschaeftsjahrTag = row.value[Int](indexGeschaeftsjahrTag),
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = UserId(row.value[Long](indexErsteller)),
@@ -567,15 +570,16 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseLieferplanungen = {
-    parse[Lieferplanung, LieferplanungId]("id", Seq("nr", "bemerkung", "status") ++ modifiCols) { id => indexes => row =>
+    parse[Lieferplanung, LieferplanungId]("id", Seq("nr", "bemerkung", "abotyp_depot_tour", "status") ++ modifiCols) { id => indexes => row =>
       //match column indexes
-      val Seq(indexNr, indexBemerkung, indexStatus) = indexes.take(3)
+      val Seq(indexNr, indexBemerkung, indexAbotypDepotTour, indexStatus) = indexes.take(4)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       Lieferplanung(
         id = LieferplanungId(id),
         nr = row.value[Int](indexNr),
         bemerkungen = row.value[Option[String]](indexBemerkung),
+        abotypDepotTour = row.value[String](indexAbotypDepotTour),
         status = LieferungStatus(row.value[String](indexStatus)),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
@@ -622,11 +626,11 @@ class DataImportParser extends Actor with ActorLogging {
 
   def parseLieferungen(abotypen: List[Abotyp], vertriebsarten: List[Vertriebsart], abwesenheiten: List[Abwesenheit], lieferplanungen: List[Lieferplanung],
     depots: List[Depot], touren: List[Tour]) = {
-    parse[Lieferung, LieferungId]("id", Seq("abotyp_id", "vertriebsart_id", "lieferplanung_id", "datum", "durchschnittspreis",
-      "anzahl_lieferungen", "preis_total") ++ modifiCols) { id => indexes => row =>
+    parse[Lieferung, LieferungId]("id", Seq("abotyp_id", "vertriebsart_id", "lieferplanung_id", "status", "datum", "anzahl_abwesenheiten", "durchschnittspreis",
+      "anzahl_lieferungen", "anzahl_koerbe_zu_liefern", "anzahl_koerbe_nicht_zu_liefern", "zielpreis", "preis_total") ++ modifiCols) { id => indexes => row =>
       //match column indexes
-      val Seq(indexAbotypId, indexVertriebsartId, indexLieferplanungId, indexDatum, indexDurchschnittspreis,
-        indexAnzahlLieferungen, indexPreisTotal) = indexes.take(7)
+      val Seq(indexAbotypId, indexVertriebsartId, indexLieferplanungId, indexStatus, indexDatum, indexAnzahlAbwesenheiten, indexDurchschnittspreis,
+        indexAnzahlLieferungen, indexAnzahlKoerbeZuLiefern, indexAnzahlKoerbeNichtZuLiefern, indexZielpreis, indexPreisTotal) = indexes.take(12)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val lieferungId = LieferungId(id)
@@ -643,7 +647,6 @@ class DataImportParser extends Actor with ActorLogging {
         case pl: Postlieferung => ""
       }
 
-      val abwesenheitByLieferung = abwesenheiten.filter(_.lieferungId == lieferungId)
       val durchschnittspreis = row.value[BigDecimal](indexDurchschnittspreis)
       val anzahlLieferungen = row.value[Int](indexAnzahlLieferungen)
       val preisTotal = row.value[BigDecimal](indexPreisTotal)
@@ -657,11 +660,15 @@ class DataImportParser extends Actor with ActorLogging {
         abotypBeschrieb = abotyp.beschreibung.getOrElse(""),
         vertriebsartId = vertriebsartId,
         vertriebsartBeschrieb = vaBeschrieb,
+        status = LieferungStatus(row.value[String](indexStatus)),
         datum = row.value[DateTime](indexDatum),
-        anzahlAbwesenheiten = abwesenheitByLieferung.size,
-        durchschnittspreis = durchschnittspreis,
-        anzahlLieferungen = anzahlLieferungen,
-        preisTotal = preisTotal,
+        anzahlAbwesenheiten = row.value[Int](indexAnzahlAbwesenheiten),
+        durchschnittspreis = row.value[BigDecimal](indexDurchschnittspreis),
+        anzahlLieferungen = row.value[Int](indexAnzahlLieferungen),
+        anzahlKoerbeZuLiefern = row.value[Int](indexAnzahlKoerbeZuLiefern),
+        anzahlKoerbeNichtZuLiefern = row.value[Int](indexAnzahlKoerbeNichtZuLiefern),
+        zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
+        preisTotal = row.value[BigDecimal](indexPreisTotal),
         lieferplanungId = lieferplanungId,
         lieferplanungNr = lieferplanungNr,
         //modification flags

@@ -37,9 +37,12 @@ case class Projekt(
   adressZusatz: Option[String],
   plz: Option[String],
   ort: Option[String],
-  preiseSichtbar: Boolean = true,
-  preiseEditierbar: Boolean = false,
-  waehrung: Waehrung = CHF,
+  preiseSichtbar: Boolean,
+  preiseEditierbar: Boolean,
+  emailErforderlich: Boolean,
+  waehrung: Waehrung,
+  geschaeftsjahrMonat: Int,
+  geschaeftsjahrTag: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -54,9 +57,12 @@ case class ProjektModify(
   adressZusatz: Option[String],
   plz: Option[String],
   ort: Option[String],
-  preiseSichtbar: Boolean = true,
-  preiseEditierbar: Boolean = false,
-  waehrung: Waehrung = CHF
+  preiseSichtbar: Boolean,
+  preiseEditierbar: Boolean,
+  emailErforderlich: Boolean,
+  waehrung: Waehrung,
+  geschaeftsjahrMonat: Int,
+  geschaeftsjahrTag: Int
 ) extends JSONSerializable
 
 case class KundentypId(id: String)

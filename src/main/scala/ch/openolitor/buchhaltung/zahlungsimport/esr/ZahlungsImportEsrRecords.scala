@@ -20,18 +20,22 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.buchhaltung.zahlungsimport.esr
 
-import akka.actor.ActorSystem
+import org.joda.time.DateTime
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
+import org.joda.time.format.DateTimeFormat
 
-trait StammdatenRepositoryComponent {
-  val writeRepository: StammdatenWriteRepository
-  val readRepository: StammdatenReadRepository
-}
+sealed trait EsrTyp
+case object Esr extends EsrTyp
+case object EsrPlus extends EsrTyp
 
-trait DefaultStammdatenRepositoryComponent extends StammdatenRepositoryComponent {
-  val system: ActorSystem
+sealed trait Transaktionsart
+case object Gutschrift extends Transaktionsart
+case object Storno extends Transaktionsart
+case object Korrektur extends Transaktionsart
 
-  override val writeRepository: StammdatenWriteRepository = new StammdatenWriteRepositoryImpl(system)
-  override val readRepository: StammdatenReadRepository = new StammdatenReadRepositoryImpl
+object ZahlungsImportEsrRecord {
+  val Scale = 2
+  val Format = DateTimeFormat.forPattern("yyMMdd")
 }

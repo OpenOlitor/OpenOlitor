@@ -59,6 +59,7 @@ case object Stueck extends Liefereinheit
 case object Bund extends Liefereinheit
 case object Gramm extends Liefereinheit
 case object Kilogramm extends Liefereinheit
+case object Liter extends Liefereinheit
 
 object Liefereinheit {
   def apply(value: String): Liefereinheit = {

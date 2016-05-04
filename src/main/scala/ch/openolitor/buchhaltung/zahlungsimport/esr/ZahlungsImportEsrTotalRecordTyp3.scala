@@ -20,45 +20,49 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.zahlungsimport.esr
 
-import ch.openolitor.core.domain._
-import ch.openolitor.core._
-import ch.openolitor.core.db.ConnectionPoolContextAware
-import akka.actor.Props
-import akka.actor.ActorSystem
+import org.joda.time.DateTime
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
+import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
 
-object BuchhaltungEntityStoreView {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)
-}
-
-class DefaultBuchhaltungEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends BuchhaltungEntityStoreView
-  with DefaultBuchhaltungWriteRepositoryComponent
-
-/**
- * Zusammenfügen des Componenten (cake pattern) zu der persistentView
- */
-trait BuchhaltungEntityStoreView extends EntityStoreView
-    with BuchhaltungEntityStoreViewComponent with ConnectionPoolContextAware {
-  self: BuchhaltungWriteRepositoryComponent =>
-
-  override val module = "buchhaltung"
-
-  def initializeEntityStoreView = {
+object EsrTotalRecordTyp3Transaktionsartcode {
+  def apply(c: String): Transaktionsart = c match {
+    case "999" => Gutschrift // Gutschrift/Korrektur
+    case "995" => Storno
   }
 }
 
-/**
- * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
- */
-trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
-  import EntityStore._
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+case class EsrTotalRecordTyp3(
+  transaktionsartcode: Transaktionsart,
+  teilnehmerNummer: String,
+  sortierSchluessel: String,
+  betrag: BigDecimal,
+  anzahlTransaktionen: Int,
+  erstellungsDatumMedium: DateTime,
+  preiseFuerEinzahlungen: BigDecimal,
+  nachbearbeitungEsrPlus: BigDecimal,
+  reserve: String
+) extends ZahlungsImportRecord
 
-  override val insertService = BuchhaltungInsertService(sysConfig, system)
-  override val updateService = BuchhaltungUpdateService(sysConfig, system)
-  override val deleteService = BuchhaltungDeleteService(sysConfig, system)
+object EsrTotalRecordTyp3 {
+  private val R = """(\w{3})(\d{9})(\d{27})(\d{12})(\d{12})(\d{6})(\d{9})(\d{9})([\w\s]{0,13})""".r
 
-  override val aktionenService = BuchhaltungAktionenService(sysConfig, system)
+  def unapply(line: String): Option[EsrTotalRecordTyp3] = line match {
+    case R(transaktionsartcode, teilnehmernummer, sortierSchluessel, betrag, anzahlTransaktionen, erstellungsDatumMedium, preiseFuerEinzahlungen, nachbearbeitungEsrPlus, reserve) =>
+      Some(EsrTotalRecordTyp3(
+        EsrTotalRecordTyp3Transaktionsartcode(transaktionsartcode),
+        teilnehmernummer,
+        sortierSchluessel,
+        BigDecimal(betrag.toInt, Scale),
+        anzahlTransaktionen.toInt,
+        DateTime.parse(erstellungsDatumMedium, Format),
+        BigDecimal(preiseFuerEinzahlungen.toInt, Scale),
+        BigDecimal(nachbearbeitungEsrPlus.toInt, Scale),
+        reserve
+      ))
+    case _ =>
+      None
+  }
 }
+

@@ -20,45 +20,16 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.stammdaten
 
-import ch.openolitor.core.domain._
-import ch.openolitor.core._
-import ch.openolitor.core.db.ConnectionPoolContextAware
-import akka.actor.Props
 import akka.actor.ActorSystem
 
-object BuchhaltungEntityStoreView {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)
+trait StammdatenWriteRepositoryComponent {
+  val stammdatenWriteRepository: StammdatenWriteRepository
 }
 
-class DefaultBuchhaltungEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends BuchhaltungEntityStoreView
-  with DefaultBuchhaltungWriteRepositoryComponent
-
-/**
- * Zusammenfügen des Componenten (cake pattern) zu der persistentView
- */
-trait BuchhaltungEntityStoreView extends EntityStoreView
-    with BuchhaltungEntityStoreViewComponent with ConnectionPoolContextAware {
-  self: BuchhaltungWriteRepositoryComponent =>
-
-  override val module = "buchhaltung"
-
-  def initializeEntityStoreView = {
-  }
-}
-
-/**
- * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
- */
-trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
-  import EntityStore._
-  val sysConfig: SystemConfig
+trait DefaultStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {
   val system: ActorSystem
 
-  override val insertService = BuchhaltungInsertService(sysConfig, system)
-  override val updateService = BuchhaltungUpdateService(sysConfig, system)
-  override val deleteService = BuchhaltungDeleteService(sysConfig, system)
-
-  override val aktionenService = BuchhaltungAktionenService(sysConfig, system)
+  override val stammdatenWriteRepository: StammdatenWriteRepository = new StammdatenWriteRepositoryImpl(system)
 }

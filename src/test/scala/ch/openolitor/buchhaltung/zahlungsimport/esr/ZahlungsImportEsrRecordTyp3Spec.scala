@@ -20,45 +20,50 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.zahlungsimport.esr
 
-import ch.openolitor.core.domain._
-import ch.openolitor.core._
-import ch.openolitor.core.db.ConnectionPoolContextAware
-import akka.actor.Props
-import akka.actor.ActorSystem
+import org.specs2.mutable._
+import org.joda.time.DateTime
 
-object BuchhaltungEntityStoreView {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)
-}
+class ZahlungsImportEsrRecordTyp3Spec extends Specification {
+  "ZahlungsImportEsrRecordTyp3" should {
 
-class DefaultBuchhaltungEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends BuchhaltungEntityStoreView
-  with DefaultBuchhaltungWriteRepositoryComponent
+    "extract esr line correctly" in {
+      val EsrRecordTyp3(result) = "0020000000000000003078431000700031995000000038400112528627013112513112513112500000000000000000000000"
 
-/**
- * Zusammenfügen des Componenten (cake pattern) zu der persistentView
- */
-trait BuchhaltungEntityStoreView extends EntityStoreView
-    with BuchhaltungEntityStoreViewComponent with ConnectionPoolContextAware {
-  self: BuchhaltungWriteRepositoryComponent =>
-
-  override val module = "buchhaltung"
-
-  def initializeEntityStoreView = {
+      result === EsrRecordTyp3(
+        EsrRecordTyp3Transaktionsartcode(Esr, Beleglos, Gutschrift),
+        "000000000",
+        "000000307843100070003199500",
+        BigDecimal("384.00"),
+        "1125286270",
+        new DateTime(2013, 11, 25, 0, 0, 0, 0),
+        new DateTime(2013, 11, 25, 0, 0, 0, 0),
+        new DateTime(2013, 11, 25, 0, 0, 0, 0),
+        "000000000",
+        Kein,
+        "000000000",
+        BigDecimal("0")
+      )
+    }
   }
-}
 
-/**
- * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
- */
-trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
-  import EntityStore._
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+  "EsrTotalRecordTyp3" should {
 
-  override val insertService = BuchhaltungInsertService(sysConfig, system)
-  override val updateService = BuchhaltungUpdateService(sysConfig, system)
-  override val deleteService = BuchhaltungDeleteService(sysConfig, system)
+    "extract esr line correctly" in {
+      val EsrTotalRecordTyp3(result) = "999000000000999999999999999999999999999000005721600000000000224140126000000000000000000  "
 
-  override val aktionenService = BuchhaltungAktionenService(sysConfig, system)
+      result === EsrTotalRecordTyp3(
+        Gutschrift,
+        "000000000",
+        "999999999999999999999999999",
+        BigDecimal("57216.00"),
+        224,
+        new DateTime(2014, 1, 26, 0, 0, 0, 0),
+        BigDecimal("0.00"),
+        BigDecimal("0.00"),
+        "  "
+      )
+    }
+  }
 }

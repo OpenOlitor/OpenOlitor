@@ -41,7 +41,7 @@ object BuchhaltungDeleteService {
 }
 
 class DefaultBuchhaltungDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungDeleteService(sysConfig: SystemConfig) with DefaultBuchhaltungRepositoryComponent {
+    extends BuchhaltungDeleteService(sysConfig: SystemConfig) with DefaultBuchhaltungWriteRepositoryComponent {
 }
 
 /**
@@ -49,7 +49,7 @@ class DefaultBuchhaltungDeleteService(sysConfig: SystemConfig, override val syst
  */
 class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent[_]]
     with LazyLogging with AsyncConnectionPoolContextAware with BuchhaltungDBMappings {
-  self: BuchhaltungRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
   import EntityStore._
 
   //TODO: replace with credentials of logged in user
@@ -63,7 +63,7 @@ class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends Eve
 
   def deleteRechnung(id: RechnungId) = {
     DB autoCommit { implicit session =>
-      writeRepository.deleteEntity[Rechnung, RechnungId](id)
+      buchhaltungWriteRepository.deleteEntity[Rechnung, RechnungId](id)
     }
   }
 }

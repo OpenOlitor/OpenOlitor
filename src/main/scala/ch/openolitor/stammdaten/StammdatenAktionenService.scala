@@ -20,45 +20,42 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.stammdaten
 
-import ch.openolitor.core.domain._
 import ch.openolitor.core._
-import ch.openolitor.core.db.ConnectionPoolContextAware
-import akka.actor.Props
+import ch.openolitor.core.db._
+import ch.openolitor.core.domain._
+import ch.openolitor.core.models._
+import ch.openolitor.stammdaten._
+import ch.openolitor.stammdaten.models._
+import java.util.UUID
+import scalikejdbc.DB
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
+import ch.openolitor.core.Macros._
+import scala.concurrent.ExecutionContext.Implicits.global
+import org.joda.time.DateTime
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 
-object BuchhaltungEntityStoreView {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)
+object StammdatenAktionenService {
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system)
 }
 
-class DefaultBuchhaltungEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends BuchhaltungEntityStoreView
-  with DefaultBuchhaltungWriteRepositoryComponent
+class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
+    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenWriteRepositoryComponent {
+}
 
 /**
- * Zusammenfügen des Componenten (cake pattern) zu der persistentView
+ * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
  */
-trait BuchhaltungEntityStoreView extends EntityStoreView
-    with BuchhaltungEntityStoreViewComponent with ConnectionPoolContextAware {
-  self: BuchhaltungWriteRepositoryComponent =>
+class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
+    with StammdatenDBMappings {
+  self: StammdatenWriteRepositoryComponent =>
 
-  override val module = "buchhaltung"
-
-  def initializeEntityStoreView = {
+  val handle: Handle = {
+    case e =>
+      logger.warn(s"Unknown event:$e")
   }
-}
-
-/**
- * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
- */
-trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
-  import EntityStore._
-  val sysConfig: SystemConfig
-  val system: ActorSystem
-
-  override val insertService = BuchhaltungInsertService(sysConfig, system)
-  override val updateService = BuchhaltungUpdateService(sysConfig, system)
-  override val deleteService = BuchhaltungDeleteService(sysConfig, system)
-
-  override val aktionenService = BuchhaltungAktionenService(sysConfig, system)
 }

@@ -41,13 +41,13 @@ object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
 }
 
-class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenDBEventEntityListener(sysConfig) with DefaultStammdatenRepositoryComponent
+class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenDBEventEntityListener(sysConfig) with DefaultStammdatenWriteRepositoryComponent with DefaultStammdatenReadRepositoryComponent
 
 /**
  * Listen on DBEvents and adjust calculated fields within this module
  */
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with StammdatenDBMappings with AsyncConnectionPoolContextAware {
-  this: StammdatenRepositoryComponent =>
+  this: StammdatenWriteRepositoryComponent with StammdatenReadRepositoryComponent =>
   import StammdatenDBEventEntityListener._
 
   override def preStart() {
@@ -209,14 +209,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit userId: UserId) = {
-    readRepository.getKundentypen map { kundetypen =>
+    stammdatenReadRepository.getKundentypen map { kundetypen =>
       DB autoCommit { implicit session =>
         removed.map { kundetypId =>
           kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
             case customKundentyp: CustomKundentyp =>
               val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen - 1)
               log.debug(s"Reduce anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
-              writeRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+              stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
           }
         }
 
@@ -225,7 +225,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             case customKundentyp: CustomKundentyp =>
               val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen + 1)
               log.debug(s"Increment anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
-              writeRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+              stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
           }
         }
       }
@@ -297,9 +297,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     id: I, mod: E => E
   )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
     DB autoCommit { implicit session =>
-      writeRepository.getById(syntax, id) map { result =>
+      stammdatenWriteRepository.getById(syntax, id) map { result =>
         val copy = mod(result)
-        writeRepository.updateEntity[E, I](copy)
+        stammdatenWriteRepository.updateEntity[E, I](copy)
       }
     }
   }

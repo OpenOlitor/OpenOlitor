@@ -20,18 +20,24 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.core.domain
 
+import ch.openolitor.stammdaten.StammdatenCommandHandler
+import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
+import ch.openolitor.buchhaltung.BuchhaltungCommandHandler
+import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
 import akka.actor.ActorSystem
+import ch.openolitor.core.SystemConfig
 
-trait BuchhaltungRepositoryComponent {
-  val writeRepository: BuchhaltungWriteRepository
-  val readRepository: BuchhaltungReadRepository
+trait CommandHandlerComponent {
+  val stammdatenCommandHandler: StammdatenCommandHandler
+  val buchhaltungCommandHandler: BuchhaltungCommandHandler
 }
 
-trait DefaultBuchhaltungRepositoryComponent extends BuchhaltungRepositoryComponent {
+trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
+  val sysConfig: SystemConfig
   val system: ActorSystem
 
-  override val writeRepository: BuchhaltungWriteRepository = new BuchhaltungWriteRepositoryImpl(system)
-  override val readRepository: BuchhaltungReadRepository = new BuchhaltungReadRepositoryImpl
+  override val stammdatenCommandHandler: StammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
+  override val buchhaltungCommandHandler: BuchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
 }

@@ -58,7 +58,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with BuchhaltungJsonProtocol
     with BuchhaltungEventStoreSerializer {
-  self: BuchhaltungRepositoryComponent with FileStoreComponent =>
+  self: BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
 
@@ -71,22 +71,70 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 
   lazy val rechnungenRoute =
     path("rechnungen") {
-      get(list(readRepository.getRechnungen)) ~
+      get(list(buchhaltungReadRepository.getRechnungen)) ~
         post(create[RechnungModify, RechnungId](RechnungId.apply _))
     } ~
       path("rechnungen" / rechnungIdPath) { id =>
-        get(detail(readRepository.getRechnungDetail(id))) ~
-          (put | post)(update[RechnungModify, RechnungId](id)) ~
+        get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
           delete(remove(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "verschicken") { id =>
+        (post)(verschicken(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "mahnungverschicken") { id =>
+        (post)(mahnungVerschicken(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "bezahlen") { id =>
+        (post)(entity(as[RechnungModifyBezahlt]) { entity => bezahlen(id, entity) })
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "stornieren") { id =>
+        (post)(stornieren(id))
       }
+
+  lazy val zahlungsImportsRoute =
+    path("zahlungseingaenge") {
+      get(list(buchhaltungReadRepository.getZahlungsEingaenge))
+    }
+
+  def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status Verschickt")
+      case _ =>
+        complete("")
+    }
+  }
+  def mahnungVerschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungMahnungVerschickenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status MahnungVerschickt")
+      case _ =>
+        complete("")
+    }
+  }
+  def bezahlen(id: RechnungId, entity: RechnungModifyBezahlt)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungBezahlenCommand(userId, id, entity)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status Bezahlt")
+      case _ =>
+        complete("")
+    }
+  }
+  def stornieren(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungStornierenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status Storniert")
+      case _ =>
+        complete("")
+    }
+  }
 }
 
 class DefaultBuchhaltungRoutes(
   override val entityStore: ActorRef,
   override val sysConfig: SystemConfig,
-  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )
     extends BuchhaltungRoutes
-    with DefaultBuchhaltungRepositoryComponent
+    with DefaultBuchhaltungReadRepositoryComponent

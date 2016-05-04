@@ -42,7 +42,7 @@ class EventStoreSerializer extends StaminaAkkaSerializer(EventStoreSerializer.ev
     with BuchhaltungEventStoreSerializer {
 
   override def toBinary(obj: AnyRef): Array[Byte] = {
-    logger.debug(s"EventStoreSerielizer: toBinary: $obj")
+    logger.debug(s"EventStoreSerializer: toBinary: $obj")
     try {
       super.toBinary(obj)
     } catch {
@@ -69,5 +69,5 @@ object EventStoreSerializer extends EntityStoreJsonProtocol
   val entityUpdatedEventPersister = new EntityUpdatedEventPersister[V1](entityPersisters)
   val entityDeletedEventPersister = new EntityDeletedEventPersister[V1](entityPersisters)
 
-  val eventStorePersisters = List(entityStoreInitializedPersister, entityInsertEventPersister, entityUpdatedEventPersister, entityDeletedEventPersister)
+  val eventStorePersisters = List(entityStoreInitializedPersister, entityInsertEventPersister, entityUpdatedEventPersister, entityDeletedEventPersister) ++ stammdatenPersisters ++ buchhaltungPersisters
 }

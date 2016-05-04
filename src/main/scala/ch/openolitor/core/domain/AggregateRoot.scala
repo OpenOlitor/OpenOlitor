@@ -25,11 +25,17 @@ package ch.openolitor.core.domain
 import akka.persistence._
 import akka.actor._
 import java.util.UUID
+import ch.openolitor.core.models.UserId
+
+trait State
+
+trait Command
+
+trait UserCommand extends Command {
+  val originator: UserId
+}
 
 object AggregateRoot {
-  trait State
-  trait Command
-
   case object KillAggregate extends Command
 
   case object GetState extends Command
@@ -47,25 +53,25 @@ trait AggregateRoot extends PersistentActor with ActorLogging {
 
   case class Initialize(state: S) extends Command
 
-  def updateState(evt: PersistetEvent): Unit
+  def updateState(evt: PersistentEvent): Unit
   def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
 
   def afterRecoveryCompleted(): Unit = {}
 
   def now = System.currentTimeMillis
 
-  protected def afterEventPersisted(evt: PersistetEvent): Unit = {
+  protected def afterEventPersisted(evt: PersistentEvent): Unit = {
     updateState(evt)
     publish(evt)
     log.debug(s"afterEventPersisted:send back state:$state")
     sender ! state
   }
 
-  private def publish(event: PersistetEvent) =
+  private def publish(event: PersistentEvent) =
     context.system.eventStream.publish(event)
 
   override val receiveRecover: Receive = {
-    case evt: PersistetEvent =>
+    case evt: PersistentEvent =>
       log.debug(s"receiveRecover $evt")
       updateState(evt)
     case SnapshotOffer(metadata, state: State) =>

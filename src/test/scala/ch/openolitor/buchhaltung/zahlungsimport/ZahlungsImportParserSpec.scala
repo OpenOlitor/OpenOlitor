@@ -20,45 +20,21 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.zahlungsimport
 
-import ch.openolitor.core.domain._
-import ch.openolitor.core._
-import ch.openolitor.core.db.ConnectionPoolContextAware
-import akka.actor.Props
-import akka.actor.ActorSystem
+import org.specs2.mutable._
+import scala.io.Source
 
-object BuchhaltungEntityStoreView {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)
-}
+class ZahlungsImportParserSpec extends Specification {
+  "ZahlungsImportParser" should {
+    val parser = new ZahlungsImportParser
 
-class DefaultBuchhaltungEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends BuchhaltungEntityStoreView
-  with DefaultBuchhaltungWriteRepositoryComponent
+    val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
 
-/**
- * Zusammenfügen des Componenten (cake pattern) zu der persistentView
- */
-trait BuchhaltungEntityStoreView extends EntityStoreView
-    with BuchhaltungEntityStoreViewComponent with ConnectionPoolContextAware {
-  self: BuchhaltungWriteRepositoryComponent =>
+    "parse example file" in {
+      val result = source.getLines map (parser.parse)
 
-  override val module = "buchhaltung"
-
-  def initializeEntityStoreView = {
+      result.size === 225
+    }
   }
-}
-
-/**
- * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
- */
-trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
-  import EntityStore._
-  val sysConfig: SystemConfig
-  val system: ActorSystem
-
-  override val insertService = BuchhaltungInsertService(sysConfig, system)
-  override val updateService = BuchhaltungUpdateService(sysConfig, system)
-  override val deleteService = BuchhaltungDeleteService(sysConfig, system)
-
-  override val aktionenService = BuchhaltungAktionenService(sysConfig, system)
 }
