@@ -40,24 +40,29 @@ import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.repositories.SqlBinder
 import java.io.InputStream
+import ch.openolitor.core.db.ConnectionPoolContextAware
+import ch.openolitor.core.SystemConfig
 
 object DataImportService {
   case class ImportData(clearDatabaseBeforeImport: Boolean, document: InputStream)
   case class ImportResult(error: Option[String], result: Map[String, Int])
 
-  def props(): Props = Props(classOf[DataImportService])
+  def props(sysConfig: SystemConfig): Props = Props(classOf[DataImportService], sysConfig)
 }
 
 trait DataImportServiceComponent {
 }
 
-trait DataImportService extends Actor with ActorLogging
+class DataImportService(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with BaseWriteRepository
     with StammdatenDBMappings
-    with BuchhaltungDBMappings {
+    with BuchhaltungDBMappings
+    with ConnectionPoolContextAware {
 
   import DataImportService._
   import DataImportParser._
+
+  override val system = context.system
 
   val parser = context.actorOf(DataImportParser.props)
   var clearBeforeImport = false
@@ -77,6 +82,7 @@ trait DataImportService extends Actor with ActorLogging
     case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, lieferungen,
       lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
       produzenten, produktProduzenten, bestellungen, bestellpositionen) =>
+      log.debug(s"Received parse result, start importing...")
       try {
         DB localTx { implicit session =>
           //clear database
@@ -143,6 +149,7 @@ trait DataImportService extends Actor with ActorLogging
         }
       } catch {
         case t: Throwable =>
+          logger.warn(s"Received error while importing data", t)
           originator.map(_ ! ImportResult(Option(t.getMessage), Map()))
       }
   }

@@ -43,13 +43,15 @@ trait SystemRouteService extends HttpService with ActorReferences
 
   private var error: Option[Throwable] = None
   val system: ActorSystem
+  lazy val importService = system.actorOf(DataImportService.props(sysConfig), "oo-import-service")
 
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  val systemRoutes = statusRoute ~ adminRoutes
+  lazy val systemRoutes = statusRoute ~ adminRoutes
 
-  val adminRoutes = pathPrefix("admin") {
+  lazy val adminRoutes = pathPrefix("admin") {
+    logger.error(s"Request admin route")
     adminRoute()
   }
 
@@ -70,27 +72,31 @@ trait SystemRouteService extends HttpService with ActorReferences
       path("import") {
         post {
           entity(as[MultipartFormData]) { formData =>
+            logger.debug(s"import requested")
             val file = formData.fields.collectFirst {
-              case b @ BodyPart(entity, headers) if b.name == "file" =>
+              case b @ BodyPart(entity, headers) if b.name == Some("file") =>
+                logger.debug(s"parse file bodypart")
                 val content = new ByteArrayInputStream(entity.data.toByteArray)
                 val fileName = headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
                 (content, fileName)
             }
 
             val clearBeforeImport = formData.fields.find(_.name == "clear").map(_.entity.asString.toBoolean).getOrElse(true)
+            logger.debug(s"File:${file.isDefined}, clearBeforeImport:$clearBeforeImport")
 
-            val importService = system.actorOf(DataImportService.props, "oo-import-service")
             implicit val timeout = Timeout(300.seconds)
             file.map { file =>
               onSuccess(importService ? ImportData(clearBeforeImport, file._1)) {
                 case ImportResult(Some(error), _) =>
+                  logger.warn(s"Couldn't import data, received error:$error")
                   complete(StatusCodes.BadRequest, error)
                 case r @ ImportResult(None, result) =>
                   complete(r.toJson.compactPrint)
                 case x =>
+                  logger.warn(s"Couldn't import data, unexpected result:$x")
                   complete(StatusCodes.BadRequest)
               }
-            }.getOrElse(complete(StatusCodes.BadRequest))
+            }.getOrElse(complete(StatusCodes.BadRequest, "No file found"))
           }
         }
       }

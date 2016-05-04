@@ -37,7 +37,7 @@ case class Status(buildNr: String)
 
 trait StatusRoutes extends HttpService with DefaultRouteService with StatusJsonProtocol {
 
-  val statusRoute =
+  lazy val statusRoute =
     pathPrefix("status") {
       statusRoutes()
     }
