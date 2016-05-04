@@ -45,6 +45,7 @@ import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
 import sqls.distinct
+import sqls.min
 import scalaz.IsEmpty
 
 trait StammdatenReadRepository {
@@ -95,6 +96,7 @@ trait StammdatenReadRepository {
   def getLatestLieferplanung(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Lieferplanung]]
   def getLieferungenNext()(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+  def getNichtInkludierteAbotypenLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getBestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellung]]
@@ -558,11 +560,22 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   }
 
   def getLieferungenNext()(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
-    withSQL {
-      select
-        .from(lieferungMapping as lieferung)
-        .where.in(lieferung.abotypId, select(distinct(aboTyp.id)).from(abotypMapping as aboTyp).where.eq(aboTyp.wirdGeplant, true))
-    }.map(lieferungMapping(lieferung)).list.future
+    sql"""
+        SELECT
+          ${lieferung.result.*}
+        FROM
+          ${lieferungMapping as lieferung}
+        INNER JOIN
+		      (SELECT ${lieferung.abotypId} AS abotypId, MIN(${lieferung.datum}) AS MinDateTime
+		       FROM ${lieferungMapping as lieferung}
+		       INNER JOIN ${abotypMapping as aboTyp}
+		       ON ${lieferung.abotypId} = ${aboTyp.id}
+		       WHERE ${aboTyp.wirdGeplant} = true
+		       AND ${lieferung.lieferplanungId} IS NULL
+		       GROUP BY ${lieferung.abotypId}) groupedLieferung
+		    ON ${lieferung.abotypId} = groupedLieferung.abotypId 
+		    AND ${lieferung.datum} = groupedLieferung.MinDateTime
+      """.map(lieferungMapping(lieferung)).list.future
   }
 
   def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
@@ -571,6 +584,29 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .from(lieferungMapping as lieferung)
         .where.eq(lieferung.lieferplanungId, parameter(id))
     }.map(lieferungMapping(lieferung)).list.future
+  }
+
+  def getNichtInkludierteAbotypenLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
+    sql"""
+        SELECT
+          ${lieferung.result.*}
+        FROM
+          ${lieferungMapping as lieferung}
+        INNER JOIN
+		      (SELECT ${lieferung.abotypId} AS abotypId, MIN(${lieferung.datum}) AS MinDateTime
+		       FROM ${lieferungMapping as lieferung}
+		       INNER JOIN ${abotypMapping as aboTyp}
+		       ON ${lieferung.abotypId} = ${aboTyp.id}
+		       AND ${lieferung.lieferplanungId} IS NULL
+		       AND ${aboTyp.id} NOT IN (
+		         SELECT DISTINCT ${lieferung.abotypId}
+		         FROM ${lieferungMapping as lieferung}
+		         WHERE ${lieferung.lieferplanungId} = ${id.id}
+		       )
+		       GROUP BY ${lieferung.abotypId}) groupedLieferung
+		    ON ${lieferung.abotypId} = groupedLieferung.abotypId 
+		    AND ${lieferung.datum} = groupedLieferung.MinDateTime
+      """.map(lieferungMapping(lieferung)).list.future
   }
 
   def getBestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellung]] = {

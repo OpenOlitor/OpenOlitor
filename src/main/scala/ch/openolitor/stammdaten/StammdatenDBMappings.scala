@@ -318,6 +318,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten),
         column.durchschnittspreis -> parameter(lieferung.durchschnittspreis),
         column.anzahlLieferungen -> parameter(lieferung.anzahlLieferungen),
+        column.anzahlKoerbeZuLiefern -> parameter(lieferung.anzahlKoerbeZuLiefern),
+        column.anzahlKoerbeNichtZuLiefern -> parameter(lieferung.anzahlKoerbeNichtZuLiefern),
         column.preisTotal -> parameter(lieferung.preisTotal),
         column.lieferplanungId -> parameter(lieferung.lieferplanungId),
         column.lieferplanungNr -> parameter(lieferung.lieferplanungNr)
@@ -339,6 +341,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(lieferplanung) ++ Seq(
         column.nr -> parameter(lieferplanung.nr),
         column.bemerkungen -> parameter(lieferplanung.bemerkungen),
+        column.abotypDepotTour -> parameter(lieferplanung.abotypDepotTour),
         column.status -> parameter(lieferplanung.status)
       )
     }
@@ -690,7 +693,10 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.ort -> parameter(projekt.ort),
         column.preiseSichtbar -> parameter(projekt.preiseSichtbar),
         column.preiseEditierbar -> parameter(projekt.preiseEditierbar),
-        column.waehrung -> parameter(projekt.waehrung)
+        column.emailErforderlich -> parameter(projekt.emailErforderlich),
+        column.waehrung -> parameter(projekt.waehrung),
+        column.geschaeftsjahrMonat -> parameter(projekt.geschaeftsjahrMonat),
+        column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag)
       )
     }
   }

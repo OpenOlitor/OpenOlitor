@@ -29,13 +29,27 @@ import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus
 
+case object Ungeplant extends LieferungStatus
 case object Offen extends LieferungStatus
 case object InBearbeitung extends LieferungStatus
 case object Bearbeitet extends LieferungStatus
 
 object LieferungStatus {
   def apply(value: String): LieferungStatus = {
-    Vector(Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
+    Vector(Ungeplant, Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
+  }
+}
+
+sealed trait KorbStatus
+
+case object WirdGeliefert extends KorbStatus
+case object Geliefert extends KorbStatus
+case object FaelltAusAbwesend extends KorbStatus
+case object FaelltAusSaldoZuTief extends KorbStatus
+
+object KorbStatus {
+  def apply(value: String): KorbStatus = {
+    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief).find(_.toString == value).getOrElse(WirdGeliefert)
   }
 }
 
@@ -45,6 +59,7 @@ case class Lieferplanung(
   id: LieferplanungId,
   nr: Int,
   bemerkungen: Option[String],
+  abotypDepotTour: String,
   status: LieferungStatus,
   //modification flags
   erstelldat: DateTime,
@@ -60,8 +75,8 @@ case class LieferplanungModify(
 ) extends JSONSerializable
 
 case class LieferplanungCreate(
-  bemerkungen: Option[String] = None,
-  status: LieferungStatus = Offen
+  bemerkungen: Option[String],
+  status: LieferungStatus
 ) extends JSONSerializable
 
 case class LieferungId(id: Long) extends BaseId
@@ -73,9 +88,13 @@ case class Lieferung(
   vertriebsartId: VertriebsartId,
   vertriebsartBeschrieb: String,
   datum: DateTime,
+  status: LieferungStatus,
   anzahlAbwesenheiten: Int,
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
+  anzahlKoerbeZuLiefern: Int,
+  anzahlKoerbeNichtZuLiefern: Int,
+  zielpreis: Option[BigDecimal],
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
   lieferplanungNr: Option[Int],
@@ -91,17 +110,14 @@ case class LieferungModify(
   abotypBeschrieb: String,
   vertriebsartId: VertriebsartId,
   vertriebsartBeschrieb: String,
-  datum: DateTime,
-  anzahlAbwesenheiten: Int,
   status: LieferungStatus,
+  datum: DateTime,
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
   lieferplanungNr: Option[Int]
 ) extends JSONSerializable
-
-//case class LieferungModify(datum: DateTime) extends JSONSerializable
 
 case class LieferungAbotypCreate(
   abotypId: AbotypId,
@@ -204,3 +220,17 @@ case class BestellpositionModify(
   preis: Option[BigDecimal],
   anzahl: Int
 ) extends JSONSerializable
+
+case class KorbId(id: Long) extends BaseId
+
+case class Korb(
+  id: KorbId,
+  lieferungId: LieferungId,
+  aboId: AboId,
+  status: KorbStatus,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId
+) extends BaseEntity[KorbId]
