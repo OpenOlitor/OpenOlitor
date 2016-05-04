@@ -91,6 +91,11 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
         (post)(stornieren(id))
       }
 
+  lazy val zahlungsImportsRoute =
+    path("zahlungseingaenge") {
+      get(list(buchhaltungReadRepository.getZahlungsEingaenge))
+    }
+
   def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
     onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(userId, id)) {
       case UserCommandFailed =>

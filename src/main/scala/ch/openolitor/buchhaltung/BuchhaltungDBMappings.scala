@@ -43,13 +43,16 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
   // DB type binders for read operations
   implicit val rechnungIdBinder: TypeBinder[RechnungId] = baseIdTypeBinder(RechnungId.apply _)
+  implicit val zahlungsEingangIdBinder: TypeBinder[ZahlungsEingangId] = baseIdTypeBinder(ZahlungsEingangId.apply _)
 
   implicit val rechnungStatusTypeBinder: TypeBinder[RechnungStatus] = string.map(RechnungStatus.apply)
 
   //DB parameter binders for write and query operationsit
   implicit val rechnungStatusBinder = toStringSqlBinder[RechnungStatus]
+  implicit val zahlungsImportStatusBinder = toStringSqlBinder[ZahlungsImportStatus]
 
   implicit val rechnungIdSqlBinder = baseIdSqlBinder[RechnungId]
+  implicit val zahlungsEingangIdSqlBinder = baseIdSqlBinder[ZahlungsEingangId]
 
   implicit val rechnungMapping = new BaseEntitySQLSyntaxSupport[Rechnung] {
     override val tableName = "Rechnung"

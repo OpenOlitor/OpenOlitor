@@ -47,6 +47,8 @@ trait BuchhaltungReadRepository {
   def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]
+
+  def getZahlungsEingaenge(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsEingang]]
 }
 
 trait BuchhaltungWriteRepository extends BaseWriteRepository {
@@ -100,6 +102,10 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
         val abo = (pl ++ hl ++ dl).head
         copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "abo" -> abo)
       }).single.future
+  }
+
+  def getZahlungsEingaenge(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsEingang]] = {
+    ???
   }
 }
 

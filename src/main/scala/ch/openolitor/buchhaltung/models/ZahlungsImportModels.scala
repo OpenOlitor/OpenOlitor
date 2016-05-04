@@ -20,29 +20,54 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.models
 
-import spray.json._
+import ch.openolitor.buchhaltung._
 import ch.openolitor.core.models._
-import java.util.UUID
-import org.joda.time._
-import org.joda.time.format._
-import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.StammdatenJsonProtocol
-import ch.openolitor.buchhaltung.models._
-import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
-import zangelo.spray.json.AutoProductFormats
+import ch.openolitor.stammdaten.models._
 
-/**
- * JSON Format deklarationen für das Modul Buchhaltung
- */
-trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
+sealed trait ZahlungsImportStatus
+case object Ok extends ZahlungsImportStatus
 
-  implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
-  implicit val zahlungsImportStatusFormat = enumFormat(ZahlungsImportStatus.apply)
-
-  //id formats
-  implicit val rechnungIdFormat = baseIdFormat(RechnungId)
-  implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
+object ZahlungsImportStatus {
+  def apply(value: String): ZahlungsImportStatus = {
+    Vector(Ok).find(_.toString == value).getOrElse(Ok)
+  }
 }
+
+case class ZahlungsEingangId(id: Long) extends BaseId
+
+case class ZahlungsImportId(id: Long) extends BaseId
+
+case class ZahlungsImport(
+  id: ZahlungsImportId,
+  file: String,
+  // modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId
+) extends BaseEntity[ZahlungsImportId]
+
+case class ZahlungsEingang(
+  id: ZahlungsEingangId,
+  rechnungId: Option[RechnungId],
+  transaktionsart: String,
+  teilnehmerNummer: String,
+  referenzNummer: String,
+  waehrung: Waehrung,
+  betrag: BigDecimal,
+  aufgabeReferenzen: String,
+  aufgabeDatum: DateTime,
+  verarbeitungsDatum: DateTime,
+  gutschriftsDatum: DateTime,
+  status: ZahlungsImportStatus,
+  esrNummer: String,
+  // modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId
+) extends BaseEntity[ZahlungsEingangId]
