@@ -349,8 +349,8 @@ trait EntityStore extends AggregateRoot
       //TODO: check if messages should also get deleted
       saveSnapshot(state)
       deleteMessages(lastSequenceNr)
-    case DeleteMessagesSuccess =>
-    case DeleteMessagesFailure(error, toSequenceNr) =>
+    case DeleteMessagesSuccess(toSequenceNr) => 
+    case DeleteMessagesFailure(error, toSequenceNr) => 
       log.error(s"Deleting of messages failed {}", error)
     case SaveSnapshotSuccess(metadata) =>
     case SaveSnapshotFailure(metadata, reason) =>

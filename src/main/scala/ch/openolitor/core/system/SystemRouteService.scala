@@ -85,7 +85,7 @@ trait SystemRouteService extends HttpService with ActorReferences
               case b @ BodyPart(entity, headers) if b.name == Some("clear") =>
                 entity.asString.toBoolean
             }.getOrElse(false)
-            logger.debug(s"File:${file.isDefined}, clearBeforeImport:$clearBeforeImport")
+            logger.debug(s"File:${file.isDefined}, clearBeforeImport:$clearBeforeImport: ")
 
             implicit val timeout = Timeout(300.seconds)
             file.map { file =>

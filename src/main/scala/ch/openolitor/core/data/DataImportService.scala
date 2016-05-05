@@ -165,6 +165,7 @@ trait DataImportService extends Actor with ActorLogging
           logger.warn(s"Received error while importing data {}", t)
           originator.map(_ ! ImportResult(Option(t.getMessage), Map()))
       }
+      context become receive
   }
 
   def importEntityList[E <: BaseEntity[I], I <: BaseId](name: String, entities: List[E], result: Map[String, Int])(implicit
