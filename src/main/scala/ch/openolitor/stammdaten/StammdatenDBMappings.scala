@@ -133,6 +133,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val bestellungIdSqlBinder = baseIdSqlBinder[BestellungId]
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
   implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
+  implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
   implicit val produktekategorieIdSqlBinder = baseIdSqlBinder[ProduktekategorieId]
   implicit val baseProduktekategorieIdSqlBinder = new SqlBinder[BaseProduktekategorieId] { def apply(value: BaseProduktekategorieId): Any = value.id }
   implicit val baseProduktekategorieIdSetSqlBinder = setSqlBinder[BaseProduktekategorieId]

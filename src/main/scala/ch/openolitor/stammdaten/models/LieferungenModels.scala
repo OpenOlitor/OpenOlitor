@@ -136,7 +136,7 @@ case class LieferpositionId(id: Long) extends BaseId
 case class Lieferposition(
   id: LieferpositionId,
   lieferungId: LieferungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
@@ -154,7 +154,7 @@ case class Lieferposition(
 
 case class LieferpositionModify(
   lieferungId: LieferungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
@@ -207,7 +207,7 @@ case class BestellpositionId(id: Long) extends BaseId
 case class Bestellposition(
   id: BestellpositionId,
   bestellungId: BestellungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   preisEinheit: Option[BigDecimal],
   einheit: Liefereinheit,
@@ -223,7 +223,7 @@ case class Bestellposition(
 
 case class BestellpositionModify(
   bestellungId: BestellungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   preisEinheit: Option[BigDecimal],
   einheit: Liefereinheit,

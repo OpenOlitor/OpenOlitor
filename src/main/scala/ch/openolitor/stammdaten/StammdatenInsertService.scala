@@ -524,7 +524,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       }
       //fetch corresponding Lieferungen and generate Bestellungen
       val newBs = collection.mutable.Map[Tuple3[ProduzentId, LieferplanungId, DateTime], Bestellung]()
-      val newBPs = collection.mutable.Map[Tuple2[BestellungId, ProduktId], Bestellposition]()
+      val newBPs = collection.mutable.Map[Tuple2[BestellungId, Option[ProduktId]], Bestellposition]()
       stammdatenReadRepository.getLieferplanung(create.lieferplanungId) map {
         case Some(lieferplanung) =>
           stammdatenReadRepository.getLieferpositionenByLieferplan(create.lieferplanungId) map {
