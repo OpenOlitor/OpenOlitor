@@ -151,7 +151,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
           val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length,
             "anzahlPendenzen" -> update.pendenzen.length, "modifidat" -> meta.timestamp, "modifikator" -> userId)
-          stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
+          DB autoCommit { implicit session =>
+            stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
+          }
         }
       }
 
@@ -421,17 +423,23 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-        //map all updatable fields
-        val copy = copyFrom(lieferung, update,
-          "lieferplanungId" -> None,
-          "lieferplanungnr" -> None,
-          "status" -> Ungeplant,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> userId)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+      stammdatenWriteRepository.deleteLieferpositionen(id) andThen {
+        case x =>
+          DB autoCommit { implicit session =>
+            stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
+              //map all updatable fields
+              val copy = copyFrom(lieferung, update,
+                "lieferplanungId" -> None,
+                "lieferplanungNr" -> None,
+                "status" -> Ungeplant,
+                "modifidat" -> meta.timestamp,
+                "modifikator" -> userId)
+              stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+            }
+          }
       }
     }
+
   }
 
 }

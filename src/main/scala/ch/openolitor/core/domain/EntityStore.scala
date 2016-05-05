@@ -278,12 +278,16 @@ trait EntityStore extends AggregateRoot
       handleEntityInsert[LieferungAbotypCreate, LieferungId](userId, entity, LieferungId.apply)
     case e @ InsertEntityCommand(userId, entity: LieferplanungCreate) =>
       handleEntityInsert[LieferplanungCreate, LieferplanungId](userId, entity, LieferplanungId.apply)
+    case e @ InsertEntityCommand(userId, entity: LieferpositionenCreate) =>
+      handleEntityInsert[LieferpositionenCreate, LieferpositionId](userId, entity, LieferpositionId.apply)
     case e @ InsertEntityCommand(userId, entity: BestellungenCreate) =>
       handleEntityInsert[BestellungenCreate, BestellungId](userId, entity, BestellungId.apply)
     case e @ InsertEntityCommand(userId, entity: PendenzModify) =>
       handleEntityInsert[PendenzModify, PendenzId](userId, entity, PendenzId.apply)
     case e @ InsertEntityCommand(userId, entity: PersonCreate) =>
       handleEntityInsert[PersonCreate, PersonId](userId, entity, PersonId.apply)
+    case e @ InsertEntityCommand(userId, entity: ProduzentModify) =>
+      handleEntityInsert[ProduzentModify, ProduzentId](userId, entity, ProduzentId.apply)
     case e @ InsertEntityCommand(userId, entity: ProduktModify) =>
       handleEntityInsert[ProduktModify, ProduktId](userId, entity, ProduktId.apply)
     case e @ InsertEntityCommand(userId, entity: ProduktProduktekategorie) =>
@@ -300,6 +304,7 @@ trait EntityStore extends AggregateRoot
       handleEntityInsert[RechnungModify, RechnungId](userId, entity, RechnungId.apply)
     case e @ InsertEntityCommand(userId, entity: AbwesenheitCreate) =>
       handleEntityInsert[AbwesenheitCreate, AbwesenheitId](userId, entity, AbwesenheitId.apply)
+
     case UpdateEntityCommand(userId, id: KundeId, entity: KundeModify) =>
       val partitions = entity.ansprechpersonen.partition(_.id.isDefined)
       val newPersons: Seq[PersonModify] = partitions._2.zipWithIndex.map {

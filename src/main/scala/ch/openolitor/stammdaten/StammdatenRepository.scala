@@ -98,6 +98,7 @@ trait StammdatenReadRepository {
   def getLieferungenNext()(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getNichtInkludierteAbotypenLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+  def getLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getBestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellung]]
@@ -656,6 +657,14 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(bestellpositionMapping(bestellposition)).list.future
   }
 
+  def getLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]] = {
+    withSQL {
+      select
+        .from(lieferpositionMapping as lieferposition)
+        .where.eq(lieferposition.lieferungId, parameter(id))
+    }.map(lieferpositionMapping(lieferposition)).list.future
+  }
+
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]] = {
     withSQL {
       select
@@ -686,7 +695,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
 
-  lazy val lieferposition = lieferpositionMapping.syntax("lieferposition")
+  lazy val lieferpositionShort = lieferpositionMapping.syntax
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
   }
@@ -694,8 +703,8 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
   def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int] = {
     withSQL {
       delete
-        .from(lieferpositionMapping as lieferposition)
-        .where.eq(lieferposition.lieferungId, parameter(id))
+        .from(lieferpositionMapping)
+        .where.eq(lieferpositionShort.lieferungId, parameter(id))
     }.update.future
   }
 }
