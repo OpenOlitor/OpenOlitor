@@ -81,7 +81,10 @@ trait SystemRouteService extends HttpService with ActorReferences
                 (content, fileName)
             }
 
-            val clearBeforeImport = formData.fields.find(_.name == "clear").map(_.entity.asString.toBoolean).getOrElse(true)
+            val clearBeforeImport = formData.fields.collectFirst {
+              case b @ BodyPart(entity, headers) if b.name == Some("clear") =>
+                entity.asString.toBoolean
+            }.getOrElse(false)
             logger.debug(s"File:${file.isDefined}, clearBeforeImport:$clearBeforeImport")
 
             implicit val timeout = Timeout(300.seconds)

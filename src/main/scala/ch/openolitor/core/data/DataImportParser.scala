@@ -53,12 +53,12 @@ class DataImportParser extends Actor with ActorLogging {
           case Success(result) =>
             rec ! result
           case Failure(error) =>
-            log.warning("Couldn't import data", error)
+            log.warning("Couldn't import data {}", error)
             rec ! ParseError(error)
         }
       } catch {
         case t: Throwable =>
-          log.warning("Couldn't import data", t)
+          log.warning("Couldn't import data {}", t)
           rec ! ParseError(t)
       }
   }

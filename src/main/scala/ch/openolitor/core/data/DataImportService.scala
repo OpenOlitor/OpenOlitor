@@ -156,7 +156,7 @@ trait DataImportService extends Actor with ActorLogging
         }
       } catch {
         case t: Throwable =>
-          logger.warn(s"Received error while importing data", t)
+          logger.warn(s"Received error while importing data {}", t)
           originator.map(_ ! ImportResult(Option(t.getMessage), Map()))
       }
   }
