@@ -43,7 +43,7 @@ trait SystemRouteService extends HttpService with ActorReferences
 
   private var error: Option[Throwable] = None
   val system: ActorSystem
-  lazy val importService = system.actorOf(DataImportService.props(sysConfig), "oo-import-service")
+  lazy val importService = system.actorOf(DataImportService.props(sysConfig, entityStore), "oo-import-service")
 
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId

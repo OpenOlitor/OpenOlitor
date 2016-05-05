@@ -44,18 +44,19 @@ import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.buchhaltung.BuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.core.domain.EntityStore
 
 object DataImportService {
   case class ImportData(clearDatabaseBeforeImport: Boolean, document: InputStream)
   case class ImportResult(error: Option[String], result: Map[String, Int])
 
-  def props(sysConfig: SystemConfig): Props = Props(classOf[DefaultDataImportService], sysConfig)
+  def props(sysConfig: SystemConfig, entityStore: ActorRef): Props = Props(classOf[DefaultDataImportService], sysConfig, entityStore)
 }
 
 trait DataImportServiceComponent {
 }
 
-class DefaultDataImportService(override val sysConfig: SystemConfig) extends DataImportService
+class DefaultDataImportService(override val sysConfig: SystemConfig, override val entityStore: ActorRef) extends DataImportService
   with DefaultStammdatenWriteRepositoryComponent
   with DefaultBuchhaltungWriteRepositoryComponent
 
@@ -71,6 +72,7 @@ trait DataImportService extends Actor with ActorLogging
   import DataImportParser._
 
   override val system = context.system
+  val entityStore: ActorRef
 
   val parser = context.actorOf(DataImportParser.props)
   var clearBeforeImport = false
@@ -151,6 +153,10 @@ trait DataImportService extends Actor with ActorLogging
           result = importEntityList[ProduktProduzent, ProduktProduzentId]("ProduktProduzenten", produktProduzenten, result)
           result = importEntityList[Bestellung, BestellungId]("Bestellungen", bestellungen, result)
           result = importEntityList[Bestellposition, BestellpositionId]("Bestellpositionen", bestellpositionen, result)
+
+          //save snapshot in entitystore actor
+          log.debug(s"Save Snapshot in entitystore")
+          entityStore ! EntityStore.StartSnapshotCommand
 
           originator.map(_ ! ImportResult(None, result))
         }
