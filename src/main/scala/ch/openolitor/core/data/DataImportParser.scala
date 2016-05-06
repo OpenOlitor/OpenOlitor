@@ -247,8 +247,8 @@ class DataImportParser extends Actor with ActorLogging {
           kundeBezeichnung = kunde.bezeichnung,
           datum = row.value[DateTime](indexDatum),
           bemerkung = row.value[Option[String]](indexBemerkung),
-          status = PendenzStatus(row.value[String](indexStatus)),
           generiert = row.value[Boolean](indexGeneriert),
+          status = PendenzStatus(row.value[String](indexStatus)),
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = UserId(row.value[Long](indexErsteller)),

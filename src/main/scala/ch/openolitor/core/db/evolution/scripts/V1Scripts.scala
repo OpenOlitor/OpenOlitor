@@ -189,8 +189,8 @@ object V1Scripts {
         kunde_bezeichnung varchar(50),
         datum datetime default null,
         bemerkung varchar(2000),
+        status varchar(50) not null,
         generiert varchar(1),
-        status varchar(10),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -363,7 +363,7 @@ object V1Scripts {
 
       sql"""create table ${produktMapping.table}  (
         id BIGINT not null,
-        name varchar(50) not null,
+        name varchar(140) not null,
         verfuegbar_von varchar(10) not null,
         verfuegbar_bis varchar(10) not null,
         kategorien varchar(300),
@@ -484,7 +484,7 @@ object V1Scripts {
         rechnungs_datum datetime not null,
         faelligkeits_datum datetime not null,
         eingangs_datum datetime,
-        status varchar(20) not null,
+        status varchar(50) not null,
         referenz_nummer varchar(27) not null,
         esr_nummer varchar(54) not null,
         strasse varchar(50) not null,
