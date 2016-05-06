@@ -597,7 +597,7 @@ class DataImportParser extends Actor with ActorLogging {
         indexAnzahl) = indexes.take(8)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
-      val produktId = ProduktId(row.value[Long](indexProduktId))
+      val produktId = Some(ProduktId(row.value[Long](indexProduktId)))
       val produzentId = ProduzentId(row.value[Long](indexProduzentId))
       val produkt = produkte.find(_.id == produktId).getOrElse(throw ParseException(s"No produkt found for id $produktId"))
       val produzent = produzenten.find(_.id == produzentId).getOrElse(throw ParseException(s"No produzent found for id $produzentId"))
@@ -779,7 +779,7 @@ class DataImportParser extends Actor with ActorLogging {
       val Seq(indexBestellungId, indexProduktId, indexPreisEinheit, indexEinheit, indexMenge, indexPreis, indexAnzahl) = indexes.take(7)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
-      val produktId = ProduktId(row.value[Long](indexProduktId))
+      val produktId = Some(ProduktId(row.value[Long](indexProduktId)))
       val produkt = produkte.find(_.id == produktId).getOrElse(throw ParseException(s"No produkt found for id $produktId"))
 
       Bestellposition(

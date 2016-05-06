@@ -322,6 +322,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.anzahlLieferungen -> parameter(lieferung.anzahlLieferungen),
         column.anzahlKoerbeZuLiefern -> parameter(lieferung.anzahlKoerbeZuLiefern),
         column.anzahlKoerbeNichtZuLiefern -> parameter(lieferung.anzahlKoerbeNichtZuLiefern),
+        column.zielpreis -> parameter(lieferung.zielpreis),
         column.preisTotal -> parameter(lieferung.preisTotal),
         column.lieferplanungId -> parameter(lieferung.lieferplanungId),
         column.lieferplanungNr -> parameter(lieferung.lieferplanungNr)
