@@ -2,7 +2,7 @@
 
 Falls du Fragen hast oder dich mit uns über OpenOlitor austauschen möchtest: Komm in den Gitter-Chat!
 
-[![Gitter](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/OpenOlitor)
+[![Gitter](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/OpenOlitor/Discussion)
 
 # OpenOlitor
 Administrationsplattform für Vertragslandwirtschaftsprojekte
