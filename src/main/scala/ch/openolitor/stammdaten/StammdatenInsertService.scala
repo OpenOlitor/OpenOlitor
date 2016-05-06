@@ -49,8 +49,7 @@ object StammdatenInsertService {
 }
 
 class DefaultStammdatenInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenInsertService(sysConfig) with DefaultStammdatenWriteRepositoryComponent with DefaultStammdatenReadRepositoryComponent {
-}
+  extends StammdatenInsertService(sysConfig) with DefaultStammdatenWriteRepositoryComponent with DefaultStammdatenReadRepositoryComponent
 
 /**
  * Actor zum Verarbeiten der Insert Anweisungen für das Stammdaten Modul
@@ -478,7 +477,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](obj)
           }
           //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
-          var abotypDepotTourF = stammdatenReadRepository.getLieferungenNext() map {
+          val abotypDepotTourF = stammdatenReadRepository.getLieferungenNext() map {
             _ map {
               lieferung =>
                 logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)

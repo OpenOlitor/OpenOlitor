@@ -76,6 +76,8 @@ object EntityStore {
   }
   case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistentEvent
 
+  case object StartSnapshotCommand
+
   // other actor messages
   case object CheckDBEvolution
 
@@ -348,6 +350,16 @@ trait EntityStore extends AggregateRoot
       if (result.isEmpty) {
         log.error(s"created => Received unknown command or no module handler handled the command:$command")
       }
+    case StartSnapshotCommand =>
+      //TODO: check if messages should also get deleted
+      saveSnapshot(state)
+      deleteMessages(lastSequenceNr)
+    case DeleteMessagesSuccess(toSequenceNr) => 
+    case DeleteMessagesFailure(error, toSequenceNr) => 
+      log.error(s"Deleting of messages failed {}", error)
+    case SaveSnapshotSuccess(metadata) =>
+    case SaveSnapshotFailure(metadata, reason) =>
+      log.error(s"SaveSnapshotFailure failed:$reason")
     case other =>
       log.error(s"received unknown command:$other")
   }

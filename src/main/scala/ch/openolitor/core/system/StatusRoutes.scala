@@ -20,9 +20,8 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.status
+package ch.openolitor.core.system
 
-import akka.actor.Actor
 import spray.routing._
 import spray.http._
 import spray.http.MediaTypes._
@@ -36,11 +35,9 @@ import scala.util.Properties
 
 case class Status(buildNr: String)
 
-trait StatusRoutes extends HttpService with DefaultRouteService {
+trait StatusRoutes extends HttpService with DefaultRouteService with StatusJsonProtocol {
 
-  import StatusJsonProtocol._
-
-  val statusRoute =
+  lazy val statusRoute =
     pathPrefix("status") {
       statusRoutes()
     }

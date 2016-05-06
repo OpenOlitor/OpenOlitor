@@ -45,7 +45,6 @@ trait StammdatenEntityStoreView extends EntityStoreView
   override val module = "stammdaten"
 
   def initializeEntityStoreView = {
-    stammdatenWriteRepository.cleanupDatabase
   }
 }
 

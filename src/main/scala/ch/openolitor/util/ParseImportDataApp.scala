@@ -28,6 +28,7 @@ import ch.openolitor.core.data.DataImportParser._
 import java.io.File
 import scala.reflect.runtime.universe._
 import ch.openolitor.core.models._
+import java.io.FileInputStream
 
 /**
  * App starting the dataimportparser itself printing results to console
@@ -56,10 +57,10 @@ object ParseImportDataApp extends App {
 
     override def preStart(): Unit = {
       print("Sending parse command to parser")
-      parser ! ParseSpreadsheet(file)
+      parser ! ParseSpreadsheet(new FileInputStream(file))
     }
 
-    def print[E: TypeTag, I <: BaseId](resultList: List[ImportEntityResult[E, I]]): Unit = {
+    def print[E <: BaseEntity[_]: TypeTag](resultList: List[E]): Unit = {
       val typ = typeOf[E]
       print("-----------------------------------------------------------------------------------------")
       print(typ.toString)
@@ -67,19 +68,38 @@ object ParseImportDataApp extends App {
       resultList.map(x => print(x))
     }
 
-    def print[E: TypeTag, I <: BaseId](result: ImportEntityResult[E, I]): Unit = {
-      print(s"id:${result.id} => ${result.entity}")
+    def print[E <: BaseEntity[_]: TypeTag](result: E): Unit = {
+      print(s"id:${result.id} => ${result}")
     }
 
     def receive = {
-      case ImportResult(kunden, abotypen, depots, abos) =>
+      case r: ParseResult =>
         print("Received import result")
-        print(kunden)
-        print(abotypen)
-        print(depots)
-        print(abos)
+        print(r.projekt)
+        print(r.kundentypen)
+        print(r.kunden)
+        print(r.personen)
+        print(r.pendenzen)
+        print(r.touren)
+        print(r.depots)
+        print(r.abotypen)
+        print(r.vertriebsarten)
+        print(r.lieferungen)
+        print(r.lieferplanungen)
+        print(r.lieferpositionen)
+        print(r.abos)
+        print(r.abwesenheiten)
+        print(r.produkte)
+        print(r.produktekategorien)
+        print(r.produktProduktekategorien)
+        print(r.produzenten)
+        print(r.produktProduzenten)
+        print(r.bestellungen)
+        print(r.bestellpositionen)
         print("Parsing finished")
         context.system.shutdown
+      case ParseError(error) =>
+        log.error(s"Couldn't parse file", error)
       case Terminated(_) =>
         log.info("{} has terminated, shutting down system", parser.path)
         context.system.shutdown

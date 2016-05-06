@@ -32,7 +32,7 @@ sealed trait Liefersaison extends Product
 sealed trait Monat extends Liefersaison
 
 object Liefersaison {
-  def apply(value: String): Liefersaison = Monat.apply(value).get
+  def apply(value: String): Liefersaison = Monat.apply(value).getOrElse(sys.error(s"Couldn't parse liefersaison:$value"))
 }
 
 case object Januar extends Monat
@@ -73,7 +73,7 @@ case class ProduktekategorieId(id: Long) extends BaseId
 
 case class Produktekategorie(
     id: ProduktekategorieId,
-    val beschreibung: String,
+    beschreibung: String,
     //modification flags
     erstelldat: DateTime,
     ersteller: UserId,
