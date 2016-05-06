@@ -38,13 +38,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
+import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
+import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
+import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferungBestellenEvent
+import ch.openolitor.stammdaten.models.Verrechnet
+import ch.openolitor.stammdaten.models.Abgeschlossen
 
 object StammdatenAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system)
 }
 
 class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenWriteRepositoryComponent {
+    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenWriteRepositoryComponent with DefaultStammdatenReadRepositoryComponent {
 }
 
 /**
@@ -52,10 +57,58 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
  */
 class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with StammdatenDBMappings {
-  self: StammdatenWriteRepositoryComponent =>
+  self: StammdatenWriteRepositoryComponent with StammdatenReadRepositoryComponent =>
 
   val handle: Handle = {
+    case LieferplanungAbschliessenEvent(meta, id: LieferplanungId) =>
+      lieferplanungAbschliessen(meta, id)
+    case LieferplanungAbrechnenEvent(meta, id: LieferplanungId) =>
+      lieferplanungVerrechnet(meta, id)
+    case LieferungBestellenEvent(meta, id: LieferungId) =>
+      lieferungBestellen(meta, id)
     case e =>
       logger.warn(s"Unknown event:$e")
+  }
+
+  def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
+        if (Offen == lieferplanung.status) {
+          stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
+        }
+      }
+    }
+    DB autoCommit { implicit session =>
+      stammdatenReadRepository.getLieferungen(id) map { lieferungen =>
+        lieferungen map { lieferung =>
+          if (Offen == lieferung.status) {
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Abgeschlossen))
+          }
+        }
+      }
+    }
+  }
+
+  def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
+        if (Abgeschlossen == lieferplanung.status) {
+          stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Verrechnet))
+        }
+      }
+    }
+    DB autoCommit { implicit session =>
+      stammdatenReadRepository.getLieferungen(id) map { lieferungen =>
+        lieferungen map { lieferung =>
+          if (Abgeschlossen == lieferung.status) {
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Verrechnet))
+          }
+        }
+      }
+    }
+  }
+
+  def lieferungBestellen(meta: EventMetadata, id: LieferungId)(implicit userId: UserId = meta.originator) = {
+    ???
   }
 }

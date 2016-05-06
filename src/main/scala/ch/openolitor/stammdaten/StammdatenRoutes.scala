@@ -318,9 +318,18 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         (put | post)(update[LieferungPlanungAdd, LieferungId](lieferungId)) ~
           delete(update(lieferungId, LieferungPlanungRemove()))
       } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, lieferungId) =>
+        (post)(lieferungErneutBestellen(lieferplanungId, lieferungId))
+      } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
         get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~
           (put | post)(create[LieferpositionenCreate, LieferpositionId](LieferpositionId.apply _))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "abschliessen") { id =>
+        (post)(lieferplanungAbschliessen(id))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "verrechnen") { id =>
+        (post)(lieferplanungVerrechnen(id))
       }
   path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
     get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))
@@ -331,6 +340,33 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
       get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
     }
+
+  def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def lieferplanungVerrechnen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbrechnenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Verrechnet")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def lieferungErneutBestellen(lieferplanungId: LieferplanungId, lieferungId: LieferungId)(implicit idPersister: Persister[LieferungId, _]) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferungErneutBestellen(userId, lieferungId)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
+      case _ =>
+        complete("")
+    }
+  }
 }
 
 class DefaultStammdatenRoutes(

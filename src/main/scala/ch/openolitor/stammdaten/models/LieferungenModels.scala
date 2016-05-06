@@ -31,12 +31,12 @@ sealed trait LieferungStatus
 
 case object Ungeplant extends LieferungStatus
 case object Offen extends LieferungStatus
-case object InBearbeitung extends LieferungStatus
-case object Bearbeitet extends LieferungStatus
+case object Abgeschlossen extends LieferungStatus
+case object Verrechnet extends LieferungStatus
 
 object LieferungStatus {
   def apply(value: String): LieferungStatus = {
-    Vector(Ungeplant, Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
+    Vector(Ungeplant, Offen, Abgeschlossen, Verrechnet).find(_.toString == value).getOrElse(Offen)
   }
 }
 
