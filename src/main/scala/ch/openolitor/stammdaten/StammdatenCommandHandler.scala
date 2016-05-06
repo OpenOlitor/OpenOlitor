@@ -48,7 +48,7 @@ object StammdatenCommandHandler {
   case class LieferungBestellenEvent(meta: EventMetadata, id: LieferungId) extends PersistentEvent with JSONSerializable
 }
 
-trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings {
+trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
   self: StammdatenWriteRepositoryComponent =>
   import StammdatenCommandHandler._
 
@@ -91,6 +91,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   }
 }
 
-class DefaultStammdatenCommandHandler(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenCommandHandler
+class DefaultStammdatenCommandHandler(override val sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenCommandHandler
     with DefaultStammdatenWriteRepositoryComponent {
 }
