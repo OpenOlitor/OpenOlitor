@@ -20,10 +20,11 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.status
+package ch.openolitor.core.system
 
 import spray.json.DefaultJsonProtocol
+import ch.openolitor.core.data.DataImportService.ImportResult
 
-object StatusJsonProtocol extends DefaultJsonProtocol {
-  implicit val statusFormat = jsonFormat1(Status)
+trait SystemJsonProtocol extends DefaultJsonProtocol {
+  implicit val importResultFormat = jsonFormat2(ImportResult)
 }

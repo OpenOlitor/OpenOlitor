@@ -231,7 +231,6 @@ object V1Scripts {
         abotyp_name varchar(50),
         depot_id BIGINT,
         depot_name varchar(50),
-        liefertag varchar(10),
         start datetime not null,
         ende datetime,
         guthaben_vertraglich int,
@@ -253,7 +252,6 @@ object V1Scripts {
         abotyp_name varchar(50),
         tour_id BIGINT,
         tour_name varchar(50),
-        liefertag varchar(10),
         start datetime not null,
         ende datetime,
         guthaben_vertraglich int,
@@ -273,7 +271,6 @@ object V1Scripts {
         kunde varchar(100),
         abotyp_id BIGINT not null,
         abotyp_name varchar(50),
-        liefertag varchar(10),
         start datetime not null,
         ende datetime,
         guthaben_vertraglich int,
@@ -505,8 +502,10 @@ object V1Scripts {
     }
   }
 
-  val scripts = Seq(
+  val dbInitializationScripts = Seq(
     StammdatenDBInitializationScript,
     BuchhaltungDBInitializationScript
   )
+
+  val scripts = dbInitializationScripts
 }

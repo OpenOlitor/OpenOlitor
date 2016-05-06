@@ -675,5 +675,32 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
+    DB localTx { implicit session =>
+      sql"truncate table ${postlieferungMapping.table}".execute.apply()
+      sql"truncate table ${depotlieferungMapping.table}".execute.apply()
+      sql"truncate table ${heimlieferungMapping.table}".execute.apply()
+      sql"truncate table ${depotMapping.table}".execute.apply()
+      sql"truncate table ${tourMapping.table}".execute.apply()
+      sql"truncate table ${abotypMapping.table}".execute.apply()
+      sql"truncate table ${kundeMapping.table}".execute.apply()
+      sql"truncate table ${pendenzMapping.table}".execute.apply()
+      sql"truncate table ${customKundentypMapping.table}".execute.apply()
+      sql"truncate table ${personMapping.table}".execute.apply()
+      sql"truncate table ${depotlieferungAboMapping.table}".execute.apply()
+      sql"truncate table ${heimlieferungAboMapping.table}".execute.apply()
+      sql"truncate table ${postlieferungAboMapping.table}".execute.apply()
+      sql"truncate table ${lieferplanungMapping.table}".execute.apply()
+      sql"truncate table ${lieferungMapping.table}".execute.apply()
+      sql"truncate table ${lieferpositionMapping.table}".execute.apply()
+      sql"truncate table ${bestellungMapping.table}".execute.apply()
+      sql"truncate table ${bestellpositionMapping.table}".execute.apply()
+      sql"truncate table ${produktMapping.table}".execute.apply()
+      sql"truncate table ${produktekategorieMapping.table}".execute.apply()
+      sql"truncate table ${produzentMapping.table}".execute.apply()
+      sql"truncate table ${projektMapping.table}".execute.apply()
+      sql"truncate table ${produktProduzentMapping.table}".execute.apply()
+      sql"truncate table ${produktProduktekategorieMapping.table}".execute.apply()
+      sql"truncate table ${abwesenheitMapping.table}".execute.apply()
+    }
   }
 }

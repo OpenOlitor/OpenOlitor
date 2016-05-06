@@ -557,8 +557,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     override def updateParameters(depotlieferungAbo: DepotlieferungAbo) = {
       super.updateParameters(depotlieferungAbo) ++ Seq(
         column.depotId -> parameter(depotlieferungAbo.depotId),
-        column.depotName -> parameter(depotlieferungAbo.depotName),
-        column.liefertag -> parameter(depotlieferungAbo.liefertag)
+        column.depotName -> parameter(depotlieferungAbo.depotName)
       )
     }
   }
@@ -576,8 +575,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     override def updateParameters(heimlieferungAbo: HeimlieferungAbo) = {
       super.updateParameters(heimlieferungAbo) ++ Seq(
         column.tourId -> parameter(heimlieferungAbo.tourId),
-        column.tourName -> parameter(heimlieferungAbo.tourName),
-        column.liefertag -> parameter(heimlieferungAbo.liefertag)
+        column.tourName -> parameter(heimlieferungAbo.tourName)
       )
     }
   }
@@ -593,9 +591,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: PostlieferungAbo): Seq[Any] = parameters(PostlieferungAbo.unapply(entity).get)
 
     override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
-      super.updateParameters(postlieferungAbo) ++ Seq(
-        column.liefertag -> parameter(postlieferungAbo.liefertag)
-      )
+      super.updateParameters(postlieferungAbo)
     }
   }
 
