@@ -363,7 +363,7 @@ object V1Scripts {
 
       sql"""create table ${produktMapping.table}  (
         id BIGINT not null,
-        name varchar(50) not null,
+        name varchar(140) not null,
         verfuegbar_von varchar(10) not null,
         verfuegbar_bis varchar(10) not null,
         kategorien varchar(300),
