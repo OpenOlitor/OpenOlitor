@@ -40,8 +40,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
 import scala.reflect._
 import scala.reflect.runtime.universe.{ Try => TTry, _ }
-import ch.openolitor.buchhaltung.models.RechnungModify
-import ch.openolitor.buchhaltung.models.RechnungId
+import ch.openolitor.buchhaltung.models._
 
 /**
  * _

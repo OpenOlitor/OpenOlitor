@@ -133,12 +133,10 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
         column.referenzNummer -> parameter(entity.referenzNummer),
         column.waehrung -> parameter(entity.waehrung),
         column.betrag -> parameter(entity.betrag),
-        column.aufgabeReferenzen -> parameter(entity.aufgabeReferenzen),
         column.aufgabeDatum -> parameter(entity.aufgabeDatum),
         column.verarbeitungsDatum -> parameter(entity.verarbeitungsDatum),
         column.gutschriftsDatum -> parameter(entity.gutschriftsDatum),
-        column.status -> parameter(entity.status),
-        column.esrNummer -> parameter(entity.esrNummer)
+        column.status -> parameter(entity.status)
       )
     }
   }

@@ -47,6 +47,7 @@ trait BuchhaltungReadRepository {
   def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]
+  def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]]
 
   def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]]
   def getZahlungsImportDetail(id: ZahlungsImportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZahlungsImportDetail]]
@@ -107,6 +108,15 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
       }).single.future
   }
 
+  def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]] = {
+    withSQL {
+      select
+        .from(rechnungMapping as rechnung)
+        .where.eq(rechnung.referenzNummer, parameter(referenzNummer))
+        .orderBy(rechnung.rechnungsDatum)
+    }.map(rechnungMapping(rechnung)).single.future
+  }
+
   def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]] = {
     withSQL {
       select
@@ -134,6 +144,8 @@ class BuchhaltungWriteRepositoryImpl(val system: ActorSystem) extends Buchhaltun
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB localTx { implicit session =>
       sql"truncate table ${rechnungMapping.table}".execute.apply()
+      sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
+      sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()
     }
   }
 }

@@ -28,6 +28,9 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 
 sealed trait ZahlungsEingangStatus
 case object Ok extends ZahlungsEingangStatus
@@ -52,6 +55,12 @@ case class ZahlungsImport(
   modifikator: UserId
 ) extends BaseEntity[ZahlungsImportId]
 
+case class ZahlungsImportCreate(
+  id: ZahlungsImportId,
+  file: String,
+  zahlungsEingaenge: Seq[ZahlungsEingangCreate]
+) extends JSONSerializable
+
 case class ZahlungsImportDetail(
   id: ZahlungsImportId,
   file: String,
@@ -72,15 +81,28 @@ case class ZahlungsEingang(
   referenzNummer: String,
   waehrung: Waehrung,
   betrag: BigDecimal,
-  aufgabeReferenzen: String,
   aufgabeDatum: DateTime,
   verarbeitungsDatum: DateTime,
   gutschriftsDatum: DateTime,
   status: ZahlungsEingangStatus,
-  esrNummer: String,
   // modification flags
   erstelldat: DateTime,
   ersteller: UserId,
   modifidat: DateTime,
   modifikator: UserId
 ) extends BaseEntity[ZahlungsEingangId]
+
+case class ZahlungsEingangCreate(
+  id: ZahlungsEingangId,
+  zahlungsImportId: ZahlungsImportId,
+  rechnungId: Option[RechnungId],
+  transaktionsart: String,
+  teilnehmerNummer: String,
+  referenzNummer: String,
+  waehrung: Waehrung,
+  betrag: BigDecimal,
+  aufgabeDatum: DateTime,
+  verarbeitungsDatum: DateTime,
+  gutschriftsDatum: DateTime,
+  status: ZahlungsEingangStatus
+) extends JSONSerializable

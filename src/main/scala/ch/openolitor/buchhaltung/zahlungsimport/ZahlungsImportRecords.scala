@@ -24,5 +24,23 @@ package ch.openolitor.buchhaltung.zahlungsimport
 
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import ch.openolitor.stammdaten.models.Waehrung
+import ch.openolitor.buchhaltung.zahlungsimport.esr.Transaktionsart
 
-trait ZahlungsImportRecord
+trait ZahlungsImportRecordResult {
+  val betrag: BigDecimal
+  val transaktionsart: Transaktionsart
+}
+
+trait ZahlungsImportRecord extends ZahlungsImportRecordResult {
+  val teilnehmerNummer: String
+  val referenzNummer: String
+  val waehrung: Waehrung
+  val aufgabeDatum: DateTime
+  val verarbeitungsDatum: DateTime
+  val gutschriftsDatum: DateTime
+}
+
+trait ZahlungsImportTotalRecord extends ZahlungsImportRecordResult
+
+case class ZahlungsImportResult(records: Seq[ZahlungsImportRecordResult])

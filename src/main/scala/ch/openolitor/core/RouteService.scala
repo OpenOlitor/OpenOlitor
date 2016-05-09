@@ -66,6 +66,8 @@ import ch.openolitor.buchhaltung.DefaultBuchhaltungRoutes
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.system.DefaultSystemRouteService
 import ch.openolitor.core.system.SystemRouteService
+import spray.routing.RequestContext
+import java.io.InputStream
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -224,7 +226,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def upload(fileType: FileType, name: Option[String] = None)(onUpload: (String, FileStoreFileMetadata) => StandardRoute, onError: Option[FileStoreError => StandardRoute] = None) = {
+  def upload(fileType: FileType, name: Option[String] = None)(onUpload: (InputStream, String) => RequestContext => Unit): RequestContext => Unit = {
     entity(as[MultipartFormData]) { formData =>
       val details = formData.fields.collectFirst {
         case BodyPart(entity, headers) =>
@@ -236,15 +238,27 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
       val id = name.getOrElse(UUID.randomUUID.toString)
       details.map {
         case (content, fileName) =>
-          onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
-            case Left(e) => onError.map(_(e)).getOrElse(complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}"))
-            case Right(metadata) => onUpload(id, metadata)
-          }
+          onUpload(content, fileName)
       } getOrElse {
         complete(StatusCodes.BadRequest, "File has to be submitted using multipart formdata")
       }
     }
   }
+
+  def storeToFileStore(fileType: FileType, name: Option[String] = None, content: InputStream, fileName: String)(onUpload: (String, FileStoreFileMetadata) => RequestContext => Unit, onError: Option[FileStoreError => RequestContext => Unit] = None): RequestContext => Unit = {
+    val id = name.getOrElse(UUID.randomUUID.toString)
+    onSuccess(fileStore.putFile(fileType.bucket, Some(id), FileStoreFileMetadata(fileName, fileType), content)) {
+      case Left(e) => onError.map(_(e)).getOrElse(complete(StatusCodes.BadRequest, s"File of file type ${fileType} with id ${id} could not be stored. Error: ${e}"))
+      case Right(metadata) => onUpload(id, metadata)
+    }
+  }
+
+  def uploadStored(fileType: FileType, name: Option[String] = None)(onUpload: (String, FileStoreFileMetadata) => RequestContext => Unit, onError: Option[FileStoreError => RequestContext => Unit] = None) = {
+    upload(fileType, name) { (content, fileName) =>
+      storeToFileStore(fileType, name, content, fileName)(onUpload, onError)
+    }
+  }
+
 }
 
 class DefaultRouteServiceActor(

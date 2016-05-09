@@ -29,12 +29,20 @@ class ZahlungsImportParserSpec extends Specification {
   "ZahlungsImportParser" should {
     val parser = new ZahlungsImportParser
 
-    val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
-
-    "parse example file" in {
+    "parse line by line" in {
+      val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
       val result = source.getLines map (parser.parse)
 
       result.size === 225
+    }
+
+    "parse example file" in {
+      val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
+      val result = ZahlungsImportParser.parse(source.getLines)
+
+      beSuccessfulTry(result)
+
+      result.get.records.size === 225
     }
   }
 }

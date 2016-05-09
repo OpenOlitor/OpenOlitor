@@ -29,7 +29,7 @@ import ch.openolitor.core.models._
 import ch.openolitor.buchhaltung._
 import ch.openolitor.buchhaltung.models._
 import java.util.UUID
-import scalikejdbc.DB
+import scalikejdbc._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
@@ -38,10 +38,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungVerschicktEvent
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungMahnungVerschicktEvent
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungBezahltEvent
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungStorniertEvent
+import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
 import ch.openolitor.buchhaltung.models.RechnungModifyBezahlt
 
 object BuchhaltungAktionenService {
@@ -68,6 +65,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       rechnungBezahlen(meta, id, entity)
     case RechnungStorniertEvent(meta, id: RechnungId) =>
       rechnungStornieren(meta, id)
+    case ZahlungsImportCreatedEvent(meta, entity: ZahlungsImportCreate) =>
+      createZahlungsImport(meta, entity)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -113,6 +112,42 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
           buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Storniert))
         }
       }
+    }
+  }
+
+  def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit userId: UserId = meta.originator) = {
+    val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
+      entity,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator
+    )
+
+    DB autoCommit { implicit session =>
+      buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
+
+      entity.zahlungsEingaenge map { eingang =>
+        val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
+          eingang,
+          "erstelldat" -> meta.timestamp,
+          "ersteller" -> meta.originator,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> meta.originator
+        )
+
+        buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
+      }
+
+      lazy val zahlungsEingang = zahlungsEingangMapping.syntax("zahlungsEingang")
+      lazy val rechnung = rechnungMapping.syntax("rechnung")
+
+      sql"""
+        update ${zahlungsEingangMapping.table}
+        inner join ${rechnungMapping.table} on (${rechnung.referenzNummer} = ${zahlungsEingang.referenzNummer})
+        set (${zahlungsEingang.rechnungId} = ${rechnung.id})
+        where ${zahlungsEingang.zahlungsImportId} = ${entity.id}
+        """.update.apply()
     }
   }
 }
