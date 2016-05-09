@@ -507,7 +507,7 @@ class DataImportParser extends Actor with ActorLogging {
 
       val produktId = ProduktId(id)
       val produzentenIds = produktProduzenten.filter(_.produktId == produktId).map(_.produzentId)
-      val produzentenName = produzenten.filter(p => produzentenIds.contains(p.id)).map(_.name)
+      val produzentenName = produzenten.filter(p => produzentenIds.contains(p.id)).map(_.kurzzeichen)
 
       val kategorienIds = produktProduktekategorien.filter(_.produktId == produktId).map(_.produktekategorieId)
       val kategorien = produktkategorien.filter(p => kategorienIds.contains(p.id)).map(_.beschreibung)

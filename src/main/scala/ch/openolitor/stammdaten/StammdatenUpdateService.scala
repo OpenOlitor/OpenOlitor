@@ -86,17 +86,15 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateAbotyp(meta: EventMetadata, id: AbotypId, update: AbotypModify)(implicit userId: UserId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB futureLocalTx { implicit session =>
       stammdatenWriteRepository.getById(abotypMapping, id) map { abotyp =>
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
         stammdatenWriteRepository.updateEntity[Abotyp, AbotypId](copy)
       }
-    }
 
-    stammdatenReadRepository.getUngeplanteLieferungen(id) map { lieferungen =>
-      lieferungen map { lieferung =>
-        DB autoCommit { implicit session =>
+      stammdatenReadRepository.getUngeplanteLieferungen(id) map { lieferungen =>
+        lieferungen map { lieferung =>
           //update einiger Felder auf den Lieferungen
           val updatedLieferung = copyTo[Lieferung, Lieferung](
             lieferung,
@@ -422,20 +420,18 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit userId: UserId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB futureLocalTx { implicit session =>
       stammdatenWriteRepository.deleteLieferpositionen(id) andThen {
         case x =>
-          DB autoCommit { implicit session =>
-            stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-              //map all updatable fields
-              val copy = copyFrom(lieferung, update,
-                "lieferplanungId" -> None,
-                "lieferplanungNr" -> None,
-                "status" -> Ungeplant,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> userId)
-              stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-            }
+          stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
+            //map all updatable fields
+            val copy = copyFrom(lieferung, update,
+              "lieferplanungId" -> None,
+              "lieferplanungNr" -> None,
+              "status" -> Ungeplant,
+              "modifidat" -> meta.timestamp,
+              "modifikator" -> userId)
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
           }
       }
     }

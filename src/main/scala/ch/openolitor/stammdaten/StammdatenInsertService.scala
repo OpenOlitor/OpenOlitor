@@ -602,28 +602,23 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createLieferpositionen(meta: EventMetadata, id: LieferpositionId, creates: LieferpositionenCreate)(implicit userId: UserId = meta.originator) = {
     val lieferungId = creates.lieferungId
-    DB autoCommit { implicit session =>
+    DB futureLocalTx { implicit session =>
       stammdatenWriteRepository.deleteLieferpositionen(lieferungId) andThen {
         case x =>
-          DB autoCommit { implicit session =>
-            logger.debug("ALLLLWIN: " + creates.lieferpositionen)
-            stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
-              //save Lieferpositionen
+          stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
+            //save Lieferpositionen
+            creates.lieferpositionen map { create =>
               val lpId = LieferpositionId(Random.nextLong)
-              creates.lieferpositionen map { create =>
-                val newObj = copyTo[LieferpositionModify, Lieferposition](
-                  create,
-                  "id" -> lpId,
-                  "lieferungId" -> lieferungId,
-                  "erstelldat" -> meta.timestamp,
-                  "ersteller" -> meta.originator,
-                  "modifidat" -> meta.timestamp,
-                  "modifikator" -> meta.originator
-                )
-                DB autoCommit { implicit session =>
-                  stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
-                }
-              }
+              val newObj = copyTo[LieferpositionModify, Lieferposition](
+                create,
+                "id" -> lpId,
+                "lieferungId" -> lieferungId,
+                "erstelldat" -> meta.timestamp,
+                "ersteller" -> meta.originator,
+                "modifidat" -> meta.timestamp,
+                "modifikator" -> meta.originator
+              )
+              stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
             }
           }
       }
