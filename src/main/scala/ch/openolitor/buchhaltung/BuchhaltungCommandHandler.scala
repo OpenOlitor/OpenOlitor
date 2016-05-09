@@ -104,7 +104,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
           }
         }
       }
-
+    case _ => None
   }
 }
 

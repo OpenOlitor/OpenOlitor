@@ -23,20 +23,20 @@
 package ch.openolitor.stammdaten
 
 import ch.openolitor.core._
+import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
-import ch.openolitor.core.models._
+import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
-import java.util.UUID
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
-import ch.openolitor.core.Macros._
+import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.joda.time.DateTime
-import ch.openolitor.core.Macros._
+import java.util.UUID
+import ch.openolitor.core.models.UserId
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
@@ -71,14 +71,12 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
   }
 
   def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit userId: UserId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB futureLocalTx { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Offen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
         }
       }
-    }
-    DB autoCommit { implicit session =>
       stammdatenReadRepository.getLieferungen(id) map { lieferungen =>
         lieferungen map { lieferung =>
           if (Offen == lieferung.status) {
@@ -90,14 +88,12 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
   }
 
   def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit userId: UserId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB futureLocalTx { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Abgeschlossen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Verrechnet))
         }
       }
-    }
-    DB autoCommit { implicit session =>
       stammdatenReadRepository.getLieferungen(id) map { lieferungen =>
         lieferungen map { lieferung =>
           if (Abgeschlossen == lieferung.status) {

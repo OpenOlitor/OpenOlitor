@@ -65,7 +65,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    case LieferplanungAbrechnenCommand(userId, id: LieferplanungId) =>
+    /*case LieferplanungAbrechnenCommand(userId, id: LieferplanungId) =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
@@ -87,7 +87,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               Failure(new InvalidStateException("Lieferung has to be in status Offen | Abgeschlossen in order to execute LieferungBestellen"))
           }
         }
-      }
+      }*/
+    case _ => None
   }
 }
 
