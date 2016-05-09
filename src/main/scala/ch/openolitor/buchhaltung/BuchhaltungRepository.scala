@@ -48,7 +48,8 @@ trait BuchhaltungReadRepository {
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]
 
-  def getZahlungsEingaenge(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsEingang]]
+  def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]]
+  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZahlungsImportDetail]]
 }
 
 trait BuchhaltungWriteRepository extends BaseWriteRepository {
@@ -59,6 +60,8 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
 
   lazy val rechnung = rechnungMapping.syntax("rechnung")
   lazy val kunde = kundeMapping.syntax("kunde")
+  lazy val zahlungsImport = zahlungsImportMapping.syntax("zahlungsImport")
+  lazy val zahlungsEingang = zahlungsEingangMapping.syntax("zahlungsEingang")
   lazy val depotlieferungAbo = depotlieferungAboMapping.syntax("depotlieferungAbo")
   lazy val heimlieferungAbo = heimlieferungAboMapping.syntax("heimlieferungAbo")
   lazy val postlieferungAbo = postlieferungAboMapping.syntax("postlieferungAbo")
@@ -104,8 +107,26 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
       }).single.future
   }
 
-  def getZahlungsEingaenge(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsEingang]] = {
-    ???
+  def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]] = {
+    withSQL {
+      select
+        .from(zahlungsImportMapping as zahlungsImport)
+    }.map(zahlungsImportMapping(zahlungsImport)).list.future
+  }
+
+  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZahlungsImportDetail]] = {
+    withSQL {
+      select
+        .from(zahlungsImportMapping as zahlungsImport)
+        .leftJoin(zahlungsEingangMapping as zahlungsEingang).on(zahlungsImport.id, zahlungsEingang.zahlungsImportId)
+        .where.eq(zahlungsImport.id, parameter(id))
+    }.one(zahlungsImportMapping(zahlungsImport))
+      .toMany(
+        rs => zahlungsEingangMapping.opt(zahlungsEingang)(rs)
+      )
+      .map({ (zahlungsImport, zahlungsEingaenge) =>
+        copyTo[ZahlungsImport, ZahlungsImportDetail](zahlungsImport, "zahlungsEingaenge" -> zahlungsEingaenge)
+      }).single.future
   }
 }
 

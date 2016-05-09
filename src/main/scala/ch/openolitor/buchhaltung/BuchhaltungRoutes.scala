@@ -61,13 +61,14 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   self: BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
+  implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
 
   import EntityStore._
 
   //TODO: get real userid from login
   override val userId: UserId = Boot.systemUserId
 
-  lazy val buchhaltungRoute = rechnungenRoute
+  lazy val buchhaltungRoute = rechnungenRoute ~ zahlungsImportsRoute
 
   lazy val rechnungenRoute =
     path("rechnungen") {
@@ -92,9 +93,16 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       }
 
   lazy val zahlungsImportsRoute =
-    path("zahlungseingaenge") {
-      get(list(buchhaltungReadRepository.getZahlungsEingaenge))
-    }
+    path("zahlungsimports") {
+      get(list(buchhaltungReadRepository.getZahlungsImports)) ~
+        (put | post)(upload(ZahlungsImportDaten, Some("import")) { (id, metadata) =>
+          // TODO create zahlungsimport
+          complete("zahlungsimport file uploaded")
+        })
+    } ~
+      path("zahlungsimports" / zahlungsImportIdPath) { id =>
+        get(detail(buchhaltungReadRepository.getZahlungsImportDetail(id)))
+      }
 
   def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
     onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(userId, id)) {

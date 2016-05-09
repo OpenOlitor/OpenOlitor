@@ -43,16 +43,22 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
   // DB type binders for read operations
   implicit val rechnungIdBinder: TypeBinder[RechnungId] = baseIdTypeBinder(RechnungId.apply _)
+  implicit val zahlungsImportIdBinder: TypeBinder[ZahlungsImportId] = baseIdTypeBinder(ZahlungsImportId.apply _)
   implicit val zahlungsEingangIdBinder: TypeBinder[ZahlungsEingangId] = baseIdTypeBinder(ZahlungsEingangId.apply _)
 
   implicit val rechnungStatusTypeBinder: TypeBinder[RechnungStatus] = string.map(RechnungStatus.apply)
+  implicit val optionRechnungIdBinder: TypeBinder[Option[RechnungId]] = optionBaseIdTypeBinder(RechnungId.apply _)
+
+  implicit val zahlungsEingangStatusTypeBinder: TypeBinder[ZahlungsEingangStatus] = string.map(ZahlungsEingangStatus.apply)
 
   //DB parameter binders for write and query operationsit
   implicit val rechnungStatusBinder = toStringSqlBinder[RechnungStatus]
-  implicit val zahlungsImportStatusBinder = toStringSqlBinder[ZahlungsImportStatus]
+  implicit val zahlungsEingangStatusBinder = toStringSqlBinder[ZahlungsEingangStatus]
 
   implicit val rechnungIdSqlBinder = baseIdSqlBinder[RechnungId]
+  implicit val optionRechnungIdSqlBinder = optionSqlBinder[RechnungId]
   implicit val zahlungsEingangIdSqlBinder = baseIdSqlBinder[ZahlungsEingangId]
+  implicit val zahlungsImportIdSqlBinder = baseIdSqlBinder[ZahlungsImportId]
 
   implicit val rechnungMapping = new BaseEntitySQLSyntaxSupport[Rechnung] {
     override val tableName = "Rechnung"
@@ -65,26 +71,74 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
     def parameterMappings(entity: Rechnung): Seq[Any] =
       parameters(Rechnung.unapply(entity).get)
 
-    override def updateParameters(rechnung: Rechnung) = {
-      super.updateParameters(rechnung) ++ Seq(
-        column.kundeId -> parameter(rechnung.kundeId),
-        column.aboId -> parameter(rechnung.aboId),
-        column.titel -> parameter(rechnung.titel),
-        column.anzahlLieferungen -> parameter(rechnung.anzahlLieferungen),
-        column.waehrung -> parameter(rechnung.waehrung),
-        column.betrag -> parameter(rechnung.betrag),
-        column.einbezahlterBetrag -> parameter(rechnung.einbezahlterBetrag),
-        column.rechnungsDatum -> parameter(rechnung.rechnungsDatum),
-        column.faelligkeitsDatum -> parameter(rechnung.faelligkeitsDatum),
-        column.eingangsDatum -> parameter(rechnung.eingangsDatum),
-        column.status -> parameter(rechnung.status),
-        column.referenzNummer -> parameter(rechnung.referenzNummer),
-        column.esrNummer -> parameter(rechnung.esrNummer),
-        column.strasse -> parameter(rechnung.strasse),
-        column.hausNummer -> parameter(rechnung.hausNummer),
-        column.adressZusatz -> parameter(rechnung.adressZusatz),
-        column.plz -> parameter(rechnung.plz),
-        column.ort -> parameter(rechnung.ort)
+    override def updateParameters(entity: Rechnung) = {
+      super.updateParameters(entity) ++ Seq(
+        column.kundeId -> parameter(entity.kundeId),
+        column.aboId -> parameter(entity.aboId),
+        column.titel -> parameter(entity.titel),
+        column.anzahlLieferungen -> parameter(entity.anzahlLieferungen),
+        column.waehrung -> parameter(entity.waehrung),
+        column.betrag -> parameter(entity.betrag),
+        column.einbezahlterBetrag -> parameter(entity.einbezahlterBetrag),
+        column.rechnungsDatum -> parameter(entity.rechnungsDatum),
+        column.faelligkeitsDatum -> parameter(entity.faelligkeitsDatum),
+        column.eingangsDatum -> parameter(entity.eingangsDatum),
+        column.status -> parameter(entity.status),
+        column.referenzNummer -> parameter(entity.referenzNummer),
+        column.esrNummer -> parameter(entity.esrNummer),
+        column.strasse -> parameter(entity.strasse),
+        column.hausNummer -> parameter(entity.hausNummer),
+        column.adressZusatz -> parameter(entity.adressZusatz),
+        column.plz -> parameter(entity.plz),
+        column.ort -> parameter(entity.ort)
+      )
+    }
+  }
+
+  implicit val zahlungsImportMapping = new BaseEntitySQLSyntaxSupport[ZahlungsImport] {
+    override val tableName = "ZahlungsImport"
+
+    override lazy val columns = autoColumns[ZahlungsImport]()
+
+    def apply(rn: ResultName[ZahlungsImport])(rs: WrappedResultSet): ZahlungsImport =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ZahlungsImport): Seq[Any] =
+      parameters(ZahlungsImport.unapply(entity).get)
+
+    override def updateParameters(entity: ZahlungsImport) = {
+      super.updateParameters(entity) ++ Seq(
+        column.file -> parameter(entity.file)
+      )
+    }
+  }
+
+  implicit val zahlungsEingangMapping = new BaseEntitySQLSyntaxSupport[ZahlungsEingang] {
+    override val tableName = "ZahlungsEingang"
+
+    override lazy val columns = autoColumns[ZahlungsEingang]()
+
+    def apply(rn: ResultName[ZahlungsEingang])(rs: WrappedResultSet): ZahlungsEingang =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ZahlungsEingang): Seq[Any] =
+      parameters(ZahlungsEingang.unapply(entity).get)
+
+    override def updateParameters(entity: ZahlungsEingang) = {
+      super.updateParameters(entity) ++ Seq(
+        column.zahlungsImportId -> parameter(entity.zahlungsImportId),
+        column.rechnungId -> parameter(entity.rechnungId),
+        column.transaktionsart -> parameter(entity.transaktionsart),
+        column.teilnehmerNummer -> parameter(entity.teilnehmerNummer),
+        column.referenzNummer -> parameter(entity.referenzNummer),
+        column.waehrung -> parameter(entity.waehrung),
+        column.betrag -> parameter(entity.betrag),
+        column.aufgabeReferenzen -> parameter(entity.aufgabeReferenzen),
+        column.aufgabeDatum -> parameter(entity.aufgabeDatum),
+        column.verarbeitungsDatum -> parameter(entity.verarbeitungsDatum),
+        column.gutschriftsDatum -> parameter(entity.gutschriftsDatum),
+        column.status -> parameter(entity.status),
+        column.esrNummer -> parameter(entity.esrNummer)
       )
     }
   }

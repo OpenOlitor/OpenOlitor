@@ -27,12 +27,13 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.JSONSerializable
 
-sealed trait ZahlungsImportStatus
-case object Ok extends ZahlungsImportStatus
+sealed trait ZahlungsEingangStatus
+case object Ok extends ZahlungsEingangStatus
 
-object ZahlungsImportStatus {
-  def apply(value: String): ZahlungsImportStatus = {
+object ZahlungsEingangStatus {
+  def apply(value: String): ZahlungsEingangStatus = {
     Vector(Ok).find(_.toString == value).getOrElse(Ok)
   }
 }
@@ -51,8 +52,20 @@ case class ZahlungsImport(
   modifikator: UserId
 ) extends BaseEntity[ZahlungsImportId]
 
+case class ZahlungsImportDetail(
+  id: ZahlungsImportId,
+  file: String,
+  zahlungsEingaenge: Seq[ZahlungsEingang],
+  // modification flags
+  erstelldat: DateTime,
+  ersteller: UserId,
+  modifidat: DateTime,
+  modifikator: UserId
+) extends JSONSerializable
+
 case class ZahlungsEingang(
   id: ZahlungsEingangId,
+  zahlungsImportId: ZahlungsImportId,
   rechnungId: Option[RechnungId],
   transaktionsart: String,
   teilnehmerNummer: String,
@@ -63,7 +76,7 @@ case class ZahlungsEingang(
   aufgabeDatum: DateTime,
   verarbeitungsDatum: DateTime,
   gutschriftsDatum: DateTime,
-  status: ZahlungsImportStatus,
+  status: ZahlungsEingangStatus,
   esrNummer: String,
   // modification flags
   erstelldat: DateTime,
