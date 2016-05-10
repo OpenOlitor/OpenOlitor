@@ -174,9 +174,20 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       }
       val newPersonsEvents = newPersons.map(_._1)
       val updatePersons = (partitions._1 ++ newPersons.map(_._2))
-      val updateEntity = entity.copy(ansprechpersonen = updatePersons)
+
+      val pendenzenPartitions = entity.pendenzen.partition(_.id.isDefined)
+      val newPendenzen = pendenzenPartitions._2.map {
+        case newPendenz =>
+          val pendenzCreate = copyTo[PendenzModify, PendenzCreate](newPendenz, "kundeId" -> id)
+          val event = EntityInsertedEvent(meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
+          (event, newPendenz.copy(id = Some(event.id)))
+      }
+      val newPendenzenEvents = newPendenzen.map(_._1)
+      val updatePendenzen = (pendenzenPartitions._1 ++ newPendenzen.map(_._2))
+
+      val updateEntity = entity.copy(ansprechpersonen = updatePersons, pendenzen = updatePendenzen)
       val updateEvent = EntityUpdatedEvent(meta, id, updateEntity)
-      Success(updateEvent +: newPersonsEvents)
+      Success(updateEvent +: (newPersonsEvents ++ newPendenzenEvents))
   }
 }
 
