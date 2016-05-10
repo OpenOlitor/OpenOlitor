@@ -144,7 +144,13 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(stammdatenReadRepository.getPendenzen(kundeId))) ~
-          post(create[PendenzModify, PendenzId](PendenzId.apply _))
+          post {
+            requestInstance { request =>
+              entity(as[PendenzModify]) { p =>
+                created(request)(copyTo[PendenzModify, PendenzCreate](p, "kundeId" -> kundeId))
+              }
+            }
+          }
       } ~
       path("kunden" / kundeIdPath / "pendenzen" / pendenzIdPath) { (kundeId, pendenzId) =>
         get(detail(stammdatenReadRepository.getPendenzDetail(pendenzId))) ~
