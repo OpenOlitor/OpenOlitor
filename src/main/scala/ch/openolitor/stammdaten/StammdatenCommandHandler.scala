@@ -41,11 +41,11 @@ import ch.openolitor.core.db.ConnectionPoolContextAware
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: UserId, id: LieferplanungId) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: UserId, id: LieferplanungId) extends UserCommand
-  case class LieferungErneutBestellen(originator: UserId, id: LieferungId) extends UserCommand
+  case class BestellungErneutVersenden(originator: UserId, id: BestellungId) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
-  case class LieferungBestellenEvent(meta: EventMetadata, id: LieferungId) extends PersistentEvent with JSONSerializable
+  case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -65,7 +65,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    /*case LieferplanungAbrechnenCommand(userId, id: LieferplanungId) =>
+    case LieferplanungAbrechnenCommand(userId, id: LieferplanungId) =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
@@ -77,17 +77,17 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    case LieferungErneutBestellen(userId, id: LieferungId) =>
+    case BestellungErneutVersenden(userId, id: BestellungId) =>
       DB readOnly { implicit session =>
-        stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-          lieferung.status match {
+        stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+          bestellung.status match {
             case Offen | Abgeschlossen =>
-              Success(LieferungBestellenEvent(meta, id))
+              Success(BestellungVersendenEvent(meta, id))
             case _ =>
-              Failure(new InvalidStateException("Lieferung has to be in status Offen | Abgeschlossen in order to execute LieferungBestellen"))
+              Failure(new InvalidStateException("Bestellung has to be in status Offen | Abgeschlossen in order to execute BestellungVersenden"))
           }
         }
-      }*/
+      }
     case _ => None
   }
 }

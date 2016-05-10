@@ -318,9 +318,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         (put | post)(update[LieferungPlanungAdd, LieferungId](lieferungId)) ~
           delete(update(lieferungId, LieferungPlanungRemove()))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, lieferungId) =>
-        (post)(lieferungErneutBestellen(lieferplanungId, lieferungId))
-      } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
         get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~
           (put | post)(create[LieferpositionenCreate, LieferpositionId](LieferpositionId.apply _))
@@ -339,6 +336,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     } ~
     path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
       get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
+    } ~
+    path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, bestellungId) =>
+      (post)(bestellungErneutVersenden(bestellungId))
     }
 
   def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
@@ -359,8 +359,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
-  def lieferungErneutBestellen(lieferplanungId: LieferplanungId, lieferungId: LieferungId)(implicit idPersister: Persister[LieferungId, _]) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.LieferungErneutBestellen(userId, lieferungId)) {
+  def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _]) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(userId, bestellungId)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
       case _ =>

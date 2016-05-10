@@ -437,84 +437,80 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit userId: UserId = meta.originator) = {
-    val defaultAbotypDepotTour = ""
-    val insert = stammdatenReadRepository.getLatestLieferplanung map {
-      case Some(latestLP) => {
-        val newNr = latestLP.nr + 1
-        val lp = copyTo[LieferplanungCreate, Lieferplanung](
-          lieferplanung,
-          "id" -> lieferplanungId,
-          "nr" -> newNr,
-          "status" -> Offen,
-          "abotypDepotTour" -> defaultAbotypDepotTour,
-          "erstelldat" -> meta.timestamp,
-          "ersteller" -> meta.originator,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> meta.originator
-        )
-        (lp, newNr)
+    DB futureLocalTx { implicit session =>
+      val defaultAbotypDepotTour = ""
+      val insert = stammdatenReadRepository.getLatestLieferplanung map {
+        case Some(latestLP) => {
+          val newNr = latestLP.nr + 1
+          val lp = copyTo[LieferplanungCreate, Lieferplanung](
+            lieferplanung,
+            "id" -> lieferplanungId,
+            "nr" -> newNr,
+            "status" -> Offen,
+            "abotypDepotTour" -> defaultAbotypDepotTour,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator
+          )
+          (lp, newNr)
+        }
+        case None => {
+          val firstNr = 1
+          val lp = copyTo[LieferplanungCreate, Lieferplanung](
+            lieferplanung,
+            "id" -> lieferplanungId,
+            "nr" -> firstNr,
+            "abotypDepotTour" -> defaultAbotypDepotTour,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator
+          )
+          (lp, firstNr)
+        }
       }
-      case None => {
-        val firstNr = 1
-        val lp = copyTo[LieferplanungCreate, Lieferplanung](
-          lieferplanung,
-          "id" -> lieferplanungId,
-          "nr" -> firstNr,
-          "abotypDepotTour" -> defaultAbotypDepotTour,
-          "erstelldat" -> meta.timestamp,
-          "ersteller" -> meta.originator,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> meta.originator
-        )
-        (lp, firstNr)
-      }
-    }
-    insert map {
-      _ match {
-        case (obj: Lieferplanung, nr: Int) =>
-          DB autoCommit { implicit session =>
+      insert map {
+        _ match {
+          case (obj: Lieferplanung, nr: Int) =>
             //create lieferplanung
             stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](obj)
-          }
-          //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
-          val abotypDepotTourF = stammdatenReadRepository.getLieferungenNext() map {
-            _ map {
-              lieferung =>
-                logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
-                val lpId = Some(lieferplanungId)
-                val lpNr = Some(obj.nr)
-                val lObj = copyTo[Lieferung, Lieferung](
-                  lieferung,
-                  "lieferplanungId" -> lpId,
-                  "lieferplanungNr" -> lpNr,
-                  "status" -> Offen
-                )
-                DB autoCommit { implicit session =>
+            //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
+            val abotypDepotTourF = stammdatenReadRepository.getLieferungenNext() map {
+              _ map {
+                lieferung =>
+                  logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
+                  val lpId = Some(lieferplanungId)
+                  val lpNr = Some(obj.nr)
+                  val lObj = copyTo[Lieferung, Lieferung](
+                    lieferung,
+                    "lieferplanungId" -> lpId,
+                    "lieferplanungNr" -> lpNr,
+                    "status" -> Offen
+                  )
                   //update Lieferung
                   stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lObj)
-                }
-                lObj.abotypBeschrieb + " " + lObj.vertriebsartBeschrieb
+                  lObj.abotypBeschrieb + " " + lObj.vertriebsartBeschrieb
+              }
             }
-          }
-          abotypDepotTourF map {
-            abotypDepotTour =>
-              val abotypDepotTourStr = abotypDepotTour filter { _.nonEmpty } mkString ", "
-              val updatedObj = copyTo[Lieferplanung, Lieferplanung](
-                obj,
-                "abotypDepotTour" -> abotypDepotTourStr
-              )
+            abotypDepotTourF map {
+              abotypDepotTour =>
+                val abotypDepotTourStr = abotypDepotTour filter { _.nonEmpty } mkString ", "
+                val updatedObj = copyTo[Lieferplanung, Lieferplanung](
+                  obj,
+                  "abotypDepotTour" -> abotypDepotTourStr
+                )
 
-              DB autoCommit { implicit session =>
                 //update lieferplanung
                 stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
-              }
-          }
+            }
+        }
       }
     }
   }
 
   def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungenCreate)(implicit userId: UserId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB futureLocalTx { implicit session =>
       //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is added)
       stammdatenReadRepository.getBestellpositionenByLieferplan(create.lieferplanungId) foreach {
         _ foreach {
@@ -533,7 +529,20 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                   stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId) map { lieferung =>
                     // enhance or create bestellung by produzentT
                     if (!newBs.isDefinedAt((lieferposition.produzentId, create.lieferplanungId, lieferung.datum))) {
-                      val bestellung = Bestellung(BestellungId(Random.nextLong), lieferposition.produzentId, lieferposition.produzentKurzzeichen, lieferplanung.id, lieferplanung.nr, lieferung.datum, None, 0, DateTime.now, userId, DateTime.now, userId)
+                      val bestellung = Bestellung(
+                        BestellungId(Random.nextLong),
+                        lieferposition.produzentId,
+                        lieferposition.produzentKurzzeichen,
+                        lieferplanung.id, lieferplanung.nr,
+                        Offen,
+                        lieferung.datum,
+                        None,
+                        0,
+                        DateTime.now,
+                        userId,
+                        DateTime.now,
+                        userId
+                      )
                       newBs += (lieferposition.produzentId, create.lieferplanungId, lieferung.datum) -> bestellung
                     }
 

@@ -40,9 +40,10 @@ import ch.openolitor.core.models.UserId
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
-import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferungBestellenEvent
+import ch.openolitor.stammdaten.StammdatenCommandHandler.BestellungVersendenEvent
 import ch.openolitor.stammdaten.models.Verrechnet
 import ch.openolitor.stammdaten.models.Abgeschlossen
+import org.joda.time.DateTime
 
 object StammdatenAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system)
@@ -64,8 +65,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
       lieferplanungAbschliessen(meta, id)
     case LieferplanungAbrechnenEvent(meta, id: LieferplanungId) =>
       lieferplanungVerrechnet(meta, id)
-    case LieferungBestellenEvent(meta, id: LieferungId) =>
-      lieferungBestellen(meta, id)
+    case BestellungVersendenEvent(meta, id: BestellungId) =>
+      bestellungVersenden(meta, id)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -81,6 +82,13 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
         lieferungen map { lieferung =>
           if (Offen == lieferung.status) {
             stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Abgeschlossen))
+          }
+        }
+      }
+      stammdatenReadRepository.getBestellungen(id) map { bestellungen =>
+        bestellungen map { bestellung =>
+          if (Offen == bestellung.status) {
+            stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
           }
         }
       }
@@ -101,10 +109,17 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
           }
         }
       }
+      stammdatenReadRepository.getBestellungen(id) map { bestellungen =>
+        bestellungen map { bestellung =>
+          if (Abgeschlossen == bestellung.status) {
+            stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Verrechnet, datumAbrechnung = Some(DateTime.now)))
+          }
+        }
+      }
     }
   }
 
-  def lieferungBestellen(meta: EventMetadata, id: LieferungId)(implicit userId: UserId = meta.originator) = {
+  def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit userId: UserId = meta.originator) = {
     ???
   }
 }

@@ -32,7 +32,7 @@ import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
-import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferungBestellenEvent
+import ch.openolitor.stammdaten.StammdatenCommandHandler.BestellungVersendenEvent
 
 trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol {
   //V1 persisters
@@ -107,7 +107,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent]("lieferplanung-abschliessen-event")
   implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
-  implicit val lieferungBestellenEventPersister = persister[LieferungBestellenEvent]("lieferung-bestellen-event")
+  implicit val BestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -164,6 +164,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     abwesenheitIdPersister,
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
-    lieferungBestellenEventPersister
+    BestellungVersendenEventPersister
   )
 }

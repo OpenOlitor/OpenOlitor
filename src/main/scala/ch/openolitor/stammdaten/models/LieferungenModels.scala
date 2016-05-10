@@ -178,6 +178,7 @@ case class Bestellung(
   produzentKurzzeichen: String,
   lieferplanungId: LieferplanungId,
   lieferplanungNr: Int,
+  status: LieferungStatus,
   datum: DateTime,
   datumAbrechnung: Option[DateTime],
   preisTotal: BigDecimal,

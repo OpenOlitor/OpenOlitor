@@ -760,6 +760,7 @@ class DataImportParser extends Actor with ActorLogging {
         produzentKurzzeichen = produzent.kurzzeichen,
         lieferplanungId,
         lieferplanungNr,
+        status = Offen,
         datum = row.value[DateTime](indexDatum),
         datumAbrechnung = row.value[Option[DateTime]](indexDatumAbrechnung),
         preisTotal = row.value[BigDecimal](indexPreisTotal),
