@@ -67,8 +67,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     case EntityInsertedEvent(meta, id: KundeId, kunde: KundeModify) =>
       createKunde(meta, id, kunde)
     case EntityInsertedEvent(meta, id: PersonId, person: PersonCreate) =>
-      val modify = copyTo[PersonCreate, PersonModify](person, "id" -> None)
-      createPerson(meta, id, modify, person.kundeId, person.sort)
+      createPerson(meta, id, person)
+    case EntityInsertedEvent(meta, id: PendenzId, pendenz: PendenzCreate) =>
+      createPendenz(meta, id, pendenz)
     case EntityInsertedEvent(meta, id: DepotId, depot: DepotModify) =>
       createDepot(meta, id, depot)
     case EntityInsertedEvent(meta, id: AboId, abo: AboModify) =>
@@ -224,11 +225,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createPerson(meta: EventMetadata, id: PersonId, create: PersonModify, kundeId: KundeId, sort: Int)(implicit userId: UserId = meta.originator) = {
-
-    val person = copyTo[PersonModify, Person](create, "id" -> id,
-      "kundeId" -> kundeId,
-      "sort" -> sort,
+  def createPerson(meta: EventMetadata, id: PersonId, create: PersonCreate)(implicit userId: UserId = meta.originator) = {
+    val person = copyTo[PersonCreate, Person](create, "id" -> id,
+      "kundeId" -> create.kundeId,
+      "sort" -> create.sort,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -239,18 +239,20 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createPendenz(meta: EventMetadata, id: PendenzId, create: PendenzModify, kundeId: KundeId, kundeBezeichnung: String)(implicit userId: UserId = meta.originator) = {
-    val pendenz = copyTo[PendenzModify, Pendenz](create, "id" -> id,
-      "kundeId" -> kundeId,
-      "generiert" -> FALSE,
-      "kundeBezeichnung" -> kundeBezeichnung,
-      "erstelldat" -> meta.timestamp,
-      "ersteller" -> meta.originator,
-      "modifidat" -> meta.timestamp,
-      "modifikator" -> meta.originator)
-
+  def createPendenz(meta: EventMetadata, id: PendenzId, create: PendenzCreate)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.insertEntity[Pendenz, PendenzId](pendenz)
+      stammdatenWriteRepository.getById(kundeMapping, create.kundeId) map { kunde =>
+        val pendenz = copyTo[PendenzCreate, Pendenz](create, "id" -> id,
+          "kundeId" -> create.kundeId,
+          "kundeBezeichnung" -> kunde.bezeichnung,
+          "generiert" -> FALSE,
+          "erstelldat" -> meta.timestamp,
+          "ersteller" -> meta.originator,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> meta.originator)
+
+        stammdatenWriteRepository.insertEntity[Pendenz, PendenzId](pendenz)
+      }
     }
   }
 

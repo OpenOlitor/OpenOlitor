@@ -40,6 +40,8 @@ import java.util.UUID
 import ch.openolitor.core.models.UserId
 import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
+import scala.concurrent.Future
+import scalikejdbc.DBSession
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -143,61 +145,60 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     if (update.ansprechpersonen.isEmpty) {
       logger.error(s"Update kunde without ansprechperson:$kundeId, update:$update")
     } else {
-      DB autoCommit { implicit session =>
-        stammdatenWriteRepository.getById(kundeMapping, kundeId) map { kunde =>
-          //map all updatable fields
-          val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
-          val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length,
-            "anzahlPendenzen" -> update.pendenzen.length, "modifidat" -> meta.timestamp, "modifikator" -> userId)
-          DB autoCommit { implicit session =>
-            stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
-          }
+      DB futureLocalTx { implicit session =>
+        for {
+          kunde <- updateKundendaten(meta, kundeId, update)
+          pesonen <- updatePersonen(meta, kundeId, update)
+          pendenzen <- updatePendenzen(meta, kundeId, update)
+        } yield {
+          kunde
         }
       }
+    }
+  }
 
-      stammdatenReadRepository.getPendenzen(kundeId) map { pendenzen =>
+  private def updateKundendaten(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, userId: UserId = meta.originator) = {
+    Future {
+      stammdatenWriteRepository.getById(kundeMapping, kundeId) map { kunde =>
+        //map all updatable fields
+        val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
+        val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length,
+          "anzahlPendenzen" -> update.pendenzen.length, "modifidat" -> meta.timestamp, "modifikator" -> userId)
         DB autoCommit { implicit session =>
-          //remove existing pendenzen
-          pendenzen.map {
-            pendenzToDelete =>
-              stammdatenWriteRepository.deleteEntity[Pendenz, PendenzId](pendenzToDelete.id)
-          }
+          stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
         }
-      } andThen {
-        case x =>
-          DB autoCommit { implicit session =>
-            //recreate submitted pendenzen
-            update.pendenzen.map { updatePendenz =>
-              val pendenzId = PendenzId(System.currentTimeMillis)
-              val kundeBezeichnung = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
-              val newPendenz = copyTo[PendenzModify, Pendenz](updatePendenz, "id" -> pendenzId,
-                "kundeId" -> kundeId, "kundeBezeichnung" -> kundeBezeichnung,
-                "generiert" -> FALSE,
-                "erstelldat" -> meta.timestamp,
-                "ersteller" -> userId,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> userId)
-              logger.debug(s"Create new pendenz on Kunde:$kundeId, data -> $newPendenz")
+      }
+    }
+  }
 
-              stammdatenWriteRepository.insertEntity[Pendenz, PendenzId](newPendenz)
+  private def updatePersonen(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, userId: UserId = meta.originator) = {
+    stammdatenReadRepository.getPersonen(kundeId) map { personen =>
+      update.ansprechpersonen.zipWithIndex.map {
+        case (updatePerson, index) =>
+          updatePerson.id.map { id =>
+            personen.filter(_.id == id).headOption.map { person =>
+              logger.debug(s"Update person with at index:$index, data -> $updatePerson")
+              val copy = copyFrom(person, updatePerson, "id" -> person.id, "modifidat" -> meta.timestamp, "modifikator" -> userId)
+
+              stammdatenWriteRepository.updateEntity[Person, PersonId](copy)
             }
           }
       }
+    }
+  }
 
-      stammdatenReadRepository.getPersonen(kundeId) map { personen =>
-        DB autoCommit { implicit session =>
-          update.ansprechpersonen.zipWithIndex.map {
-            case (updatePerson, index) =>
-              updatePerson.id.map { id =>
-                personen.filter(_.id == id).headOption.map { person =>
-                  logger.debug(s"Update person with at index:$index, data -> $updatePerson")
-                  val copy = copyFrom(person, updatePerson, "id" -> person.id, "modifidat" -> meta.timestamp, "modifikator" -> userId)
+  private def updatePendenzen(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, userId: UserId = meta.originator) = {
+    stammdatenReadRepository.getPendenzen(kundeId) map { pendenzen =>
+      update.pendenzen.map {
+        case updatePendenz =>
+          updatePendenz.id.map { id =>
+            pendenzen.filter(_.id == id).headOption.map { pendenz =>
+              logger.debug(s"Update pendenz with data -> updatePendenz")
+              val copy = copyFrom(pendenz, updatePendenz, "id" -> pendenz.id, "modifidat" -> meta.timestamp, "modifikator" -> userId)
 
-                  stammdatenWriteRepository.updateEntity[Person, PersonId](copy)
-                }
-              }
+              stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
+            }
           }
-        }
       }
     }
   }

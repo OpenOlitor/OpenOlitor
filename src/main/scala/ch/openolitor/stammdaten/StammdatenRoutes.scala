@@ -148,7 +148,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "pendenzen" / pendenzIdPath) { (kundeId, pendenzId) =>
         get(detail(stammdatenReadRepository.getPendenzDetail(pendenzId))) ~
-          (put | post)(update[PendenzModify, PendenzId](pendenzId))
+          (put | post)(update[PendenzModify, PendenzId](pendenzId)) ~
+          delete(remove(pendenzId))
       } ~
       path("kunden" / kundeIdPath / "personen" / personIdPath) { (kundeId, personId) =>
         delete(remove(personId))

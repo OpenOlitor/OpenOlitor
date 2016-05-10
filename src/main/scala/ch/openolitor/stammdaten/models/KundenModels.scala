@@ -239,3 +239,10 @@ case class PendenzModify(
   bemerkung: Option[String],
   status: PendenzStatus
 ) extends JSONSerializable
+
+case class PendenzCreate(
+  kundeId: KundeId,
+  datum: DateTime,
+  bemerkung: Option[String],
+  status: PendenzStatus
+) extends JSONSerializable
