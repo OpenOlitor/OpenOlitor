@@ -82,6 +82,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
+  implicit val korbStatusFormat = enumFormat(KorbStatus.apply)
   implicit val pendenzStatusFormat = enumFormat(PendenzStatus.apply)
   implicit val liefereinheitFormat = enumFormat(Liefereinheit.apply)
 
@@ -363,6 +364,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val bestellungModifyFormat = autoProductFormat[BestellungModify]
   implicit val bestellungenCreateFormat = autoProductFormat[BestellungenCreate]
   implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
+
+  implicit val korbCreateFormat = autoProductFormat[KorbCreate]
+  implicit val korbModifyFormat = autoProductFormat[KorbModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 }

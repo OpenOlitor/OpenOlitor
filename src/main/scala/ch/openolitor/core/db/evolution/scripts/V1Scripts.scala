@@ -53,6 +53,7 @@ object V1Scripts {
       sql"drop table if exists ${lieferpositionMapping.table}".execute.apply()
       sql"drop table if exists ${bestellungMapping.table}".execute.apply()
       sql"drop table if exists ${bestellpositionMapping.table}".execute.apply()
+      sql"drop table if exists ${korbMapping.table}".execute.apply()
       sql"drop table if exists ${produktMapping.table}".execute.apply()
       sql"drop table if exists ${produktekategorieMapping.table}".execute.apply()
       sql"drop table if exists ${produzentMapping.table}".execute.apply()
@@ -358,6 +359,17 @@ object V1Scripts {
         menge DECIMAL(7,2),
         preis DECIMAL(7,2),
         anzahl int not null,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${korbMapping.table}  (
+        id varchar(36) not null,
+        lieferungId: LieferungId,
+        lieferung_id varchar(36) not null,
+        abo_id varchar(36)  not null,
+        status varchar(50) not null, 
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,

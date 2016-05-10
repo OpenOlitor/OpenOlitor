@@ -246,3 +246,13 @@ case class Korb(
   modifidat: DateTime,
   modifikator: UserId
 ) extends BaseEntity[KorbId]
+
+case class KorbModify(
+  status: KorbStatus
+) extends JSONSerializable
+
+case class KorbCreate(
+  LieferungId: LieferungId,
+  aboId: AboId,
+  status: KorbStatus
+) extends JSONSerializable

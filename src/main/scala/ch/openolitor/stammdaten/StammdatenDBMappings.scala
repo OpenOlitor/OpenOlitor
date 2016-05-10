@@ -70,11 +70,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
   implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
   implicit val abwesenheitIdBinder: TypeBinder[AbwesenheitId] = baseIdTypeBinder(AbwesenheitId.apply _)
+  implicit val korbIdBinder: TypeBinder[KorbId] = baseIdTypeBinder(KorbId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
   implicit val lieferungStatusTypeBinder: TypeBinder[LieferungStatus] = string.map(LieferungStatus.apply)
+  implicit val kornStatusTypeBinder: TypeBinder[KorbStatus] = string.map(KorbStatus.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
@@ -108,6 +110,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
   implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
+  implicit val korbStatusSqlBinder = toStringSqlBinder[KorbStatus]
   implicit val lieferzeitpunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
@@ -132,6 +135,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val lieferpositionIdSqlBinder = baseIdSqlBinder[LieferpositionId]
   implicit val bestellungIdSqlBinder = baseIdSqlBinder[BestellungId]
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
+  implicit val korbIdSqlBinder = baseIdSqlBinder[KorbId]
   implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
   implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
   implicit val produktekategorieIdSqlBinder = baseIdSqlBinder[ProduktekategorieId]
@@ -754,6 +758,25 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferungId -> parameter(entity.lieferungId),
         column.datum -> parameter(entity.datum),
         column.bemerkung -> parameter(entity.bemerkung)
+      )
+    }
+  }
+
+  implicit val korbMapping = new BaseEntitySQLSyntaxSupport[Korb] {
+    override val tableName = "Korb"
+
+    override lazy val columns = autoColumns[Korb]()
+
+    def apply(rn: ResultName[Korb])(rs: WrappedResultSet): Korb =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Korb): Seq[Any] = parameters(Korb.unapply(entity).get)
+
+    override def updateParameters(entity: Korb) = {
+      super.updateParameters(entity) ++ Seq(
+        column.lieferungId -> parameter(entity.lieferungId),
+        column.aboId -> parameter(entity.aboId),
+        column.status -> parameter(entity.status)
       )
     }
   }
