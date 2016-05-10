@@ -340,6 +340,7 @@ object V1Scripts {
         lieferplanung_id varchar(36) not null,
         lieferplanung_nr int not null,
         status varchar(50) not null,
+        datum datetime not null,
         datum_abrechnung datetime default null,
         preis_total DECIMAL(7,2) not null,
         erstelldat datetime not null,
