@@ -45,7 +45,7 @@ import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
 import sqls.distinct
-import sqls.min
+import sqls.{ min, count }
 import scalaz.IsEmpty
 
 trait StammdatenReadRepository {
@@ -71,6 +71,9 @@ trait StammdatenReadRepository {
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]]
+  def getAktiveAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
+
+  def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Int]]
 
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
   def getPendenzen(id: KundeId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]]
@@ -101,6 +104,9 @@ trait StammdatenReadRepository {
   def getLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
+
+  def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Korb]]
+
   def getBestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellung]]
   def getBestellungByProduzentLieferplanungDatum(produzentId: ProduzentId, lieferplanungId: LieferplanungId, datum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Bestellung]]
   def getBestellpositionen(id: BestellungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellposition]]
@@ -112,6 +118,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 
   def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int]
+  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
@@ -141,6 +148,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   lazy val produktProduzent = produktProduzentMapping.syntax("produktProduzent")
   lazy val produktProduktekategorie = produktProduktekategorieMapping.syntax("produktProduktekategorie")
   lazy val abwesenheit = abwesenheitMapping.syntax("abwesenheit")
+  lazy val korb = korbMapping.syntax("korb")
 
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     withSQL {
@@ -440,6 +448,49 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     } yield (d orElse h orElse p)
   }
 
+  def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Int]] = {
+    withSQL {
+      select(count(distinct(abwesenheit.id)))
+        .from(abwesenheitMapping as abwesenheit)
+        .where.eq(abwesenheit.lieferungId, lieferungId).and.eq(abwesenheit.aboId, aboId)
+        .limit(1)
+    }.map(_.int(1)).single.future
+  }
+
+  def getAktiveAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]] = {
+    for {
+      d <- getAktiveDepotlieferungAbos(abotypId, lieferdatum)
+      h <- getAktiveHeimlieferungAbos(abotypId, lieferdatum)
+      p <- getAktivePostlieferungAbos(abotypId, lieferdatum)
+    } yield {
+      d ::: h ::: p
+    }
+  }
+
+  def getAktiveDepotlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotlieferungAbo]] = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+    }.map(depotlieferungAboMapping(depotlieferungAbo)).list.future
+  }
+
+  def getAktiveHeimlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[HeimlieferungAbo]] = {
+    withSQL {
+      select
+        .from(heimlieferungAboMapping as heimlieferungAbo)
+        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+    }.map(heimlieferungAboMapping(heimlieferungAbo)).list.future
+  }
+
+  def getAktivePostlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostlieferungAbo]] = {
+    withSQL {
+      select
+        .from(postlieferungAboMapping as postlieferungAbo)
+        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+    }.map(postlieferungAboMapping(postlieferungAbo)).list.future
+  }
+
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
     withSQL {
       select
@@ -690,11 +741,21 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(lieferpositionMapping(lieferposition)).list.future
   }
 
+  def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Korb]] = {
+    withSQL {
+      select
+        .from(korbMapping as korb)
+        .where.eq(korb.lieferungId, parameter(lieferungId))
+        .and.eq(korb.aboId, parameter(aboId)).and.not.eq(korb.status, Geliefert)
+    }.map(korbMapping(korb)).single.future
+  }
+
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
+  lazy val korbShort = korbMapping.syntax
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB localTx { implicit session =>
@@ -723,6 +784,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"truncate table ${produktProduzentMapping.table}".execute.apply()
       sql"truncate table ${produktProduktekategorieMapping.table}".execute.apply()
       sql"truncate table ${abwesenheitMapping.table}".execute.apply()
+      sql"truncate table ${korbMapping.table}".execute.apply()
     }
   }
 
@@ -731,6 +793,14 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       delete
         .from(lieferpositionMapping)
         .where.eq(lieferpositionShort.lieferungId, parameter(id))
+    }.update.future
+  }
+
+  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int] = {
+    withSQL {
+      delete
+        .from(korbMapping)
+        .where.eq(korbShort.lieferungId, parameter(id))
     }.update.future
   }
 }

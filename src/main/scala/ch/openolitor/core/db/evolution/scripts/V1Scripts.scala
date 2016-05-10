@@ -366,10 +366,10 @@ object V1Scripts {
 
       sql"""create table ${korbMapping.table}  (
         id varchar(36) not null,
-        lieferungId: LieferungId,
         lieferung_id varchar(36) not null,
         abo_id varchar(36)  not null,
-        status varchar(50) not null, 
+        status varchar(50) not null,
+        guthaben_vor_lieferung int not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,

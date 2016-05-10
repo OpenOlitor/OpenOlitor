@@ -482,6 +482,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               _ map {
                 lieferung =>
                   logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
+
                   val lpId = Some(lieferplanungId)
                   val lpNr = Some(obj.nr)
                   val lObj = copyTo[Lieferung, Lieferung](
@@ -491,20 +492,25 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "status" -> Offen
                   )
                   //update Lieferung
-                  stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lObj)
-                  lObj.abotypBeschrieb + " " + lObj.vertriebsartBeschrieb
+                  DB autoCommit { implicit session =>
+                    stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lObj)
+                  }
+
+                  lObj.abotypBeschrieb
               }
             }
             abotypDepotTourF map {
               abotypDepotTour =>
-                val abotypDepotTourStr = abotypDepotTour filter { _.nonEmpty } mkString ", "
+                val abotypStr = abotypDepotTour filter { _.nonEmpty } mkString ", "
                 val updatedObj = copyTo[Lieferplanung, Lieferplanung](
                   obj,
-                  "abotypDepotTour" -> abotypDepotTourStr
+                  "abotypDepotTour" -> abotypStr
                 )
 
                 //update lieferplanung
-                stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
+                DB autoCommit { implicit session =>
+                  stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
+                }
             }
         }
       }
