@@ -52,7 +52,8 @@ trait StammdatenReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
 
-  def getOffeneLieferungen(abotypId: AbotypId, vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+  def getUngeplanteLieferungen(abotypId: AbotypId, vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+  def getUngeplanteLieferungen(abotypId: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
 
   def getVertriebsart(vertriebsartId: VertriebsartId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[VertriebsartDetail]]
   def getVertriebsarten(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[VertriebsartDetail]]
@@ -97,6 +98,7 @@ trait StammdatenReadRepository {
   def getLieferungenNext()(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getNichtInkludierteAbotypenLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+  def getLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getBestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellung]]
@@ -108,6 +110,8 @@ trait StammdatenReadRepository {
 
 trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
+
+  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
@@ -150,7 +154,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     withSQL {
       select
         .from(kundeMapping as kunde)
-        .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
         .orderBy(kunde.bezeichnung)
     }.map(kundeMapping(kunde)).list.future
   }
@@ -302,11 +305,20 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.single.future
   }
 
-  def getOffeneLieferungen(abotypId: AbotypId, vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
+  def getUngeplanteLieferungen(abotypId: AbotypId, vertriebsartId: VertriebsartId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
     withSQL {
       select
         .from(lieferungMapping as lieferung)
         .where.eq(lieferung.abotypId, parameter(abotypId)).and.eq(lieferung.vertriebsartId, parameter(vertriebsartId)).and.isNull(lieferung.lieferplanungId)
+        .orderBy(lieferung.datum)
+    }.map(lieferungMapping(lieferung)).list.future
+  }
+
+  def getUngeplanteLieferungen(abotypId: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .where.eq(lieferung.abotypId, parameter(abotypId)).and.isNull(lieferung.lieferplanungId)
         .orderBy(lieferung.datum)
     }.map(lieferungMapping(lieferung)).list.future
   }
@@ -644,6 +656,14 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     }.map(bestellpositionMapping(bestellposition)).list.future
   }
 
+  def getLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]] = {
+    withSQL {
+      select
+        .from(lieferpositionMapping as lieferposition)
+        .where.eq(lieferposition.lieferungId, parameter(id))
+    }.map(lieferpositionMapping(lieferposition)).list.future
+  }
+
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]] = {
     withSQL {
       select
@@ -674,6 +694,8 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
 
+  lazy val lieferpositionShort = lieferpositionMapping.syntax
+
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB localTx { implicit session =>
       sql"truncate table ${postlieferungMapping.table}".execute.apply()
@@ -702,5 +724,13 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
       sql"truncate table ${produktProduktekategorieMapping.table}".execute.apply()
       sql"truncate table ${abwesenheitMapping.table}".execute.apply()
     }
+  }
+
+  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int] = {
+    withSQL {
+      delete
+        .from(lieferpositionMapping)
+        .where.eq(lieferpositionShort.lieferungId, parameter(id))
+    }.update.future
   }
 }

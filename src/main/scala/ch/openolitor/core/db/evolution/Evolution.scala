@@ -76,12 +76,16 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
           adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping)(LieferungId.apply),
           adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping)(PendenzId.apply),
           adjustSeed[Person, PersonId](seeds, personMapping)(PersonId.apply),
+          adjustSeed[Produzent, ProduzentId](seeds, produzentMapping)(ProduzentId.apply),
           adjustSeed[Produkt, ProduktId](seeds, produktMapping)(ProduktId.apply),
           adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping)(ProduktProduktekategorieId.apply),
           adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping)(ProduktProduzentId.apply),
           adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping)(ProduktekategorieId.apply),
           adjustSeed[Projekt, ProjektId](seeds, projektMapping)(ProjektId.apply),
-          adjustSeed[Tour, TourId](seeds, tourMapping)(TourId.apply)
+          adjustSeed[Tour, TourId](seeds, tourMapping)(TourId.apply),
+          adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping)(LieferplanungId.apply),
+          adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping)(LieferpositionId.apply),
+          adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping)(BestellpositionId.apply)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)
