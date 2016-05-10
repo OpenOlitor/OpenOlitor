@@ -138,23 +138,27 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       "modifikator" -> meta.originator
     )
 
-    DB futureLocalTx { implicit session =>
-      Future.sequence(entity.zahlungsEingaenge map { eingang =>
-        buchhaltungReadRepository.getRechnungByReferenznummer(eingang.referenzNummer) map {
-          case Some(rechnung) =>
-            val state = if (rechnung.status == Bezahlt) {
-              BereitsVerarbeitet
-            } else if (rechnung.betrag != eingang.betrag) {
-              BetragNichtKorrekt
-            } else {
-              Ok
+    DB localTx { implicit session =>
+      entity.zahlungsEingaenge.foldLeft(Future(())) {
+        case (acc, eingang) =>
+          acc map { _ =>
+            buchhaltungReadRepository.getRechnungByReferenznummer(eingang.referenzNummer) map {
+              case Some(rechnung) =>
+                val state = if (rechnung.status == Bezahlt) {
+                  BereitsVerarbeitet
+                } else if (rechnung.betrag != eingang.betrag) {
+                  BetragNichtKorrekt
+                } else {
+                  Ok
+                }
+                createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
+              case None =>
+                createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
             }
-            createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
-          case None =>
-            createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
-        }
-      }) map { _ =>
-        buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
+          }
+      } onSuccess {
+        case _ =>
+          Future.successful(buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport))
       }
     }
   }
