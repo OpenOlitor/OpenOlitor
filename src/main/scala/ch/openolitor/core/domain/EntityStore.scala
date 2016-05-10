@@ -108,7 +108,7 @@ trait EntityStore extends AggregateRoot
   type S = EventStoreState
   override var state: EventStoreState = EventStoreState(0, 0, Map())
 
-  lazy val moduleCommandHandlers = List(stammdatenCommandHandler, buchhaltungCommandHandler)
+  lazy val moduleCommandHandlers: List[CommandHandler] = List(stammdatenCommandHandler, buchhaltungCommandHandler)
 
   def newId[E, I <: BaseId](clOf: Class[_ <: BaseId])(implicit f: Long => I): I = {
     val id: Long = state.dbSeeds.get(clOf).map { id =>
@@ -338,14 +338,17 @@ trait EntityStore extends AggregateRoot
       log.debug(s"created => GetState")
       sender ! state
     case command: UserCommand =>
-      val result = (moduleCommandHandlers map (_.handle(metadata(command.originator))(command))).flatten map {
-        case Success(resultingEvent) =>
-          log.debug(s"handled command: $command in module specific command handler.")
-          state = incState
-          persist(resultingEvent)(afterEventPersisted)
-        case Failure(e) =>
-          log.error(s"There was an error proccessing the command:$command, error:${e.getMessage}")
-          sender ! UserCommandFailed
+      val meta = metadata(command.originator)
+      val result = moduleCommandHandlers collectFirst { case ch: CommandHandler if ch.handle.isDefinedAt((command)) => ch.handle(command) } map { handle =>
+        handle(meta) match {
+          case Success(resultingEvent) =>
+            log.debug(s"handled command: $command in module specific command handler.")
+            state = incState
+            persist(resultingEvent)(afterEventPersisted)
+          case Failure(e) =>
+            log.error(s"There was an error proccessing the command:$command, error:${e.getMessage}")
+            sender ! UserCommandFailed
+        }
       }
       if (result.isEmpty) {
         log.error(s"created => Received unknown command or no module handler handled the command:$command")

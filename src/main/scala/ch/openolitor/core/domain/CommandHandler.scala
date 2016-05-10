@@ -29,5 +29,5 @@ import scala.util.Try
  * Validates the preconditions for a given command and returns resulting events.
  */
 trait CommandHandler {
-  def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]]
+  val handle: PartialFunction[UserCommand, EventMetadata => Try[PersistentEvent]]
 }

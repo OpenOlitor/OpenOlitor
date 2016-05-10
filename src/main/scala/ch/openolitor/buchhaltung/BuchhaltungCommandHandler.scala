@@ -56,55 +56,54 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
   self: BuchhaltungWriteRepositoryComponent =>
   import BuchhaltungCommandHandler._
 
-  override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]] = {
-    case RechnungVerschickenCommand(userId, id: RechnungId) =>
+  override val handle: PartialFunction[UserCommand, EventMetadata => Try[PersistentEvent]] = {
+    case RechnungVerschickenCommand(userId, id: RechnungId) => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Erstellt =>
               Success(RechnungVerschicktEvent(meta, id))
             case _ =>
-              Failure(new InvalidStateException("Rechnung has to be in status Erstellt in order to transition to Verschickt"))
+              Failure(new InvalidStateException("Eine Rechnung kann nur im Status 'Erstellt' verschickt werden"))
           }
-        }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungMahnungVerschickenCommand(userId, id: RechnungId) =>
+    case RechnungMahnungVerschickenCommand(userId, id: RechnungId) => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt =>
               Success(RechnungMahnungVerschicktEvent(meta, id))
             case _ =>
-              Failure(new InvalidStateException("Rechnung has to be in status Verschickt in order to transition to MahnungVerschickt"))
+              Failure(new InvalidStateException("Eine Mahnung kann nur im Status 'Verschickt' verschickt werden"))
           }
-        }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungBezahlenCommand(userId, id: RechnungId, entity: RechnungModifyBezahlt) =>
+    case RechnungBezahlenCommand(userId, id: RechnungId, entity: RechnungModifyBezahlt) => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt | MahnungVerschickt =>
               Success(RechnungBezahltEvent(meta, id, entity))
             case _ =>
-              Failure(new InvalidStateException("Rechnung has to be in status Verschickt | MahnungVerschickt in order to transition to Bezahlt"))
+              Failure(new InvalidStateException("Eine Rechnung kann nur im Status 'Verschickt' oder 'MahnungVerschickt' bezahlt werden"))
           }
-        }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungStornierenCommand(userId, id: RechnungId) =>
+    case RechnungStornierenCommand(userId, id: RechnungId) => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Bezahlt =>
-              Failure(new InvalidStateException("Rechnung must not be in status Bezahlt in order to transition to Storniert"))
+              Failure(new InvalidStateException("Eine Rechnung im Status 'Bezahlt' kann nicht mehr storniert werden"))
             case _ =>
               Success(RechnungStorniertEvent(meta, id))
           }
-        }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
-    case _ => None
   }
 }
 

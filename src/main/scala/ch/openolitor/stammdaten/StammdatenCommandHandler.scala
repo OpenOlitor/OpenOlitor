@@ -52,43 +52,42 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   self: StammdatenWriteRepositoryComponent =>
   import StammdatenCommandHandler._
 
-  override def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]] = {
-    case LieferplanungAbschliessenCommand(userId, id: LieferplanungId) =>
+  override val handle: PartialFunction[UserCommand, EventMetadata => Try[PersistentEvent]] = {
+    case LieferplanungAbschliessenCommand(userId, id: LieferplanungId) => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Offen =>
               Success(LieferplanungAbschliessenEvent(meta, id))
             case _ =>
-              Failure(new InvalidStateException("Lieferplanung has to be in status Offen in order to transition to Abgeschlossen"))
+              Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
-        }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
       }
 
-    case LieferplanungAbrechnenCommand(userId, id: LieferplanungId) =>
+    case LieferplanungAbrechnenCommand(userId, id: LieferplanungId) => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Abgeschlossen =>
               Success(LieferplanungAbrechnenEvent(meta, id))
             case _ =>
-              Failure(new InvalidStateException("Lieferplanung has to be in status Abgeschlossen in order to transition to Verrechnet"))
+              Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Abgeschlossen' verrechnet werden"))
           }
-        }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
       }
 
-    case BestellungErneutVersenden(userId, id: BestellungId) =>
+    case BestellungErneutVersenden(userId, id: BestellungId) => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
           bestellung.status match {
             case Offen | Abgeschlossen =>
               Success(BestellungVersendenEvent(meta, id))
             case _ =>
-              Failure(new InvalidStateException("Bestellung has to be in status Offen | Abgeschlossen in order to execute BestellungVersenden"))
+              Failure(new InvalidStateException("Eine Bestellung kann nur in den Stati 'Offen' oder 'Abgeschlossen' erneut versendet werden"))
           }
-        }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
       }
-    case _ => None
   }
 }
 
