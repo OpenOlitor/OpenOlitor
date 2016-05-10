@@ -22,22 +22,15 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung
 
-import ch.openolitor.core.domain.CommandHandler
-import ch.openolitor.core.domain.EventMetadata
-import ch.openolitor.core.domain.PersistentEvent
-import ch.openolitor.buchhaltung.models.RechnungId
-import ch.openolitor.buchhaltung.models.RechnungModify
-import ch.openolitor.core.models.UserId
-import ch.openolitor.core.models.BaseId
+import ch.openolitor.core.domain._
+import ch.openolitor.buchhaltung.models._
+import ch.openolitor.core.models._
 import scala.util._
-import ch.openolitor.core.domain.UserCommand
 import scalikejdbc.DB
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.exceptions.InvalidStateException
-import ch.openolitor.core.domain.EventMetadata
 import akka.actor.ActorSystem
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 
 object BuchhaltungCommandHandler {
@@ -55,55 +48,62 @@ object BuchhaltungCommandHandler {
 trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware {
   self: BuchhaltungWriteRepositoryComponent =>
   import BuchhaltungCommandHandler._
+  import EntityStore._
 
-  override val handle: PartialFunction[UserCommand, EventMetadata => Try[PersistentEvent]] = {
-    case RechnungVerschickenCommand(userId, id: RechnungId) => meta =>
+  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
+    case RechnungVerschickenCommand(userId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Erstellt =>
-              Success(RechnungVerschicktEvent(meta, id))
+              Success(Seq(RechnungVerschicktEvent(meta, id)))
             case _ =>
               Failure(new InvalidStateException("Eine Rechnung kann nur im Status 'Erstellt' verschickt werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungMahnungVerschickenCommand(userId, id: RechnungId) => meta =>
+    case RechnungMahnungVerschickenCommand(userId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt =>
-              Success(RechnungMahnungVerschicktEvent(meta, id))
+              Success(Seq(RechnungMahnungVerschicktEvent(meta, id)))
             case _ =>
               Failure(new InvalidStateException("Eine Mahnung kann nur im Status 'Verschickt' verschickt werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungBezahlenCommand(userId, id: RechnungId, entity: RechnungModifyBezahlt) => meta =>
+    case RechnungBezahlenCommand(userId, id: RechnungId, entity: RechnungModifyBezahlt) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt | MahnungVerschickt =>
-              Success(RechnungBezahltEvent(meta, id, entity))
+              Success(Seq(RechnungBezahltEvent(meta, id, entity)))
             case _ =>
               Failure(new InvalidStateException("Eine Rechnung kann nur im Status 'Verschickt' oder 'MahnungVerschickt' bezahlt werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungStornierenCommand(userId, id: RechnungId) => meta =>
+    case RechnungStornierenCommand(userId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Bezahlt =>
               Failure(new InvalidStateException("Eine Rechnung im Status 'Bezahlt' kann nicht mehr storniert werden"))
             case _ =>
-              Success(RechnungStorniertEvent(meta, id))
+              Success(Seq(RechnungStorniertEvent(meta, id)))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
+
+    /*
+       * Insert command handling
+       */
+    case e @ InsertEntityCommand(userId, entity: RechnungModify) => idFactory => meta =>
+      handleEntityInsert[RechnungModify, RechnungId](idFactory, meta, entity, RechnungId.apply)
   }
 }
 

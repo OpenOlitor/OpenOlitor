@@ -22,24 +22,20 @@
 \*                                                                           */
 package ch.openolitor.core.domain
 
-import ch.openolitor.stammdaten.StammdatenCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import akka.actor.ActorSystem
-import ch.openolitor.core.SystemConfig
+import scala.util._
+import com.typesafe.scalalogging.LazyLogging
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
-
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
-
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+/**
+ *
+ */
+class BaseCommandHandler extends CommandHandler with LazyLogging {
+  import EntityStore._
+  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
+    case UpdateEntityCommand(userId, id, entity) => idFactory => meta =>
+      logger.debug(s"created => Update entity::$id, $entity")
+      Success(Seq(EntityUpdatedEvent(meta, id, entity)))
+    case DeleteEntityCommand(userId, entity) => idFactory => meta =>
+      logger.debug(s"created => delete entity:$entity")
+      Success(Seq(EntityDeletedEvent(meta, entity)))
+  }
 }
