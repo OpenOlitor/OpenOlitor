@@ -102,7 +102,8 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
 
   def adjustSeeds[I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], BaseId], queries: Option[Long]*)(f: Long => I)(implicit session: DBSession, userId: UserId): Option[(Class[I], BaseId)] = {
     val entity: Class[I] = classTag[I].runtimeClass.asInstanceOf[Class[I]]
-    val overallMaxId = queries.flatten.max
+    val q = queries.flatten
+    val overallMaxId = if (q.length > 0) q.max else 0
     seeds.get(entity).map(_.id < overallMaxId).getOrElse(true) match {
       case true => Some(entity -> f(overallMaxId))
       case _ => None
