@@ -27,25 +27,18 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 
 sealed trait ZahlungsEingangStatus
 case object Ok extends ZahlungsEingangStatus
-case object FehlerInDatei extends ZahlungsEingangStatus
-case object NichtEindeutigeRechnungsNr extends ZahlungsEingangStatus
+case object AbgelehntFinanzinstitut extends ZahlungsEingangStatus
 case object BetragNichtKorrekt extends ZahlungsEingangStatus
-case object FehlerKeineRechnungsNrGefunden extends ZahlungsEingangStatus
-case object FehlerImDatensatz extends ZahlungsEingangStatus
-case object UnvorhergesehenerFehler extends ZahlungsEingangStatus
 case object BereitsVerarbeitet extends ZahlungsEingangStatus
-case object KeineRechnungsNrGefunden extends ZahlungsEingangStatus
+case object ReferenznummerNichtGefunden extends ZahlungsEingangStatus
 
 object ZahlungsEingangStatus {
   def apply(value: String): ZahlungsEingangStatus = {
-    Vector(Ok).find(_.toString == value).getOrElse(Ok)
+    Vector(Ok, AbgelehntFinanzinstitut, BetragNichtKorrekt, BereitsVerarbeitet, ReferenznummerNichtGefunden).find(_.toString == value).getOrElse(Ok)
   }
 }
 

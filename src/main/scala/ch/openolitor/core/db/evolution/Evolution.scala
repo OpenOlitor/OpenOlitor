@@ -53,39 +53,39 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
 
   logger.debug(s"Evolution manager consists of:$scripts")
 
-  def checkDBSeeds(seeds: Map[Class[_ <: BaseId], BaseId])(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Map[Class[_ <: BaseId], BaseId]] = {
+  def checkDBSeeds(seeds: Map[Class[_ <: BaseId], Long])(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Map[Class[_ <: BaseId], Long]] = {
     DB readOnly { implicit session =>
       try {
         val dbIds = Seq(
-          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping)(AbotypId.apply),
-          adjustSeed[Depot, DepotId](seeds, depotMapping)(DepotId.apply),
+          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping),
+          adjustSeed[Depot, DepotId](seeds, depotMapping),
           adjustSeeds[VertriebsartId](
             seeds,
             maxId[Depotlieferung, VertriebsartId](depotlieferungMapping),
             maxId[Heimlieferung, VertriebsartId](heimlieferungMapping),
             maxId[Postlieferung, VertriebsartId](postlieferungMapping)
-          )(VertriebsartId.apply),
+          ),
           adjustSeeds[AboId](
             seeds,
             maxId[DepotlieferungAbo, AboId](depotlieferungAboMapping),
             maxId[HeimlieferungAbo, AboId](heimlieferungAboMapping),
             maxId[PostlieferungAbo, AboId](postlieferungAboMapping)
-          )(AboId.apply),
-          adjustSeed[Kunde, KundeId](seeds, kundeMapping)(KundeId.apply),
-          adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping)(CustomKundentypId.apply),
-          adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping)(LieferungId.apply),
-          adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping)(PendenzId.apply),
-          adjustSeed[Person, PersonId](seeds, personMapping)(PersonId.apply),
-          adjustSeed[Produzent, ProduzentId](seeds, produzentMapping)(ProduzentId.apply),
-          adjustSeed[Produkt, ProduktId](seeds, produktMapping)(ProduktId.apply),
-          adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping)(ProduktProduktekategorieId.apply),
-          adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping)(ProduktProduzentId.apply),
-          adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping)(ProduktekategorieId.apply),
-          adjustSeed[Projekt, ProjektId](seeds, projektMapping)(ProjektId.apply),
-          adjustSeed[Tour, TourId](seeds, tourMapping)(TourId.apply),
-          adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping)(LieferplanungId.apply),
-          adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping)(LieferpositionId.apply),
-          adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping)(BestellpositionId.apply)
+          ),
+          adjustSeed[Kunde, KundeId](seeds, kundeMapping),
+          adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping),
+          adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping),
+          adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping),
+          adjustSeed[Person, PersonId](seeds, personMapping),
+          adjustSeed[Produzent, ProduzentId](seeds, produzentMapping),
+          adjustSeed[Produkt, ProduktId](seeds, produktMapping),
+          adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping),
+          adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping),
+          adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping),
+          adjustSeed[Projekt, ProjektId](seeds, projektMapping),
+          adjustSeed[Tour, TourId](seeds, tourMapping),
+          adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping),
+          adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping),
+          adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)
@@ -96,15 +96,15 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
     }
   }
 
-  def adjustSeed[E <: BaseEntity[I], I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], BaseId], syntax: BaseEntitySQLSyntaxSupport[E])(f: Long => I)(implicit session: DBSession, userId: UserId): Option[(Class[I], BaseId)] = {
-    adjustSeeds(seeds, maxId[E, I](syntax))(f)
+  def adjustSeed[E <: BaseEntity[I], I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], Long], syntax: BaseEntitySQLSyntaxSupport[E])(implicit session: DBSession, userId: UserId): Option[(Class[I], Long)] = {
+    adjustSeeds(seeds, maxId[E, I](syntax))
   }
 
-  def adjustSeeds[I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], BaseId], queries: Option[Long]*)(f: Long => I)(implicit session: DBSession, userId: UserId): Option[(Class[I], BaseId)] = {
+  def adjustSeeds[I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], Long], queries: Option[Long]*)(implicit session: DBSession, userId: UserId): Option[(Class[I], Long)] = {
     val entity: Class[I] = classTag[I].runtimeClass.asInstanceOf[Class[I]]
     val overallMaxId = queries.flatten.max
-    seeds.get(entity).map(_.id < overallMaxId).getOrElse(true) match {
-      case true => Some(entity -> f(overallMaxId))
+    seeds.get(entity).map(_ < overallMaxId).getOrElse(true) match {
+      case true => Some(entity -> overallMaxId)
       case _ => None
     }
   }
