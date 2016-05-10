@@ -118,6 +118,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
   def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit userId: UserId = meta.originator) = {
     val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
       entity,
+      "status" -> Neu,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,

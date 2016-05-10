@@ -50,10 +50,12 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
   implicit val optionRechnungIdBinder: TypeBinder[Option[RechnungId]] = optionBaseIdTypeBinder(RechnungId.apply _)
 
   implicit val zahlungsEingangStatusTypeBinder: TypeBinder[ZahlungsEingangStatus] = string.map(ZahlungsEingangStatus.apply)
+  implicit val zahlungsImportStatusTypeBinder: TypeBinder[ZahlungsImportStatus] = string.map(ZahlungsImportStatus.apply)
 
   //DB parameter binders for write and query operationsit
   implicit val rechnungStatusBinder = toStringSqlBinder[RechnungStatus]
   implicit val zahlungsEingangStatusBinder = toStringSqlBinder[ZahlungsEingangStatus]
+  implicit val zahlungsImportStatusBinder = toStringSqlBinder[ZahlungsImportStatus]
 
   implicit val rechnungIdSqlBinder = baseIdSqlBinder[RechnungId]
   implicit val optionRechnungIdSqlBinder = optionSqlBinder[RechnungId]
@@ -108,7 +110,8 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
     override def updateParameters(entity: ZahlungsImport) = {
       super.updateParameters(entity) ++ Seq(
-        column.file -> parameter(entity.file)
+        column.file -> parameter(entity.file),
+        column.status -> parameter(entity.status)
       )
     }
   }

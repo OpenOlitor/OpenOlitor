@@ -504,6 +504,7 @@ object V1Scripts {
       sql"""create table ${zahlungsImportMapping.table} (
         id BIGINT not null,
         file varchar(255) not null,
+        status varchar(50) not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
