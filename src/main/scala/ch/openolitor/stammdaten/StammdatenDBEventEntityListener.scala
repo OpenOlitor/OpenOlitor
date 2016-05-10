@@ -151,55 +151,57 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit userId: UserId) = {
-    //TODO: calculate geschaeftsjahr key based on project configuration
-    val geschaeftsjahrKey = abw.datum.year.getAsText
+    stammdatenWriteRepository.getProjekt map { projekt =>
+      val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
-    modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
-      val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
-      log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
-      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
-    })
-    modifyEntity[HeimlieferungAbo, AboId](abw.aboId, { abo =>
-      val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
-      log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
-      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
-    })
-    modifyEntity[PostlieferungAbo, AboId](abw.aboId, { abo =>
-      val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
-      log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
-      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
-    })
+      modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
+        val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
+        log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
+        abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+      })
+      modifyEntity[HeimlieferungAbo, AboId](abw.aboId, { abo =>
+        val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
+        log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
+        abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+      })
+      modifyEntity[PostlieferungAbo, AboId](abw.aboId, { abo =>
+        val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
+        log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
+        abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+      })
 
-    modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
-      log.debug(s"Remove abwesenheit from lieferung:${lieferung.id}")
-      lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten - 1)
-    })
+      modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
+        log.debug(s"Remove abwesenheit from lieferung:${lieferung.id}")
+        lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten - 1)
+      })
+    }
   }
 
   def handleAbwesenheitCreated(abw: Abwesenheit)(implicit userId: UserId) = {
-    //TODO: calculate geschaeftsjahr key based on project configuration
-    val geschaeftsjahrKey = abw.datum.year().getAsText
+    stammdatenWriteRepository.getProjekt map { projekt =>
+      val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
-    modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
-      val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
-      log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
-      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
-    })
-    modifyEntity[HeimlieferungAbo, AboId](abw.aboId, { abo =>
-      val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
-      log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
-      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
-    })
-    modifyEntity[PostlieferungAbo, AboId](abw.aboId, { abo =>
-      val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
-      log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
-      abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
-    })
+      modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
+        val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+        log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
+        abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+      })
+      modifyEntity[HeimlieferungAbo, AboId](abw.aboId, { abo =>
+        val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+        log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
+        abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+      })
+      modifyEntity[PostlieferungAbo, AboId](abw.aboId, { abo =>
+        val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+        log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
+        abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
+      })
 
-    modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
-      log.debug(s"Add abwesenheit to lieferung:${lieferung.id}")
-      lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + 1)
-    })
+      modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
+        log.debug(s"Add abwesenheit to lieferung:${lieferung.id}")
+        lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + 1)
+      })
+    }
   }
 
   def handlePendenzCreated(pendenz: Pendenz)(implicit userId: UserId) = {
