@@ -77,6 +77,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(userId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(userId)
 
     case e @ EntityCreated(userId, entity: Pendenz) => handlePendenzCreated(entity)(userId)
+    case e @ EntityDeleted(userId, entity: Pendenz) => handlePendenzDeleted(entity)(userId)
 
     case e @ EntityCreated(userId, entity: Rechnung) => handleRechnungCreated(entity)(userId)
     case e @ EntityDeleted(userId, entity: Rechnung) => handleRechnungDeleted(entity)(userId)
@@ -205,6 +206,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
       log.debug(s"Add pendenz count to kunde:${kunde.id}")
       kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
+    })
+  }
+
+  def handlePendenzDeleted(pendenz: Pendenz)(implicit userId: UserId) = {
+    modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
+      log.debug(s"Remove pendenz count from kunde:${kunde.id}")
+      kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen - 1)
     })
   }
 
