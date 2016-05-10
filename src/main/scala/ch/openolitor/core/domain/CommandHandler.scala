@@ -23,11 +23,25 @@
 package ch.openolitor.core.domain
 
 import scala.util.Try
+import ch.openolitor.core.models._
+import scala.reflect._
+import scala.reflect.runtime.universe.{ Try => TTry, _ }
+import com.typesafe.scalalogging.LazyLogging
+import scala.util.Success
 
 /**
  * Used for handling custom module specific commands.
  * Validates the preconditions for a given command and returns resulting events.
  */
-trait CommandHandler {
-  def handle(meta: EventMetadata): UserCommand => Option[Try[PersistentEvent]]
+trait CommandHandler extends LazyLogging {
+  import EntityStore._
+  type IdFactory = Class[_ <: BaseId] => Long
+  val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]]
+
+  def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, meta: EventMetadata, entity: E, f: Long => I): Try[Seq[PersistentEvent]] = {
+    val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
+    logger.debug(s"created => Insert entity:$entity")
+    val id = f(idFactory(clOf))
+    Success(Seq(EntityInsertedEvent(meta, id, entity)))
+  }
 }

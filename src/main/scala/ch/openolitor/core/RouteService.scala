@@ -186,6 +186,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     entity(as[E]) { entity => updated(id, entity) }
   }
 
+  def update[E <: AnyRef: ClassTag, I <: BaseId](id: I, entity: E)(implicit
+    um: FromRequestUnmarshaller[E],
+    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
+    updated(id, entity)
+  }
+
   def updated[E <: AnyRef: ClassTag, I <: BaseId](id: I, entity: E)(implicit idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     //update entity
     onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>

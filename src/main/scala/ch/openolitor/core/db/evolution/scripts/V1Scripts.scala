@@ -320,7 +320,7 @@ object V1Scripts {
       sql"""create table ${lieferpositionMapping.table}  (
         id varchar(36) not null,
         lieferung_id varchar(36) not null,
-        produkt_id varchar(36) not null,
+        produkt_id varchar(36),
         produkt_beschrieb varchar(100) not null,
         produzent_id varchar(36) not null,
         produzent_kurzzeichen varchar(6) not null,
@@ -339,6 +339,8 @@ object V1Scripts {
         produzent_kurzzeichen varchar(6) not null,
         lieferplanung_id varchar(36) not null,
         lieferplanung_nr int not null,
+        status varchar(50) not null,
+        datum datetime not null,
         datum_abrechnung datetime default null,
         preis_total DECIMAL(7,2) not null,
         erstelldat datetime not null,
@@ -349,7 +351,7 @@ object V1Scripts {
       sql"""create table ${bestellpositionMapping.table}  (
         id varchar(36) not null,
         bestellung_id varchar(36) not null,
-        produkt_id varchar(36) not null,
+        produkt_id varchar(36),
         produkt_beschrieb varchar(100) not null,
         preis_einheit DECIMAL(7,2),
         einheit varchar(20) not null,

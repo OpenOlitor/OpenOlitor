@@ -133,6 +133,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val bestellungIdSqlBinder = baseIdSqlBinder[BestellungId]
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
   implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
+  implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
   implicit val produktekategorieIdSqlBinder = baseIdSqlBinder[ProduktekategorieId]
   implicit val baseProduktekategorieIdSqlBinder = new SqlBinder[BaseProduktekategorieId] { def apply(value: BaseProduktekategorieId): Any = value.id }
   implicit val baseProduktekategorieIdSetSqlBinder = setSqlBinder[BaseProduktekategorieId]
@@ -321,6 +322,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.anzahlLieferungen -> parameter(lieferung.anzahlLieferungen),
         column.anzahlKoerbeZuLiefern -> parameter(lieferung.anzahlKoerbeZuLiefern),
         column.anzahlKoerbeNichtZuLiefern -> parameter(lieferung.anzahlKoerbeNichtZuLiefern),
+        column.zielpreis -> parameter(lieferung.zielpreis),
         column.preisTotal -> parameter(lieferung.preisTotal),
         column.lieferplanungId -> parameter(lieferung.lieferplanungId),
         column.lieferplanungNr -> parameter(lieferung.lieferplanungNr)
@@ -389,6 +391,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.produzentKurzzeichen -> parameter(bestellung.produzentKurzzeichen),
         column.lieferplanungId -> parameter(bestellung.lieferplanungId),
         column.lieferplanungNr -> parameter(bestellung.lieferplanungNr),
+        column.status -> parameter(bestellung.status),
+        column.datum -> parameter(bestellung.datum),
         column.datumAbrechnung -> parameter(bestellung.datumAbrechnung),
         column.preisTotal -> parameter(bestellung.preisTotal)
       )

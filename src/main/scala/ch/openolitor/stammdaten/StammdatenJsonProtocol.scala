@@ -112,6 +112,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
   implicit val produktIdFormat = baseIdFormat(ProduktId.apply)
+  implicit val optionProduktIdFormat = new OptionFormat[ProduktId]
   implicit val produktekategorieIdFormat = baseIdFormat(ProduktekategorieId.apply)
   implicit val baseProduktekategorieIdFormat = new JsonFormat[BaseProduktekategorieId] {
     def write(obj: BaseProduktekategorieId): JsValue =
@@ -356,10 +357,12 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val lieferplanungModifyFormat = autoProductFormat[LieferplanungModify]
   implicit val lieferplanungCreateFormat = autoProductFormat[LieferplanungCreate]
   implicit val lieferpositionModifyFormat = autoProductFormat[LieferpositionModify]
+  implicit val lieferpositionenCreateFormat = autoProductFormat[LieferpositionenCreate]
+  implicit val lieferungPlanungAddFormat = autoProductFormat[LieferungPlanungAdd]
+  implicit val lieferungPlanungRemoveFormat = autoProductFormat[LieferungPlanungRemove]
   implicit val bestellungModifyFormat = autoProductFormat[BestellungModify]
   implicit val bestellungenCreateFormat = autoProductFormat[BestellungenCreate]
   implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
 
-  implicit val projektFormat = autoProductFormat[Projekt]
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 }

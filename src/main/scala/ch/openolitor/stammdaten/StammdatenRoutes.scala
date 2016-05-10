@@ -148,7 +148,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "pendenzen" / pendenzIdPath) { (kundeId, pendenzId) =>
         get(detail(stammdatenReadRepository.getPendenzDetail(pendenzId))) ~
-          (put | post)(update[PendenzModify, PendenzId](pendenzId))
+          (put | post)(update[PendenzModify, PendenzId](pendenzId)) ~
+          delete(remove(pendenzId))
       } ~
       path("kunden" / kundeIdPath / "personen" / personIdPath) { (kundeId, personId) =>
         delete(remove(personId))
@@ -207,7 +208,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(vertriebsartId))
       } ~
       path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath / "lieferungen") { (abotypId, vertriebsartId) =>
-        get(list(stammdatenReadRepository.getOffeneLieferungen(abotypId, vertriebsartId))) ~
+        get(list(stammdatenReadRepository.getUngeplanteLieferungen(abotypId, vertriebsartId))) ~
           post {
             requestInstance { request =>
               entity(as[LieferungAbotypCreate]) { entity =>
@@ -315,7 +316,18 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(stammdatenReadRepository.getNichtInkludierteAbotypenLieferungen(lieferplanungId)))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
-        (put | post)(update[LieferungModify, LieferungId](lieferungId))
+        (put | post)(update[LieferungPlanungAdd, LieferungId](lieferungId)) ~
+          delete(update(lieferungId, LieferungPlanungRemove()))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
+        get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~
+          (put | post)(create[LieferpositionenCreate, LieferpositionId](LieferpositionId.apply _))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "abschliessen") { id =>
+        (post)(lieferplanungAbschliessen(id))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "verrechnen") { id =>
+        (post)(lieferplanungVerrechnen(id))
       }
   path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
     get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))
@@ -325,7 +337,37 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     } ~
     path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
       get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
+    } ~
+    path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, bestellungId) =>
+      (post)(bestellungErneutVersenden(bestellungId))
     }
+
+  def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def lieferplanungVerrechnen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbrechnenCommand(userId, id)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Verrechnet")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _]) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(userId, bestellungId)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
+      case _ =>
+        complete("")
+    }
+  }
 }
 
 class DefaultStammdatenRoutes(

@@ -31,12 +31,12 @@ sealed trait LieferungStatus
 
 case object Ungeplant extends LieferungStatus
 case object Offen extends LieferungStatus
-case object InBearbeitung extends LieferungStatus
-case object Bearbeitet extends LieferungStatus
+case object Abgeschlossen extends LieferungStatus
+case object Verrechnet extends LieferungStatus
 
 object LieferungStatus {
   def apply(value: String): LieferungStatus = {
-    Vector(Ungeplant, Offen, InBearbeitung, Bearbeitet).find(_.toString == value).getOrElse(Offen)
+    Vector(Ungeplant, Offen, Abgeschlossen, Verrechnet).find(_.toString == value).getOrElse(Offen)
   }
 }
 
@@ -119,6 +119,12 @@ case class LieferungModify(
   lieferplanungNr: Option[Int]
 ) extends JSONSerializable
 
+case class LieferungPlanungAdd(
+  lieferplanungId: LieferplanungId
+) extends JSONSerializable
+
+case class LieferungPlanungRemove() extends JSONSerializable
+
 case class LieferungAbotypCreate(
   abotypId: AbotypId,
   vertriebsartId: VertriebsartId,
@@ -130,7 +136,7 @@ case class LieferpositionId(id: Long) extends BaseId
 case class Lieferposition(
   id: LieferpositionId,
   lieferungId: LieferungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
@@ -148,7 +154,7 @@ case class Lieferposition(
 
 case class LieferpositionModify(
   lieferungId: LieferungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
@@ -159,6 +165,11 @@ case class LieferpositionModify(
   anzahl: Int
 ) extends JSONSerializable
 
+case class LieferpositionenCreate(
+  lieferungId: LieferungId,
+  lieferpositionen: List[LieferpositionModify]
+) extends JSONSerializable
+
 case class BestellungId(id: Long) extends BaseId
 
 case class Bestellung(
@@ -167,6 +178,7 @@ case class Bestellung(
   produzentKurzzeichen: String,
   lieferplanungId: LieferplanungId,
   lieferplanungNr: Int,
+  status: LieferungStatus,
   datum: DateTime,
   datumAbrechnung: Option[DateTime],
   preisTotal: BigDecimal,
@@ -196,7 +208,7 @@ case class BestellpositionId(id: Long) extends BaseId
 case class Bestellposition(
   id: BestellpositionId,
   bestellungId: BestellungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   preisEinheit: Option[BigDecimal],
   einheit: Liefereinheit,
@@ -212,7 +224,7 @@ case class Bestellposition(
 
 case class BestellpositionModify(
   bestellungId: BestellungId,
-  produktId: ProduktId,
+  produktId: Option[ProduktId],
   produktBeschrieb: String,
   preisEinheit: Option[BigDecimal],
   einheit: Liefereinheit,
