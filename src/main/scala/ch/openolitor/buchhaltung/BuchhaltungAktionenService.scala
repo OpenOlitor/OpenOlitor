@@ -40,13 +40,14 @@ import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
 import ch.openolitor.buchhaltung.models.RechnungModifyBezahlt
+import scala.concurrent.Future
 
 object BuchhaltungAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungAktionenService = new DefaultBuchhaltungAktionenService(sysConfig, system)
 }
 
 class DefaultBuchhaltungAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungAktionenService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent {
+    extends BuchhaltungAktionenService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent with DefaultBuchhaltungReadRepositoryComponent {
 }
 
 /**
@@ -54,7 +55,7 @@ class DefaultBuchhaltungAktionenService(sysConfig: SystemConfig, override val sy
  */
 class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with BuchhaltungDBMappings {
-  self: BuchhaltungWriteRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent with BuchhaltungReadRepositoryComponent =>
 
   val handle: Handle = {
     case RechnungVerschicktEvent(meta, id: RechnungId) =>
@@ -116,6 +117,18 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
   }
 
   def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit userId: UserId = meta.originator) = {
+    def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession) = {
+      val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
+        zahlungsEingangCreate,
+        "erstelldat" -> meta.timestamp,
+        "ersteller" -> meta.originator,
+        "modifidat" -> meta.timestamp,
+        "modifikator" -> meta.originator
+      )
+
+      buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
+    }
+
     val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
       entity,
       "status" -> Neu,
@@ -125,30 +138,24 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       "modifikator" -> meta.originator
     )
 
-    DB autoCommit { implicit session =>
-      buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
-
-      entity.zahlungsEingaenge map { eingang =>
-        val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
-          eingang,
-          "erstelldat" -> meta.timestamp,
-          "ersteller" -> meta.originator,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> meta.originator
-        )
-
-        buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
+    DB futureLocalTx { implicit session =>
+      Future.sequence(entity.zahlungsEingaenge map { eingang =>
+        buchhaltungReadRepository.getRechnungByReferenznummer(eingang.referenzNummer) map {
+          case Some(rechnung) =>
+            val state = if (rechnung.status == Bezahlt) {
+              BereitsVerarbeitet
+            } else if (rechnung.betrag != eingang.betrag) {
+              BetragNichtKorrekt
+            } else {
+              Ok
+            }
+            createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
+          case None =>
+            createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
+        }
+      }) map { _ =>
+        buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
       }
-
-      lazy val zahlungsEingang = zahlungsEingangMapping.syntax("zahlungsEingang")
-      lazy val rechnung = rechnungMapping.syntax("rechnung")
-
-      sql"""
-        update ${zahlungsEingangMapping.table}
-        inner join ${rechnungMapping.table} on (${rechnung.referenzNummer} = ${zahlungsEingang.referenzNummer})
-        set (${zahlungsEingang.rechnungId} = ${rechnung.id})
-        where ${zahlungsEingang.zahlungsImportId} = ${entity.id}
-        """.update.apply()
     }
   }
 }
