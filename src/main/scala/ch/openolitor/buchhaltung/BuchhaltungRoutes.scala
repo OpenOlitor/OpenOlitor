@@ -23,7 +23,6 @@
 package ch.openolitor.buchhaltung
 
 import spray.routing._
-
 import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
@@ -53,6 +52,9 @@ import ch.openolitor.buchhaltung.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
 import akka.actor._
+import scala.io.Source
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -61,13 +63,14 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   self: BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
+  implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
 
   import EntityStore._
 
   //TODO: get real userid from login
   override val personId: PersonId = Boot.systemPersonId
 
-  lazy val buchhaltungRoute = rechnungenRoute
+  lazy val buchhaltungRoute = rechnungenRoute ~ zahlungsImportsRoute
 
   lazy val rechnungenRoute =
     path("rechnungen") {
@@ -92,9 +95,22 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       }
 
   lazy val zahlungsImportsRoute =
-    path("zahlungseingaenge") {
-      get(list(buchhaltungReadRepository.getZahlungsEingaenge))
-    }
+    path("zahlungsimports") {
+      get(list(buchhaltungReadRepository.getZahlungsImports)) ~
+        (put | post)(upload(ZahlungsImportDaten) { (content, fileName) =>
+          // parse
+          ZahlungsImportParser.parse(Source.fromInputStream(content).getLines) match {
+            case Success(importResult) =>
+              storeToFileStore(ZahlungsImportDaten, None, content, fileName) { (fileId, meta) =>
+                createZahlungsImport(fileId, importResult.records)
+              }
+            case Failure(e) => complete(StatusCodes.BadRequest, s"Die Datei konnte nicht gelesen werden: $e")
+          }
+        })
+    } ~
+      path("zahlungsimports" / zahlungsImportIdPath) { id =>
+        get(detail(buchhaltungReadRepository.getZahlungsImportDetail(id)))
+      }
 
   def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
     onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(personId, id)) {
@@ -104,6 +120,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
         complete("")
     }
   }
+
   def mahnungVerschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
     onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungMahnungVerschickenCommand(personId, id)) {
       case UserCommandFailed =>
@@ -112,6 +129,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
         complete("")
     }
   }
+
   def bezahlen(id: RechnungId, entity: RechnungModifyBezahlt)(implicit idPersister: Persister[RechnungId, _]) = {
     onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungBezahlenCommand(personId, id, entity)) {
       case UserCommandFailed =>
@@ -120,10 +138,20 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
         complete("")
     }
   }
+
   def stornieren(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
     onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungStornierenCommand(personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit to status Storniert")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def createZahlungsImport(file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult])(implicit idPersister: Persister[ZahlungsImportId, _]) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.ZahlungsImportCreateCommand(personId, file, zahlungsEingaenge))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not transit to status Bezahlt")
       case _ =>
         complete("")
     }

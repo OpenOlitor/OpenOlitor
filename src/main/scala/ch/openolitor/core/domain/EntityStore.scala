@@ -40,8 +40,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
 import scala.reflect._
 import scala.reflect.runtime.universe.{ Try => TTry, _ }
-import ch.openolitor.buchhaltung.models.RechnungModify
-import ch.openolitor.buchhaltung.models.RechnungId
+import ch.openolitor.buchhaltung.models._
 
 /**
  * _
@@ -54,7 +53,7 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], BaseId]) extends State
+  case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], Long]) extends State
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultEntityStore], sysConfig, evolution)
 
   //base commands
@@ -113,14 +112,15 @@ trait EntityStore extends AggregateRoot
 
   def newId(clOf: Class[_ <: BaseId]): Long = {
     val id: Long = state.dbSeeds.get(clOf).map { id =>
-      id.id + 1
+      id + 1
     }.getOrElse(sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
+    updateId(clOf, id)
     id
   }
 
-  def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: I) = {
+  def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: Long) = {
     log.debug(s"updateId:$clOf -> $id")
-    if (state.dbSeeds.get(clOf).map(_.id < id.id).getOrElse(true)) {
+    if (state.dbSeeds.get(clOf).map(_ < id).getOrElse(true)) {
       //only update if current id is smaller than new one or no id did exist 
       state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
     }
@@ -135,7 +135,7 @@ trait EntityStore extends AggregateRoot
     log.debug(s"updateState:$evt")
     evt match {
       case EntityStoreInitialized(_) =>
-      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id)
+      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id.id)
       case _ =>
     }
   }

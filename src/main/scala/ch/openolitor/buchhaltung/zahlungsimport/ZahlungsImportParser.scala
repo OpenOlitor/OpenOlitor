@@ -26,14 +26,31 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import ch.openolitor.buchhaltung.zahlungsimport.esr.EsrRecordTyp3
 import ch.openolitor.buchhaltung.zahlungsimport.esr.EsrTotalRecordTyp3
+import scala.util._
+import scala.io.Source
+import java.io.InputStream
 
 class ZahlungsImportParseException(message: String) extends Exception(message)
 
 class ZahlungsImportParser {
-  def parse(line: String): ZahlungsImportRecord = line.trim match {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = line.trim match {
     case EsrRecordTyp3(record) =>
-      record
+      Success(record)
     case EsrTotalRecordTyp3(record) =>
-      record
+      Success(record)
+  }
+}
+
+object ZahlungsImportParser {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = {
+    (new ZahlungsImportParser).parse(line)
+  }
+
+  def parse(lines: Iterator[String]): Try[ZahlungsImportResult] = {
+    val parser = new ZahlungsImportParser
+
+    val result = lines map (parser.parse)
+
+    Try(ZahlungsImportResult((result map (_.get)).toList))
   }
 }

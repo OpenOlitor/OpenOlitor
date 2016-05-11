@@ -300,7 +300,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("projekt" / projektIdPath / "logo") { id =>
         get(download(ProjektStammdaten, "logo")) ~
-          (put | post)(upload(ProjektStammdaten, Some("logo")) { (id, metadata) =>
+          (put | post)(uploadStored(ProjektStammdaten, Some("logo")) { (id, metadata) =>
             //TODO: update projekt stammdaten entity
             complete("Logo uploaded")
           })

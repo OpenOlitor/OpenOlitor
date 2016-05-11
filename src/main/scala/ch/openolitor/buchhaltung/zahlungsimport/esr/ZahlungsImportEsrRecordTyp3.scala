@@ -25,6 +25,8 @@ package ch.openolitor.buchhaltung.zahlungsimport.esr
 import org.joda.time.DateTime
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
 import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
+import ch.openolitor.stammdaten.models.Waehrung
+import ch.openolitor.stammdaten.models.CHF
 
 object EsrRecordTyp3EsrTyp {
   def apply(c: String): EsrTyp = c match {
@@ -83,19 +85,22 @@ object EsrRecordTyp3RejectCode {
 }
 
 case class EsrRecordTyp3(
-  transaktionsartCode: EsrRecordTyp3Transaktionsartcode,
-  teilnehmerNummer: String,
-  referenzNummer: String,
-  betrag: BigDecimal,
-  aufgabereferenzen: String,
-  aufgabeDatum: DateTime,
-  verarbeitungsDatum: DateTime,
-  gutschriftsDatum: DateTime,
-  mikrofilmNummer: String,
-  rejectCode: EsrRecordTyp3RejectCode,
-  reserve: String,
-  preiseFuerEinzahlungen: BigDecimal
-) extends ZahlungsImportRecord
+    transaktionsartCode: EsrRecordTyp3Transaktionsartcode,
+    teilnehmerNummer: String,
+    referenzNummer: String,
+    betrag: BigDecimal,
+    aufgabereferenzen: String,
+    aufgabeDatum: DateTime,
+    verarbeitungsDatum: DateTime,
+    gutschriftsDatum: DateTime,
+    mikrofilmNummer: String,
+    rejectCode: EsrRecordTyp3RejectCode,
+    reserve: String,
+    preiseFuerEinzahlungen: BigDecimal
+) extends ZahlungsImportRecord {
+  override val transaktionsart: Transaktionsart = transaktionsartCode.transaktionsart
+  override val waehrung: Waehrung = CHF
+}
 
 object EsrRecordTyp3 {
   private val R = """(\w{3})(\d{9})(\d{27})(\d{10})(\w{10})(\d{6})(\d{6})(\d{6})(\d{9})(\d{1})(\w{9})(\d{4})""".r
