@@ -79,6 +79,7 @@ object EntityStore {
 
   // other actor messages
   case object CheckDBEvolution
+  case object ReadSeedsFromDB
 
   case object UserCommandFailed
 }
@@ -147,13 +148,7 @@ trait EntityStore extends AggregateRoot
         log.debug(s"Successfully updated to db rev:$rev")
         updateDBRevision(rev)
 
-        evolution.checkDBSeeds(state.dbSeeds) match {
-          case Success(newSeeds) =>
-            log.debug(s"Read dbseeds:$newSeeds")
-            state = state.copy(dbSeeds = newSeeds)
-          case Failure(e) =>
-            log.warning(s"Coulnd't read actual seeds from db", e)
-        }
+        readDBSeeds()
 
         context become created
         s
@@ -165,6 +160,18 @@ trait EntityStore extends AggregateRoot
         }
         context become uncheckedDB
         f
+    }
+  }
+
+  def readDBSeeds() = {
+    implicit val userId = Boot.systemUserId
+    evolution.checkDBSeeds(Map()) match {
+      case Success(newSeeds) =>
+        log.debug(s"Read dbseeds:$newSeeds")
+        state = state.copy(dbSeeds = newSeeds)
+      case Failure(e) =>
+        e.printStackTrace
+        log.warning(s"Coulnd't read actual seeds from db {}", e)
     }
   }
 
@@ -212,7 +219,7 @@ trait EntityStore extends AggregateRoot
       log.debug(s"uncheckedDB => check db evolution")
       sender ! checkDBEvolution()
     case x =>
-      log.warning(s"uncheckedDB => unsupported command:$x")
+      log.error(s"uncheckedDB => unsupported command:$x")
   }
 
   /**
@@ -257,6 +264,8 @@ trait EntityStore extends AggregateRoot
     case SaveSnapshotSuccess(metadata) =>
     case SaveSnapshotFailure(metadata, reason) =>
       log.error(s"SaveSnapshotFailure failed:$reason")
+    case ReadSeedsFromDB =>
+      readDBSeeds()
     case other =>
       log.error(s"received unknown command:$other")
   }

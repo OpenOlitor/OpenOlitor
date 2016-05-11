@@ -112,6 +112,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 
   def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int]
+
+  def getProjekt(implicit cpContext: ConnectionPoolContext): Option[Projekt]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenDBMappings {
@@ -695,6 +697,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
+  lazy val projekt = projektMapping.syntax
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB localTx { implicit session =>
@@ -732,5 +735,14 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
         .from(lieferpositionMapping)
         .where.eq(lieferpositionShort.lieferungId, parameter(id))
     }.update.future
+  }
+
+  def getProjekt(implicit cpContext: ConnectionPoolContext): Option[Projekt] = {
+    DB readOnly { implicit session =>
+      withSQL {
+        select
+          .from(projektMapping as projekt)
+      }.map(projektMapping(projekt)).single.apply()
+    }
   }
 }

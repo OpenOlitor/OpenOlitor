@@ -165,6 +165,10 @@ trait DataImportService extends Actor with ActorLogging
           logger.warn(s"Received error while importing data {}", t)
           originator.map(_ ! ImportResult(Option(t.getMessage), Map()))
       }
+
+      //force reread of db seeds after importing data
+      entityStore ! EntityStore.ReadSeedsFromDB
+
       context become receive
   }
 

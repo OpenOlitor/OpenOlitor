@@ -977,6 +977,12 @@ object DataImportParser {
   }
 
   implicit class MyRow(self: Row) {
-    def value[T: TypeTag](index: Int): T = self.getCellByIndex(index).value[T]
+    def value[T: TypeTag](index: Int): T = {
+      val value = self.getCellByIndex(index).value[T]
+      value match {
+        case x: String => x.trim().asInstanceOf[T]
+        case _ => value
+      }
+    }
   }
 }

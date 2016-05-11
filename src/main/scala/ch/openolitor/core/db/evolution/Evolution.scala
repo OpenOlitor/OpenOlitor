@@ -85,7 +85,8 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
           adjustSeed[Tour, TourId](seeds, tourMapping),
           adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping),
           adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping),
-          adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping)
+          adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping),
+          adjustSeed[Abwesenheit, AbwesenheitId](seeds, abwesenheitMapping)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)
@@ -102,7 +103,8 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
 
   def adjustSeeds[I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], Long], queries: Option[Long]*)(implicit session: DBSession, userId: UserId): Option[(Class[I], Long)] = {
     val entity: Class[I] = classTag[I].runtimeClass.asInstanceOf[Class[I]]
-    val overallMaxId = queries.flatten.max
+    val q = queries.flatten
+    val overallMaxId = if (q.length > 0) q.max else 0
     seeds.get(entity).map(_ < overallMaxId).getOrElse(true) match {
       case true => Some(entity -> overallMaxId)
       case _ => None

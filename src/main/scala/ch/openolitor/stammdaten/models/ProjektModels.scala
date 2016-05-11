@@ -29,26 +29,60 @@ import ch.openolitor.core.JSONSerializable
 
 case class ProjektId(id: Long) extends BaseId
 
+case class Geschaeftsjahr(monat: Int, tag: Int) {
+
+  /**
+   * Errechnet den Start des Geschäftsjahres aufgrund eines Datums
+   */
+  def start(date: DateTime = DateTime.now): DateTime = {
+    val geschaftsjahrInJahr = new DateTime(date.year.get, monat, tag, 0, 0, 0, 0)
+    date match {
+      case d if d.isBefore(geschaftsjahrInJahr) =>
+        //Wir sind noch im "alten" Geschäftsjahr
+        geschaftsjahrInJahr.minusYears(1)
+      case d =>
+        //Wir sind bereits im neuen Geschäftsjahr
+        geschaftsjahrInJahr
+    }
+  }
+
+  /**
+   * Errechnet der Key für ein Geschäftsjahr aufgrund eines Datum. Der Key des Geschäftsjahres leitet sich aus dem Startdatum
+   * des Geschäftsjahres ab. Wird der Start des Geschäftsjahres auf den Start des Kalenderjahres gesetzt, wird das Kalenderjahr als
+   * key benutzt, ansonsten setzt sich der Key aus Monat/Jahr zusammen
+   */
+  def key(date: DateTime = DateTime.now): String = {
+    val startDate = start(date)
+    if (monat == 1 && tag == 1) {
+      startDate.year.getAsText
+    } else {
+      s"${startDate.getMonthOfYear}/${startDate.getYear}"
+    }
+  }
+}
+
 case class Projekt(
-  id: ProjektId,
-  bezeichnung: String,
-  strasse: Option[String],
-  hausNummer: Option[String],
-  adressZusatz: Option[String],
-  plz: Option[String],
-  ort: Option[String],
-  preiseSichtbar: Boolean,
-  preiseEditierbar: Boolean,
-  emailErforderlich: Boolean,
-  waehrung: Waehrung,
-  geschaeftsjahrMonat: Int,
-  geschaeftsjahrTag: Int,
-  //modification flags
-  erstelldat: DateTime,
-  ersteller: UserId,
-  modifidat: DateTime,
-  modifikator: UserId
-) extends BaseEntity[ProjektId]
+    id: ProjektId,
+    bezeichnung: String,
+    strasse: Option[String],
+    hausNummer: Option[String],
+    adressZusatz: Option[String],
+    plz: Option[String],
+    ort: Option[String],
+    preiseSichtbar: Boolean,
+    preiseEditierbar: Boolean,
+    emailErforderlich: Boolean,
+    waehrung: Waehrung,
+    geschaeftsjahrMonat: Int,
+    geschaeftsjahrTag: Int,
+    //modification flags
+    erstelldat: DateTime,
+    ersteller: UserId,
+    modifidat: DateTime,
+    modifikator: UserId
+) extends BaseEntity[ProjektId] {
+  lazy val geschaftsjahr = Geschaeftsjahr(geschaeftsjahrMonat, geschaeftsjahrTag)
+}
 
 case class ProjektModify(
   bezeichnung: String,

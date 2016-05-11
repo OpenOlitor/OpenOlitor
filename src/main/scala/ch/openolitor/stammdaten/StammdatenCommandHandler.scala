@@ -140,6 +140,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[HeimlieferungAboModify, AboId](idFactory, meta, entity, AboId.apply)
     case e @ InsertEntityCommand(userId, entity: PostlieferungAboModify) => idFactory => meta =>
       handleEntityInsert[PostlieferungAboModify, AboId](idFactory, meta, entity, AboId.apply)
+    case e @ InsertEntityCommand(userId, entity: PendenzCreate) => idFactory => meta =>
+      handleEntityInsert[PendenzCreate, PendenzId](idFactory, meta, entity, PendenzId.apply)
     case e @ InsertEntityCommand(userId, entity: KundeModify) => idFactory => meta =>
       if (entity.ansprechpersonen.isEmpty) {
         Failure(new InvalidStateException(s"Zum Erstellen eines Kunden muss mindestens ein Ansprechpartner angegeben werden"))
