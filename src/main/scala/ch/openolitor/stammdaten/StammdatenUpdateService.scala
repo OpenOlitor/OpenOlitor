@@ -406,15 +406,24 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, update.lieferplanungId) map { lieferplanung =>
         stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-          val lpId = Some(update.lieferplanungId)
-          //map lieferplanungId und Nr
-          val copy = copyFrom(lieferung, update,
-            "lieferplanungId" -> lpId,
-            "lieferplanungnr" -> lieferplanung.nr,
-            "status" -> Offen,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> personId)
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+          DB futureLocalTx { implicit session =>
+            stammdatenReadRepository.getLastGeplanteLieferung(lieferung.abotypId) map { letzteLieferung =>
+              val lpId = Some(update.lieferplanungId)
+              val anzahlLieferungen = letzteLieferung match {
+                case Some(l) => l.anzahlLieferungen + 1
+                case None => 1
+              }
+              //map lieferplanungId und Nr
+              val copy = copyFrom(lieferung, update,
+                "lieferplanungId" -> lpId,
+                "lieferplanungnr" -> lieferplanung.nr,
+                "status" -> Offen,
+                "anzahlLieferungen" -> anzahlLieferungen,
+                "modifidat" -> meta.timestamp,
+                "modifikator" -> personId)
+              stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+            }
+          }
         }
       }
     }

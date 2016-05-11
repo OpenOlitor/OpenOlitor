@@ -38,6 +38,10 @@ import ch.openolitor.buchhaltung.models.Rechnung
 import ch.openolitor.buchhaltung.models.{ Erstellt, Bezahlt }
 import org.joda.time.DateTime
 import scala.util.Random
+import scala.concurrent.Future
+import ch.openolitor.stammdaten.models.FaelltAusAbwesend
+import ch.openolitor.stammdaten.models.FaelltAusSaldoZuTief
+import ch.openolitor.stammdaten.models.WirdGeliefert
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -191,10 +195,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             stammdatenReadRepository.getKorb(abw.lieferungId, abw.aboId) map { k =>
               k match {
                 case Some(korb) => {
-                  val copy = korb.copy(status = getCalculateKorbStatus(Some(0), abo.guthaben))
-                  log.debug(s"Modify Korb-Status as Abwesenheit was deleted : ${copy.status}.")
                   DB autoCommit { implicit session =>
-                    stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                    stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+                      val status = calculateKorbStatus(Some(0), abo.guthaben, abotyp.guthabenMindestbestand)
+                      val statusAlt = korb.status
+                      val copy = korb.copy(status = status)
+                      log.debug(s"Modify Korb-Status as Abwesenheit was deleted : ${copy.status}.")
+                      stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                      stammdatenWriteRepository.getById(lieferungMapping, abw.lieferungId) map { lieferung =>
+                        updateLieferungCounts(lieferung, status, statusAlt)
+                      }
+
+                    }
                   }
                 }
                 case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
@@ -235,15 +247,38 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       stammdatenReadRepository.getKorb(abw.lieferungId, abw.aboId) map { k =>
         k match {
           case Some(korb) => {
+            val statusAlt = korb.status
             val copy = korb.copy(status = FaelltAusAbwesend)
             log.debug(s"Modify Korb-Status as Abwesenheit was created : ${copy.status}.")
             DB autoCommit { implicit session =>
               stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+              stammdatenWriteRepository.getById(lieferungMapping, abw.lieferungId) map { lieferung =>
+                updateLieferungCounts(lieferung, FaelltAusAbwesend, statusAlt)
+              }
             }
           }
           case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
         }
       }
+    }
+  }
+
+  def updateLieferungCounts(lieferung: Lieferung, korbStatusNeu: KorbStatus, korbStatusAlt: KorbStatus)(implicit personId: PersonId) = {
+    val zuLiefenDec = if (korbStatusAlt == WirdGeliefert && korbStatusNeu != WirdGeliefert) 1 else 0
+    val abwDec = if (korbStatusAlt == FaelltAusAbwesend && korbStatusNeu != FaelltAusAbwesend) 1 else 0
+    val saldoDec = if (korbStatusAlt == FaelltAusSaldoZuTief && korbStatusNeu != FaelltAusSaldoZuTief) 1 else 0
+
+    val zuLiefenAdd = if (korbStatusNeu == WirdGeliefert && korbStatusAlt != WirdGeliefert) 1 else 0
+    val abwAdd = if (korbStatusNeu == FaelltAusAbwesend && korbStatusNeu != FaelltAusAbwesend) 1 else 0
+    val saldoAdd = if (korbStatusNeu == FaelltAusSaldoZuTief && korbStatusAlt != FaelltAusSaldoZuTief) 1 else 0
+    val lCopy = lieferung.copy(
+      anzahlKoerbeZuLiefern = lieferung.anzahlKoerbeZuLiefern - zuLiefenDec + zuLiefenAdd,
+      anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten - abwDec + abwAdd,
+      anzahlSaldoZuTief = lieferung.anzahlSaldoZuTief - saldoDec + saldoAdd
+    )
+    log.debug(s"Modify Lieferung as Korb-Status was modified : ${lieferung.id} status form ${korbStatusNeu} to ${korbStatusAlt}.")
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lCopy)
     }
   }
 
@@ -362,45 +397,71 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def removeKoerbe(lieferungId: LieferungId)(implicit personId: PersonId) = {
-    stammdatenWriteRepository.deleteKoerbe(lieferungId)
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.deleteKoerbe(lieferungId)
+    }
   }
 
   def createKoerbe(lieferungId: LieferungId)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
-        DB futureLocalTx { implicit session =>
-          stammdatenReadRepository.getAktiveAbos(lieferung.abotypId, lieferung.datum) map { abos =>
-            abos map { abo =>
-              stammdatenReadRepository.countAbwesend(lieferungId, abo.id) map { abwCount =>
-                val status = getCalculateKorbStatus(abwCount, abo.guthaben)
-                val kId = KorbId(Random.nextLong)
-                val korb = Korb(
-                  kId,
-                  lieferungId,
-                  abo.id,
-                  status,
-                  abo.guthaben,
-                  DateTime.now,
-                  personId,
-                  DateTime.now,
-                  personId
-                )
-                DB autoCommit { implicit session =>
-                  stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
+        stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
+          DB futureLocalTx { implicit session =>
+            val statusLF = stammdatenReadRepository.getAktiveAbos(lieferung.abotypId, lieferung.datum) map { abos =>
+              abos map { abo =>
+                stammdatenReadRepository.countAbwesend(lieferungId, abo.id) map { abwCount =>
+                  val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+                  val kId = KorbId(Random.nextLong)
+                  val korb = Korb(
+                    kId,
+                    lieferungId,
+                    abo.id,
+                    status,
+                    abo.guthaben,
+                    DateTime.now,
+                    personId,
+                    DateTime.now,
+                    personId
+                  )
+                  DB autoCommit { implicit session =>
+                    stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
+                  }
+                  val retAbw = abwCount match {
+                    case Some(abw) if abw > 0 => 1
+                    case _ => 0
+                  }
+                  status
                 }
               }
             }
+
+            statusLF map {
+              Future.sequence(_).map { statusL =>
+                val counts = statusL.groupBy { _.getClass }.mapValues(_.size)
+
+                val copy = lieferung.copy(
+                  anzahlKoerbeZuLiefern = counts.get(WirdGeliefert.getClass).getOrElse(0),
+                  anzahlAbwesenheiten = counts.get(FaelltAusAbwesend.getClass).getOrElse(0),
+                  anzahlSaldoZuTief = counts.get(FaelltAusSaldoZuTief.getClass).getOrElse(0)
+                )
+                DB autoCommit { implicit session =>
+                  stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+                }
+              }
+            }
+
+            statusLF
           }
         }
       }
     }
   }
 
-  def getCalculateKorbStatus(abwCount: Option[Int], guthaben: Int): KorbStatus = {
+  def calculateKorbStatus(abwCount: Option[Int], guthaben: Int, minGuthaben: Int): KorbStatus = {
     (abwCount, guthaben) match {
       case (Some(abw), gut) if abw > 0 => FaelltAusAbwesend
-      case (_, gut) if gut > 0 => WirdGeliefert
-      case (_, gut) if gut <= 0 => FaelltAusSaldoZuTief
+      case (_, gut) if gut > minGuthaben => WirdGeliefert
+      case (_, gut) if gut <= minGuthaben => FaelltAusSaldoZuTief
     }
   }
 

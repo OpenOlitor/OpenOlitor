@@ -318,7 +318,7 @@ object V1Scripts {
         vertriebsart_beschrieb varchar(100) not null,
         status varchar(50) not null,
         datum datetime not null,
-        adurchschnittspreis DECIMAL(7,2) not null,
+        durchschnittspreis DECIMAL(7,2) not null,
         anzahl_lieferungen int not null,
         anzahl_koerbe_zu_liefern int not null,
         anzahl_abwesenheiten int not null,

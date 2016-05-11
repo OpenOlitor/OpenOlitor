@@ -100,6 +100,7 @@ trait StammdatenReadRepository {
   def getLieferplanung(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Lieferplanung]]
   def getLatestLieferplanung(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Lieferplanung]]
   def getLieferungenNext()(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+  def getLastGeplanteLieferung(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Lieferung]]
   def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getNichtInkludierteAbotypenLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
@@ -643,6 +644,16 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 		    ON ${lieferung.abotypId} = groupedLieferung.abotypId 
 		    AND ${lieferung.datum} = groupedLieferung.MinDateTime
       """.map(lieferungMapping(lieferung)).list.future
+  }
+
+  def getLastGeplanteLieferung(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Lieferung]] = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .where.eq(lieferung.abotypId, abotypId).and.not.eq(lieferung.status, Ungeplant)
+        .orderBy(lieferung.datum).desc
+        .limit(1)
+    }.map(lieferungMapping(lieferung)).single.future
   }
 
   def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
