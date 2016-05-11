@@ -34,8 +34,10 @@ import org.joda.time.DateTime
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.repositories.SqlBinder
 import scala.reflect._
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 trait Script {
   def execute(implicit session: DBSession): Try[Boolean]
@@ -48,7 +50,7 @@ object Evolution extends Evolution(V1Scripts.scripts)
 /**
  * Base evolution class to evolve database from a specific revision to another
  */
-class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging with StammdatenDBMappings {
+class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
   import IteratorUtil._
 
   logger.debug(s"Evolution manager consists of:$scripts")
@@ -86,7 +88,10 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
           adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping),
           adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping),
           adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping),
-          adjustSeed[Abwesenheit, AbwesenheitId](seeds, abwesenheitMapping)
+          adjustSeed[Abwesenheit, AbwesenheitId](seeds, abwesenheitMapping),
+          adjustSeed[Rechnung, RechnungId](seeds, rechnungMapping),
+          adjustSeed[ZahlungsImport, ZahlungsImportId](seeds, zahlungsImportMapping),
+          adjustSeed[ZahlungsEingang, ZahlungsEingangId](seeds, zahlungsEingangMapping)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)
