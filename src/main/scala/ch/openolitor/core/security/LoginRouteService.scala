@@ -54,7 +54,7 @@ import scalaz._
 import Scalaz._
 import ch.openolitor.util.ConfigUtil._
 
-trait SecurityRouteService extends HttpService with ActorReferences
+trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
     with SprayDeserializers
     with DefaultRouteService with LazyLogging with LoginJsonProtocol {
@@ -234,11 +234,11 @@ trait SecurityRouteService extends HttpService with ActorReferences
   def generateCode = (Random.alphanumeric take 6).mkString.toLowerCase
 }
 
-class DefaultSecurityRouteService(
+class DefaultLoginRouteService(
   override val entityStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )
-    extends SecurityRouteService
+    extends LoginRouteService
     with DefaultStammdatenReadRepositoryComponent

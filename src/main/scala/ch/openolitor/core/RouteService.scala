@@ -45,7 +45,7 @@ import spray.http.HttpHeaders.RawHeader
 import spray.http.HttpHeaders.Location
 import spray.json._
 import ch.openolitor.core.BaseJsonProtocol._
-import ch.openolitor.stammdaten.FileStoreRoutes
+import ch.openolitor.stammdaten._
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -54,20 +54,17 @@ import scala.util._
 import ch.openolitor.core.BaseJsonProtocol.IdResponse
 import stamina.Persister
 import stamina.json.JsonPersister
-import ch.openolitor.core.system.StatusRoutes
+import ch.openolitor.core.system._
 import java.io.ByteArrayInputStream
 import ch.openolitor.core.filestore._
 import spray.routing.StandardRoute
 import akka.util.ByteString
-import ch.openolitor.stammdaten.StreamSupport
 import scala.reflect.ClassTag
-import ch.openolitor.buchhaltung.BuchhaltungRoutes
-import ch.openolitor.buchhaltung.DefaultBuchhaltungRoutes
+import ch.openolitor.buchhaltung._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.system.DefaultSystemRouteService
-import ch.openolitor.core.system.SystemRouteService
 import spray.routing.RequestContext
 import java.io.InputStream
+import ch.openolitor.core.security._
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -85,12 +82,14 @@ trait RouteServiceComponent {
   val stammdatenRouteService: StammdatenRoutes
   val buchhaltungRouteService: BuchhaltungRoutes
   val systemRouteService: SystemRouteService
+  val loginRouteService: LoginRouteService
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent {
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, sysConfig, fileStore, actorRefFactory)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -120,7 +119,8 @@ trait RouteServiceActor
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ systemRouteService.systemRoutes ~ stammdatenRouteService.stammdatenRoute ~ buchhaltungRouteService.buchhaltungRoute ~ fileStoreRoute))
+  val initializedDB = runRoute(cors(helloWorldRoute ~ systemRouteService.systemRoutes ~ loginRouteService.loginRoute ~
+    stammdatenRouteService.stammdatenRoute ~ buchhaltungRouteService.buchhaltungRoute ~ fileStoreRoute))
 
   val dbEvolutionRoutes =
     pathPrefix("db") {
