@@ -47,7 +47,7 @@ object BuchhaltungAktionenService {
 }
 
 class DefaultBuchhaltungAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungAktionenService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent with DefaultBuchhaltungReadRepositoryComponent {
+    extends BuchhaltungAktionenService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent {
 }
 
 /**
@@ -55,7 +55,7 @@ class DefaultBuchhaltungAktionenService(sysConfig: SystemConfig, override val sy
  */
 class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with BuchhaltungDBMappings {
-  self: BuchhaltungWriteRepositoryComponent with BuchhaltungReadRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
 
   val handle: Handle = {
     case RechnungVerschicktEvent(meta, id: RechnungId) =>
@@ -118,7 +118,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit userId: UserId = meta.originator) = {
 
-    def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession): Future[Unit] = {
+    def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession) = {
       val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
         zahlungsEingangCreate,
         "erstelldat" -> meta.timestamp,
@@ -127,9 +127,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
         "modifikator" -> meta.originator
       )
 
-      Future.successful {
-        buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
-      }
+      buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
     }
 
     val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
@@ -141,28 +139,23 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       "modifikator" -> meta.originator
     )
 
-    DB futureLocalTx { implicit session =>
-      entity.zahlungsEingaenge.foldLeft(Future.successful(())) {
-        case (acc, eingang) =>
-          acc flatMap { _ =>
-            buchhaltungReadRepository.getRechnungByReferenznummer(eingang.referenzNummer) flatMap {
-              case Some(rechnung) =>
-                val state = if (rechnung.status == Bezahlt) {
-                  BereitsVerarbeitet
-                } else if (rechnung.betrag != eingang.betrag) {
-                  BetragNichtKorrekt
-                } else {
-                  Ok
-                }
-                createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
-              case None =>
-                createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
+    DB localTx { implicit session =>
+      entity.zahlungsEingaenge map { eingang =>
+        buchhaltungWriteRepository.getRechnungByReferenznummer(eingang.referenzNummer) match {
+          case Some(rechnung) =>
+            val state = if (rechnung.status == Bezahlt) {
+              BereitsVerarbeitet
+            } else if (rechnung.betrag != eingang.betrag) {
+              BetragNichtKorrekt
+            } else {
+              Ok
             }
-          }
-      } andThen {
-        case x =>
-          Future.successful(buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport))
+            createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
+          case None =>
+            createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
+        }
       }
+      buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
     }
   }
 }
