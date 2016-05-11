@@ -22,10 +22,20 @@
 \*                                                                           */
 package ch.openolitor.core.security
 
-import spray.json.DefaultJsonProtocol
+import spray.json._
 import zangelo.spray.json.AutoProductFormats
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.stammdaten.StammdatenJsonProtocol
 
-trait LoginJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONSerializable] {
+trait LoginJsonProtocol extends StammdatenJsonProtocol with AutoProductFormats[JSONSerializable] {
+  implicit val loginStatusFormat = new JsonFormat[LoginStatus] {
+    def write(obj: LoginStatus): JsValue =
+      JsString(obj.productPrefix)
 
+    def read(json: JsValue): LoginStatus =
+      json match {
+        case JsString(value) => LoginStatus(value).getOrElse(sys.error(s"Unknown LoginStatus:$value"))
+        case pt => sys.error(s"Unknown LoginStatus:$pt")
+      }
+  }
 }

@@ -22,7 +22,14 @@
 \*                                                                           */
 package ch.openolitor.core.security
 
-import spray.routing.HttpService
+import spray.routing._
+import spray.http._
+import spray.http.MediaTypes._
+import spray.httpx.marshalling.ToResponseMarshallable._
+import spray.httpx.SprayJsonSupport._
+import spray.routing.Directive._
+import spray.json._
+import spray.json.DefaultJsonProtocol._
 import spray.caching._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core._
@@ -53,7 +60,10 @@ trait SecurityRouteService extends HttpService with ActorReferences
     with DefaultRouteService with LazyLogging with LoginJsonProtocol {
   self: StammdatenReadRepositoryComponent =>
 
-  type EitherFuture[+A] = EitherT[Future, LoginFailed, A]
+  //TODO: get real userid from login
+  override val personId: PersonId = Boot.systemPersonId
+
+  type EitherFuture[A] = EitherT[Future, LoginFailed, A]
 
   lazy val loginRoutes = loginRoute
 
@@ -76,15 +86,15 @@ trait SecurityRouteService extends HttpService with ActorReferences
   val errorTokenOrCodeMismatch = LoginFailed("Code stimmt nicht überein")
   val errorPersonNotFound = LoginFailed("Person konnte nicht gefunden werden")
 
-  def loginRoute = pathPrefix("login") {
-    path("form") {
+  def loginRoute = pathPrefix("auth") {
+    path("login") {
       post {
         requestInstance { request =>
           entity(as[LoginForm]) { form =>
             onSuccess(validateLogin(form).run) {
-              case Left(error) =>
+              case -\/(error) =>
                 complete(StatusCodes.BadRequest, error.msg)
-              case Right(result) =>
+              case \/-(result) =>
                 complete(result)
             }
           }
@@ -96,9 +106,9 @@ trait SecurityRouteService extends HttpService with ActorReferences
           requestInstance { request =>
             entity(as[SecondFactorLoginForm]) { form =>
               onSuccess(validateSecondFactorLogin(form).run) {
-                case Left(error) =>
+                case -\/(error) =>
                   complete(StatusCodes.BadRequest, error.msg)
-                case Right(result) =>
+                case \/-(result) =>
                   complete(result)
               }
             }
@@ -119,12 +129,20 @@ trait SecurityRouteService extends HttpService with ActorReferences
     o.map(f => f.map(Option(_))).getOrElse(Future.successful(None))
   }
 
-  def validateSecondFactorLogin(form: SecondFactorLoginForm): EitherFuture[LoginResult] = EitherT {
-    transform(secondFactorTokenCache.get(form.token)) map {
-      case Some(SecondFactor(form.code, personId)) =>
-        personById(personId) flatMap doLogin
-      case None =>
-        errorTokenOrCodeMismatch.left
+  def validateSecondFactorLogin(form: SecondFactorLoginForm): EitherFuture[LoginResult] = {
+    for {
+      secondFactor <- readTokenFromCache(form)
+      person <- personById(personId)
+      result <- doLogin(person)
+    } yield result
+  }
+
+  def readTokenFromCache(form: SecondFactorLoginForm): EitherFuture[SecondFactor] = {
+    EitherT {
+      transform(secondFactorTokenCache.get(form.token)) map {
+        case Some(factor @ SecondFactor(form.token, form.code, _)) => factor.right
+        case _ => errorTokenOrCodeMismatch.left
+      }
     }
   }
 
@@ -159,15 +177,19 @@ trait SecurityRouteService extends HttpService with ActorReferences
   }
 
   def sendSecondFactorAuthentication(person: PersonDetail): EitherFuture[LoginResult] = {
-    val token = generateToken
-    val code = generateCode
-    EitherT {
-      secondFactorTokenCache(token)(SecondFactor(code, person.id)) map { x =>
-        //send email
-        //TODO
+    for {
+      secondFactor <- generateSecondFactor(person)
+      emailSent <- sendEmail(secondFactor, person)
+    } yield {
+      LoginResult(LoginSecondFactorRequired, secondFactor.token, person)
+    }
+  }
 
-        LoginResult(LoginSecondFactorRequired, token, person).right
-      }
+  def generateSecondFactor(person: PersonDetail): EitherFuture[SecondFactor] = {
+    EitherT {
+      val token = generateToken
+      val code = generateCode
+      secondFactorTokenCache(token)(SecondFactor(token, code, person.id)) map (_.right)
     }
   }
 

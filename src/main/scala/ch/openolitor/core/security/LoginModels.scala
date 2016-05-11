@@ -23,18 +23,22 @@
 package ch.openolitor.core.security
 
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models.PersonDetail
-import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.models.PersonId
 
 case class LoginForm(email: String, passwort: String) extends JSONSerializable
 case class SecondFactorLoginForm(token: String, code: String) extends JSONSerializable
-case class SecondFactor(code: String, personId: PersonId)
+case class SecondFactor(token: String, code: String, personId: PersonId)
 
-trait LoginStatus
+sealed trait LoginStatus extends Product
 case object LoginOk extends LoginStatus
 case object LoginSecondFactorRequired extends LoginStatus
+
+object LoginStatus {
+  def apply(value: String): Option[LoginStatus] = {
+    Vector(LoginOk, LoginSecondFactorRequired).find(_.toString == value)
+  }
+}
 
 case class LoginResult(status: LoginStatus, token: String, person: PersonDetail) extends JSONSerializable
 
