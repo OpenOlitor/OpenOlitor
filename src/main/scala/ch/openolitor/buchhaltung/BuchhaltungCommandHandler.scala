@@ -120,7 +120,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case ZahlungsImportCreateCommand(userId, file, zahlungsEingaengeRecords) => idFactory => meta =>
+    case ZahlungsImportCreateCommand(personId, file, zahlungsEingaengeRecords) => idFactory => meta =>
       DB readOnly { implicit session =>
         val id = ZahlungsImportId(idFactory(classOf[ZahlungsImportId]))
         val zahlungsEingaenge = zahlungsEingaengeRecords collect {

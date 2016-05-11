@@ -635,10 +635,10 @@ class DataImportParser extends Actor with ActorLogging {
   def parseLieferungen(abotypen: List[Abotyp], vertriebsarten: List[Vertriebsart], abwesenheiten: List[Abwesenheit], lieferplanungen: List[Lieferplanung],
     depots: List[Depot], touren: List[Tour]) = {
     parse[Lieferung, LieferungId]("id", Seq("abotyp_id", "vertriebsart_id", "lieferplanung_id", "status", "datum", "anzahl_abwesenheiten", "durchschnittspreis",
-      "anzahl_lieferungen", "anzahl_koerbe_zu_liefern", "anzahl_koerbe_nicht_zu_liefern", "zielpreis", "preis_total") ++ modifiCols) { id => indexes => row =>
+      "anzahl_lieferungen", "anzahl_koerbe_zu_liefern", "anzahl_saldo_zu_tief", "zielpreis", "preis_total") ++ modifiCols) { id => indexes => row =>
       //match column indexes
       val Seq(indexAbotypId, indexVertriebsartId, indexLieferplanungId, indexStatus, indexDatum, indexAnzahlAbwesenheiten, indexDurchschnittspreis,
-        indexAnzahlLieferungen, indexAnzahlKoerbeZuLiefern, indexAnzahlKoerbeNichtZuLiefern, indexZielpreis, indexPreisTotal) = indexes.take(12)
+        indexAnzahlLieferungen, indexAnzahlKoerbeZuLiefern, indexAnzahlSaldoZuTief, indexZielpreis, indexPreisTotal) = indexes.take(12)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val lieferungId = LieferungId(id)
@@ -670,11 +670,11 @@ class DataImportParser extends Actor with ActorLogging {
         vertriebsartBeschrieb = vaBeschrieb,
         status = LieferungStatus(row.value[String](indexStatus)),
         datum = row.value[DateTime](indexDatum),
-        anzahlAbwesenheiten = row.value[Int](indexAnzahlAbwesenheiten),
         durchschnittspreis = row.value[BigDecimal](indexDurchschnittspreis),
         anzahlLieferungen = row.value[Int](indexAnzahlLieferungen),
         anzahlKoerbeZuLiefern = row.value[Int](indexAnzahlKoerbeZuLiefern),
-        anzahlKoerbeNichtZuLiefern = row.value[Int](indexAnzahlKoerbeNichtZuLiefern),
+        anzahlAbwesenheiten = row.value[Int](indexAnzahlAbwesenheiten),
+        anzahlSaldoZuTief = row.value[Int](indexAnzahlSaldoZuTief),
         zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
         preisTotal = row.value[BigDecimal](indexPreisTotal),
         lieferplanungId = lieferplanungId,

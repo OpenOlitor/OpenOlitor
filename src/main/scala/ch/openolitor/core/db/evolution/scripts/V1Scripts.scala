@@ -62,6 +62,7 @@ object V1Scripts {
       sql"drop table if exists ${lieferpositionMapping.table}".execute.apply()
       sql"drop table if exists ${bestellungMapping.table}".execute.apply()
       sql"drop table if exists ${bestellpositionMapping.table}".execute.apply()
+      sql"drop table if exists ${korbMapping.table}".execute.apply()
       sql"drop table if exists ${produktMapping.table}".execute.apply()
       sql"drop table if exists ${produktekategorieMapping.table}".execute.apply()
       sql"drop table if exists ${produzentMapping.table}".execute.apply()
@@ -317,11 +318,11 @@ object V1Scripts {
         vertriebsart_beschrieb varchar(100) not null,
         status varchar(50) not null,
         datum datetime not null,
-        anzahl_abwesenheiten int not null,
         durchschnittspreis DECIMAL(7,2) not null,
         anzahl_lieferungen int not null,
         anzahl_koerbe_zu_liefern int not null,
-        anzahl_koerbe_nicht_zu_liefern int not null,
+        anzahl_abwesenheiten int not null,
+        anzahl_saldo_zu_tief int not null,
         zielpreis DECIMAL(7,2),
         preis_total DECIMAL(7,2) not null,
         lieferplanung_id varchar(36),
@@ -372,6 +373,17 @@ object V1Scripts {
         menge DECIMAL(7,2),
         preis DECIMAL(7,2),
         anzahl int not null,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${korbMapping.table}  (
+        id varchar(36) not null,
+        lieferung_id varchar(36) not null,
+        abo_id varchar(36)  not null,
+        status varchar(50) not null,
+        guthaben_vor_lieferung int not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
