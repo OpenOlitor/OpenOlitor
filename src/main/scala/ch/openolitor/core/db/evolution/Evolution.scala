@@ -34,58 +34,63 @@ import org.joda.time.DateTime
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.repositories.SqlBinder
 import scala.reflect._
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 trait Script {
-  def execute(implicit session: DBSession): Try[Boolean]
+  def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean]
 }
 
 case class EvolutionException(msg: String) extends Exception
 
-object Evolution extends Evolution(V1Scripts.scripts)
-
 /**
  * Base evolution class to evolve database from a specific revision to another
  */
-class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging with StammdatenDBMappings {
+class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = V1Scripts.scripts) extends CoreDBMappings with LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
   import IteratorUtil._
 
   logger.debug(s"Evolution manager consists of:$scripts")
 
-  def checkDBSeeds(seeds: Map[Class[_ <: BaseId], BaseId])(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Map[Class[_ <: BaseId], BaseId]] = {
+  def checkDBSeeds(seeds: Map[Class[_ <: BaseId], Long])(implicit cpContext: ConnectionPoolContext, personId: PersonId): Try[Map[Class[_ <: BaseId], Long]] = {
     DB readOnly { implicit session =>
       try {
         val dbIds = Seq(
-          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping)(AbotypId.apply),
-          adjustSeed[Depot, DepotId](seeds, depotMapping)(DepotId.apply),
+          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping),
+          adjustSeed[Depot, DepotId](seeds, depotMapping),
           adjustSeeds[VertriebsartId](
             seeds,
             maxId[Depotlieferung, VertriebsartId](depotlieferungMapping),
             maxId[Heimlieferung, VertriebsartId](heimlieferungMapping),
             maxId[Postlieferung, VertriebsartId](postlieferungMapping)
-          )(VertriebsartId.apply),
+          ),
           adjustSeeds[AboId](
             seeds,
             maxId[DepotlieferungAbo, AboId](depotlieferungAboMapping),
             maxId[HeimlieferungAbo, AboId](heimlieferungAboMapping),
             maxId[PostlieferungAbo, AboId](postlieferungAboMapping)
-          )(AboId.apply),
-          adjustSeed[Kunde, KundeId](seeds, kundeMapping)(KundeId.apply),
-          adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping)(CustomKundentypId.apply),
-          adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping)(LieferungId.apply),
-          adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping)(PendenzId.apply),
-          adjustSeed[Person, PersonId](seeds, personMapping)(PersonId.apply),
-          adjustSeed[Produzent, ProduzentId](seeds, produzentMapping)(ProduzentId.apply),
-          adjustSeed[Produkt, ProduktId](seeds, produktMapping)(ProduktId.apply),
-          adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping)(ProduktProduktekategorieId.apply),
-          adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping)(ProduktProduzentId.apply),
-          adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping)(ProduktekategorieId.apply),
-          adjustSeed[Projekt, ProjektId](seeds, projektMapping)(ProjektId.apply),
-          adjustSeed[Tour, TourId](seeds, tourMapping)(TourId.apply),
-          adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping)(LieferplanungId.apply),
-          adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping)(LieferpositionId.apply),
-          adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping)(BestellpositionId.apply)
+          ),
+          adjustSeed[Kunde, KundeId](seeds, kundeMapping),
+          adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping),
+          adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping),
+          adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping),
+          adjustSeed[Person, PersonId](seeds, personMapping),
+          adjustSeed[Produzent, ProduzentId](seeds, produzentMapping),
+          adjustSeed[Produkt, ProduktId](seeds, produktMapping),
+          adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping),
+          adjustSeed[ProduktProduzent, ProduktProduzentId](seeds, produktProduzentMapping),
+          adjustSeed[Produktekategorie, ProduktekategorieId](seeds, produktekategorieMapping),
+          adjustSeed[Projekt, ProjektId](seeds, projektMapping),
+          adjustSeed[Tour, TourId](seeds, tourMapping),
+          adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping),
+          adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping),
+          adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping),
+          adjustSeed[Abwesenheit, AbwesenheitId](seeds, abwesenheitMapping),
+          adjustSeed[Rechnung, RechnungId](seeds, rechnungMapping),
+          adjustSeed[ZahlungsImport, ZahlungsImportId](seeds, zahlungsImportMapping),
+          adjustSeed[ZahlungsEingang, ZahlungsEingangId](seeds, zahlungsEingangMapping)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)
@@ -96,21 +101,21 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
     }
   }
 
-  def adjustSeed[E <: BaseEntity[I], I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], BaseId], syntax: BaseEntitySQLSyntaxSupport[E])(f: Long => I)(implicit session: DBSession, userId: UserId): Option[(Class[I], BaseId)] = {
-    adjustSeeds(seeds, maxId[E, I](syntax))(f)
+  def adjustSeed[E <: BaseEntity[I], I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], Long], syntax: BaseEntitySQLSyntaxSupport[E])(implicit session: DBSession, personId: PersonId): Option[(Class[I], Long)] = {
+    adjustSeeds(seeds, maxId[E, I](syntax))
   }
 
-  def adjustSeeds[I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], BaseId], queries: Option[Long]*)(f: Long => I)(implicit session: DBSession, userId: UserId): Option[(Class[I], BaseId)] = {
+  def adjustSeeds[I <: BaseId: ClassTag](seeds: Map[Class[_ <: BaseId], Long], queries: Option[Long]*)(implicit session: DBSession, PersonId: PersonId): Option[(Class[I], Long)] = {
     val entity: Class[I] = classTag[I].runtimeClass.asInstanceOf[Class[I]]
     val q = queries.flatten
     val overallMaxId = if (q.length > 0) q.max else 0
-    seeds.get(entity).map(_.id < overallMaxId).getOrElse(true) match {
-      case true => Some(entity -> f(overallMaxId))
+    seeds.get(entity).map(_ < overallMaxId).getOrElse(true) match {
+      case true => Some(entity -> overallMaxId)
       case _ => None
     }
   }
 
-  def maxId[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E])(implicit session: DBSession, userId: UserId): Option[Long] = {
+  def maxId[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E])(implicit session: DBSession, personId: PersonId): Option[Long] = {
     val alias = syntax.syntax("x")
     val idx = alias.id
     withSQL {
@@ -119,7 +124,7 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
     }.map(_.longOpt(1)).single.apply().getOrElse(None)
   }
 
-  def evolveDatabase(fromRevision: Int = 0)(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Int] = {
+  def evolveDatabase(fromRevision: Int = 0)(implicit cpContext: ConnectionPoolContext, personId: PersonId): Try[Int] = {
     val currentDBRevision = DB readOnly { implicit session => currentRevision }
     val revision = Math.max(fromRevision, currentDBRevision)
     scripts.take(scripts.length - revision) match {
@@ -128,14 +133,14 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
     }
   }
 
-  def evolve(scripts: Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext, userId: UserId): Try[Int] = {
+  def evolve(scripts: Seq[Script], currentRevision: Int)(implicit cpContext: ConnectionPoolContext, personId: PersonId): Try[Int] = {
     logger.debug(s"evolve database from:$currentRevision")
     val x = scripts.zipWithIndex.view.map {
       case (script, index) =>
         try {
           logger.debug(s"evolve script:$script [$index]")
           DB localTx { implicit session =>
-            script.execute match {
+            script.execute(sysConfig) match {
               case Success(x) =>
                 val rev = currentRevision + index + 1
                 insertRevision(rev) match {
@@ -160,8 +165,8 @@ class Evolution(scripts: Seq[Script]) extends CoreDBMappings with LazyLogging wi
     x.reverse.headOption.getOrElse(Failure(EvolutionException(s"No Script found")))
   }
 
-  def insertRevision(revision: Int)(implicit session: DBSession, userId: UserId): Boolean = {
-    val entity = DBSchema(DBSchemaId(), revision, Done, DateTime.now, userId, DateTime.now, userId)
+  def insertRevision(revision: Int)(implicit session: DBSession, personId: PersonId): Boolean = {
+    val entity = DBSchema(DBSchemaId(), revision, Done, DateTime.now, personId, DateTime.now, personId)
     val params = dbSchemaMapping.parameterMappings(entity)
     withSQL(insertInto(dbSchemaMapping).values(params: _*)).update.apply() == 1
   }

@@ -40,8 +40,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
 import scala.reflect._
 import scala.reflect.runtime.universe.{ Try => TTry, _ }
-import ch.openolitor.buchhaltung.models.RechnungModify
-import ch.openolitor.buchhaltung.models.RechnungId
+import ch.openolitor.buchhaltung.models._
 
 /**
  * _
@@ -54,17 +53,17 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], BaseId]) extends State
+  case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], Long]) extends State
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultEntityStore], sysConfig, evolution)
 
   //base commands
-  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends UserCommand {
+  case class InsertEntityCommand[E <: AnyRef](originator: PersonId, entity: E) extends UserCommand {
     val entityType = entity.getClass
   }
-  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends UserCommand {
+  case class UpdateEntityCommand[E <: AnyRef](originator: PersonId, id: BaseId, entity: E) extends UserCommand {
     val entityType = entity.getClass
   }
-  case class DeleteEntityCommand(originator: UserId, id: BaseId) extends UserCommand
+  case class DeleteEntityCommand(originator: PersonId, id: BaseId) extends UserCommand
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistentEvent
@@ -113,14 +112,15 @@ trait EntityStore extends AggregateRoot
 
   def newId(clOf: Class[_ <: BaseId]): Long = {
     val id: Long = state.dbSeeds.get(clOf).map { id =>
-      id.id + 1
+      id + 1
     }.getOrElse(sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
+    updateId(clOf, id)
     id
   }
 
-  def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: I) = {
+  def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: Long) = {
     log.debug(s"updateId:$clOf -> $id")
-    if (state.dbSeeds.get(clOf).map(_.id < id.id).getOrElse(true)) {
+    if (state.dbSeeds.get(clOf).map(_ < id).getOrElse(true)) {
       //only update if current id is smaller than new one or no id did exist 
       state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
     }
@@ -135,14 +135,14 @@ trait EntityStore extends AggregateRoot
     log.debug(s"updateState:$evt")
     evt match {
       case EntityStoreInitialized(_) =>
-      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id)
+      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id.id)
       case _ =>
     }
   }
 
   def checkDBEvolution(): Try[Int] = {
     log.debug(s"Check DB Evolution: current revision=${state.dbRevision}")
-    implicit val userId = Boot.systemUserId
+    implicit val personId = Boot.systemPersonId
     evolution.evolveDatabase(state.dbRevision) match {
       case s @ Success(rev) =>
         log.debug(s"Successfully updated to db rev:$rev")
@@ -164,7 +164,7 @@ trait EntityStore extends AggregateRoot
   }
 
   def readDBSeeds() = {
-    implicit val userId = Boot.systemUserId
+    implicit val personId = Boot.systemPersonId
     evolution.checkDBSeeds(Map()) match {
       case Success(newSeeds) =>
         log.debug(s"Read dbseeds:$newSeeds")
@@ -208,7 +208,7 @@ trait EntityStore extends AggregateRoot
     case e =>
       log.debug(s"uninitialized => Initialize eventstore with event:$e, $self")
       state = incState
-      persist(EntityStoreInitialized(metadata(Boot.systemUserId)))(afterEventPersisted)
+      persist(EntityStoreInitialized(metadata(Boot.systemPersonId)))(afterEventPersisted)
       context become uncheckedDB
       //reprocess event
       uncheckedDB(e)
@@ -270,8 +270,8 @@ trait EntityStore extends AggregateRoot
       log.error(s"received unknown command:$other")
   }
 
-  def metadata(userId: UserId) = {
-    EventMetadata(userId, VERSION, DateTime.now, state.seqNr, persistenceId)
+  def metadata(personId: PersonId) = {
+    EventMetadata(personId, VERSION, DateTime.now, state.seqNr, persistenceId)
   }
 
   def incState = {

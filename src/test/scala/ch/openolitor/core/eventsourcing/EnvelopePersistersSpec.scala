@@ -6,7 +6,7 @@ import stamina.json._
 import org.specs2.mutable.Specification
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.domain.EventMetadata
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.eventsourcing.events._
 import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.BaseJsonProtocol
@@ -35,7 +35,7 @@ class EnvelopePersistersSpec extends Specification {
     val persister = new EntityInsertEventPersister[V1](persisters)
 
     "persist and unpersist correctly" in {
-      val meta = EventMetadata(UserId(23), 1, DateTime.now, 1L, "test")
+      val meta = EventMetadata(PersonId(23), 1, DateTime.now, 1L, "test")
       val event = EntityInsertedEvent(meta, TestId(), TestEntity("test", 1234))
 
       persister.unpersist(persister.persist(event.asInstanceOf[EntityInsertedEvent[BaseId, AnyRef]])) === event
@@ -46,7 +46,7 @@ class EnvelopePersistersSpec extends Specification {
     val persister = new EntityUpdatedEventPersister[V1](persisters)
 
     "persist and unpersist correctly" in {
-      val meta = EventMetadata(UserId(24), 1, DateTime.now, 1L, "test")
+      val meta = EventMetadata(PersonId(24), 1, DateTime.now, 1L, "test")
       val event = EntityUpdatedEvent(meta, TestId(), TestEntity("test", 1234))
 
       persister.unpersist(persister.persist(event.asInstanceOf[EntityUpdatedEvent[BaseId, AnyRef]])) === event
@@ -57,7 +57,7 @@ class EnvelopePersistersSpec extends Specification {
     val persister = new EntityDeletedEventPersister[V1](persisters)
 
     "persist and unpersist correctly" in {
-      val meta = EventMetadata(UserId(25), 1, DateTime.now, 1L, "test")
+      val meta = EventMetadata(PersonId(25), 1, DateTime.now, 1L, "test")
       val event = EntityDeletedEvent(meta, TestId())
 
       persister.unpersist(persister.persist(event.asInstanceOf[EntityDeletedEvent[BaseId]])) === event

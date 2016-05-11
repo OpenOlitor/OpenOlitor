@@ -61,25 +61,25 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
   }
 
   val receive: Receive = {
-    case e @ EntityCreated(userId, entity: Rechnung) => handleRechnungCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Rechnung) => handleRechnungDeleted(entity)(userId)
-    case e @ EntityModified(userId, entity: Rechnung, orig: Rechnung) => handleRechnungModified(entity, orig)(userId)
+    case e @ EntityCreated(personId, entity: Rechnung) => handleRechnungCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: Rechnung) => handleRechnungDeleted(entity)(personId)
+    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) => handleRechnungModified(entity, orig)(personId)
 
     case x => //log.debug(s"receive unused event $x")
   }
 
-  def handleRechnungModified(rechnung: Rechnung, orig: Rechnung)(implicit userId: UserId) = {
+  def handleRechnungModified(rechnung: Rechnung, orig: Rechnung)(implicit personId: PersonId) = {
   }
 
-  def handleRechnungDeleted(rechnung: Rechnung)(implicit userId: UserId) = {
+  def handleRechnungDeleted(rechnung: Rechnung)(implicit personId: PersonId) = {
   }
 
-  def handleRechnungCreated(rechnung: Rechnung)(implicit userId: UserId) = {
+  def handleRechnungCreated(rechnung: Rechnung)(implicit personId: PersonId) = {
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
     id: I, mod: E => E
-  )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
+  )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(syntax, id) map { result =>
         val copy = mod(result)

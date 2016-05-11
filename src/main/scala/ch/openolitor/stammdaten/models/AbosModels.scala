@@ -93,9 +93,9 @@ case class DepotlieferungAbo(
   anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends Abo
 
 case class DepotlieferungAboDetail(
@@ -117,9 +117,9 @@ case class DepotlieferungAboDetail(
   anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId,
+  modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
   abotyp: Option[Abotyp]
@@ -155,9 +155,9 @@ case class HeimlieferungAbo(
   anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends Abo
 
 case class HeimlieferungAboDetail(
@@ -179,9 +179,9 @@ case class HeimlieferungAboDetail(
   anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId,
+  modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
   abotyp: Option[Abotyp]
@@ -215,9 +215,9 @@ case class PostlieferungAbo(
   anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends Abo
 
 case class PostlieferungAboDetail(
@@ -237,9 +237,9 @@ case class PostlieferungAboDetail(
   anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId,
+  modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
   abotyp: Option[Abotyp]
@@ -264,9 +264,9 @@ case class Abwesenheit(
   bemerkung: Option[String],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[AbwesenheitId] with JSONSerializable
 
 case class AbwesenheitModify(

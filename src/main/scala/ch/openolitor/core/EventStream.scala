@@ -29,6 +29,14 @@ import akka.actor.ActorSystem
  * Trait providing a simple access to publish events to the eventstream per mandant
  */
 trait EventStream {
+  def publish(msg: Object)
+}
+
+trait NoPublishEventStream extends EventStream {
+  def publish(msg: Object) = {}
+}
+
+trait AkkaEventStream extends EventStream {
   val system: ActorSystem
 
   def publish(msg: Object) = system.eventStream.publish(msg)

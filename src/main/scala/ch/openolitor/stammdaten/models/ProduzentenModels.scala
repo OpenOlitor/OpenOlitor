@@ -56,9 +56,9 @@ case class Produzent(
   aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ProduzentId]
 
 object Produzent {
@@ -85,9 +85,9 @@ object Produzent {
       p.aktiv: Boolean,
       //modification flags
       p.erstelldat: DateTime,
-      p.ersteller: UserId,
+      p.ersteller: PersonId,
       p.modifidat: DateTime,
-      p.modifikator: UserId
+      p.modifikator: PersonId
     ))
   }
 }

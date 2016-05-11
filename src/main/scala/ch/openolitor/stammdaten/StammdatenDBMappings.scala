@@ -50,7 +50,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder(AbotypId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
   implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
-  implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder(PersonId.apply _)
   implicit val pendenzIdBinder: TypeBinder[PendenzId] = baseIdTypeBinder(PendenzId.apply _)
   implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
   implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
@@ -93,14 +92,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
-  implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = string.map(s => (TreeMap.empty[String, Int] /: s.split(",")) { (tree, str) =>
-    str.split("=") match {
-      case Array(left, right) =>
-        tree + (left -> right.toInt)
-      case _ =>
-        tree
-    }
-  })
+  implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = treeMapTypeBinder(identity, _.toInt)
+  implicit val rolleMapTypeBinder: TypeBinder[Map[Rolle, Boolean]] = mapTypeBinder(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean)
+  implicit val rolleTypeBinder: TypeBinder[Option[Rolle]] = string.map(Rolle.apply)
 
   implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
 
@@ -123,7 +117,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
-  implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
   implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
   implicit val pendenzIdSqlBinder = baseIdSqlBinder[PendenzId]
   implicit val customKundentypIdSqlBinder = baseIdSqlBinder[CustomKundentypId]
@@ -150,6 +143,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
   implicit val lieferplanungIdOptionBinder = optionSqlBinder[LieferplanungId]
   implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
+  implicit val rolleSqlBinder = toStringSqlBinder[Rolle]
+  implicit val optionRolleSqlBinder = optionSqlBinder[Rolle]
+  implicit val rolleMapSqlBinder = mapSqlBinder[Rolle, Boolean]
   implicit val fristeSqlBinder = new SqlBinder[Frist] {
     def apply(frist: Frist): Any = {
       val einheit = frist.einheit match {
@@ -274,7 +270,12 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.telefonMobil -> parameter(person.telefonMobil),
         column.telefonFestnetz -> parameter(person.telefonFestnetz),
         column.bemerkungen -> parameter(person.bemerkungen),
-        column.sort -> parameter(person.sort)
+        column.sort -> parameter(person.sort),
+        column.loginAktiv -> parameter(person.loginAktiv),
+        column.passwort -> parameter(person.passwort),
+        column.passwortWechselErforderlich -> parameter(person.passwortWechselErforderlich),
+        column.rolle -> parameter(person.rolle),
+        column.letzteAnmeldung -> parameter(person.letzteAnmeldung)
       )
     }
   }
@@ -701,7 +702,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.emailErforderlich -> parameter(projekt.emailErforderlich),
         column.waehrung -> parameter(projekt.waehrung),
         column.geschaeftsjahrMonat -> parameter(projekt.geschaeftsjahrMonat),
-        column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag)
+        column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag),
+        column.twoFactorAuthentication -> parameter(projekt.twoFactorAuthentication)
       )
     }
   }

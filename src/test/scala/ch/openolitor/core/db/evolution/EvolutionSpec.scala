@@ -29,7 +29,10 @@ import org.specs2.mock.Mockito
 import ch.openolitor.core.db.TestDB
 import scalikejdbc.specs2.mutable.AutoRollback
 import ch.openolitor.core.models.DBSchema
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.BuchhaltungConfig
+import ch.openolitor.core.MandantConfiguration
 
 class EvolutionSpec extends Specification with Mockito with TestDB {
 
@@ -45,6 +48,10 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
     	PRIMARY KEY (id));""".execute.apply()
   }
 
+  val buchhaltung = BuchhaltungConfig(0, 0, "", "")
+  val mandant = MandantConfiguration("", "", "", 0, 0, Map(), buchhaltung)
+  val cfg = SystemConfig(mandant, null, null)
+
   "Evolution" should {
     "apply all scripts when they return with success" in new AutoRollback {
 
@@ -53,19 +60,19 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
       val script1 = mock[Script]
       val script2 = mock[Script]
 
-      script1.execute(any[DBSession]) returns Success(true)
-      script2.execute(any[DBSession]) returns Success(true)
+      script1.execute(any[SystemConfig])(any[DBSession]) returns Success(true)
+      script2.execute(any[SystemConfig])(any[DBSession]) returns Success(true)
 
       val scripts = Seq(script1, script2)
-      val evolution = new Evolution(Seq())
+      val evolution = new Evolution(cfg, Seq())
 
-      implicit val user = UserId(23)
+      implicit val user = PersonId(23)
       val result = evolution.evolve(scripts, 0)
 
       result === Success(2)
 
-      there was one(script1).execute(any[DBSession])
-      there was one(script2).execute(any[DBSession])
+      there was one(script1).execute(any[SystemConfig])(any[DBSession])
+      there was one(script2).execute(any[SystemConfig])(any[DBSession])
     }
 
     "apply revision when second script fails" in new AutoRollback {
@@ -77,21 +84,21 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
       val script3 = mock[Script]
 
       val exception = new RuntimeException
-      script1.execute(any[DBSession]) returns Success(true)
-      script2.execute(any[DBSession]) returns Failure(exception)
-      script3.execute(any[DBSession]) returns Success(true)
+      script1.execute(any[SystemConfig])(any[DBSession]) returns Success(true)
+      script2.execute(any[SystemConfig])(any[DBSession]) returns Failure(exception)
+      script3.execute(any[SystemConfig])(any[DBSession]) returns Success(true)
 
       val scripts = Seq(script1, script2, script3)
-      val evolution = new Evolution(Seq())
+      val evolution = new Evolution(cfg, Seq())
 
-      implicit val user = UserId(24)
+      implicit val user = PersonId(24)
       val result = evolution.evolve(scripts, 0)
 
       result === Failure(exception)
 
-      there was one(script1).execute(any[DBSession])
-      there was one(script2).execute(any[DBSession])
-      there was no(script3).execute(any[DBSession])
+      there was one(script1).execute(any[SystemConfig])(any[DBSession])
+      there was one(script2).execute(any[SystemConfig])(any[DBSession])
+      there was no(script3).execute(any[SystemConfig])(any[DBSession])
 
       //There seems to be no storing to the in memory database...
       //evolution.currentRevision === 1

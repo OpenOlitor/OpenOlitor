@@ -25,6 +25,7 @@ package ch.openolitor.buchhaltung.zahlungsimport.esr
 import org.joda.time.DateTime
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
 import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportTotalRecord
 
 object EsrTotalRecordTyp3Transaktionsartcode {
   def apply(c: String): Transaktionsart = c match {
@@ -34,7 +35,7 @@ object EsrTotalRecordTyp3Transaktionsartcode {
 }
 
 case class EsrTotalRecordTyp3(
-  transaktionsartcode: Transaktionsart,
+  transaktionsart: Transaktionsart,
   teilnehmerNummer: String,
   sortierSchluessel: String,
   betrag: BigDecimal,
@@ -43,7 +44,7 @@ case class EsrTotalRecordTyp3(
   preiseFuerEinzahlungen: BigDecimal,
   nachbearbeitungEsrPlus: BigDecimal,
   reserve: String
-) extends ZahlungsImportRecord
+) extends ZahlungsImportTotalRecord
 
 object EsrTotalRecordTyp3 {
   private val R = """(\w{3})(\d{9})(\d{27})(\d{12})(\d{12})(\d{6})(\d{9})(\d{9})([\w\s]{0,13})""".r

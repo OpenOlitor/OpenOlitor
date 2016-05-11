@@ -26,8 +26,9 @@ import scalikejdbc._
 import ch.openolitor.core.models.BaseId
 import java.util.UUID
 import org.joda.time.DateTime
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import scala.collection.immutable.TreeMap
+import ch.openolitor.core.models.PersonId
 
 trait DBMappings extends BaseParameter
     with Parameters23
@@ -43,9 +44,27 @@ trait DBMappings extends BaseParameter
   def seqSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Seq[V]] { def apply(values: Seq[V]): Any = values map (binder) mkString (",") }
   def setSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Set[V]] { def apply(values: Set[V]): Any = values map (binder) mkString (",") }
   def treeMapSqlBinder[K, V](implicit keyBinder: SqlBinder[K], valueBinder: SqlBinder[V]) = new SqlBinder[TreeMap[K, V]] { def apply(map: TreeMap[K, V]): Any = map.toIterable.map { case (k, v) => keyBinder(k) + "=" + valueBinder(v) }.mkString(",") }
+  def mapSqlBinder[K, V](implicit keyBinder: SqlBinder[K], valueBinder: SqlBinder[V]) = new SqlBinder[Map[K, V]] { def apply(map: Map[K, V]): Any = map.toIterable.map { case (k, v) => keyBinder(k) + "=" + valueBinder(v) }.mkString(",") }
   def noConversionSqlBinder[V] = new SqlBinder[V] { def apply(value: V): Any = value }
   def optionSqlBinder[V](implicit binder: SqlBinder[V]) = new SqlBinder[Option[V]] { def apply(value: Option[V]): Any = value map (binder) }
   def baseIdSqlBinder[I <: BaseId] = new SqlBinder[I] { def apply(value: I): Any = value.id }
+
+  def treeMapTypeBinder[K: Ordering, V](kf: String => K, vf: String => V): TypeBinder[TreeMap[K, V]] = string.map(s => (TreeMap.empty[K, V] /: s.split(",")) { (tree, str) =>
+    str.split("=") match {
+      case Array(left, right) =>
+        tree + (kf(left) -> vf(right))
+      case _ =>
+        tree
+    }
+  })
+  def mapTypeBinder[K, V](kf: String => K, vf: String => V): TypeBinder[Map[K, V]] = string.map(s => (Map.empty[K, V] /: s.split(",")) { (tree, str) =>
+    str.split("=") match {
+      case Array(left, right) =>
+        tree + (kf(left) -> vf(right))
+      case _ =>
+        tree
+    }
+  })
 
   // Just for convenience so NoConversion does not escape the scope.
   private case object DefaultSqlConverter extends SqlBinder[Any] { def apply(value: Any): Any = value }
@@ -64,8 +83,12 @@ trait DBMappings extends BaseParameter
   implicit val optionIntSqlBinder = optionSqlBinder[Int]
   implicit val optionBigDecimalSqlBinder = optionSqlBinder[BigDecimal]
 
-  implicit val userIdBinder: TypeBinder[UserId] = baseIdTypeBinder(UserId.apply _)
-  implicit val userIdSqlBinder = baseIdSqlBinder[UserId]
+  implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder(PersonId.apply _)
+  implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
+
+  implicit val charArraySqlBinder = new SqlBinder[Array[Char]] { def apply(values: Array[Char]): Any = new String(values) }
+  implicit val optionCharArraySqlBinder = optionSqlBinder[Array[Char]]
+  implicit val charArrayTypeBinder = string.map(_.toCharArray)
 
   def parameters[A](params: Tuple1[A])(
     implicit

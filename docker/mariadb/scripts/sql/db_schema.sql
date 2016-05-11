@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS persistence_metadata (
 CREATE TABLE IF NOT EXISTS persistence_journal (
   persistence_key BIGINT NOT NULL,
   sequence_nr BIGINT NOT NULL,
-  message BLOB NOT NULL,
+  message MEDIUMBLOB NOT NULL,
   PRIMARY KEY (persistence_key, sequence_nr),
   FOREIGN KEY (persistence_key) REFERENCES persistence_metadata (persistence_key)
 );
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS persistence_snapshot (
   persistence_key BIGINT NOT NULL,
   sequence_nr BIGINT NOT NULL,
   created_at BIGINT NOT NULL,
-  snapshot BLOB NOT NULL,
+  snapshot MEDIUMBLOB NOT NULL,
   PRIMARY KEY (persistence_key, sequence_nr),
   FOREIGN KEY (persistence_key) REFERENCES persistence_metadata (persistence_key)
 );

@@ -28,10 +28,19 @@ import scala.util._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import org.mindrot.jbcrypt.BCrypt
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.DefaultStammdatenWriteRepositoryComponent
+import ch.openolitor.core.SystemConfig
+import org.joda.time.DateTime
+import scala.collection.immutable.TreeMap
+import ch.openolitor.core.repositories.BaseWriteRepository
+import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.core.models.PersonId
 
 object V1Scripts {
   val StammdatenDBInitializationScript = new Script with LazyLogging with StammdatenDBMappings {
-    def execute(implicit session: DBSession): Try[Boolean] = {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       //drop all tables
       logger.debug(s"oo-system: cleanupDatabase - drop tables - stammdaten")
 
@@ -219,6 +228,11 @@ object V1Scripts {
         telefon_festnetz varchar(50),
         bemerkungen varchar(512),
         sort int not null,
+        login_aktiv varchar(1) not null,
+        passwort varchar(50),
+        letzte_anmeldung datetime,
+        passwort_wechsel_erforderlich varchar(1),
+        rolle varchar(50),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -437,6 +451,7 @@ object V1Scripts {
         waehrung varchar(10) not null,
         geschaeftsjahr_monat DECIMAL(2,0) not null,
         geschaeftsjahr_tag DECIMAL(2,0) not null,
+        two_factor_authentication varchar(100),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -476,12 +491,107 @@ object V1Scripts {
     }
   }
 
+  val InitialDataScript = new Script with LazyLogging with StammdatenDBMappings with BaseWriteRepository with NoPublishEventStream {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      //Create initial account
+      val pwd = BCrypt.hashpw("openOlit0rAdmin1", BCrypt.gensalt());
+      val pid = sysConfig.mandantConfiguration.dbSeeds.get(classOf[PersonId]).getOrElse(1L)
+      implicit val personId = PersonId(pid)
+      val kid = sysConfig.mandantConfiguration.dbSeeds.get(classOf[KundeId]).getOrElse(1L)
+      val kunde = Kunde(
+        id = KundeId(kid),
+        bezeichnung = "System Administator",
+        strasse = "",
+        hausNummer = None,
+        adressZusatz = None,
+        plz = "",
+        ort = "",
+        bemerkungen = None,
+        abweichendeLieferadresse = false,
+        bezeichnungLieferung = None,
+        strasseLieferung = None,
+        hausNummerLieferung = None,
+        adressZusatzLieferung = None,
+        plzLieferung = None,
+        ortLieferung = None,
+        zusatzinfoLieferung = None,
+        typen = Set(),
+        //Zusatzinformationen
+        anzahlAbos = 0,
+        anzahlPendenzen = 0,
+        anzahlPersonen = 1,
+        //modification flags
+        erstelldat = DateTime.now,
+        ersteller = personId,
+        modifidat = DateTime.now,
+        modifikator = personId
+      )
+
+      val person = Person(
+        id = personId,
+        kundeId = kunde.id,
+        anrede = None,
+        name = "Administrator",
+        vorname = "System",
+        // Email adresse entspricht login name
+        email = Some("admin@openolitor.ch"),
+        emailAlternative = None,
+        telefonMobil = None,
+        telefonFestnetz = None,
+        bemerkungen = None,
+        sort = 1,
+        // security data
+        loginAktiv = true,
+        passwort = Some(pwd.toCharArray),
+        letzteAnmeldung = None,
+        passwortWechselErforderlich = true,
+        rolle = Some(AdministratorZugang),
+        // modification flags
+        erstelldat = DateTime.now,
+        ersteller = personId,
+        modifidat = DateTime.now,
+        modifikator = personId
+      )
+
+      val projId = sysConfig.mandantConfiguration.dbSeeds.get(classOf[ProjektId]).getOrElse(1L)
+      val projekt = Projekt(
+        id = ProjektId(projId),
+        bezeichnung = "Demo Projekt",
+        strasse = None,
+        hausNummer = None,
+        adressZusatz = None,
+        plz = None,
+        ort = None,
+        preiseSichtbar = true,
+        preiseEditierbar = true,
+        emailErforderlich = true,
+        waehrung = CHF,
+        geschaeftsjahrMonat = 1,
+        geschaeftsjahrTag = 1,
+        twoFactorAuthentication = Map(AdministratorZugang -> false, KundenZugang -> true),
+        //modification flags
+        erstelldat = DateTime.now,
+        ersteller = personId,
+        modifidat = DateTime.now,
+        modifikator = personId
+      )
+
+      insertEntity[Kunde, KundeId](kunde);
+      insertEntity[Person, PersonId](person);
+      insertEntity[Projekt, ProjektId](projekt);
+
+      Success(true)
+    }
+  }
+
   val BuchhaltungDBInitializationScript = new Script with LazyLogging with BuchhaltungDBMappings {
-    def execute(implicit session: DBSession): Try[Boolean] = {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       //drop all tables
       logger.debug(s"oo-system: cleanupDatabase - drop tables - buchhaltung")
 
       sql"drop table if exists ${rechnungMapping.table}".execute.apply()
+      sql"drop table if exists ${zahlungsImportMapping.table}".execute.apply()
+      sql"drop table if exists ${zahlungsEingangMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables - buchhaltung")
       //create tables
@@ -511,6 +621,33 @@ object V1Scripts {
         modifidat datetime not null,
         modifikator BIGINT not null)""".execute.apply()
 
+      sql"""create table ${zahlungsImportMapping.table} (
+        id BIGINT not null,
+        file varchar(255) not null,
+        status varchar(50) not null,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${zahlungsEingangMapping.table} (
+        id BIGINT not null,
+        zahlungs_import_id BIGINT not null,
+        rechnung_id BIGINT,
+        transaktionsart varchar(100) not null,
+        teilnehmer_nummer varchar (10) not null,
+        referenz_nummer varchar(27) not null,
+        waehrung varchar(10) not null,
+        betrag DECIMAL(8,2) not null,
+        aufgabe_datum datetime,
+        verarbeitungs_datum datetime,
+        gutschrifts_datum datetime,
+        status varchar(50) not null,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
       logger.debug(s"oo-system: cleanupDatabase - end - buchhaltung")
       Success(true)
     }
@@ -518,7 +655,8 @@ object V1Scripts {
 
   val dbInitializationScripts = Seq(
     StammdatenDBInitializationScript,
-    BuchhaltungDBInitializationScript
+    BuchhaltungDBInitializationScript,
+    InitialDataScript
   )
 
   val scripts = dbInitializationScripts

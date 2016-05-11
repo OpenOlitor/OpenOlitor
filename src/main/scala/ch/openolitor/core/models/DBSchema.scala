@@ -40,6 +40,6 @@ case class DBSchemaId(id: Long = Random.nextLong) extends BaseId
 case class DBSchema(id: DBSchemaId, revision: Int, status: EvolutionStatus,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId) extends BaseEntity[DBSchemaId]
+  modifikator: PersonId) extends BaseEntity[DBSchemaId]

@@ -41,12 +41,17 @@ trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with Entit
   implicit val rechnungStorniertEventPersister = persister[RechnungStorniertEvent]("rechnung-storniert-event")
   implicit val rechnungIdPersister = persister[RechnungId]("rechnung-id")
 
+  implicit val zahlungsImportIdPersister = persister[ZahlungsImportId]("zahlungs-import-id")
+  implicit val zahlungsImportCreatedEventPersister = persister[ZahlungsImportCreatedEvent]("zahlungs-import-created-event")
+
   val buchhaltungPersisters = List(
     rechnungModifyPersister,
     rechnungIdPersister,
     rechnungVerschicktEventPersister,
     rechnungMahnungVerschicktEventPersister,
     rechnungBezahltEventPersister,
-    rechnungStorniertEventPersister
+    rechnungStorniertEventPersister,
+    zahlungsImportIdPersister,
+    zahlungsImportCreatedEventPersister
   )
 }
