@@ -46,9 +46,9 @@ case class ZahlungsImport(
   file: String,
   // modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ZahlungsImportId]
 
 case class ZahlungsEingang(
@@ -67,7 +67,7 @@ case class ZahlungsEingang(
   esrNummer: String,
   // modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ZahlungsEingangId]

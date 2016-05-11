@@ -34,10 +34,10 @@ import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 
 object BuchhaltungCommandHandler {
-  case class RechnungVerschickenCommand(originator: UserId, id: RechnungId) extends UserCommand
-  case class RechnungMahnungVerschickenCommand(originator: UserId, id: RechnungId) extends UserCommand
-  case class RechnungBezahlenCommand(originator: UserId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
-  case class RechnungStornierenCommand(originator: UserId, id: RechnungId) extends UserCommand
+  case class RechnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
+  case class RechnungMahnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
+  case class RechnungBezahlenCommand(originator: PersonId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
+  case class RechnungStornierenCommand(originator: PersonId, id: RechnungId) extends UserCommand
 
   case class RechnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
@@ -51,7 +51,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
   import EntityStore._
 
   override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
-    case RechnungVerschickenCommand(userId, id: RechnungId) => idFactory => meta =>
+    case RechnungVerschickenCommand(personId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -63,7 +63,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungMahnungVerschickenCommand(userId, id: RechnungId) => idFactory => meta =>
+    case RechnungMahnungVerschickenCommand(personId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -75,7 +75,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungBezahlenCommand(userId, id: RechnungId, entity: RechnungModifyBezahlt) => idFactory => meta =>
+    case RechnungBezahlenCommand(personId, id: RechnungId, entity: RechnungModifyBezahlt) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -87,7 +87,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungStornierenCommand(userId, id: RechnungId) => idFactory => meta =>
+    case RechnungStornierenCommand(personId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -102,7 +102,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
     /*
        * Insert command handling
        */
-    case e @ InsertEntityCommand(userId, entity: RechnungModify) => idFactory => meta =>
+    case e @ InsertEntityCommand(personId, entity: RechnungModify) => idFactory => meta =>
       handleEntityInsert[RechnungModify, RechnungId](idFactory, meta, entity, RechnungId.apply)
   }
 }

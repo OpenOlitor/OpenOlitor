@@ -36,7 +36,7 @@ import akka.actor.ActorSystem
 import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.UUID
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 
 object BuchhaltungUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungUpdateService = new DefaultBuchhaltungUpdateService(sysConfig, system)
@@ -60,7 +60,7 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
       logger.warn(s"Unknown event:$e")
   }
 
-  def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit userId: UserId = meta.originator) = {
+  def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { entity =>
         //map all updatable fields

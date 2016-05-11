@@ -66,9 +66,9 @@ case class Depot(
   anzahlAbonnenten: Int,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[DepotId] with Vertriebskanal
 
 object Depot {
@@ -100,9 +100,9 @@ object Depot {
       d.anzahlAbonnenten: Int,
       //modification flags
       d.erstelldat: DateTime,
-      d.ersteller: UserId,
+      d.ersteller: PersonId,
       d.modifidat: DateTime,
-      d.modifikator: UserId
+      d.modifikator: PersonId
     ))
   }
 }
@@ -144,9 +144,9 @@ case class Tour(
   beschreibung: Option[String],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[TourId] with Vertriebskanal
 
 case class TourModify(

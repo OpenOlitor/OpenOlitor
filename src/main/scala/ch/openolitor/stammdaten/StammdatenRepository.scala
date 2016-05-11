@@ -47,6 +47,7 @@ import org.joda.time.DateTime
 import sqls.distinct
 import sqls.min
 import scalaz.IsEmpty
+import ch.openolitor.core.AkkaEventStream
 
 trait StammdatenReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
@@ -108,7 +109,7 @@ trait StammdatenReadRepository {
   def getBestellpositionByBestellungProdukt(bestellungId: BestellungId, produktId: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Bestellposition]]
 }
 
-trait StammdatenWriteRepository extends BaseWriteRepository {
+trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 
   def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int]
@@ -197,8 +198,9 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
       )
       .map({ (kunde, pl, hl, dl, personen, pendenzen) =>
         val abos = pl ++ hl ++ dl
+        val personenWihoutPwd = personen.map(p => copyTo[Person, PersonDetail](p))
 
-        copyTo[Kunde, KundeDetail](kunde, "abos" -> abos, "pendenzen" -> pendenzen, "ansprechpersonen" -> personen)
+        copyTo[Kunde, KundeDetail](kunde, "abos" -> abos, "pendenzen" -> pendenzen, "ansprechpersonen" -> personenWihoutPwd)
       }).single.future
   }
 
@@ -694,7 +696,7 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 
 }
 
-class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with EventStream with StammdatenDBMappings {
+class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with AkkaEventStream with StammdatenDBMappings {
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val projekt = projektMapping.syntax

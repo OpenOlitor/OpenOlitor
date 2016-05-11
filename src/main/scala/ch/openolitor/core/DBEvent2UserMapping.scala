@@ -52,7 +52,8 @@ class DBEvent2UserMapping extends Actor
     with ActorLogging
     with ClientReceiver
     with StammdatenJsonProtocol
-    with BuchhaltungJsonProtocol {
+    with BuchhaltungJsonProtocol
+    with AkkaEventStream {
   import DBEvent2UserMapping._
 
   override val system = context.system
@@ -70,80 +71,80 @@ class DBEvent2UserMapping extends Actor
 
   val receive: Receive = {
     //TODO: resolve module based json formats of entities, maybe create module based sealed interfaces?
-    case e @ EntityModified(userId, entity: Abotyp, _) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
-    case e @ EntityCreated(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
-    case e @ EntityDeleted(userId, entity: Abotyp) => send(userId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityModified(personId, entity: Abotyp, _) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityCreated(personId, entity: Abotyp) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
+    case e @ EntityDeleted(personId, entity: Abotyp) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
 
-    case e @ EntityModified(userId, entity: Abo, _) => send(userId, e.asInstanceOf[DBEvent[Abo]])
-    case e @ EntityCreated(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
-    case e @ EntityDeleted(userId, entity: Abo) => send(userId, e.asInstanceOf[DBEvent[Abo]])
+    case e @ EntityModified(personId, entity: Abo, _) => send(personId, e.asInstanceOf[DBEvent[Abo]])
+    case e @ EntityCreated(personId, entity: Abo) => send(personId, e.asInstanceOf[DBEvent[Abo]])
+    case e @ EntityDeleted(personId, entity: Abo) => send(personId, e.asInstanceOf[DBEvent[Abo]])
 
-    case e @ EntityModified(userId, entity: Abwesenheit, _) => send(userId, e.asInstanceOf[DBEvent[Abwesenheit]])
-    case e @ EntityCreated(userId, entity: Abwesenheit) => send(userId, e.asInstanceOf[DBEvent[Abwesenheit]])
-    case e @ EntityDeleted(userId, entity: Abwesenheit) => send(userId, e.asInstanceOf[DBEvent[Abwesenheit]])
+    case e @ EntityModified(personId, entity: Abwesenheit, _) => send(personId, e.asInstanceOf[DBEvent[Abwesenheit]])
+    case e @ EntityCreated(personId, entity: Abwesenheit) => send(personId, e.asInstanceOf[DBEvent[Abwesenheit]])
+    case e @ EntityDeleted(personId, entity: Abwesenheit) => send(personId, e.asInstanceOf[DBEvent[Abwesenheit]])
 
-    //    case e @ EntityModified(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
-    case e @ EntityCreated(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
-    case e @ EntityDeleted(userId, entity: Person) => send(userId, e.asInstanceOf[DBEvent[Person]])
+    //    case e @ EntityModified(personId, entity: Person) => send(personId, e.asInstanceOf[DBEvent[Person]])
+    case e @ EntityCreated(personId, entity: Person) => send(personId, e.asInstanceOf[DBEvent[Person]])
+    case e @ EntityDeleted(personId, entity: Person) => send(personId, e.asInstanceOf[DBEvent[Person]])
 
-    case e @ EntityModified(userId, entity: Kunde, _) => send(userId, e.asInstanceOf[DBEvent[Kunde]])
-    case e @ EntityCreated(userId, entity: Kunde) => send(userId, e.asInstanceOf[DBEvent[Kunde]])
-    case e @ EntityDeleted(userId, entity: Kunde) => send(userId, e.asInstanceOf[DBEvent[Kunde]])
+    case e @ EntityModified(personId, entity: Kunde, _) => send(personId, e.asInstanceOf[DBEvent[Kunde]])
+    case e @ EntityCreated(personId, entity: Kunde) => send(personId, e.asInstanceOf[DBEvent[Kunde]])
+    case e @ EntityDeleted(personId, entity: Kunde) => send(personId, e.asInstanceOf[DBEvent[Kunde]])
 
-    case e @ EntityModified(userId, entity: Pendenz, _) => send(userId, e.asInstanceOf[DBEvent[Pendenz]])
-    case e @ EntityCreated(userId, entity: Pendenz) => send(userId, e.asInstanceOf[DBEvent[Pendenz]])
+    case e @ EntityModified(personId, entity: Pendenz, _) => send(personId, e.asInstanceOf[DBEvent[Pendenz]])
+    case e @ EntityCreated(personId, entity: Pendenz) => send(personId, e.asInstanceOf[DBEvent[Pendenz]])
 
-    case e @ EntityModified(userId, entity: Depot, _) => send(userId, e.asInstanceOf[DBEvent[Depot]])
-    case e @ EntityCreated(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
-    case e @ EntityDeleted(userId, entity: Depot) => send(userId, e.asInstanceOf[DBEvent[Depot]])
+    case e @ EntityModified(personId, entity: Depot, _) => send(personId, e.asInstanceOf[DBEvent[Depot]])
+    case e @ EntityCreated(personId, entity: Depot) => send(personId, e.asInstanceOf[DBEvent[Depot]])
+    case e @ EntityDeleted(personId, entity: Depot) => send(personId, e.asInstanceOf[DBEvent[Depot]])
 
-    case e @ EntityModified(userId, entity: Tour, _) => send(userId, e.asInstanceOf[DBEvent[Tour]])
-    case e @ EntityCreated(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
-    case e @ EntityDeleted(userId, entity: Tour) => send(userId, e.asInstanceOf[DBEvent[Tour]])
+    case e @ EntityModified(personId, entity: Tour, _) => send(personId, e.asInstanceOf[DBEvent[Tour]])
+    case e @ EntityCreated(personId, entity: Tour) => send(personId, e.asInstanceOf[DBEvent[Tour]])
+    case e @ EntityDeleted(personId, entity: Tour) => send(personId, e.asInstanceOf[DBEvent[Tour]])
 
-    case e @ EntityModified(userId, entity: CustomKundentyp, _) => send(userId, e.asInstanceOf[DBEvent[CustomKundentyp]])
-    case e @ EntityCreated(userId, entity: CustomKundentyp) => send(userId, e.asInstanceOf[DBEvent[CustomKundentyp]])
-    case e @ EntityDeleted(userId, entity: CustomKundentyp) => send(userId, e.asInstanceOf[DBEvent[CustomKundentyp]])
+    case e @ EntityModified(personId, entity: CustomKundentyp, _) => send(personId, e.asInstanceOf[DBEvent[CustomKundentyp]])
+    case e @ EntityCreated(personId, entity: CustomKundentyp) => send(personId, e.asInstanceOf[DBEvent[CustomKundentyp]])
+    case e @ EntityDeleted(personId, entity: CustomKundentyp) => send(personId, e.asInstanceOf[DBEvent[CustomKundentyp]])
 
-    case e @ EntityCreated(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
-    case e @ EntityModified(userId, entity: Lieferung, _) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
-    case e @ EntityDeleted(userId, entity: Lieferung) => send(userId, e.asInstanceOf[DBEvent[Lieferung]])
+    case e @ EntityCreated(personId, entity: Lieferung) => send(personId, e.asInstanceOf[DBEvent[Lieferung]])
+    case e @ EntityModified(personId, entity: Lieferung, _) => send(personId, e.asInstanceOf[DBEvent[Lieferung]])
+    case e @ EntityDeleted(personId, entity: Lieferung) => send(personId, e.asInstanceOf[DBEvent[Lieferung]])
 
-    case e @ EntityCreated(userId, entity: Lieferplanung) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
-    case e @ EntityModified(userId, entity: Lieferplanung, _) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
+    case e @ EntityCreated(personId, entity: Lieferplanung) => send(personId, e.asInstanceOf[DBEvent[Lieferplanung]])
+    case e @ EntityModified(personId, entity: Lieferplanung, _) => send(personId, e.asInstanceOf[DBEvent[Lieferplanung]])
 
-    case e @ EntityCreated(userId, entity: Bestellung) => send(userId, e.asInstanceOf[DBEvent[Bestellung]])
+    case e @ EntityCreated(personId, entity: Bestellung) => send(personId, e.asInstanceOf[DBEvent[Bestellung]])
 
-    case e @ EntityCreated(userId, entity: Depotlieferung) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
-    case e @ EntityModified(userId, entity: Depotlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
-    case e @ EntityDeleted(userId, entity: Depotlieferung) => send(userId, e.asInstanceOf[DBEvent[Depotlieferung]])
+    case e @ EntityCreated(personId, entity: Depotlieferung) => send(personId, e.asInstanceOf[DBEvent[Depotlieferung]])
+    case e @ EntityModified(personId, entity: Depotlieferung, _) => send(personId, e.asInstanceOf[DBEvent[Depotlieferung]])
+    case e @ EntityDeleted(personId, entity: Depotlieferung) => send(personId, e.asInstanceOf[DBEvent[Depotlieferung]])
 
-    case e @ EntityCreated(userId, entity: Heimlieferung) => send(userId, e.asInstanceOf[DBEvent[Heimlieferung]])
-    case e @ EntityModified(userId, entity: Heimlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Heimlieferung]])
-    case e @ EntityDeleted(userId, entity: Heimlieferung) => send(userId, e.asInstanceOf[DBEvent[Heimlieferung]])
+    case e @ EntityCreated(personId, entity: Heimlieferung) => send(personId, e.asInstanceOf[DBEvent[Heimlieferung]])
+    case e @ EntityModified(personId, entity: Heimlieferung, _) => send(personId, e.asInstanceOf[DBEvent[Heimlieferung]])
+    case e @ EntityDeleted(personId, entity: Heimlieferung) => send(personId, e.asInstanceOf[DBEvent[Heimlieferung]])
 
-    case e @ EntityCreated(userId, entity: Postlieferung) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
-    case e @ EntityModified(userId, entity: Postlieferung, _) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
-    case e @ EntityDeleted(userId, entity: Postlieferung) => send(userId, e.asInstanceOf[DBEvent[Postlieferung]])
+    case e @ EntityCreated(personId, entity: Postlieferung) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
+    case e @ EntityModified(personId, entity: Postlieferung, _) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
+    case e @ EntityDeleted(personId, entity: Postlieferung) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
 
-    case e @ EntityCreated(userId, entity: Produkt) => send(userId, e.asInstanceOf[DBEvent[Produkt]])
-    case e @ EntityModified(userId, entity: Produkt, _) => send(userId, e.asInstanceOf[DBEvent[Produkt]])
-    case e @ EntityDeleted(userId, entity: Produkt) => send(userId, e.asInstanceOf[DBEvent[Produkt]])
+    case e @ EntityCreated(personId, entity: Produkt) => send(personId, e.asInstanceOf[DBEvent[Produkt]])
+    case e @ EntityModified(personId, entity: Produkt, _) => send(personId, e.asInstanceOf[DBEvent[Produkt]])
+    case e @ EntityDeleted(personId, entity: Produkt) => send(personId, e.asInstanceOf[DBEvent[Produkt]])
 
-    case e @ EntityCreated(userId, entity: Produktekategorie) => send(userId, e.asInstanceOf[DBEvent[Produktekategorie]])
-    case e @ EntityModified(userId, entity: Produktekategorie, _) => send(userId, e.asInstanceOf[DBEvent[Produktekategorie]])
-    case e @ EntityDeleted(userId, entity: Produktekategorie) => send(userId, e.asInstanceOf[DBEvent[Produktekategorie]])
+    case e @ EntityCreated(personId, entity: Produktekategorie) => send(personId, e.asInstanceOf[DBEvent[Produktekategorie]])
+    case e @ EntityModified(personId, entity: Produktekategorie, _) => send(personId, e.asInstanceOf[DBEvent[Produktekategorie]])
+    case e @ EntityDeleted(personId, entity: Produktekategorie) => send(personId, e.asInstanceOf[DBEvent[Produktekategorie]])
 
-    case e @ EntityCreated(userId, entity: Produzent) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
-    case e @ EntityModified(userId, entity: Produzent, _) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
-    case e @ EntityDeleted(userId, entity: Produzent) => send(userId, e.asInstanceOf[DBEvent[Produzent]])
+    case e @ EntityCreated(personId, entity: Produzent) => send(personId, e.asInstanceOf[DBEvent[Produzent]])
+    case e @ EntityModified(personId, entity: Produzent, _) => send(personId, e.asInstanceOf[DBEvent[Produzent]])
+    case e @ EntityDeleted(personId, entity: Produzent) => send(personId, e.asInstanceOf[DBEvent[Produzent]])
 
-    case e @ EntityCreated(userId, entity: Projekt) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
-    case e @ EntityModified(userId, entity: Projekt, _) => send(userId, e.asInstanceOf[DBEvent[Projekt]])
+    case e @ EntityCreated(personId, entity: Projekt) => send(personId, e.asInstanceOf[DBEvent[Projekt]])
+    case e @ EntityModified(personId, entity: Projekt, _) => send(personId, e.asInstanceOf[DBEvent[Projekt]])
 
-    case e @ EntityCreated(userId, entity: Rechnung) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
-    case e @ EntityModified(userId, entity: Rechnung, _) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
-    case e @ EntityDeleted(userId, entity: Rechnung) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
+    case e @ EntityCreated(personId, entity: Rechnung) => send(personId, e.asInstanceOf[DBEvent[Rechnung]])
+    case e @ EntityModified(personId, entity: Rechnung, _) => send(personId, e.asInstanceOf[DBEvent[Rechnung]])
+    case e @ EntityDeleted(personId, entity: Rechnung) => send(personId, e.asInstanceOf[DBEvent[Rechnung]])
 
     case x => log.debug(s"receive unknown event $x")
   }

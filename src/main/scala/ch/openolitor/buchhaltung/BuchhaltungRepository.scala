@@ -42,6 +42,7 @@ import akka.actor.ActorSystem
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.AkkaEventStream
 
 trait BuchhaltungReadRepository {
   def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
@@ -51,7 +52,7 @@ trait BuchhaltungReadRepository {
   def getZahlungsEingaenge(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsEingang]]
 }
 
-trait BuchhaltungWriteRepository extends BaseWriteRepository {
+trait BuchhaltungWriteRepository extends BaseWriteRepository with EventStream {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 }
 
@@ -109,7 +110,7 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
   }
 }
 
-class BuchhaltungWriteRepositoryImpl(val system: ActorSystem) extends BuchhaltungWriteRepository with LazyLogging with EventStream with BuchhaltungDBMappings {
+class BuchhaltungWriteRepositoryImpl(val system: ActorSystem) extends BuchhaltungWriteRepository with LazyLogging with AkkaEventStream with BuchhaltungDBMappings {
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB localTx { implicit session =>
       sql"truncate table ${rechnungMapping.table}".execute.apply()

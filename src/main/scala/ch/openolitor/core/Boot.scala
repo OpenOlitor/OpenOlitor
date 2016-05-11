@@ -45,7 +45,7 @@ import ch.openolitor.core.db._
 import org.slf4j.Logger
 import akka.event.slf4j.Logger
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import java.util.UUID
 import ch.openolitor.core.ws.ClientMessagesServer
 import resource._
@@ -86,7 +86,7 @@ object Boot extends App with LazyLogging {
   val config = ConfigFactory.load
 
   //TODO: replace with real userid after login succeeded
-  val systemUserId = UserId(1000)
+  val systemPersonId = PersonId(1000)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
   val configs = getMandantConfiguration(config)
@@ -164,7 +164,7 @@ object Boot extends App with LazyLogging {
       val duration = Duration.create(1, SECONDS);
       val system = app.actorOf(SystemActor.props, "oo-system")
       logger.debug(s"oo-system:$system")
-      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(Evolution), "entity-store"), duration).asInstanceOf[ActorRef]
+      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(new Evolution(sysCfg)), "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 

@@ -27,7 +27,7 @@ import ch.openolitor.core.data.DataImportService.ImportResult
 import spray.json._
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Boot
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.filestore.FileStore
 
 class DefaultSystemRouteService(
@@ -43,10 +43,10 @@ trait SystemRouteService extends HttpService with ActorReferences
 
   private var error: Option[Throwable] = None
   val system: ActorSystem
-  lazy val importService = system.actorOf(DataImportService.props(sysConfig, entityStore), "oo-import-service")
+  lazy val importService = system.actorOf(DataImportService.props(sysConfig, entityStore, system), "oo-import-service")
 
   //TODO: get real userid from login
-  override val userId: UserId = Boot.systemUserId
+  override val personId: PersonId = Boot.systemPersonId
 
   lazy val systemRoutes = statusRoute ~ adminRoutes
 

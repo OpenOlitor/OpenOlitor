@@ -55,9 +55,9 @@ case class Kunde(
   anzahlPersonen: Int,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[KundeId]
 
 object Kunde {
@@ -85,9 +85,9 @@ object Kunde {
     k.anzahlPersonen: Int,
     //modification flags
     k.erstelldat: DateTime,
-    k.ersteller: UserId,
+    k.ersteller: PersonId,
     k.modifidat: DateTime,
-    k.modifikator: UserId
+    k.modifikator: PersonId
   ))
 }
 
@@ -115,12 +115,12 @@ case class KundeDetail(
   anzahlPersonen: Int,
   abos: Seq[Abo],
   pendenzen: Seq[Pendenz],
-  ansprechpersonen: Seq[Person],
+  ansprechpersonen: Seq[PersonDetail],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends JSONSerializable
 
 case class KundeModify(
@@ -154,7 +154,18 @@ object Anrede {
   }
 }
 
-case class PersonId(id: Long) extends BaseId
+sealed trait Rolle
+case object AdministratorZugang extends Rolle
+case object KundenZugang extends Rolle
+
+object Rolle {
+  val AlleRollen = Vector(AdministratorZugang, KundenZugang)
+
+  def apply(value: String): Option[Rolle] = {
+    AlleRollen.find(_.toString == value)
+  }
+}
+
 case class Person(
   id: PersonId,
   kundeId: KundeId,
@@ -167,11 +178,41 @@ case class Person(
   telefonFestnetz: Option[String],
   bemerkungen: Option[String],
   sort: Int,
-  //modification flags
+  // security data
+  loginAktiv: Boolean,
+  passwort: Option[Array[Char]],
+  letzteAnmeldung: Option[DateTime],
+  passwortWechselErforderlich: Boolean,
+  rolle: Option[Rolle],
+  // modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
+) extends BaseEntity[PersonId]
+
+case class PersonDetail(
+  id: PersonId,
+  kundeId: KundeId,
+  anrede: Option[Anrede],
+  name: String,
+  vorname: String,
+  email: Option[String],
+  emailAlternative: Option[String],
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
+  bemerkungen: Option[String],
+  sort: Int,
+  // security data
+  loginAktiv: Boolean,
+  letzteAnmeldung: Option[DateTime],
+  passwortWechselErforderlich: Boolean,
+  rolle: Option[Rolle],
+  // modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
 ) extends BaseEntity[PersonId]
 
 case class KundeSummary(id: KundeId, kunde: String) extends Product
@@ -226,11 +267,11 @@ case class Pendenz(
   bemerkung: Option[String],
   status: PendenzStatus,
   generiert: Boolean,
-  //modification flags
+  // modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[PendenzId]
 
 case class PendenzModify(

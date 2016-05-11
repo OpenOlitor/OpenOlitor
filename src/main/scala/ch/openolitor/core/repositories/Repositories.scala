@@ -72,7 +72,8 @@ trait SqlBinder[-T] extends (T => Any) {
 object BaseRepository extends LazyLogging {
 }
 
-trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
+trait BaseWriteRepository extends DBMappings with LazyLogging {
+  self: EventStream =>
 
   type Validator[E] = E => Boolean
   val TrueValidator: Validator[Any] = x => true
@@ -93,7 +94,7 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: UserId) = {
+    user: PersonId) = {
     val params = syntaxSupport.parameterMappings(entity)
     logger.debug(s"create entity with values:$entity")
     getById(syntaxSupport, entity.id) match {
@@ -110,7 +111,7 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: UserId) = {
+    user: PersonId) = {
     getById(syntaxSupport, entity.id).map { orig =>
       val alias = syntaxSupport.syntax("x")
       val id = alias.id
@@ -126,7 +127,7 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: UserId): Option[E] = {
+    user: PersonId): Option[E] = {
     deleteEntity[E, I](id, Some(validator))
   }
 
@@ -134,7 +135,7 @@ trait BaseWriteRepository extends DBMappings with LazyLogging with EventStream {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: UserId): Option[E] = {
+    user: PersonId): Option[E] = {
     logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
     getById(syntaxSupport, id).map { entity =>
       val validation = validator.getOrElse(TrueValidator)

@@ -26,7 +26,7 @@ import org.joda.time.DateTime
 
 case class ModificationFlags(
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 )

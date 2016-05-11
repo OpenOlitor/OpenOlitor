@@ -22,10 +22,10 @@
 \*                                                                           */
 package ch.openolitor.core.domain
 
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import org.joda.time.DateTime
 
-case class EventMetadata(originator: UserId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
+case class EventMetadata(originator: PersonId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
 
 trait PersistentEvent extends Serializable {
   val meta: EventMetadata

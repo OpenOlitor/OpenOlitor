@@ -61,47 +61,47 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   val receive: Receive = {
-    case e @ EntityCreated(userId, entity: DepotlieferungAbo) =>
-      handleDepotlieferungAboCreated(entity)(userId)
-      handleAboCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: DepotlieferungAbo) =>
-      handleDepotlieferungAboDeleted(entity)(userId)
-      handleAboDeleted(entity)(userId)
-    case e @ EntityCreated(userId, entity: Abo) => handleAboCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Abo) => handleAboDeleted(entity)(userId)
-    case e @ EntityCreated(userId, entity: Abwesenheit) => handleAbwesenheitCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Abwesenheit) => handleAbwesenheitDeleted(entity)(userId)
+    case e @ EntityCreated(personId, entity: DepotlieferungAbo) =>
+      handleDepotlieferungAboCreated(entity)(personId)
+      handleAboCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: DepotlieferungAbo) =>
+      handleDepotlieferungAboDeleted(entity)(personId)
+      handleAboDeleted(entity)(personId)
+    case e @ EntityCreated(personId, entity: Abo) => handleAboCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: Abo) => handleAboDeleted(entity)(personId)
+    case e @ EntityCreated(personId, entity: Abwesenheit) => handleAbwesenheitCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: Abwesenheit) => handleAbwesenheitDeleted(entity)(personId)
 
-    case e @ EntityCreated(userId, entity: Kunde) => handleKundeCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Kunde) => handleKundeDeleted(entity)(userId)
-    case e @ EntityModified(userId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(userId)
+    case e @ EntityCreated(personId, entity: Kunde) => handleKundeCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: Kunde) => handleKundeDeleted(entity)(personId)
+    case e @ EntityModified(personId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(personId)
 
-    case e @ EntityCreated(userId, entity: Pendenz) => handlePendenzCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Pendenz) => handlePendenzDeleted(entity)(userId)
+    case e @ EntityCreated(personId, entity: Pendenz) => handlePendenzCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: Pendenz) => handlePendenzDeleted(entity)(personId)
 
-    case e @ EntityCreated(userId, entity: Rechnung) => handleRechnungCreated(entity)(userId)
-    case e @ EntityDeleted(userId, entity: Rechnung) => handleRechnungDeleted(entity)(userId)
-    case e @ EntityModified(userId, entity: Rechnung, orig: Rechnung) if (orig.status == Erstellt && entity.status == Bezahlt) =>
-      handleRechnungBezahlt(entity, orig)(userId)
+    case e @ EntityCreated(personId, entity: Rechnung) => handleRechnungCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: Rechnung) => handleRechnungDeleted(entity)(personId)
+    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if (orig.status == Erstellt && entity.status == Bezahlt) =>
+      handleRechnungBezahlt(entity, orig)(personId)
 
     case x => //log.debug(s"receive unused event $x")
   }
 
-  def handleDepotlieferungAboCreated(abo: DepotlieferungAbo)(implicit userId: UserId) = {
+  def handleDepotlieferungAboCreated(abo: DepotlieferungAbo)(implicit personId: PersonId) = {
     modifyEntity[Depot, DepotId](abo.depotId, { depot =>
       log.debug(s"Add abonnent to depot:${depot.id}")
       depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1)
     })
   }
 
-  def handleDepotlieferungAboDeleted(abo: DepotlieferungAbo)(implicit userId: UserId) = {
+  def handleDepotlieferungAboDeleted(abo: DepotlieferungAbo)(implicit personId: PersonId) = {
     modifyEntity[Depot, DepotId](abo.depotId, { depot =>
       log.debug(s"Remove abonnent from depot:${depot.id}")
       depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten - 1)
     })
   }
 
-  def handleAboCreated(abo: Abo)(implicit userId: UserId) = {
+  def handleAboCreated(abo: Abo)(implicit personId: PersonId) = {
     modifyEntity[Abotyp, AbotypId](abo.abotypId, { abotyp =>
       log.debug(s"Add abonnent to abotyp:${abotyp.id}")
       abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten + 1)
@@ -112,7 +112,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     })
   }
 
-  def handleAboDeleted(abo: Abo)(implicit userId: UserId) = {
+  def handleAboDeleted(abo: Abo)(implicit personId: PersonId) = {
     modifyEntity[Abotyp, AbotypId](abo.abotypId, { abotyp =>
       log.debug(s"Remove abonnent from abotyp:${abotyp.id}")
       abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten - 1)
@@ -123,7 +123,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     })
   }
 
-  def handleKundeModified(kunde: Kunde, orig: Kunde)(implicit userId: UserId) = {
+  def handleKundeModified(kunde: Kunde, orig: Kunde)(implicit personId: PersonId) = {
     //compare typen
     //find removed typen
     val removed = orig.typen -- kunde.typen
@@ -142,15 +142,15 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     //    })
   }
 
-  def handleKundeDeleted(kunde: Kunde)(implicit userId: UserId) = {
+  def handleKundeDeleted(kunde: Kunde)(implicit personId: PersonId) = {
     handleKundentypenChanged(kunde.typen, Set())
   }
 
-  def handleKundeCreated(kunde: Kunde)(implicit userId: UserId) = {
+  def handleKundeCreated(kunde: Kunde)(implicit personId: PersonId) = {
     handleKundentypenChanged(Set(), kunde.typen)
   }
 
-  def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit userId: UserId) = {
+  def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit personId: PersonId) = {
     stammdatenWriteRepository.getProjekt map { projekt =>
       val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
@@ -177,7 +177,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleAbwesenheitCreated(abw: Abwesenheit)(implicit userId: UserId) = {
+  def handleAbwesenheitCreated(abw: Abwesenheit)(implicit personId: PersonId) = {
     stammdatenWriteRepository.getProjekt map { projekt =>
       val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
@@ -204,21 +204,21 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handlePendenzCreated(pendenz: Pendenz)(implicit userId: UserId) = {
+  def handlePendenzCreated(pendenz: Pendenz)(implicit personId: PersonId) = {
     modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
       log.debug(s"Add pendenz count to kunde:${kunde.id}")
       kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
     })
   }
 
-  def handlePendenzDeleted(pendenz: Pendenz)(implicit userId: UserId) = {
+  def handlePendenzDeleted(pendenz: Pendenz)(implicit personId: PersonId) = {
     modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
       log.debug(s"Remove pendenz count from kunde:${kunde.id}")
       kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen - 1)
     })
   }
 
-  def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit userId: UserId) = {
+  def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
     stammdatenReadRepository.getKundentypen map { kundetypen =>
       DB autoCommit { implicit session =>
         removed.map { kundetypId =>
@@ -243,7 +243,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   }
 
-  def handleRechnungDeleted(rechnung: Rechnung)(implicit userId: UserId) = {
+  def handleRechnungDeleted(rechnung: Rechnung)(implicit personId: PersonId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
         guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen
@@ -261,7 +261,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     })
   }
 
-  def handleRechnungCreated(rechnung: Rechnung)(implicit userId: UserId) = {
+  def handleRechnungCreated(rechnung: Rechnung)(implicit personId: PersonId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
         guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen
@@ -279,7 +279,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     })
   }
 
-  def handleRechnungBezahlt(rechnung: Rechnung, orig: Rechnung)(implicit userId: UserId) = {
+  def handleRechnungBezahlt(rechnung: Rechnung, orig: Rechnung)(implicit personId: PersonId) = {
     modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
       abo.copy(
         guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
@@ -305,7 +305,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
     id: I, mod: E => E
-  )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], userId: UserId) = {
+  )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(syntax, id) map { result =>
         val copy = mod(result)

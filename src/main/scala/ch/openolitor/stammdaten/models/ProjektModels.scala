@@ -26,6 +26,7 @@ import java.util.UUID
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
+import scala.collection.immutable.TreeMap
 
 case class ProjektId(id: Long) extends BaseId
 
@@ -75,11 +76,12 @@ case class Projekt(
     waehrung: Waehrung,
     geschaeftsjahrMonat: Int,
     geschaeftsjahrTag: Int,
+    twoFactorAuthentication: Map[Rolle, Boolean],
     //modification flags
     erstelldat: DateTime,
-    ersteller: UserId,
+    ersteller: PersonId,
     modifidat: DateTime,
-    modifikator: UserId
+    modifikator: PersonId
 ) extends BaseEntity[ProjektId] {
   lazy val geschaftsjahr = Geschaeftsjahr(geschaeftsjahrMonat, geschaeftsjahrTag)
 }
@@ -96,7 +98,8 @@ case class ProjektModify(
   emailErforderlich: Boolean,
   waehrung: Waehrung,
   geschaeftsjahrMonat: Int,
-  geschaeftsjahrTag: Int
+  geschaeftsjahrTag: Int,
+  twoFactorAuthentication: Map[Rolle, Boolean]
 ) extends JSONSerializable
 
 case class KundentypId(id: String)
@@ -116,9 +119,9 @@ case class CustomKundentyp(
     anzahlVerknuepfungen: Int,
     //modification flags
     erstelldat: DateTime,
-    ersteller: UserId,
+    ersteller: PersonId,
     modifidat: DateTime,
-    modifikator: UserId
+    modifikator: PersonId
 ) extends BaseEntity[CustomKundentypId] with Kundentyp {
   override def system = false
 }
