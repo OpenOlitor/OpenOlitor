@@ -57,6 +57,9 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     with BuchhaltungDBMappings {
   self: BuchhaltungWriteRepositoryComponent =>
 
+  val False = false
+  val Zero = 0
+
   val handle: Handle = {
     case RechnungVerschicktEvent(meta, id: RechnungId) =>
       rechnungVerschicken(meta, id)
@@ -121,6 +124,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession) = {
       val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
         zahlungsEingangCreate,
+        "erledigt" -> False,
         "erstelldat" -> meta.timestamp,
         "ersteller" -> meta.originator,
         "modifidat" -> meta.timestamp,
@@ -132,7 +136,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
     val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
       entity,
-      "status" -> Neu,
+      "anzahlZahlungsEingaenge" -> entity.zahlungsEingaenge.size,
+      "anzahlZahlungsEingaengeErledigt" -> Zero,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
