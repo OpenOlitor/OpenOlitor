@@ -195,6 +195,15 @@ trait SecurityRouteService extends HttpService with ActorReferences
 
   def sendEmail(secondFactor: SecondFactor, person: PersonDetail): EitherFuture[Boolean] = EitherT {
     Future {
+      logger.debug(s"=====================================================================")
+      logger.debug(s"| Send Email to:${person.email}")
+      logger.debug(s"---------------------------------------------------------------------")
+      logger.debug(s"| Token :${secondFactor.token}")
+      logger.debug(s"| Code :${secondFactor.code}")
+      logger.debug(s"=====================================================================")
+
+      //TODO: bind to email service
+
       true.right
     }
   }
