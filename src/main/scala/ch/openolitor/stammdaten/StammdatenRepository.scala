@@ -66,6 +66,8 @@ trait StammdatenReadRepository {
   def getCustomKundentypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[CustomKundentyp]]
 
   def getPersonen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
+  def getPersonByEmail(email: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]]
+  def getPerson(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PersonDetail]]
 
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]]
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
@@ -211,6 +213,25 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
         .where.eq(person.kundeId, parameter(kundeId))
         .orderBy(person.sort)
     }.map(personMapping(person)).list.future
+  }
+
+  def getPersonByEmail(email: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]] = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .where.eq(person.email, parameter(email))
+    }.map(personMapping(person)).single.future
+  }
+
+  def getPerson(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PersonDetail]] = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .where.eq(person.id, parameter(id))
+    }.map { rs =>
+      val p = personMapping(person)(rs)
+      copyTo[Person, PersonDetail](p)
+    }.single.future
   }
 
   override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]] = {
