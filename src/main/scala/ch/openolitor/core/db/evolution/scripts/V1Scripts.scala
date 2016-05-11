@@ -229,7 +229,7 @@ object V1Scripts {
         bemerkungen varchar(512),
         sort int not null,
         login_aktiv varchar(1) not null,
-        passwort varchar(50),
+        passwort varchar(300),
         letzte_anmeldung datetime,
         passwort_wechsel_erforderlich varchar(1),
         rolle varchar(50),
