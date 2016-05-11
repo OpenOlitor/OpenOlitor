@@ -67,7 +67,7 @@ object BuchhaltungCommandHandler {
 }
 
 trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware with AsyncConnectionPoolContextAware {
-  self: BuchhaltungWriteRepositoryComponent with BuchhaltungReadRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
   import BuchhaltungCommandHandler._
   import EntityStore._
 
@@ -155,6 +155,5 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 }
 
 class DefaultBuchhaltungCommandHandler(override val sysConfig: SystemConfig, override val system: ActorSystem) extends BuchhaltungCommandHandler
-    with DefaultBuchhaltungWriteRepositoryComponent
-    with DefaultBuchhaltungReadRepositoryComponent {
+    with DefaultBuchhaltungWriteRepositoryComponent {
 }
