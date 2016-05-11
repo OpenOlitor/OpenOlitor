@@ -36,7 +36,7 @@ import akka.actor.ActorSystem
 import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.UUID
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
@@ -71,7 +71,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
       logger.warn(s"Unknown event:$e")
   }
 
-  def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit userId: UserId = meta.originator) = {
+  def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
     DB futureLocalTx { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Offen == lieferplanung.status) {
@@ -95,7 +95,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
     }
   }
 
-  def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit userId: UserId = meta.originator) = {
+  def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
     DB futureLocalTx { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Abgeschlossen == lieferplanung.status) {
@@ -119,7 +119,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
     }
   }
 
-  def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit userId: UserId = meta.originator) = {
+  def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
     ???
   }
 }

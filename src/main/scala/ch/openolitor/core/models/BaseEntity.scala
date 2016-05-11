@@ -33,22 +33,22 @@ trait BaseId extends AnyRef {
   val id: Long
 }
 
-case class UserId(id: Long) extends BaseId
+case class PersonId(id: Long) extends BaseId
 
 trait BaseEntity[T <: BaseId] extends Product with JSONSerializable {
   val id: T
   //modification flags on all entities
   val erstelldat: DateTime
-  val ersteller: UserId
+  val ersteller: PersonId
   val modifidat: DateTime
-  val modifikator: UserId
+  val modifikator: PersonId
 }
 
 sealed trait DBEvent[E <: BaseEntity[_ <: BaseId]] extends Product {
-  val originator: UserId
+  val originator: PersonId
   val entity: E
 }
 //events raised by this aggregateroot
-case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
-case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E, orig: E) extends DBEvent[E]
-case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: UserId, entity: E) extends DBEvent[E]
+case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends DBEvent[E]
+case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E, orig: E) extends DBEvent[E]
+case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends DBEvent[E]

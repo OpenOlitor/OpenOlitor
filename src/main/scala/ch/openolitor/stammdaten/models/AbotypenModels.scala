@@ -131,9 +131,9 @@ case class Abotyp(
   waehrung: Waehrung,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[AbotypId] with AktivRange with Product
 
 object Abotyp {

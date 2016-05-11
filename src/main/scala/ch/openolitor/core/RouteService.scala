@@ -153,7 +153,7 @@ trait RouteServiceActor
 // this trait defines our service behavior independently from the service actor
 trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport with FileStoreComponent with LazyLogging {
 
-  val userId: UserId
+  val personId: PersonId
   implicit val timeout = Timeout(5.seconds)
 
   def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit
@@ -168,7 +168,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
   def created[E <: AnyRef: ClassTag, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister: Persister[E, _]) = {
     //create entity
-    onSuccess(entityStore ? EntityStore.InsertEntityCommand(userId, entity)) {
+    onSuccess(entityStore ? EntityStore.InsertEntityCommand(personId, entity)) {
       case event: EntityInsertedEvent[_, _] =>
         respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
           respondWithStatus(StatusCodes.Created) {
@@ -194,7 +194,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
   def updated[E <: AnyRef: ClassTag, I <: BaseId](id: I, entity: E)(implicit idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
     //update entity
-    onSuccess(entityStore ? EntityStore.UpdateEntityCommand(userId, id, entity)) { result =>
+    onSuccess(entityStore ? EntityStore.UpdateEntityCommand(personId, id, entity)) { result =>
       complete(StatusCodes.Accepted, "")
     }
   }
@@ -217,7 +217,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
    * @persister declare format to ensure that format exists for persising purposes
    */
   def remove[I <: BaseId](id: I)(implicit persister: Persister[I, _]) = {
-    onSuccess(entityStore ? EntityStore.DeleteEntityCommand(userId, id)) { result =>
+    onSuccess(entityStore ? EntityStore.DeleteEntityCommand(personId, id)) { result =>
       complete("")
     }
   }

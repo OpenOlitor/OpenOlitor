@@ -78,7 +78,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       logger.warn(s"Unknown event:$e")
   }
 
-  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungModify)(implicit userId: UserId = meta.originator) = {
+  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungModify)(implicit personId: PersonId = meta.originator) = {
     val referenzNummer = generateReferenzNummer(entity, id)
     val esrNummer = generateEsrNummer(entity, referenzNummer)
 

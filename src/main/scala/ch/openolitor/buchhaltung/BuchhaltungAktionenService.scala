@@ -72,7 +72,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       logger.warn(s"Unknown event:$e")
   }
 
-  def rechnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit userId: UserId = meta.originator) = {
+  def rechnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Erstellt == rechnung.status) {
@@ -82,7 +82,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     }
   }
 
-  def rechnungMahnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit userId: UserId = meta.originator) = {
+  def rechnungMahnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Verschickt == rechnung.status) {
@@ -92,7 +92,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     }
   }
 
-  def rechnungBezahlen(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt)(implicit userId: UserId = meta.originator) = {
+  def rechnungBezahlen(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Verschickt == rechnung.status || MahnungVerschickt == rechnung.status) {
@@ -106,7 +106,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     }
   }
 
-  def rechnungStornieren(meta: EventMetadata, id: RechnungId)(implicit userId: UserId = meta.originator) = {
+  def rechnungStornieren(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Bezahlt != rechnung.status) {
@@ -116,7 +116,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     }
   }
 
-  def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit userId: UserId = meta.originator) = {
+  def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit PersonId: PersonId = meta.originator) = {
 
     def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession) = {
       val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](

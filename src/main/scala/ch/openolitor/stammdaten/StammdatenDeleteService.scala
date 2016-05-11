@@ -26,6 +26,7 @@ import akka.persistence.PersistentView
 
 import akka.actor._
 import ch.openolitor.core._
+import ch.openolitor.core.models._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import scala.concurrent.duration._
@@ -53,7 +54,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   import EntityStore._
 
   //TODO: replace with credentials of logged in user
-  implicit val userId = Boot.systemUserId
+  implicit val personId = Boot.systemPersonId
 
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: AbotypId) => deleteAbotyp(id)

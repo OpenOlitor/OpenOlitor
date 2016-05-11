@@ -80,7 +80,7 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
   self: FileStoreComponent =>
 
   //TODO: get real userid from login
-  override val userId: UserId = Boot.systemUserId
+  override val personId: PersonId = Boot.systemPersonId
 
   lazy val fileStoreRoute =
     pathPrefix("filestore") {

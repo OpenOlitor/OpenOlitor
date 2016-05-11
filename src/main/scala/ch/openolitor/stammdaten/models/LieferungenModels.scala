@@ -63,9 +63,9 @@ case class Lieferplanung(
   status: LieferungStatus,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[LieferplanungId]
 
 case class LieferplanungModify(
@@ -100,9 +100,9 @@ case class Lieferung(
   lieferplanungNr: Option[Int],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[LieferungId]
 
 case class LieferungModify(
@@ -147,9 +147,9 @@ case class Lieferposition(
   anzahl: Int,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[LieferpositionId]
 
 case class LieferpositionModify(
@@ -184,9 +184,9 @@ case class Bestellung(
   preisTotal: BigDecimal,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[BestellungId]
 
 case class BestellungModify(
@@ -217,9 +217,9 @@ case class Bestellposition(
   anzahl: Int,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[BestellpositionId]
 
 case class BestellpositionModify(
@@ -242,7 +242,7 @@ case class Korb(
   status: KorbStatus,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[KorbId]

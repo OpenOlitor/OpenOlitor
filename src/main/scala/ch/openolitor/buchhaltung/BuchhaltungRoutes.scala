@@ -68,7 +68,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   import EntityStore._
 
   //TODO: get real userid from login
-  override val userId: UserId = Boot.systemUserId
+  override val personId: PersonId = Boot.systemPersonId
 
   lazy val buchhaltungRoute = rechnungenRoute ~ zahlungsImportsRoute
 
@@ -113,7 +113,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       }
 
   def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(userId, id)) {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungVerschickenCommand(personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit to status Verschickt")
       case _ =>
@@ -122,7 +122,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def mahnungVerschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungMahnungVerschickenCommand(userId, id)) {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungMahnungVerschickenCommand(personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit to status MahnungVerschickt")
       case _ =>
@@ -131,7 +131,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def bezahlen(id: RechnungId, entity: RechnungModifyBezahlt)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungBezahlenCommand(userId, id, entity)) {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungBezahlenCommand(personId, id, entity)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit to status Bezahlt")
       case _ =>
@@ -140,7 +140,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def stornieren(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
-    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungStornierenCommand(userId, id)) {
+    onSuccess(entityStore ? BuchhaltungCommandHandler.RechnungStornierenCommand(personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit to status Storniert")
       case _ =>
@@ -149,7 +149,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def createZahlungsImport(file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult])(implicit idPersister: Persister[ZahlungsImportId, _]) = {
-    onSuccess((entityStore ? BuchhaltungCommandHandler.ZahlungsImportCreateCommand(userId, file, zahlungsEingaenge))) {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.ZahlungsImportCreateCommand(personId, file, zahlungsEingaenge))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit to status Bezahlt")
       case _ =>
