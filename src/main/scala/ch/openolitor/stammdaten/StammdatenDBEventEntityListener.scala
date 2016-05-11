@@ -381,9 +381,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
                   status,
                   abo.guthaben,
                   DateTime.now,
-                  userId,
+                  personId,
                   DateTime.now,
-                  userId
+                  personId
                 )
                 DB autoCommit { implicit session =>
                   stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)

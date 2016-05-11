@@ -182,7 +182,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               "durchschnittspreis" -> ZERO,
               "anzahlLieferungen" -> ZERO,
               "anzahlKoerbeZuLiefern" -> ZERO,
-              "anzahlKoerbeNichtZuLiefern" -> ZERO,
+              "anzahlSaldoZuTief" -> ZERO,
               "zielpreis" -> abotyp.zielpreis,
               "preisTotal" -> ZERO,
               "status" -> Ungeplant,
