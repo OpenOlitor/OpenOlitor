@@ -470,6 +470,8 @@ object V1Scripts {
       logger.debug(s"oo-system: cleanupDatabase - drop tables - buchhaltung")
 
       sql"drop table if exists ${rechnungMapping.table}".execute.apply()
+      sql"drop table if exists ${zahlungsImportMapping.table}".execute.apply()
+      sql"drop table if exists ${zahlungsEingangMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables - buchhaltung")
       //create tables
@@ -494,6 +496,33 @@ object V1Scripts {
         adress_zusatz varchar(100),
         plz varchar(10) not null,
         ort varchar(50) not null,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${zahlungsImportMapping.table} (
+        id BIGINT not null,
+        file varchar(255) not null,
+        status varchar(50) not null,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${zahlungsEingangMapping.table} (
+        id BIGINT not null,
+        zahlungs_import_id BIGINT not null,
+        rechnung_id BIGINT,
+        transaktionsart varchar(100) not null,
+        teilnehmer_nummer varchar (10) not null,
+        referenz_nummer varchar(27) not null,
+        waehrung varchar(10) not null,
+        betrag DECIMAL(8,2) not null,
+        aufgabe_datum datetime,
+        verarbeitungs_datum datetime,
+        gutschrifts_datum datetime,
+        status varchar(50) not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,

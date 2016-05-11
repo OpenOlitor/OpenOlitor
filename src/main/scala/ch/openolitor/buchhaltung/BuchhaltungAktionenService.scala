@@ -29,7 +29,7 @@ import ch.openolitor.core.models._
 import ch.openolitor.buchhaltung._
 import ch.openolitor.buchhaltung.models._
 import java.util.UUID
-import scalikejdbc.DB
+import scalikejdbc._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
@@ -38,11 +38,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungVerschicktEvent
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungMahnungVerschicktEvent
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungBezahltEvent
-import ch.openolitor.buchhaltung.BuchhaltungCommandHandler.RechnungStorniertEvent
+import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
 import ch.openolitor.buchhaltung.models.RechnungModifyBezahlt
+import scala.concurrent.Future
 
 object BuchhaltungAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungAktionenService = new DefaultBuchhaltungAktionenService(sysConfig, system)
@@ -68,6 +66,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       rechnungBezahlen(meta, id, entity)
     case RechnungStorniertEvent(meta, id: RechnungId) =>
       rechnungStornieren(meta, id)
+    case ZahlungsImportCreatedEvent(meta, entity: ZahlungsImportCreate) =>
+      createZahlungsImport(meta, entity)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -113,6 +113,49 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
           buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Storniert))
         }
       }
+    }
+  }
+
+  def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit userId: UserId = meta.originator) = {
+
+    def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession) = {
+      val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
+        zahlungsEingangCreate,
+        "erstelldat" -> meta.timestamp,
+        "ersteller" -> meta.originator,
+        "modifidat" -> meta.timestamp,
+        "modifikator" -> meta.originator
+      )
+
+      buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
+    }
+
+    val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
+      entity,
+      "status" -> Neu,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator
+    )
+
+    DB localTx { implicit session =>
+      entity.zahlungsEingaenge map { eingang =>
+        buchhaltungWriteRepository.getRechnungByReferenznummer(eingang.referenzNummer) match {
+          case Some(rechnung) =>
+            val state = if (rechnung.status == Bezahlt) {
+              BereitsVerarbeitet
+            } else if (rechnung.betrag != eingang.betrag) {
+              BetragNichtKorrekt
+            } else {
+              Ok
+            }
+            createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
+          case None =>
+            createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
+        }
+      }
+      buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
     }
   }
 }

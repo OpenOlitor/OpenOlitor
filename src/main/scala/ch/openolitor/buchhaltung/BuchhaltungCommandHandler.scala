@@ -32,6 +32,23 @@ import ch.openolitor.core.exceptions.InvalidStateException
 import akka.actor.ActorSystem
 import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
+import ch.openolitor.core.filestore.FileStoreComponent
+import ch.openolitor.core.filestore.DefaultFileStoreComponent
+import ch.openolitor.core.filestore.ZahlungsImportBucket
+import scala.concurrent.ExecutionContext.Implicits.global
+import ch.openolitor.core.domain.EntityStore.EntityInsertedEvent
+import ch.openolitor.core.filestore.FileStoreComponent
+import ch.openolitor.core.filestore.DefaultFileStoreComponent
+import ch.openolitor.core.filestore.FileStoreBucket
+import scala.io.Source
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.Config
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportTotalRecord
+import ch.openolitor.core.db.AsyncConnectionPoolContextAware
+import scala.concurrent.Future
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 
 object BuchhaltungCommandHandler {
   case class RechnungVerschickenCommand(originator: UserId, id: RechnungId) extends UserCommand
@@ -43,9 +60,13 @@ object BuchhaltungCommandHandler {
   case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungBezahltEvent(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt) extends PersistentEvent with JSONSerializable
   case class RechnungStorniertEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
+
+  case class ZahlungsImportCreateCommand(originator: UserId, file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult]) extends UserCommand
+
+  case class ZahlungsImportCreatedEvent(meta: EventMetadata, entity: ZahlungsImportCreate) extends PersistentEvent with JSONSerializable
 }
 
-trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware {
+trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware with AsyncConnectionPoolContextAware {
   self: BuchhaltungWriteRepositoryComponent =>
   import BuchhaltungCommandHandler._
   import EntityStore._
@@ -99,6 +120,32 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
+    case ZahlungsImportCreateCommand(userId, file, zahlungsEingaengeRecords) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        val id = ZahlungsImportId(idFactory(classOf[ZahlungsImportId]))
+        val zahlungsEingaenge = zahlungsEingaengeRecords collect {
+          // ignoring total records for now
+          case result: ZahlungsImportRecord =>
+            val zahlungsEingangId = ZahlungsEingangId(idFactory(classOf[ZahlungsEingangId]))
+
+            ZahlungsEingangCreate(
+              zahlungsEingangId,
+              id,
+              None,
+              result.transaktionsart.toString,
+              result.teilnehmerNummer,
+              result.referenzNummer,
+              result.waehrung,
+              result.betrag,
+              result.aufgabeDatum,
+              result.verarbeitungsDatum,
+              result.gutschriftsDatum,
+              Ok
+            )
+        }
+
+        Success(Seq(ZahlungsImportCreatedEvent(meta, ZahlungsImportCreate(id, file, zahlungsEingaenge))))
+      }
     /*
        * Insert command handling
        */

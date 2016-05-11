@@ -29,8 +29,8 @@ sealed trait FileStoreBucket
 case object VorlagenBucket extends FileStoreBucket
 case object GeneriertBucket extends FileStoreBucket
 case object StammdatenBucket extends FileStoreBucket
-case object EsrBucket extends FileStoreBucket
+case object ZahlungsImportBucket extends FileStoreBucket
 
 object FileStoreBucket {
-  val AllFileStoreBuckets = List(VorlagenBucket, GeneriertBucket, StammdatenBucket, EsrBucket)
+  val AllFileStoreBuckets = List(VorlagenBucket, GeneriertBucket, StammdatenBucket, ZahlungsImportBucket)
 }
