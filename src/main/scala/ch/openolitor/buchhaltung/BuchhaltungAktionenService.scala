@@ -117,7 +117,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
   }
 
   def createZahlungsImport(meta: EventMetadata, entity: ZahlungsImportCreate)(implicit userId: UserId = meta.originator) = {
-    def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession) = {
+
+    def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession): Future[Unit] = {
       val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
         zahlungsEingangCreate,
         "erstelldat" -> meta.timestamp,
@@ -126,7 +127,9 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
         "modifikator" -> meta.originator
       )
 
-      buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
+      Future.successful {
+        buchhaltungWriteRepository.insertEntity[ZahlungsEingang, ZahlungsEingangId](zahlungsEingang)
+      }
     }
 
     val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
@@ -138,11 +141,11 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       "modifikator" -> meta.originator
     )
 
-    DB localTx { implicit session =>
-      entity.zahlungsEingaenge.foldLeft(Future(())) {
+    DB futureLocalTx { implicit session =>
+      entity.zahlungsEingaenge.foldLeft(Future.successful(())) {
         case (acc, eingang) =>
-          acc map { _ =>
-            buchhaltungReadRepository.getRechnungByReferenznummer(eingang.referenzNummer) map {
+          acc flatMap { _ =>
+            buchhaltungReadRepository.getRechnungByReferenznummer(eingang.referenzNummer) flatMap {
               case Some(rechnung) =>
                 val state = if (rechnung.status == Bezahlt) {
                   BereitsVerarbeitet
@@ -156,8 +159,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
                 createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
             }
           }
-      } onSuccess {
-        case _ =>
+      } andThen {
+        case x =>
           Future.successful(buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport))
       }
     }
