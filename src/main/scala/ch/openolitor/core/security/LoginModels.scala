@@ -23,8 +23,8 @@
 package ch.openolitor.core.security
 
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.stammdaten.models.PersonDetail
 import ch.openolitor.core.models.PersonId
+import ch.openolitor.stammdaten.models.PersonSummary
 
 case class LoginForm(email: String, passwort: String) extends JSONSerializable
 case class SecondFactorLoginForm(token: String, code: String) extends JSONSerializable
@@ -40,6 +40,6 @@ object LoginStatus {
   }
 }
 
-case class LoginResult(status: LoginStatus, token: String, person: PersonDetail) extends JSONSerializable
+case class LoginResult(status: LoginStatus, token: String, person: PersonSummary) extends JSONSerializable
 
 case class LoginFailed(msg: String)

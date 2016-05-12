@@ -53,6 +53,7 @@ import scala.util.Random
 import scalaz._
 import Scalaz._
 import ch.openolitor.util.ConfigUtil._
+import ch.openolitor.stammdaten.models.PersonSummary
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -74,7 +75,7 @@ trait LoginRouteService extends HttpService with ActorReferences
   )
   val secondFactorTokenCache = LruCache[SecondFactor](
     maxCapacity = 1000,
-    timeToLive = 10 minutes,
+    timeToLive = 20 minutes,
     timeToIdle = 10 minutes
   )
 
@@ -93,6 +94,7 @@ trait LoginRouteService extends HttpService with ActorReferences
           entity(as[LoginForm]) { form =>
             onSuccess(validateLogin(form).run) {
               case -\/(error) =>
+                logger.debug(s"Login failed ${error.msg}")
                 complete(StatusCodes.BadRequest, error.msg)
               case \/-(result) =>
                 complete(result)
@@ -132,7 +134,7 @@ trait LoginRouteService extends HttpService with ActorReferences
   def validateSecondFactorLogin(form: SecondFactorLoginForm): EitherFuture[LoginResult] = {
     for {
       secondFactor <- readTokenFromCache(form)
-      person <- personById(personId)
+      person <- personById(secondFactor.personId)
       result <- doLogin(person)
     } yield result
   }
@@ -148,44 +150,48 @@ trait LoginRouteService extends HttpService with ActorReferences
 
   def personByEmail(form: LoginForm): EitherFuture[Person] = {
     EitherT {
-      stammdatenReadRepository.getPersonByEmail(form.email) map (_ map (_.right) getOrElse (errorUsernameOrPasswordMismatch.left))
+      stammdatenReadRepository.getPersonByEmail(form.email) map (_ map (_.right) getOrElse {
+        logger.debug(s"No person found for email")
+        errorUsernameOrPasswordMismatch.left
+      })
     }
   }
 
-  def personById(personId: PersonId): EitherFuture[PersonDetail] = {
+  def personById(personId: PersonId): EitherFuture[Person] = {
     EitherT {
       stammdatenReadRepository.getPerson(personId) map (_ map (_.right) getOrElse (errorPersonNotFound.left))
     }
   }
 
   def handleLoggedIn(person: Person): EitherFuture[LoginResult] = {
-    val detail = copyTo[Person, PersonDetail](person)
     requireSecondFactorAuthentifcation(person) flatMap {
-      case false => doLogin(detail)
-      case true => sendSecondFactorAuthentication(detail)
+      case false => doLogin(person)
+      case true => sendSecondFactorAuthentication(person)
     }
   }
 
-  def doLogin(person: PersonDetail): EitherFuture[LoginResult] = {
+  def doLogin(person: Person): EitherFuture[LoginResult] = {
     //generate token
     val token = generateToken
     EitherT {
       loginTokenCache(token)(person.id) map { _ =>
-        LoginResult(LoginOk, token, person).right
+        val personSummary = copyTo[Person, PersonSummary](person)
+        LoginResult(LoginOk, token, personSummary).right
       }
     }
   }
 
-  def sendSecondFactorAuthentication(person: PersonDetail): EitherFuture[LoginResult] = {
+  def sendSecondFactorAuthentication(person: Person): EitherFuture[LoginResult] = {
     for {
       secondFactor <- generateSecondFactor(person)
       emailSent <- sendEmail(secondFactor, person)
     } yield {
-      LoginResult(LoginSecondFactorRequired, secondFactor.token, person)
+      val personSummary = copyTo[Person, PersonSummary](person)
+      LoginResult(LoginSecondFactorRequired, secondFactor.token, personSummary)
     }
   }
 
-  def generateSecondFactor(person: PersonDetail): EitherFuture[SecondFactor] = {
+  def generateSecondFactor(person: Person): EitherFuture[SecondFactor] = {
     EitherT {
       val token = generateToken
       val code = generateCode
@@ -193,13 +199,13 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def sendEmail(secondFactor: SecondFactor, person: PersonDetail): EitherFuture[Boolean] = EitherT {
+  def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
     Future {
       logger.debug(s"=====================================================================")
-      logger.debug(s"| Send Email to:${person.email}")
+      logger.debug(s"| Send Email to: ${person.email}")
       logger.debug(s"---------------------------------------------------------------------")
-      logger.debug(s"| Token :${secondFactor.token}")
-      logger.debug(s"| Code :${secondFactor.code}")
+      logger.debug(s"| Token: ${secondFactor.token}")
+      logger.debug(s"| Code: ${secondFactor.code}")
       logger.debug(s"=====================================================================")
 
       //TODO: bind to email service
@@ -224,9 +230,14 @@ trait LoginRouteService extends HttpService with ActorReferences
       person.passwort map { pwd =>
         BCrypt.checkpw(form.passwort, new String(pwd)) match {
           case true => true.right
-          case false => errorUsernameOrPasswordMismatch.left
+          case false =>
+            logger.debug(s"Password mismatch")
+            errorUsernameOrPasswordMismatch.left
         }
-      } getOrElse errorUsernameOrPasswordMismatch.left
+      } getOrElse {
+        logger.debug(s"No password for user")
+        errorUsernameOrPasswordMismatch.left
+      }
     }
   }
 

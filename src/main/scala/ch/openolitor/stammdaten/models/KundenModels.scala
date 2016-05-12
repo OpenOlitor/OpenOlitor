@@ -28,6 +28,7 @@ import java.util.Date
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple24
+import ch.openolitor.core.JSONSerializable
 
 case class KundeId(id: Long) extends BaseId
 
@@ -214,6 +215,15 @@ case class PersonDetail(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[PersonId]
+
+case class PersonSummary(
+  anrede: Option[Anrede],
+  name: String,
+  vorname: String,
+  email: Option[String],
+  emailAlternative: Option[String],
+  letzteAnmeldung: Option[DateTime]
+) extends JSONSerializable
 
 case class KundeSummary(id: KundeId, kunde: String) extends Product
 
