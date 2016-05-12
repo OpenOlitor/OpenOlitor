@@ -53,6 +53,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val produktProduktekategorie = produktProduktekategorieMapping.syntax("produktProduktekategorie")
   lazy val abwesenheit = abwesenheitMapping.syntax("abwesenheit")
   lazy val korb = korbMapping.syntax("korb")
+  lazy val vertrieb = vertriebMapping.syntax("vertrieb")
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
@@ -125,34 +126,34 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(abotypMapping(aboTyp)).single
   }
 
-  protected def getDepotlieferungQuery(abotypId: AbotypId) = {
+  protected def getDepotlieferungQuery(vertriebId: VertriebId) = {
     withSQL {
       select
         .from(depotlieferungMapping as depotlieferung)
         .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
-        .where.eq(depotlieferung.abotypId, parameter(abotypId))
+        .where.eq(depotlieferung.vertriebId, parameter(vertriebId))
     }.one(depotlieferungMapping(depotlieferung)).toOne(depotMapping.opt(depot)).map { (vertriebsart, depot) =>
       val depotSummary = DepotSummary(depot.head.id, depot.head.name)
       copyTo[Depotlieferung, DepotlieferungDetail](vertriebsart, "depot" -> depotSummary)
     }.list
   }
 
-  protected def getHeimlieferungQuery(abotypId: AbotypId) = {
+  protected def getHeimlieferungQuery(vertriebId: VertriebId) = {
     withSQL {
       select
         .from(heimlieferungMapping as heimlieferung)
         .leftJoin(tourMapping as tour).on(heimlieferung.tourId, tour.id)
-        .where.eq(heimlieferung.abotypId, parameter(abotypId))
+        .where.eq(heimlieferung.vertriebId, parameter(vertriebId))
     }.one(heimlieferungMapping(heimlieferung)).toOne(tourMapping.opt(tour)).map { (vertriebsart, tour) =>
       copyTo[Heimlieferung, HeimlieferungDetail](vertriebsart, "tour" -> tour.get)
     }.list
   }
 
-  protected def getPostlieferungQuery(abotypId: AbotypId) = {
+  protected def getPostlieferungQuery(vertriebId: VertriebId) = {
     withSQL {
       select
         .from(postlieferungMapping as postlieferung)
-        .where.eq(postlieferung.abotypId, parameter(abotypId))
+        .where.eq(postlieferung.vertriebId, parameter(vertriebId))
     }.map { rs =>
       val pl = postlieferungMapping(postlieferung)(rs)
       copyTo[Postlieferung, PostlieferungDetail](pl)
@@ -193,11 +194,12 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.single
   }
 
-  protected def getUngeplanteLieferungenQuery(abotypId: AbotypId, vertriebsartId: VertriebsartId) = {
+  protected def getUngeplanteLieferungenQuery(abotypId: AbotypId, vertriebId: VertriebId) = {
     withSQL {
       select
         .from(lieferungMapping as lieferung)
-        .where.eq(lieferung.abotypId, parameter(abotypId)).and.eq(lieferung.vertriebsartId, parameter(vertriebsartId)).and.isNull(lieferung.lieferplanungId)
+        .leftJoin(vertriebMapping as vertrieb).on(lieferung.vertriebId, vertrieb.id)
+        .where.eq(vertrieb.abotypId, parameter(abotypId)).and.eq(lieferung.vertriebId, parameter(vertriebId)).and.isNull(lieferung.lieferplanungId)
         .orderBy(lieferung.datum)
     }.map(lieferungMapping(lieferung)).list
   }
@@ -610,6 +612,22 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .where.eq(korb.lieferungId, parameter(lieferungId))
         .and.eq(korb.aboId, parameter(aboId)).and.not.eq(korb.status, Geliefert)
     }.map(korbMapping(korb)).single
+  }
+
+  protected def getVertriebQuery(vertriebId: VertriebId) = {
+    withSQL {
+      select
+        .from(vertriebMapping as vertrieb)
+        .where.eq(vertrieb.id, parameter(vertriebId))
+    }.map(vertriebMapping(vertrieb)).single
+  }
+
+  protected def getVertriebeQuery(abotypId: AbotypId) = {
+    withSQL {
+      select
+        .from(vertriebMapping as vertrieb)
+        .where.eq(vertrieb.abotypId, parameter(abotypId))
+    }.map(vertriebMapping(vertrieb)).list
   }
 
   // MODIFY and DELETE Queries
