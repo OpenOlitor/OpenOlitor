@@ -50,7 +50,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder(AbotypId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
   implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
-  implicit val personIdBinder: TypeBinder[PersonId] = baseIdTypeBinder(PersonId.apply _)
   implicit val pendenzIdBinder: TypeBinder[PendenzId] = baseIdTypeBinder(PendenzId.apply _)
   implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
   implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
@@ -70,11 +69,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
   implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
   implicit val abwesenheitIdBinder: TypeBinder[AbwesenheitId] = baseIdTypeBinder(AbwesenheitId.apply _)
+  implicit val korbIdBinder: TypeBinder[KorbId] = baseIdTypeBinder(KorbId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
   implicit val lieferungStatusTypeBinder: TypeBinder[LieferungStatus] = string.map(LieferungStatus.apply)
+  implicit val kornStatusTypeBinder: TypeBinder[KorbStatus] = string.map(KorbStatus.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
@@ -91,14 +92,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
-  implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = string.map(s => (TreeMap.empty[String, Int] /: s.split(",")) { (tree, str) =>
-    str.split("=") match {
-      case Array(left, right) =>
-        tree + (left -> right.toInt)
-      case _ =>
-        tree
-    }
-  })
+  implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = treeMapTypeBinder(identity, _.toInt)
+  implicit val rolleMapTypeBinder: TypeBinder[Map[Rolle, Boolean]] = mapTypeBinder(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean)
+  implicit val rolleTypeBinder: TypeBinder[Option[Rolle]] = string.map(Rolle.apply)
 
   implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
 
@@ -108,6 +104,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
   implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
+  implicit val korbStatusSqlBinder = toStringSqlBinder[KorbStatus]
   implicit val lieferzeitpunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
@@ -120,7 +117,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
-  implicit val personIdSqlBinder = baseIdSqlBinder[PersonId]
   implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
   implicit val pendenzIdSqlBinder = baseIdSqlBinder[PendenzId]
   implicit val customKundentypIdSqlBinder = baseIdSqlBinder[CustomKundentypId]
@@ -132,6 +128,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val lieferpositionIdSqlBinder = baseIdSqlBinder[LieferpositionId]
   implicit val bestellungIdSqlBinder = baseIdSqlBinder[BestellungId]
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
+  implicit val korbIdSqlBinder = baseIdSqlBinder[KorbId]
   implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
   implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
   implicit val produktekategorieIdSqlBinder = baseIdSqlBinder[ProduktekategorieId]
@@ -146,6 +143,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
   implicit val lieferplanungIdOptionBinder = optionSqlBinder[LieferplanungId]
   implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
+  implicit val rolleSqlBinder = toStringSqlBinder[Rolle]
+  implicit val optionRolleSqlBinder = optionSqlBinder[Rolle]
+  implicit val rolleMapSqlBinder = mapSqlBinder[Rolle, Boolean]
   implicit val fristeSqlBinder = new SqlBinder[Frist] {
     def apply(frist: Frist): Any = {
       val einheit = frist.einheit match {
@@ -270,7 +270,12 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.telefonMobil -> parameter(person.telefonMobil),
         column.telefonFestnetz -> parameter(person.telefonFestnetz),
         column.bemerkungen -> parameter(person.bemerkungen),
-        column.sort -> parameter(person.sort)
+        column.sort -> parameter(person.sort),
+        column.loginAktiv -> parameter(person.loginAktiv),
+        column.passwort -> parameter(person.passwort),
+        column.passwortWechselErforderlich -> parameter(person.passwortWechselErforderlich),
+        column.rolle -> parameter(person.rolle),
+        column.letzteAnmeldung -> parameter(person.letzteAnmeldung)
       )
     }
   }
@@ -317,11 +322,11 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.vertriebsartBeschrieb -> parameter(lieferung.vertriebsartBeschrieb),
         column.status -> parameter(lieferung.status),
         column.datum -> parameter(lieferung.datum),
-        column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten),
         column.durchschnittspreis -> parameter(lieferung.durchschnittspreis),
         column.anzahlLieferungen -> parameter(lieferung.anzahlLieferungen),
         column.anzahlKoerbeZuLiefern -> parameter(lieferung.anzahlKoerbeZuLiefern),
-        column.anzahlKoerbeNichtZuLiefern -> parameter(lieferung.anzahlKoerbeNichtZuLiefern),
+        column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten),
+        column.anzahlSaldoZuTief -> parameter(lieferung.anzahlSaldoZuTief),
         column.zielpreis -> parameter(lieferung.zielpreis),
         column.preisTotal -> parameter(lieferung.preisTotal),
         column.lieferplanungId -> parameter(lieferung.lieferplanungId),
@@ -697,7 +702,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.emailErforderlich -> parameter(projekt.emailErforderlich),
         column.waehrung -> parameter(projekt.waehrung),
         column.geschaeftsjahrMonat -> parameter(projekt.geschaeftsjahrMonat),
-        column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag)
+        column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag),
+        column.twoFactorAuthentication -> parameter(projekt.twoFactorAuthentication)
       )
     }
   }
@@ -754,6 +760,25 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferungId -> parameter(entity.lieferungId),
         column.datum -> parameter(entity.datum),
         column.bemerkung -> parameter(entity.bemerkung)
+      )
+    }
+  }
+
+  implicit val korbMapping = new BaseEntitySQLSyntaxSupport[Korb] {
+    override val tableName = "Korb"
+
+    override lazy val columns = autoColumns[Korb]()
+
+    def apply(rn: ResultName[Korb])(rs: WrappedResultSet): Korb =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Korb): Seq[Any] = parameters(Korb.unapply(entity).get)
+
+    override def updateParameters(entity: Korb) = {
+      super.updateParameters(entity) ++ Seq(
+        column.lieferungId -> parameter(entity.lieferungId),
+        column.aboId -> parameter(entity.aboId),
+        column.status -> parameter(entity.status)
       )
     }
   }

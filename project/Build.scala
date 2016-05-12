@@ -27,6 +27,7 @@ object BuildSettings {
     libraryDependencies ++= {	  
 	  Seq(
 	    "io.spray"            %%  "spray-can"     					           % sprayV,
+	    "io.spray"            %%  "spray-caching"     					           % sprayV,
 	    "io.spray"            %%  "spray-routing-shapeless2" 		       % sprayV,
 	    "io.spray"            %%  "spray-testkit" 					           % sprayV  % "test",
 	    "io.spray" 			      %%  "spray-json"    					           % sprayV,
@@ -62,7 +63,8 @@ object BuildSettings {
 	    "org.jfarcand" % "wcs" % "1.5",
 	    "com.scalapenos" %% "stamina-json" % "0.1.1",
       //s3 access
-        "com.sclasen" %% "spray-s3" % "0.3.6"
+        "com.sclasen" %% "spray-s3" % "0.3.6",
+        "de.svenkubiak" % "jBCrypt" % "0.4.1"
 	  )
 	}
   )

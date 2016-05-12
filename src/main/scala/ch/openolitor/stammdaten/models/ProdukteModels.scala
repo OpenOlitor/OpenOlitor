@@ -76,9 +76,9 @@ case class Produktekategorie(
     beschreibung: String,
     //modification flags
     erstelldat: DateTime,
-    ersteller: UserId,
+    ersteller: PersonId,
     modifidat: DateTime,
-    modifikator: UserId
+    modifikator: PersonId
 ) extends BaseEntity[ProduktekategorieId] {
 }
 
@@ -98,9 +98,9 @@ case class Produkt(
   produzenten: Seq[String],
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ProduktId]
 
 case class ProduktModify(
@@ -122,9 +122,9 @@ case class ProduktProduzent(
   produzentId: ProduzentId,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ProduktProduzentId]
 
 case class ProduktProduktekategorieId(id: Long) extends BaseId
@@ -135,8 +135,8 @@ case class ProduktProduktekategorie(
   produktekategorieId: ProduktekategorieId,
   //modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ProduktProduktekategorieId]
 

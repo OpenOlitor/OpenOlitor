@@ -20,14 +20,26 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.security
 
+import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.models.PersonId
-import org.joda.time.DateTime
+import ch.openolitor.stammdaten.models.PersonSummary
 
-case class EventMetadata(originator: PersonId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
+case class LoginForm(email: String, passwort: String) extends JSONSerializable
+case class SecondFactorLoginForm(token: String, code: String) extends JSONSerializable
+case class SecondFactor(token: String, code: String, personId: PersonId)
 
-trait PersistentEvent extends Serializable {
-  val meta: EventMetadata
+sealed trait LoginStatus extends Product
+case object LoginOk extends LoginStatus
+case object LoginSecondFactorRequired extends LoginStatus
+
+object LoginStatus {
+  def apply(value: String): Option[LoginStatus] = {
+    Vector(LoginOk, LoginSecondFactorRequired).find(_.toString == value)
+  }
 }
 
+case class LoginResult(status: LoginStatus, token: String, person: PersonSummary) extends JSONSerializable
+
+case class LoginFailed(msg: String)

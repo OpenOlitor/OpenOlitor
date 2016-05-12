@@ -54,9 +54,9 @@ case class ZahlungsImport(
   anzahlZahlungsEingaengeErledigt: Int,
   // modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ZahlungsImportId]
 
 case class ZahlungsImportCreate(
@@ -71,9 +71,9 @@ case class ZahlungsImportDetail(
   zahlungsEingaenge: Seq[ZahlungsEingang],
   // modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends JSONSerializable
 
 case class ZahlungsEingang(
@@ -93,9 +93,9 @@ case class ZahlungsEingang(
   bemerkung: Option[String],
   // modification flags
   erstelldat: DateTime,
-  ersteller: UserId,
+  ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: UserId
+  modifikator: PersonId
 ) extends BaseEntity[ZahlungsEingangId]
 
 case class ZahlungsEingangCreate(

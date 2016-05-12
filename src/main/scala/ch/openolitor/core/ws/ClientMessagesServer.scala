@@ -26,7 +26,7 @@ import akka.actor._
 import spray.can.Http
 import ClientMessages._
 import ch.openolitor.core._
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.ws.ControlCommands.SendToClient
 import ch.openolitor.core.ws.ClientMessagesWorker.Push
 import spray.json.RootJsonWriter
@@ -36,22 +36,22 @@ trait ClientReceiverComponent {
 }
 
 object ControlCommands {
-  case class SendToClient(senderUserId: UserId, msg: String, receivers: List[UserId] = Nil)
+  case class SendToClient(senderPersonId: PersonId, msg: String, receivers: List[PersonId] = Nil)
 }
 
 trait ClientReceiver extends EventStream {
 
-  def broadcast[M >: ClientMessage](senderUserId: UserId, msg: M)(implicit writer: RootJsonWriter[M]) =
-    publish(SendToClient(senderUserId, msgToString(msg)))
+  def broadcast[M >: ClientMessage](senderPersonId: PersonId, msg: M)(implicit writer: RootJsonWriter[M]) =
+    publish(SendToClient(senderPersonId, msgToString(msg)))
 
   /**
    * Send OutEvent to a list of receiving clients exclusing sender itself
    */
-  def send[M](senderUserId: UserId, msg: M, receivers: List[UserId])(implicit writer: RootJsonWriter[M]) =
-    publish(SendToClient(senderUserId, msgToString(msg), receivers))
+  def send[M](senderPersonId: PersonId, msg: M, receivers: List[PersonId])(implicit writer: RootJsonWriter[M]) =
+    publish(SendToClient(senderPersonId, msgToString(msg), receivers))
 
-  def send[M](senderUserId: UserId, msg: M)(implicit writer: RootJsonWriter[M]): Unit =
-    send(senderUserId, msg, List(senderUserId))
+  def send[M](senderPersonId: PersonId, msg: M)(implicit writer: RootJsonWriter[M]): Unit =
+    send(senderPersonId, msg, List(senderPersonId))
 
   def msgToString[M](msg: M)(implicit writer: RootJsonWriter[M]) =
     writer.write(msg).compactPrint
@@ -64,7 +64,7 @@ class ClientMessagesServer extends Actor with ActorLogging {
 
   import ClientMessagesJsonProtocol._
 
-  def actorName(id: UserId): String = "uid:" + id.id.toString
+  def actorName(id: PersonId): String = "uid:" + id.id.toString
 
   override def preStart() {
     super.preStart()
@@ -84,15 +84,15 @@ class ClientMessagesServer extends Actor with ActorLogging {
       val serverConnection = sender()
 
       //...how to we get userid?
-      val userId = Boot.systemUserId
+      val personId = Boot.systemPersonId
 
-      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), actorName(userId) + "-" + System.currentTimeMillis)
+      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), actorName(personId) + "-" + System.currentTimeMillis)
       serverConnection ! Http.Register(conn)
-    case SendToClient(senderUserId, msg, Nil) =>
+    case SendToClient(senderPersonId, msg, Nil) =>
       //broadcast to all      
       log.debug(s"Broadcast client message:$msg")
       context.children.map(c => c ! Push(msg))
-    case SendToClient(senderUserId, msg, receivers) =>
+    case SendToClient(senderPersonId, msg, receivers) =>
       //send to specific clients only
       log.debug(s"send client message:$msg:$receivers")
       receivers.map { receiver =>

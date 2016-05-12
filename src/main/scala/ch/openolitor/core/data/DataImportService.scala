@@ -45,23 +45,25 @@ import ch.openolitor.core.SystemConfig
 import ch.openolitor.buchhaltung.BuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.core.domain.EntityStore
+import ch.openolitor.core.NoPublishEventStream
 
 object DataImportService {
   case class ImportData(clearDatabaseBeforeImport: Boolean, document: InputStream)
   case class ImportResult(error: Option[String], result: Map[String, Int])
 
-  def props(sysConfig: SystemConfig, entityStore: ActorRef): Props = Props(classOf[DefaultDataImportService], sysConfig, entityStore)
+  def props(sysConfig: SystemConfig, entityStore: ActorRef, system: ActorSystem): Props = Props(classOf[DefaultDataImportService], sysConfig, entityStore, system)
 }
 
 trait DataImportServiceComponent {
 }
 
-class DefaultDataImportService(override val sysConfig: SystemConfig, override val entityStore: ActorRef) extends DataImportService
+class DefaultDataImportService(override val sysConfig: SystemConfig, override val entityStore: ActorRef, override val system: ActorSystem) extends DataImportService
   with DefaultStammdatenWriteRepositoryComponent
   with DefaultBuchhaltungWriteRepositoryComponent
 
 trait DataImportService extends Actor with ActorLogging
     with BaseWriteRepository
+    with NoPublishEventStream
     with StammdatenDBMappings
     with BuchhaltungDBMappings
     with ConnectionPoolContextAware
@@ -71,7 +73,6 @@ trait DataImportService extends Actor with ActorLogging
   import DataImportService._
   import DataImportParser._
 
-  override val system = context.system
   val entityStore: ActorRef
 
   val parser = context.actorOf(DataImportParser.props)
@@ -88,6 +89,7 @@ trait DataImportService extends Actor with ActorLogging
 
   val waitForResult: Receive = {
     case e: ParseError =>
+      e.error.printStackTrace
       originator.map(_ ! e)
     case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, lieferungen,
       lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
@@ -104,7 +106,7 @@ trait DataImportService extends Actor with ActorLogging
 
           //import entities
           //TODO: get userid from login
-          implicit val userId = Boot.systemUserId
+          implicit val personId = Boot.systemPersonId
           log.debug(s"Start importing data")
           log.debug(s"Import Projekt...")
           var result = Map[String, Int]()
@@ -162,6 +164,7 @@ trait DataImportService extends Actor with ActorLogging
         }
       } catch {
         case t: Throwable =>
+          t.printStackTrace
           logger.warn(s"Received error while importing data {}", t)
           originator.map(_ ! ImportResult(Option(t.getMessage), Map()))
       }
@@ -176,7 +179,7 @@ trait DataImportService extends Actor with ActorLogging
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: UserId) = {
+    user: PersonId) = {
     log.debug(s"Import ${entities.length} $name...")
     entities.map { entity =>
       insertEntity[E, I](entity)

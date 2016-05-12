@@ -40,7 +40,7 @@ import scala.collection.immutable.TreeMap
 import java.io.InputStream
 import scala.util._
 
-case class ParseException(msg: String) extends Exception
+case class ParseException(msg: String) extends Exception(msg)
 
 class DataImportParser extends Actor with ActorLogging {
   import DataImportParser._
@@ -53,7 +53,7 @@ class DataImportParser extends Actor with ActorLogging {
           case Success(result) =>
             rec ! result
           case Failure(error) =>
-            log.warning("Couldn't import data {}", error)
+            log.warning("Couldn't import data {}", error.getMessage)
             rec ! ParseError(error)
         }
       } catch {
@@ -121,12 +121,13 @@ class DataImportParser extends Actor with ActorLogging {
 
   def parseProjekte = {
     parse[Projekt, ProjektId]("id", Seq("bezeichnung", "strasse", "haus_nummer", "adress_zusatz", "plz", "ort",
-      "preise_sichtbar", "preise_editierbar", "email_erforderlich", "waehrung", "geschaeftsjahr_monat", "geschaeftsjahr_tag") ++ modifiCols) { id => indexes =>
+      "preise_sichtbar", "preise_editierbar", "email_erforderlich", "waehrung", "geschaeftsjahr_monat", "geschaeftsjahr_tag", "two_factor_auth") ++ modifiCols) { id => indexes =>
       row =>
         //match column indexes
         val Seq(indexBezeichnung, indexStrasse, indexHausNummer, indexAdressZusatz, indexPlz, indexOrt, indexPreiseSichtbar,
-          indexPreiseEditierbar, indexEmailErforderlich, indexWaehrung, indexGeschaeftsjahrMonat, indexGeschaeftsjahrTag) = indexes.take(12)
+          indexPreiseEditierbar, indexEmailErforderlich, indexWaehrung, indexGeschaeftsjahrMonat, indexGeschaeftsjahrTag, indexTwoFactorAuth) = indexes.take(13)
         val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+        val twoFactorAuth = parseMap(row.value[String](indexTwoFactorAuth))(r => Rolle(r).getOrElse(throw ParseException(s"Unknown Rolle $r while parsing Projekt")), _.toBoolean)
 
         Projekt(
           id = ProjektId(id),
@@ -142,11 +143,12 @@ class DataImportParser extends Actor with ActorLogging {
           waehrung = Waehrung(row.value[String](indexWaehrung)),
           geschaeftsjahrMonat = row.value[Int](indexGeschaeftsjahrMonat),
           geschaeftsjahrTag = row.value[Int](indexGeschaeftsjahrTag),
+          twoFactorAuthentication = twoFactorAuth,
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
-          ersteller = UserId(row.value[Long](indexErsteller)),
+          ersteller = PersonId(row.value[Long](indexErsteller)),
           modifidat = row.value[DateTime](indexModifidat),
-          modifikator = UserId(row.value[Long](indexModifikator))
+          modifikator = PersonId(row.value[Long](indexModifikator))
         )
     }
   }
@@ -193,20 +195,20 @@ class DataImportParser extends Actor with ActorLogging {
         anzahlPersonen = row.value[Int](indexAnzahlPersonen),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
 
   def parsePersonen = {
     parse[Person, PersonId]("id", Seq("kunde_id", "anrede", "name", "vorname", "email", "email_alternative",
-      "telefon_mobil", "telefon_festnetz", "bemerkungen", "sort") ++ modifiCols) { id => indexes =>
+      "telefon_mobil", "telefon_festnetz", "bemerkungen", "sort", "login_aktiv", "passwort", "letzte_anmeldung", "passwort_wechsel", "rolle") ++ modifiCols) { id => indexes =>
       row =>
         //match column indexes
         val Seq(indexKundeId, indexAnrede, indexName, indexVorname, indexEmail, indexEmailAlternative, indexTelefonMobil,
-          indexTelefonFestnetz, indexBemerkungen, indexSort) = indexes.take(10)
+          indexTelefonFestnetz, indexBemerkungen, indexSort, indexLoginAktiv, indexPasswort, indexLetzteAnmeldung, indexPasswortWechselErforderlich, indexRolle) = indexes.take(15)
         val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
         val kundeId = KundeId(row.value[Long](indexKundeId))
@@ -223,11 +225,17 @@ class DataImportParser extends Actor with ActorLogging {
           telefonFestnetz = row.value[Option[String]](indexTelefonFestnetz),
           bemerkungen = row.value[Option[String]](indexBemerkungen),
           sort = row.value[Int](indexSort),
-          //modification flags
+          // security daten
+          loginAktiv = row.value[Boolean](indexLoginAktiv),
+          passwort = row.value[Option[String]](indexPasswort).map(_.toCharArray),
+          letzteAnmeldung = row.value[Option[DateTime]](indexLetzteAnmeldung),
+          passwortWechselErforderlich = row.value[Boolean](indexPasswortWechselErforderlich),
+          rolle = row.value[Option[String]](indexRolle).map(r => Rolle(r).getOrElse(throw ParseException(s"Unbekannte Rolle $r bei Person Nr. $id"))),
+          // modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
-          ersteller = UserId(row.value[Long](indexErsteller)),
+          ersteller = PersonId(row.value[Long](indexErsteller)),
           modifidat = row.value[DateTime](indexModifidat),
-          modifikator = UserId(row.value[Long](indexModifikator))
+          modifikator = PersonId(row.value[Long](indexModifikator))
         )
     }
   }
@@ -251,9 +259,9 @@ class DataImportParser extends Actor with ActorLogging {
           status = PendenzStatus(row.value[String](indexStatus)),
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
-          ersteller = UserId(row.value[Long](indexErsteller)),
+          ersteller = PersonId(row.value[Long](indexErsteller)),
           modifidat = row.value[DateTime](indexModifidat),
-          modifikator = UserId(row.value[Long](indexModifikator))
+          modifikator = PersonId(row.value[Long](indexModifikator))
         )
     }
   }
@@ -296,9 +304,9 @@ class DataImportParser extends Actor with ActorLogging {
         anzahlAbonnenten = row.value[Int](indexAnzahlAbonnenten),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -315,9 +323,9 @@ class DataImportParser extends Actor with ActorLogging {
         beschreibung = row.value[Option[String]](indexBeschreibung),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -371,9 +379,9 @@ class DataImportParser extends Actor with ActorLogging {
         waehrung = Waehrung(row.value[String](indexWaehrung)),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -392,9 +400,9 @@ class DataImportParser extends Actor with ActorLogging {
         bemerkung = row.value[Option[String]](indexBemerkung),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -417,25 +425,25 @@ class DataImportParser extends Actor with ActorLogging {
           abotypId, depotId, liefertag,
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
-          ersteller = UserId(row.value[Long](indexErsteller)),
+          ersteller = PersonId(row.value[Long](indexErsteller)),
           modifidat = row.value[DateTime](indexModifidat),
-          modifikator = UserId(row.value[Long](indexModifikator))
+          modifikator = PersonId(row.value[Long](indexModifikator))
         )
       }.getOrElse {
         tourIdOpt.map { tourId =>
           Heimlieferung(vertriebsartId, abotypId, tourId, liefertag,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
-            ersteller = UserId(row.value[Long](indexErsteller)),
+            ersteller = PersonId(row.value[Long](indexErsteller)),
             modifidat = row.value[DateTime](indexModifidat),
-            modifikator = UserId(row.value[Long](indexModifikator)))
+            modifikator = PersonId(row.value[Long](indexModifikator)))
         }.getOrElse {
           Postlieferung(vertriebsartId, abotypId, liefertag,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
-            ersteller = UserId(row.value[Long](indexErsteller)),
+            ersteller = PersonId(row.value[Long](indexErsteller)),
             modifidat = row.value[DateTime](indexModifidat),
-            modifikator = UserId(row.value[Long](indexModifikator)))
+            modifikator = PersonId(row.value[Long](indexModifikator)))
         }
       }
     }
@@ -453,9 +461,9 @@ class DataImportParser extends Actor with ActorLogging {
         produzentId = ProduzentId(row.value[Long](indexProduzentId)),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -472,9 +480,9 @@ class DataImportParser extends Actor with ActorLogging {
         produktekategorieId = ProduktekategorieId(row.value[Long](indexProduktekategorieId)),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -490,9 +498,9 @@ class DataImportParser extends Actor with ActorLogging {
         beschreibung = row.value[String](indexBeschreibung),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -524,9 +532,9 @@ class DataImportParser extends Actor with ActorLogging {
         produzentenName,
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -562,9 +570,9 @@ class DataImportParser extends Actor with ActorLogging {
         aktiv = row.value[Boolean](indexAktiv),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -583,9 +591,9 @@ class DataImportParser extends Actor with ActorLogging {
         status = LieferungStatus(row.value[String](indexStatus)),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -617,9 +625,9 @@ class DataImportParser extends Actor with ActorLogging {
         anzahl = row.value[Int](indexAnzahl),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -627,10 +635,10 @@ class DataImportParser extends Actor with ActorLogging {
   def parseLieferungen(abotypen: List[Abotyp], vertriebsarten: List[Vertriebsart], abwesenheiten: List[Abwesenheit], lieferplanungen: List[Lieferplanung],
     depots: List[Depot], touren: List[Tour]) = {
     parse[Lieferung, LieferungId]("id", Seq("abotyp_id", "vertriebsart_id", "lieferplanung_id", "status", "datum", "anzahl_abwesenheiten", "durchschnittspreis",
-      "anzahl_lieferungen", "anzahl_koerbe_zu_liefern", "anzahl_koerbe_nicht_zu_liefern", "zielpreis", "preis_total") ++ modifiCols) { id => indexes => row =>
+      "anzahl_lieferungen", "anzahl_koerbe_zu_liefern", "anzahl_saldo_zu_tief", "zielpreis", "preis_total") ++ modifiCols) { id => indexes => row =>
       //match column indexes
       val Seq(indexAbotypId, indexVertriebsartId, indexLieferplanungId, indexStatus, indexDatum, indexAnzahlAbwesenheiten, indexDurchschnittspreis,
-        indexAnzahlLieferungen, indexAnzahlKoerbeZuLiefern, indexAnzahlKoerbeNichtZuLiefern, indexZielpreis, indexPreisTotal) = indexes.take(12)
+        indexAnzahlLieferungen, indexAnzahlKoerbeZuLiefern, indexAnzahlSaldoZuTief, indexZielpreis, indexPreisTotal) = indexes.take(12)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val lieferungId = LieferungId(id)
@@ -662,20 +670,20 @@ class DataImportParser extends Actor with ActorLogging {
         vertriebsartBeschrieb = vaBeschrieb,
         status = LieferungStatus(row.value[String](indexStatus)),
         datum = row.value[DateTime](indexDatum),
-        anzahlAbwesenheiten = row.value[Int](indexAnzahlAbwesenheiten),
         durchschnittspreis = row.value[BigDecimal](indexDurchschnittspreis),
         anzahlLieferungen = row.value[Int](indexAnzahlLieferungen),
         anzahlKoerbeZuLiefern = row.value[Int](indexAnzahlKoerbeZuLiefern),
-        anzahlKoerbeNichtZuLiefern = row.value[Int](indexAnzahlKoerbeNichtZuLiefern),
+        anzahlAbwesenheiten = row.value[Int](indexAnzahlAbwesenheiten),
+        anzahlSaldoZuTief = row.value[Int](indexAnzahlSaldoZuTief),
         zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
         preisTotal = row.value[BigDecimal](indexPreisTotal),
         lieferplanungId = lieferplanungId,
         lieferplanungNr = lieferplanungNr,
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -705,13 +713,13 @@ class DataImportParser extends Actor with ActorLogging {
 
         val letzteLieferung = row.value[Option[DateTime]](indexLetzteLieferung)
         //calculate count
-        val anzahlAbwesenheiten = parseTreeMap(row.value[String](indexAnzahlAbwesenheiten))
-        val anzahlLieferungen = parseTreeMap(row.value[String](lieferungenIndex))
+        val anzahlAbwesenheiten = parseTreeMap(row.value[String](indexAnzahlAbwesenheiten))(identity, _.toInt)
+        val anzahlLieferungen = parseTreeMap(row.value[String](lieferungenIndex))(identity, _.toInt)
 
         val erstelldat = row.value[DateTime](indexErstelldat)
-        val ersteller = UserId(row.value[Long](indexErsteller))
+        val ersteller = PersonId(row.value[Long](indexErsteller))
         val modifidat = row.value[DateTime](indexModifidat)
-        val modifikator = UserId(row.value[Long](indexModifikator))
+        val modifikator = PersonId(row.value[Long](indexModifikator))
 
         val kundeId = kundeIdMapping.getOrElse(kundeIdInt, throw ParseException(s"Kunde id $kundeIdInt referenced from abo not found"))
         val kunde = kunden.filter(_.id == kundeId).headOption.map(_.bezeichnung).getOrElse(throw ParseException(s"Kunde not found for id:$kundeId"))
@@ -766,9 +774,9 @@ class DataImportParser extends Actor with ActorLogging {
         preisTotal = row.value[BigDecimal](indexPreisTotal),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -796,9 +804,9 @@ class DataImportParser extends Actor with ActorLogging {
         anzahl = row.value[Int](indexAnzahl),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
@@ -816,18 +824,29 @@ class DataImportParser extends Actor with ActorLogging {
         anzahlVerknuepfungen = row.value[Int](indexAnzahlVerknuepfungen),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
-        ersteller = UserId(row.value[Long](indexErsteller)),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
         modifidat = row.value[DateTime](indexModifidat),
-        modifikator = UserId(row.value[Long](indexModifikator))
+        modifikator = PersonId(row.value[Long](indexModifikator))
       )
     }
   }
 
-  def parseTreeMap(value: String) = {
-    (TreeMap.empty[String, Int] /: value.split(",")) { (tree, str) =>
+  def parseTreeMap[K: Ordering, V](value: String)(kf: String => K, vf: String => V): TreeMap[K, V] = {
+    (TreeMap.empty[K, V] /: value.split(",")) { (tree, str) =>
       str.split("=") match {
         case Array(left, right) =>
-          tree + (left -> right.toInt)
+          tree + (kf(left) -> vf(right))
+        case _ =>
+          tree
+      }
+    }
+  }
+
+  def parseMap[K, V](value: String)(kf: String => K, vf: String => V): Map[K, V] = {
+    (Map.empty[K, V] /: value.split(",")) { (tree, str) =>
+      str.split("=") match {
+        case Array(left, right) =>
+          tree + (kf(left) -> vf(right))
         case _ =>
           tree
       }
@@ -949,7 +968,7 @@ object DataImportParser {
         case t if t =:= typeOf[Boolean] => self.getStringValue match {
           case "true" | "1" | "x" | "X" => true
           case "false" | "0" => false
-          case x => throw ParseException(s"Unsupported boolean format:$x")
+          case x => throw ParseException(s"Unsupported boolean format:'$x' on col:${self.getColumnIndex}, row:${self.getRowIndex}")
         }
 
         case t if t =:= typeOf[String] => self.getStringValue
@@ -967,7 +986,7 @@ object DataImportParser {
         case t if t =:= typeOf[Float] => self.getStringValue.toFloat
         case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
         case _ =>
-          throw ParseException(s"Unsupported format:$typ")
+          throw ParseException(s"Unsupported format:$typ on col:${self.getColumnIndex}, row:${self.getRowIndex}")
       }).asInstanceOf[T]
     }
 

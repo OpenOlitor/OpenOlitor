@@ -86,7 +86,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   import EntityStore._
 
   //TODO: get real userid from login
-  override val userId: UserId = Boot.systemUserId
+  override val personId: PersonId = Boot.systemPersonId
 
   lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
     kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
@@ -349,7 +349,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
 
   def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(userId, id)) {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
       case _ =>
@@ -358,7 +358,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   }
 
   def lieferplanungVerrechnen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbrechnenCommand(userId, id)) {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbrechnenCommand(personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Verrechnet")
       case _ =>
@@ -367,9 +367,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   }
 
   def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _]) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(userId, bestellungId)) {
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(personId, bestellungId)) {
       case UserCommandFailed =>
-        complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
+        complete(StatusCodes.BadRequest, s"Could not execute BestellungErneutVersenden on Bestellung")
       case _ =>
         complete("")
     }

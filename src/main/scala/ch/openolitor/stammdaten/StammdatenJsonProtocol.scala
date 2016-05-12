@@ -79,9 +79,25 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
+  implicit val rolleFormat = new JsonFormat[Rolle] {
+    def write(obj: Rolle): JsValue =
+      obj match {
+        case AdministratorZugang => JsString("Administrator")
+        case KundenZugang => JsString("Kunde")
+      }
+
+    def read(json: JsValue): Rolle =
+      json match {
+        case JsString("Administrator") => AdministratorZugang
+        case JsString("Kunde") => KundenZugang
+        case pe => sys.error(s"Unknown Rolle:$pe")
+      }
+  }
+
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
+  implicit val korbStatusFormat = enumFormat(KorbStatus.apply)
   implicit val pendenzStatusFormat = enumFormat(PendenzStatus.apply)
   implicit val liefereinheitFormat = enumFormat(Liefereinheit.apply)
 
@@ -92,7 +108,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val tourIdFormat = baseIdFormat(TourId)
   implicit val kundeIdFormat = baseIdFormat(KundeId)
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
-  implicit val personIdFormat = baseIdFormat(PersonId)
   implicit val aboIdFormat = baseIdFormat(AboId)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId)
   implicit val lieferplanungIdFormat = baseIdFormat(LieferplanungId)
@@ -363,6 +378,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val bestellungModifyFormat = autoProductFormat[BestellungModify]
   implicit val bestellungenCreateFormat = autoProductFormat[BestellungenCreate]
   implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
+
+  implicit val korbCreateFormat = autoProductFormat[KorbCreate]
+  implicit val korbModifyFormat = autoProductFormat[KorbModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 }

@@ -33,8 +33,9 @@ import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
 import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
 import ch.openolitor.stammdaten.StammdatenCommandHandler.BestellungVersendenEvent
+import ch.openolitor.core.eventsourcing.CoreEventStoreSerializer
 
-trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol {
+trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol with CoreEventStoreSerializer {
   //V1 persisters
   implicit val depotModifyPersister = persister[DepotModify]("depot-modify")
   implicit val depotIdPersister = persister[DepotId]("depot-id")
@@ -48,7 +49,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val kundeIdPersister = persister[KundeId]("kunde-id")
 
   implicit val personCreatePersister = persister[PersonCreate]("person-create")
-  implicit val personIdPersister = persister[PersonId]("person-id")
 
   implicit val abwesenheitCreatePersister = persister[AbwesenheitCreate]("abwesenheit-create")
   implicit val abwesenheitIdPersister = persister[AbwesenheitId]("abwesenheit-id")
@@ -110,6 +110,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
   implicit val BestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
 
+  implicit val korbCratePersister = persister[KorbCreate]("korb-create")
+  implicit val korbModifyPersister = persister[KorbModify]("korb-modify")
+
   val stammdatenPersisters = List(
     depotModifyPersister,
     depotIdPersister,
@@ -119,7 +122,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     kundeModifyPersister,
     kundeIdPersister,
     personCreatePersister,
-    personIdPersister,
     pendenzIdPersister,
     pendenzCreatePersister,
     vertriebsartDLPersister,
@@ -166,6 +168,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     abwesenheitIdPersister,
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
-    BestellungVersendenEventPersister
+    BestellungVersendenEventPersister,
+    korbCratePersister,
+    korbModifyPersister
   )
 }

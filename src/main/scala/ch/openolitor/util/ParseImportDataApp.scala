@@ -97,12 +97,12 @@ object ParseImportDataApp extends App {
         print(r.bestellungen)
         print(r.bestellpositionen)
         print("Parsing finished")
-        context.system.shutdown
+        context.system.terminate()
       case ParseError(error) =>
         log.error(s"Couldn't parse file", error)
       case Terminated(_) =>
         log.info("{} has terminated, shutting down system", parser.path)
-        context.system.shutdown
+        context.system.terminate()
     }
   }
 }

@@ -42,6 +42,7 @@ import akka.actor.ActorSystem
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.AkkaEventStream
 
 trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMappings with StammdatenDBMappings {
   lazy val rechnung = rechnungMapping.syntax("rechnung")
@@ -141,7 +142,7 @@ trait BuchhaltungReadRepository {
 /**
  * Synchronous Repository
  */
-trait BuchhaltungWriteRepository extends BaseWriteRepository {
+trait BuchhaltungWriteRepository extends BaseWriteRepository with EventStream {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 
   def getRechnungen(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung]
@@ -179,7 +180,7 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
   }
 }
 
-class BuchhaltungWriteRepositoryImpl(val system: ActorSystem) extends BuchhaltungWriteRepository with LazyLogging with EventStream with BuchhaltungRepositoryQueries {
+class BuchhaltungWriteRepositoryImpl(val system: ActorSystem) extends BuchhaltungWriteRepository with LazyLogging with AkkaEventStream with BuchhaltungRepositoryQueries {
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB localTx { implicit session =>
       sql"truncate table ${rechnungMapping.table}".execute.apply()

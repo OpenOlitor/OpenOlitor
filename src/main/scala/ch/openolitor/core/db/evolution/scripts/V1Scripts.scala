@@ -28,10 +28,19 @@ import scala.util._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import org.mindrot.jbcrypt.BCrypt
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.DefaultStammdatenWriteRepositoryComponent
+import ch.openolitor.core.SystemConfig
+import org.joda.time.DateTime
+import scala.collection.immutable.TreeMap
+import ch.openolitor.core.repositories.BaseWriteRepository
+import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.core.models.PersonId
 
 object V1Scripts {
   val StammdatenDBInitializationScript = new Script with LazyLogging with StammdatenDBMappings {
-    def execute(implicit session: DBSession): Try[Boolean] = {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       //drop all tables
       logger.debug(s"oo-system: cleanupDatabase - drop tables - stammdaten")
 
@@ -53,6 +62,7 @@ object V1Scripts {
       sql"drop table if exists ${lieferpositionMapping.table}".execute.apply()
       sql"drop table if exists ${bestellungMapping.table}".execute.apply()
       sql"drop table if exists ${bestellpositionMapping.table}".execute.apply()
+      sql"drop table if exists ${korbMapping.table}".execute.apply()
       sql"drop table if exists ${produktMapping.table}".execute.apply()
       sql"drop table if exists ${produktekategorieMapping.table}".execute.apply()
       sql"drop table if exists ${produzentMapping.table}".execute.apply()
@@ -218,6 +228,11 @@ object V1Scripts {
         telefon_festnetz varchar(50),
         bemerkungen varchar(512),
         sort int not null,
+        login_aktiv varchar(1) not null,
+        passwort varchar(300),
+        letzte_anmeldung datetime,
+        passwort_wechsel_erforderlich varchar(1),
+        rolle varchar(50),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -303,11 +318,11 @@ object V1Scripts {
         vertriebsart_beschrieb varchar(100) not null,
         status varchar(50) not null,
         datum datetime not null,
-        anzahl_abwesenheiten int not null,
         durchschnittspreis DECIMAL(7,2) not null,
         anzahl_lieferungen int not null,
         anzahl_koerbe_zu_liefern int not null,
-        anzahl_koerbe_nicht_zu_liefern int not null,
+        anzahl_abwesenheiten int not null,
+        anzahl_saldo_zu_tief int not null,
         zielpreis DECIMAL(7,2),
         preis_total DECIMAL(7,2) not null,
         lieferplanung_id varchar(36),
@@ -358,6 +373,17 @@ object V1Scripts {
         menge DECIMAL(7,2),
         preis DECIMAL(7,2),
         anzahl int not null,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${korbMapping.table}  (
+        id varchar(36) not null,
+        lieferung_id varchar(36) not null,
+        abo_id varchar(36)  not null,
+        status varchar(50) not null,
+        guthaben_vor_lieferung int not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -425,6 +451,7 @@ object V1Scripts {
         waehrung varchar(10) not null,
         geschaeftsjahr_monat DECIMAL(2,0) not null,
         geschaeftsjahr_tag DECIMAL(2,0) not null,
+        two_factor_authentication varchar(100),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -464,8 +491,101 @@ object V1Scripts {
     }
   }
 
+  val InitialDataScript = new Script with LazyLogging with StammdatenDBMappings with BaseWriteRepository with NoPublishEventStream {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      //Create initial account
+      val pwd = BCrypt.hashpw("openOlit0rAdmin1", BCrypt.gensalt());
+      val pid = sysConfig.mandantConfiguration.dbSeeds.get(classOf[PersonId]).getOrElse(1L)
+      implicit val personId = PersonId(pid)
+      val kid = sysConfig.mandantConfiguration.dbSeeds.get(classOf[KundeId]).getOrElse(1L)
+      val kunde = Kunde(
+        id = KundeId(kid),
+        bezeichnung = "System Administator",
+        strasse = "",
+        hausNummer = None,
+        adressZusatz = None,
+        plz = "",
+        ort = "",
+        bemerkungen = None,
+        abweichendeLieferadresse = false,
+        bezeichnungLieferung = None,
+        strasseLieferung = None,
+        hausNummerLieferung = None,
+        adressZusatzLieferung = None,
+        plzLieferung = None,
+        ortLieferung = None,
+        zusatzinfoLieferung = None,
+        typen = Set(),
+        //Zusatzinformationen
+        anzahlAbos = 0,
+        anzahlPendenzen = 0,
+        anzahlPersonen = 1,
+        //modification flags
+        erstelldat = DateTime.now,
+        ersteller = personId,
+        modifidat = DateTime.now,
+        modifikator = personId
+      )
+
+      val person = Person(
+        id = personId,
+        kundeId = kunde.id,
+        anrede = None,
+        name = "Administrator",
+        vorname = "System",
+        // Email adresse entspricht login name
+        email = Some("admin@openolitor.ch"),
+        emailAlternative = None,
+        telefonMobil = None,
+        telefonFestnetz = None,
+        bemerkungen = None,
+        sort = 1,
+        // security data
+        loginAktiv = true,
+        passwort = Some(pwd.toCharArray),
+        letzteAnmeldung = None,
+        passwortWechselErforderlich = true,
+        rolle = Some(AdministratorZugang),
+        // modification flags
+        erstelldat = DateTime.now,
+        ersteller = personId,
+        modifidat = DateTime.now,
+        modifikator = personId
+      )
+
+      val projId = sysConfig.mandantConfiguration.dbSeeds.get(classOf[ProjektId]).getOrElse(1L)
+      val projekt = Projekt(
+        id = ProjektId(projId),
+        bezeichnung = "Demo Projekt",
+        strasse = None,
+        hausNummer = None,
+        adressZusatz = None,
+        plz = None,
+        ort = None,
+        preiseSichtbar = true,
+        preiseEditierbar = true,
+        emailErforderlich = true,
+        waehrung = CHF,
+        geschaeftsjahrMonat = 1,
+        geschaeftsjahrTag = 1,
+        twoFactorAuthentication = Map(AdministratorZugang -> false, KundenZugang -> true),
+        //modification flags
+        erstelldat = DateTime.now,
+        ersteller = personId,
+        modifidat = DateTime.now,
+        modifikator = personId
+      )
+
+      insertEntity[Kunde, KundeId](kunde);
+      insertEntity[Person, PersonId](person);
+      insertEntity[Projekt, ProjektId](projekt);
+
+      Success(true)
+    }
+  }
+
   val BuchhaltungDBInitializationScript = new Script with LazyLogging with BuchhaltungDBMappings {
-    def execute(implicit session: DBSession): Try[Boolean] = {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       //drop all tables
       logger.debug(s"oo-system: cleanupDatabase - drop tables - buchhaltung")
 
@@ -538,7 +658,8 @@ object V1Scripts {
 
   val dbInitializationScripts = Seq(
     StammdatenDBInitializationScript,
-    BuchhaltungDBInitializationScript
+    BuchhaltungDBInitializationScript,
+    InitialDataScript
   )
 
   val scripts = dbInitializationScripts

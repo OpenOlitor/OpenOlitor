@@ -53,7 +53,7 @@ class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends Eve
   import EntityStore._
 
   //TODO: replace with credentials of logged in user
-  implicit val userId = Boot.systemUserId
+  implicit val personId = Boot.systemPersonId
 
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: RechnungId) => deleteRechnung(id)

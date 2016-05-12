@@ -20,14 +20,10 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.stammdaten
 
-import ch.openolitor.core.models.PersonId
-import org.joda.time.DateTime
+import org.specs2.mock.Mockito
 
-case class EventMetadata(originator: PersonId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
-
-trait PersistentEvent extends Serializable {
-  val meta: EventMetadata
+trait MockStammdatenReadRepositoryComponent extends StammdatenReadRepositoryComponent with Mockito {
+  override val stammdatenReadRepository: StammdatenReadRepository = mock[StammdatenReadRepository]
 }
-

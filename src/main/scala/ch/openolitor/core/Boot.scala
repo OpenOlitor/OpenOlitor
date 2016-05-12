@@ -45,7 +45,7 @@ import ch.openolitor.core.db._
 import org.slf4j.Logger
 import akka.event.slf4j.Logger
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import java.util.UUID
 import ch.openolitor.core.ws.ClientMessagesServer
 import resource._
@@ -58,12 +58,11 @@ import ch.openolitor.core.domain.EntityStore.CheckDBEvolution
 import scala.util._
 import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
 import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
+import ch.openolitor.core.models.BaseId
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
-case class BuchhaltungConfig(rechnungIdLength: Int, kundeIdLength: Int, teilnehmernummer: String, referenznummerPrefix: String)
-
-case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer, dbSeeds: Map[Class[_], Long], buchhaltungConfig: BuchhaltungConfig) {
+case class MandantConfiguration(key: String, name: String, interface: String, port: Integer, wsPort: Integer, dbSeeds: Map[Class[_], Long], config: Config) {
   val configKey = s"openolitor.${key}"
 
   def wsUri = s"ws://$interface:$wsPort"
@@ -86,7 +85,7 @@ object Boot extends App with LazyLogging {
   val config = ConfigFactory.load
 
   //TODO: replace with real userid after login succeeded
-  val systemUserId = UserId(1000)
+  val systemPersonId = PersonId(1000)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
   val configs = getMandantConfiguration(config)
@@ -110,7 +109,9 @@ object Boot extends App with LazyLogging {
   }
 
   def getMandantConfiguration(config: Config): NonEmptyList[MandantConfiguration] = {
-    val mandanten = config.getStringList("openolitor.mandanten").toList
+    val ooConfig = config.getConfig("openolitor")
+    val mandanten = ooConfig.getStringList("mandanten").toList
+
     mandanten.toNel.map(_.zipWithIndex.map {
       case (mandant, index) =>
         val ifc = config.getStringOption(s"openolitor.$mandant.interface").getOrElse(rootInterface)
@@ -118,28 +119,16 @@ object Boot extends App with LazyLogging {
         val wsPort = config.getIntOption(s"openolitor.$mandant.webservicePort").getOrElse(freePort)
         val name = config.getStringOption(s"openolitor.$mandant.name").getOrElse(mandant)
 
-        val buchhaltungConfig = BuchhaltungConfig(
-          config.getIntOption(s"openolitor.$mandant.buchhaltung.rechnung-id-length").getOrElse(6),
-          config.getIntOption(s"openolitor.$mandant.buchhaltung.kunde-id-length").getOrElse(6),
-          config.getStringOption(s"openolitor.$mandant.buchhaltung.referenznummer-prefix").getOrElse(""),
-          config.getStringOption(s"openolitor.$mandant.buchhaltung.referenznummer-prefix").getOrElse("")
-        )
+        val mandantConfig = ooConfig.getConfig(mandant).withFallback(ooConfig)
 
-        MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(config), buchhaltungConfig)
+        MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(mandantConfig), mandantConfig)
     }).getOrElse {
       //default if no list of mandanten is configured
       val ifc = rootInterface
       val port = rootPort
       val wsPort = config.getIntOption("openolitor.webservicePort").getOrElse(9001)
 
-      val buchhaltungConfig = BuchhaltungConfig(
-        config.getIntOption(s"openolitor.buchhaltung.rechnung-id-length").getOrElse(6),
-        config.getIntOption(s"openolitor.buchhaltung.kunde-id-length").getOrElse(6),
-        config.getStringOption(s"openolitor.buchhaltung.referenznummer-prefix").getOrElse(""),
-        config.getStringOption(s"openolitor.buchhaltung.referenznummer-prefix").getOrElse("")
-      )
-
-      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(config), buchhaltungConfig))
+      NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(ooConfig), ooConfig))
     }
   }
 
@@ -164,7 +153,7 @@ object Boot extends App with LazyLogging {
       val duration = Duration.create(1, SECONDS);
       val system = app.actorOf(SystemActor.props, "oo-system")
       logger.debug(s"oo-system:$system")
-      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(Evolution), "entity-store"), duration).asInstanceOf[ActorRef]
+      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(new Evolution(sysCfg)), "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 

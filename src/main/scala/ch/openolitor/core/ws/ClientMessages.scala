@@ -23,13 +23,13 @@
 package ch.openolitor.core.ws
 
 import spray.json._
-import ch.openolitor.core.models.UserId
+import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.BaseJsonProtocol
 
 object ClientMessages {
   trait ClientMessage extends Product
 
-  case class HelloClient(userId: UserId) extends ClientMessage
+  case class HelloClient(personId: PersonId) extends ClientMessage
 }
 
 object ClientMessagesJsonProtocol extends BaseJsonProtocol {

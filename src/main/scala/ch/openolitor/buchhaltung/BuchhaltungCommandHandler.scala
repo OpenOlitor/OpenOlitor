@@ -51,19 +51,19 @@ import scala.concurrent.Future
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 
 object BuchhaltungCommandHandler {
-  case class RechnungVerschickenCommand(originator: UserId, id: RechnungId) extends UserCommand
-  case class RechnungMahnungVerschickenCommand(originator: UserId, id: RechnungId) extends UserCommand
-  case class RechnungBezahlenCommand(originator: UserId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
-  case class RechnungStornierenCommand(originator: UserId, id: RechnungId) extends UserCommand
+  case class RechnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
+  case class RechnungMahnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
+  case class RechnungBezahlenCommand(originator: PersonId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
+  case class RechnungStornierenCommand(originator: PersonId, id: RechnungId) extends UserCommand
 
   case class RechnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungBezahltEvent(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt) extends PersistentEvent with JSONSerializable
   case class RechnungStorniertEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
 
-  case class ZahlungsImportCreateCommand(originator: UserId, file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult]) extends UserCommand
-  case class ZahlungsEingangErledigenCommand(originator: UserId, entity: ZahlungsEingangModifyErledigt) extends UserCommand
-  case class ZahlungsEingaengeErledigenCommand(originator: UserId, entities: Seq[ZahlungsEingangModifyErledigt]) extends UserCommand
+  case class ZahlungsImportCreateCommand(originator: PersonId, file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult]) extends UserCommand
+  case class ZahlungsEingangErledigenCommand(originator: PersonId, entity: ZahlungsEingangModifyErledigt) extends UserCommand
+  case class ZahlungsEingaengeErledigenCommand(originator: PersonId, entities: Seq[ZahlungsEingangModifyErledigt]) extends UserCommand
 
   case class ZahlungsImportCreatedEvent(meta: EventMetadata, entity: ZahlungsImportCreate) extends PersistentEvent with JSONSerializable
   case class ZahlungsEingangErledigtEvent(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt) extends PersistentEvent with JSONSerializable
@@ -75,7 +75,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
   import EntityStore._
 
   override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
-    case RechnungVerschickenCommand(userId, id: RechnungId) => idFactory => meta =>
+    case RechnungVerschickenCommand(personId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -87,7 +87,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungMahnungVerschickenCommand(userId, id: RechnungId) => idFactory => meta =>
+    case RechnungMahnungVerschickenCommand(personId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -99,7 +99,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungBezahlenCommand(userId, id: RechnungId, entity: RechnungModifyBezahlt) => idFactory => meta =>
+    case RechnungBezahlenCommand(personId, id: RechnungId, entity: RechnungModifyBezahlt) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -111,7 +111,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungStornierenCommand(userId, id: RechnungId) => idFactory => meta =>
+    case RechnungStornierenCommand(personId, id: RechnungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
@@ -123,7 +123,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case ZahlungsImportCreateCommand(userId, file, zahlungsEingaengeRecords) => idFactory => meta =>
+    case ZahlungsImportCreateCommand(personId, file, zahlungsEingaengeRecords) => idFactory => meta =>
       val id = ZahlungsImportId(idFactory(classOf[ZahlungsImportId]))
       val zahlungsEingaenge = zahlungsEingaengeRecords collect {
         // ignoring total records for now
@@ -148,7 +148,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 
       Success(Seq(ZahlungsImportCreatedEvent(meta, ZahlungsImportCreate(id, file, zahlungsEingaenge))))
 
-    case ZahlungsEingangErledigenCommand(userId, entity) => idFactory => meta =>
+    case ZahlungsEingangErledigenCommand(personId, entity) => idFactory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
           if (!eingang.erledigt) {
@@ -173,7 +173,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
     /*
        * Insert command handling
        */
-    case e @ InsertEntityCommand(userId, entity: RechnungModify) => idFactory => meta =>
+    case e @ InsertEntityCommand(personId, entity: RechnungModify) => idFactory => meta =>
       handleEntityInsert[RechnungModify, RechnungId](idFactory, meta, entity, RechnungId.apply)
   }
 }

@@ -38,6 +38,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
+import ch.openolitor.util.ConfigUtil._
 
 object BuchhaltungInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungInsertService = new DefaultBuchhaltungInsertService(sysConfig, system)
@@ -59,10 +60,11 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   val BetragLength = 10
   val TeilnehmernummerLength = 9
 
-  val RechnungIdLength = sysConfig.mandantConfiguration.buchhaltungConfig.rechnungIdLength
-  val KundeIdLength = sysConfig.mandantConfiguration.buchhaltungConfig.kundeIdLength
-  val Teilnehmernummer = sysConfig.mandantConfiguration.buchhaltungConfig.teilnehmernummer
-  val ReferenznummerPrefix = sysConfig.mandantConfiguration.buchhaltungConfig.referenznummerPrefix
+  lazy val config = sysConfig.mandantConfiguration.config
+  lazy val RechnungIdLength = config.getIntOption(s"buchhaltung.rechnung-id-length").getOrElse(6)
+  lazy val KundeIdLength = config.getIntOption(s"buchhaltung.kunde-id-length").getOrElse(6)
+  lazy val Teilnehmernummer = config.getStringOption(s"buchhaltung.referenznummer-prefix").getOrElse("")
+  lazy val ReferenznummerPrefix = config.getStringOption(s"buchhaltung.referenznummer-prefix").getOrElse("")
 
   val belegarten = Map[Waehrung, String](CHF -> "01", EUR -> "21")
 
@@ -78,7 +80,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       logger.warn(s"Unknown event:$e")
   }
 
-  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungModify)(implicit userId: UserId = meta.originator) = {
+  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungModify)(implicit personId: PersonId = meta.originator) = {
     val referenzNummer = generateReferenzNummer(entity, id)
     val esrNummer = generateEsrNummer(entity, referenzNummer)
 

@@ -57,13 +57,13 @@ object EntityStore {
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultEntityStore], sysConfig, evolution)
 
   //base commands
-  case class InsertEntityCommand[E <: AnyRef](originator: UserId, entity: E) extends UserCommand {
+  case class InsertEntityCommand[E <: AnyRef](originator: PersonId, entity: E) extends UserCommand {
     val entityType = entity.getClass
   }
-  case class UpdateEntityCommand[E <: AnyRef](originator: UserId, id: BaseId, entity: E) extends UserCommand {
+  case class UpdateEntityCommand[E <: AnyRef](originator: PersonId, id: BaseId, entity: E) extends UserCommand {
     val entityType = entity.getClass
   }
-  case class DeleteEntityCommand(originator: UserId, id: BaseId) extends UserCommand
+  case class DeleteEntityCommand(originator: PersonId, id: BaseId) extends UserCommand
 
   //events raised by this aggregateroot
   case class EntityStoreInitialized(meta: EventMetadata) extends PersistentEvent
@@ -142,7 +142,7 @@ trait EntityStore extends AggregateRoot
 
   def checkDBEvolution(): Try[Int] = {
     log.debug(s"Check DB Evolution: current revision=${state.dbRevision}")
-    implicit val userId = Boot.systemUserId
+    implicit val personId = Boot.systemPersonId
     evolution.evolveDatabase(state.dbRevision) match {
       case s @ Success(rev) =>
         log.debug(s"Successfully updated to db rev:$rev")
@@ -164,7 +164,7 @@ trait EntityStore extends AggregateRoot
   }
 
   def readDBSeeds() = {
-    implicit val userId = Boot.systemUserId
+    implicit val personId = Boot.systemPersonId
     evolution.checkDBSeeds(Map()) match {
       case Success(newSeeds) =>
         log.debug(s"Read dbseeds:$newSeeds")
@@ -208,7 +208,7 @@ trait EntityStore extends AggregateRoot
     case e =>
       log.debug(s"uninitialized => Initialize eventstore with event:$e, $self")
       state = incState
-      persist(EntityStoreInitialized(metadata(Boot.systemUserId)))(afterEventPersisted)
+      persist(EntityStoreInitialized(metadata(Boot.systemPersonId)))(afterEventPersisted)
       context become uncheckedDB
       //reprocess event
       uncheckedDB(e)
@@ -270,8 +270,8 @@ trait EntityStore extends AggregateRoot
       log.error(s"received unknown command:$other")
   }
 
-  def metadata(userId: UserId) = {
-    EventMetadata(userId, VERSION, DateTime.now, state.seqNr, persistenceId)
+  def metadata(personId: PersonId) = {
+    EventMetadata(personId, VERSION, DateTime.now, state.seqNr, persistenceId)
   }
 
   def incState = {

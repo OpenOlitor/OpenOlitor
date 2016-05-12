@@ -20,14 +20,22 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.security
 
-import ch.openolitor.core.models.PersonId
-import org.joda.time.DateTime
+import spray.json._
+import zangelo.spray.json.AutoProductFormats
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.stammdaten.StammdatenJsonProtocol
 
-case class EventMetadata(originator: PersonId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
+trait LoginJsonProtocol extends StammdatenJsonProtocol with AutoProductFormats[JSONSerializable] {
+  implicit val loginStatusFormat = new JsonFormat[LoginStatus] {
+    def write(obj: LoginStatus): JsValue =
+      JsString(obj.productPrefix)
 
-trait PersistentEvent extends Serializable {
-  val meta: EventMetadata
+    def read(json: JsValue): LoginStatus =
+      json match {
+        case JsString(value) => LoginStatus(value).getOrElse(sys.error(s"Unknown LoginStatus:$value"))
+        case pt => sys.error(s"Unknown LoginStatus:$pt")
+      }
+  }
 }
-
