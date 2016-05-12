@@ -24,6 +24,7 @@ package ch.openolitor.core.domain
 
 import ch.openolitor.core.models.PersonId
 import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
 case class EventMetadata(originator: PersonId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
 
@@ -33,7 +34,7 @@ trait PersistentEvent extends Serializable {
 
 case class PersistentSystemEvent(meta: EventMetadata, event: SystemEvent) extends PersistentEvent
 
-trait SystemEvent
+trait SystemEvent extends JSONSerializable
 
 object SystemEvents {
 

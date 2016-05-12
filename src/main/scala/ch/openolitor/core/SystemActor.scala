@@ -51,7 +51,7 @@ class SystemActor(sysConfig: SystemConfig) extends Actor with ActorLogging {
 
   def receive: Receive = {
     case Child(props, name) =>
-      log.debug(s"oo-system:Request child actor for props:$props")
+      log.debug(s"oo-system:Request child actor $name")
       val actorRef = context.actorOf(props, name)
 
       //return created actor

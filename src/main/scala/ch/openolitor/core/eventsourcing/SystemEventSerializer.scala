@@ -20,64 +20,28 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.eventsourcing
 
-import akka.persistence._
-import akka.actor._
+import stamina._
+import stamina.json._
+import spray.json._
+import ch.openolitor.core.models._
 import java.util.UUID
-import ch.openolitor.core.models.PersonId
+import org.joda.time._
+import org.joda.time.format._
+import ch.openolitor.core.BaseJsonProtocol
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.JSONSerializable
+import zangelo.spray.json.AutoProductFormats
+import scala.collection.immutable.TreeMap
+import ch.openolitor.core.domain.EntityStoreJsonProtocol
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.domain.SystemEvents
 
-trait State
+trait SystemEventSerializer extends BaseJsonProtocol with EntityStoreJsonProtocol {
+  import SystemEvents._
 
-trait Command
+  implicit val personLoggedInPersister = persister[PersonLoggedIn]("person-logged-in")
 
-trait UserCommand extends Command {
-  val originator: PersonId
-}
-
-object AggregateRoot {
-  case object KillAggregate extends Command
-
-  case object GetState extends Command
-
-  case object Removed extends State
-  case object Created extends State
-  case object Uninitialized extends State
-}
-
-trait AggregateRoot extends PersistentActor with ActorLogging {
-  import AggregateRoot._
-
-  type S <: State
-  var state: S
-
-  case class Initialize(state: S) extends Command
-
-  def updateState(evt: PersistentEvent): Unit
-  def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
-
-  def afterRecoveryCompleted(): Unit = {}
-
-  def now = System.currentTimeMillis
-
-  protected def afterEventPersisted(evt: PersistentEvent): Unit = {
-    updateState(evt)
-    publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
-  }
-
-  protected def publish(event: Object) =
-    context.system.eventStream.publish(event)
-
-  override val receiveRecover: Receive = {
-    case evt: PersistentEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
-    case SnapshotOffer(metadata, state: State) =>
-      restoreFromSnapshot(metadata, state)
-      log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted =>
-      afterRecoveryCompleted()
-  }
+  val systemEventPersisters = List(personLoggedInPersister)
 }

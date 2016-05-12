@@ -369,7 +369,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _]) = {
     onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(personId, bestellungId)) {
       case UserCommandFailed =>
-        complete(StatusCodes.BadRequest, s"Could not execute BestellungErneutVersenden on Bestellung")
+        complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
       case _ =>
         complete("")
     }

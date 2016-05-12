@@ -52,7 +52,6 @@ trait SystemRouteService extends HttpService with ActorReferences
   lazy val systemRoutes = statusRoute ~ adminRoutes
 
   lazy val adminRoutes = pathPrefix("admin") {
-    logger.error(s"Request admin route")
     adminRoute()
   }
 

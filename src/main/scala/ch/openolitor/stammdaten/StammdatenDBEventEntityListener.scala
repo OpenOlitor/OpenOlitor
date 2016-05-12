@@ -23,8 +23,9 @@
 package ch.openolitor.stammdaten
 
 import akka.actor._
+
 import ch.openolitor.core.models._
-import ch.openolitor.core.domain.SystemEvents
+import ch.openolitor.core.domain._
 import ch.openolitor.core.ws._
 import spray.json._
 import ch.openolitor.stammdaten.models._
@@ -35,14 +36,10 @@ import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
 import scala.concurrent.ExecutionContext.Implicits.global;
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.buchhaltung.models.Rechnung
-import ch.openolitor.buchhaltung.models.{ Erstellt, Bezahlt }
+import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
 import scala.util.Random
 import scala.concurrent.Future
-import ch.openolitor.stammdaten.models.FaelltAusAbwesend
-import ch.openolitor.stammdaten.models.FaelltAusSaldoZuTief
-import ch.openolitor.stammdaten.models.WirdGeliefert
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -61,10 +58,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   override def preStart() {
     super.preStart()
     context.system.eventStream.subscribe(self, classOf[DBEvent[_]])
+    context.system.eventStream.subscribe(self, classOf[SystemEvent])
   }
 
   override def postStop() {
     context.system.eventStream.unsubscribe(self, classOf[DBEvent[_]])
+    context.system.eventStream.unsubscribe(self, classOf[SystemEvent])
     super.postStop()
   }
 

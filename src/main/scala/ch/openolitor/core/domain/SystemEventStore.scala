@@ -41,7 +41,7 @@ object SystemEventStore {
 /**
  * PersistentActor welcher SystemEvents speichert
  */
-trait SystemEventStore extends AggregateRoot with AkkaEventStream {
+trait SystemEventStore extends AggregateRoot {
   import SystemEvents._
   import SystemEventStore._
   import AggregateRoot._
@@ -49,7 +49,6 @@ trait SystemEventStore extends AggregateRoot with AkkaEventStream {
   override def persistenceId: String = SystemEventStore.persistenceId
   type S = SystemEventStoreState
   override var state: SystemEventStoreState = SystemEventStoreState(DateTime.now, 0L)
-  override val system = context.system
 
   /**
    * Updates internal processor state according to event that is to be applied.
@@ -57,26 +56,29 @@ trait SystemEventStore extends AggregateRoot with AkkaEventStream {
    * @param evt Event to apply
    */
   override def updateState(evt: PersistentEvent): Unit = {
+    log.debug(s"updateState:$evt")
     evt match {
       case PersistentSystemEvent(meta, event) =>
         //publish event to eventstream
+        log.debug(s"Publish system event:$event")
         publish(event)
       case _ =>
     }
   }
 
   override def restoreFromSnapshot(metadata: SnapshotMetadata, state: State) = {
+    log.debug(s"restoreFromSnapshot:$state")
     state match {
       case Removed => context become removed
       case Created => context become created
+      case s: SystemEventStoreState => this.state = s
+      case other => log.error(s"Received unsupported state:$other")
     }
   }
 
   val removed: Receive = {
     case _ =>
   }
-
-  override val receiveCommand = created
 
   /**
    * Eventlog initialized, handle entity events
@@ -90,6 +92,8 @@ trait SystemEventStore extends AggregateRoot with AkkaEventStream {
       sender ! state
     case systemEvent: SystemEvent =>
       persist(PersistentSystemEvent(metadata, systemEvent))(afterEventPersisted)
+    case other =>
+      log.error(s"Received unknown command:$other")
   }
 
   def metadata = {
@@ -99,7 +103,10 @@ trait SystemEventStore extends AggregateRoot with AkkaEventStream {
   def incState = {
     state.copy(seqNr = state.seqNr + 1)
   }
+
+  override val receiveCommand = created
 }
 
 class DefaultSystemEventStore(sysConfig: SystemConfig) extends SystemEventStore {
+  log.debug(s"create DefaultSystemEventStore")
 }
