@@ -86,6 +86,7 @@ trait LoginRouteService extends HttpService with ActorReferences
   val errorUsernameOrPasswordMismatch = LoginFailed("Benutzername oder Passwort stimmen nicht überein")
   val errorTokenOrCodeMismatch = LoginFailed("Code stimmt nicht überein")
   val errorPersonNotFound = LoginFailed("Person konnte nicht gefunden werden")
+  val errorPersonLoginNotActive = LoginFailed("Login wurde deaktiviert")
 
   def loginRoute = pathPrefix("auth") {
     path("login") {
@@ -123,6 +124,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     for {
       person <- personByEmail(form)
       pwdValid <- validatePassword(form, person)
+      personValid <- validatePerson(person)
       result <- handleLoggedIn(person)
     } yield result
   }
@@ -135,6 +137,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     for {
       secondFactor <- readTokenFromCache(form)
       person <- personById(secondFactor.personId)
+      personValid <- validatePerson(person)
       result <- doLogin(person)
     } yield result
   }
@@ -237,6 +240,15 @@ trait LoginRouteService extends HttpService with ActorReferences
       } getOrElse {
         logger.debug(s"No password for user")
         errorUsernameOrPasswordMismatch.left
+      }
+    }
+  }
+
+  def validatePerson(person: Person): EitherFuture[Boolean] = EitherT {
+    Future {
+      person.loginAktiv match {
+        case true => true.right
+        case false => errorPersonLoginNotActive.left
       }
     }
   }
