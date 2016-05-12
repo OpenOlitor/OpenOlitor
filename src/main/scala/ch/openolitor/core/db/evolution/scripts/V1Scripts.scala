@@ -79,7 +79,11 @@ object V1Scripts {
         id BIGINT not null,
         abotyp_id BIGINT not null,
         liefertag varchar(10),
-        beschrieb varchar(2000))""".execute.apply()
+        beschrieb varchar(2000),
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
 
       sql"""create table ${postlieferungMapping.table}  (
         id BIGINT not null,

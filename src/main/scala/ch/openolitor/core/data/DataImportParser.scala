@@ -634,8 +634,8 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseVertriebe(vertriebsarten: List[Vertriebsart]) = {
-    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "lieferzeitpunkt") ++ modifiCols) { id => indexes => row =>
-      val Seq(indexAbotypId, indexBeschrieb, indexLieferzeitpunkt) = indexes.take(3)
+    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "liefertag") ++ modifiCols) { id => indexes => row =>
+      val Seq(indexAbotypId, indexBeschrieb, indexLiefertag) = indexes.take(3)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val vertriebId = VertriebId(id)
@@ -648,7 +648,7 @@ class DataImportParser extends Actor with ActorLogging {
             touren.find(_.id == hl.tourId).getOrElse(throw ParseException(s"No tour found for id ${hl.tourId}")).name
           case pl: Postlieferung => ""
         }*/
-      val liefertag = Lieferzeitpunkt(row.value[String](indexLieferzeitpunkt))
+      val liefertag = Lieferzeitpunkt(row.value[String](indexLiefertag))
 
       Vertrieb(vertriebId, abotypId, liefertag, beschrieb,
         //modification flags
