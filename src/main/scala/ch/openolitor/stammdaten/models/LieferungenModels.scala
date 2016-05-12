@@ -46,6 +46,7 @@ case object WirdGeliefert extends KorbStatus
 case object Geliefert extends KorbStatus
 case object FaelltAusAbwesend extends KorbStatus
 case object FaelltAusSaldoZuTief extends KorbStatus
+case object FaelltAusGekuendigt extends KorbStatus
 
 object KorbStatus {
   def apply(value: String): KorbStatus = {
@@ -89,11 +90,11 @@ case class Lieferung(
   vertriebsartBeschrieb: String,
   status: LieferungStatus,
   datum: DateTime,
-  anzahlAbwesenheiten: Int,
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
   anzahlKoerbeZuLiefern: Int,
-  anzahlKoerbeNichtZuLiefern: Int,
+  anzahlAbwesenheiten: Int,
+  anzahlSaldoZuTief: Int,
   zielpreis: Option[BigDecimal],
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
@@ -240,9 +241,22 @@ case class Korb(
   lieferungId: LieferungId,
   aboId: AboId,
   status: KorbStatus,
+  guthabenVorLieferung: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[KorbId]
+
+case class KorbModify(
+  status: KorbStatus,
+  guthabenVorLieferung: Int
+) extends JSONSerializable
+
+case class KorbCreate(
+  LieferungId: LieferungId,
+  aboId: AboId,
+  status: KorbStatus,
+  guthabenVorLieferung: Int
+) extends JSONSerializable
