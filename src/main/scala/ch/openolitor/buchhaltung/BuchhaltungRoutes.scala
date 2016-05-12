@@ -64,6 +64,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
+  implicit val zahlungsEingangIdPath = long2BaseIdPathMatcher(ZahlungsEingangId.apply)
 
   import EntityStore._
 
@@ -110,6 +111,12 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     } ~
       path("zahlungsimports" / zahlungsImportIdPath) { id =>
         get(detail(buchhaltungReadRepository.getZahlungsImportDetail(id)))
+      } ~
+      path("zahlungsimports" / zahlungsImportIdPath / "zahlungseingaenge" / zahlungsEingangIdPath / "aktionen" / "erledigen") { (_, zahlungsEingangId) =>
+        post(entity(as[ZahlungsEingangModifyErledigt]) { entity => zahlungsEingangErledigen(entity) })
+      } ~
+      path("zahlungsimports" / zahlungsImportIdPath / "zahlungseingaenge" / "aktionen" / "automatischerledigen") { id =>
+        post(entity(as[Seq[ZahlungsEingangModifyErledigt]]) { entities => zahlungsEingaengeErledigen(entities) })
       }
 
   def verschicken(id: RechnungId)(implicit idPersister: Persister[RechnungId, _]) = {
@@ -152,6 +159,24 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     onSuccess((entityStore ? BuchhaltungCommandHandler.ZahlungsImportCreateCommand(userId, file, zahlungsEingaenge))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit to status Bezahlt")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def zahlungsEingangErledigen(entity: ZahlungsEingangModifyErledigt)(implicit idPersister: Persister[ZahlungsEingangId, _]) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.ZahlungsEingangErledigenCommand(userId, entity))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Der Zahlungseingang konnte nicht erledigt werden")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def zahlungsEingaengeErledigen(entities: Seq[ZahlungsEingangModifyErledigt])(implicit idPersister: Persister[ZahlungsEingangId, _]) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.ZahlungsEingaengeErledigenCommand(userId, entities))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Es konnten nicht alle Zahlungseingänge erledigt werden")
       case _ =>
         complete("")
     }

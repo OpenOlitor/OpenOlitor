@@ -90,6 +90,7 @@ case class ZahlungsEingang(
   gutschriftsDatum: DateTime,
   status: ZahlungsEingangStatus,
   erledigt: Boolean,
+  bemerkung: Option[String],
   // modification flags
   erstelldat: DateTime,
   ersteller: UserId,
@@ -110,4 +111,9 @@ case class ZahlungsEingangCreate(
   verarbeitungsDatum: DateTime,
   gutschriftsDatum: DateTime,
   status: ZahlungsEingangStatus
+) extends JSONSerializable
+
+case class ZahlungsEingangModifyErledigt(
+  id: ZahlungsEingangId,
+  bemerkung: Option[String]
 ) extends JSONSerializable

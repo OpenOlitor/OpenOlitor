@@ -71,6 +71,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       rechnungStornieren(meta, id)
     case ZahlungsImportCreatedEvent(meta, entity: ZahlungsImportCreate) =>
       createZahlungsImport(meta, entity)
+    case ZahlungsEingangErledigtEvent(meta, entity: ZahlungsEingangModifyErledigt) =>
+      zahlungsEingangErledigen(meta, entity)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -125,6 +127,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
         zahlungsEingangCreate,
         "erledigt" -> False,
+        "bemerkung" -> None,
         "erstelldat" -> meta.timestamp,
         "ersteller" -> meta.originator,
         "modifidat" -> meta.timestamp,
@@ -161,6 +164,14 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
         }
       }
       buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
+    }
+  }
+
+  def zahlungsEingangErledigen(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt)(implicit userId: UserId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
+        buchhaltungWriteRepository.updateEntity[ZahlungsEingang, ZahlungsEingangId](eingang.copy(erledigt = true, bemerkung = entity.bemerkung))
+      }
     }
   }
 }

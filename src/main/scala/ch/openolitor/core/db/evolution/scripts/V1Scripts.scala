@@ -525,6 +525,7 @@ object V1Scripts {
         gutschrifts_datum datetime,
         status varchar(50) not null,
         erledigt varchar(1) not null,
+        bemerkung varchar(2000),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,

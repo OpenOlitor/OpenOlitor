@@ -128,18 +128,8 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
     override def updateParameters(entity: ZahlungsEingang) = {
       super.updateParameters(entity) ++ Seq(
-        column.zahlungsImportId -> parameter(entity.zahlungsImportId),
-        column.rechnungId -> parameter(entity.rechnungId),
-        column.transaktionsart -> parameter(entity.transaktionsart),
-        column.teilnehmerNummer -> parameter(entity.teilnehmerNummer),
-        column.referenzNummer -> parameter(entity.referenzNummer),
-        column.waehrung -> parameter(entity.waehrung),
-        column.betrag -> parameter(entity.betrag),
-        column.aufgabeDatum -> parameter(entity.aufgabeDatum),
-        column.verarbeitungsDatum -> parameter(entity.verarbeitungsDatum),
-        column.gutschriftsDatum -> parameter(entity.gutschriftsDatum),
-        column.status -> parameter(entity.status),
-        column.erledigt -> parameter(entity.erledigt)
+        column.erledigt -> parameter(entity.erledigt),
+        column.bemerkung -> parameter(entity.bemerkung)
       )
     }
   }
