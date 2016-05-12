@@ -82,7 +82,8 @@ class DataImportParser extends Actor with ActorLogging {
       (abos, _) <- Try(doc.withSheet("Abos")(parseAbos(kundeIdMapping, kunden, abotypIdMapping, abotypen, depotIdMapping, depots, tourIdMapping, tours, abwesenheiten)))
       (lieferplanungen, _) <- Try(doc.withSheet("Lieferplanungen")(parseLieferplanungen))
       (vertriebsarten, _) <- Try(doc.withSheet("Vertriebsarten")(parseVertriebsarten))
-      (lieferungen, _) <- Try(doc.withSheet("Lieferungen")(parseLieferungen(abotypen, vertriebsarten, abwesenheiten, lieferplanungen, depots, tours)))
+      (vertriebe, _) <- Try(doc.withSheet("Vertriebe")(parseVertriebe(vertriebsarten)))
+      (lieferungen, _) <- Try(doc.withSheet("Lieferungen")(parseLieferungen(abotypen, vertriebe, abwesenheiten, lieferplanungen, depots, tours)))
       (produzenten, _) <- Try(doc.withSheet("Produzenten")(parseProduzenten))
       (produktkategorien, _) <- Try(doc.withSheet("Produktekategorien")(parseProduktekategorien))
       (produktProduzenten, _) <- Try(doc.withSheet("ProduktProduzenten")(parseProdukteProduzenten))
@@ -103,6 +104,7 @@ class DataImportParser extends Actor with ActorLogging {
         depots,
         abotypen,
         vertriebsarten,
+        vertriebe,
         lieferungen,
         lieferplanungen,
         lieferpositionen,
@@ -408,21 +410,20 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseVertriebsarten = {
-    parse[Vertriebsart, VertriebsartId]("id", Seq("abotyp_id", "depot_id", "tour_id", "liefertag") ++ modifiCols) { id => indexes => row =>
+    parse[Vertriebsart, VertriebsartId]("id", Seq("vertrieb_id", "depot_id", "tour_id") ++ modifiCols) { id => indexes => row =>
       //match column indexes
-      val Seq(indexAbotypId, indexDepotId, indexTourId, indexLieferzeitpunkt) = indexes.take(4)
+      val Seq(indexVertriebId, indexDepotId, indexTourId) = indexes.take(3)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val vertriebsartId = VertriebsartId(id)
-      val abotypId = AbotypId(row.value[Long](indexAbotypId))
+      val vertriebId = VertriebId(row.value[Long](indexVertriebId))
       val depotIdOpt = row.value[Option[Long]](indexDepotId).map(DepotId)
       val tourIdOpt = row.value[Option[Long]](indexTourId).map(TourId)
-      val liefertag = Lieferzeitpunkt(row.value[String](indexLieferzeitpunkt))
 
       depotIdOpt.map { depotId =>
         Depotlieferung(
           vertriebsartId,
-          abotypId, depotId, liefertag,
+          vertriebId, depotId,
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -431,14 +432,14 @@ class DataImportParser extends Actor with ActorLogging {
         )
       }.getOrElse {
         tourIdOpt.map { tourId =>
-          Heimlieferung(vertriebsartId, abotypId, tourId, liefertag,
+          Heimlieferung(vertriebsartId, vertriebId, tourId,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
             ersteller = PersonId(row.value[Long](indexErsteller)),
             modifidat = row.value[DateTime](indexModifidat),
             modifikator = PersonId(row.value[Long](indexModifikator)))
         }.getOrElse {
-          Postlieferung(vertriebsartId, abotypId, liefertag,
+          Postlieferung(vertriebsartId, vertriebId,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
             ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -632,28 +633,49 @@ class DataImportParser extends Actor with ActorLogging {
     }
   }
 
-  def parseLieferungen(abotypen: List[Abotyp], vertriebsarten: List[Vertriebsart], abwesenheiten: List[Abwesenheit], lieferplanungen: List[Lieferplanung],
+  def parseVertriebe(vertriebsarten: List[Vertriebsart]) = {
+    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "lieferzeitpunkt") ++ modifiCols) { id => indexes => row =>
+      val Seq(indexAbotypId, indexBeschrieb, indexLieferzeitpunkt) = indexes.take(3)
+      val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
+
+      val vertriebId = VertriebId(id)
+      val abotypId = AbotypId(row.value[Long](indexAbotypId))
+      val beschrieb = row.value[String](indexBeschrieb)
+      /*val vaBeschrieb = vertriebsart match {
+          case dl: Depotlieferung =>
+            depots.find(_.id == dl.depotId).getOrElse(throw ParseException(s"No depot found for id ${dl.depotId}")).name
+          case hl: Heimlieferung =>
+            touren.find(_.id == hl.tourId).getOrElse(throw ParseException(s"No tour found for id ${hl.tourId}")).name
+          case pl: Postlieferung => ""
+        }*/
+      val liefertag = Lieferzeitpunkt(row.value[String](indexLieferzeitpunkt))
+
+      Vertrieb(vertriebId, abotypId, liefertag, beschrieb,
+        //modification flags
+        erstelldat = row.value[DateTime](indexErstelldat),
+        ersteller = PersonId(row.value[Long](indexErsteller)),
+        modifidat = row.value[DateTime](indexModifidat),
+        modifikator = PersonId(row.value[Long](indexModifikator)))
+    }
+
+  }
+
+  def parseLieferungen(abotypen: List[Abotyp], vertriebe: List[Vertrieb], abwesenheiten: List[Abwesenheit], lieferplanungen: List[Lieferplanung],
     depots: List[Depot], touren: List[Tour]) = {
-    parse[Lieferung, LieferungId]("id", Seq("abotyp_id", "vertriebsart_id", "lieferplanung_id", "status", "datum", "anzahl_abwesenheiten", "durchschnittspreis",
+    parse[Lieferung, LieferungId]("id", Seq("abotyp_id", "vertrieb_id", "lieferplanung_id", "status", "datum", "anzahl_abwesenheiten", "durchschnittspreis",
       "anzahl_lieferungen", "anzahl_koerbe_zu_liefern", "anzahl_saldo_zu_tief", "zielpreis", "preis_total") ++ modifiCols) { id => indexes => row =>
       //match column indexes
-      val Seq(indexAbotypId, indexVertriebsartId, indexLieferplanungId, indexStatus, indexDatum, indexAnzahlAbwesenheiten, indexDurchschnittspreis,
+      val Seq(indexAbotypId, indexVertriebId, indexLieferplanungId, indexStatus, indexDatum, indexAnzahlAbwesenheiten, indexDurchschnittspreis,
         indexAnzahlLieferungen, indexAnzahlKoerbeZuLiefern, indexAnzahlSaldoZuTief, indexZielpreis, indexPreisTotal) = indexes.take(12)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val lieferungId = LieferungId(id)
       val abotypId = AbotypId(row.value[Long](indexAbotypId))
       val abotyp = abotypen.find(_.id == abotypId).getOrElse(throw ParseException(s"No abotyp found for id:$abotypId"))
-      val vertriebsartId = VertriebsartId(row.value[Long](indexVertriebsartId))
-      val vertriebsart = vertriebsarten.find(_.id == vertriebsartId).getOrElse(throw ParseException(s"No vertriebsart found for id $vertriebsartId"))
+      val vertriebId = VertriebId(row.value[Long](indexVertriebId))
+      val vertrieb = vertriebe.find(_.id == vertriebId).getOrElse(throw ParseException(s"No vertrieb found for id $vertriebId"))
 
-      val vaBeschrieb = vertriebsart match {
-        case dl: Depotlieferung =>
-          depots.find(_.id == dl.depotId).getOrElse(throw ParseException(s"No depot found for id ${dl.depotId}")).name
-        case hl: Heimlieferung =>
-          touren.find(_.id == hl.tourId).getOrElse(throw ParseException(s"No tour found for id ${hl.tourId}")).name
-        case pl: Postlieferung => ""
-      }
+      val vBeschrieb = vertrieb.beschrieb
 
       val durchschnittspreis = row.value[BigDecimal](indexDurchschnittspreis)
       val anzahlLieferungen = row.value[Int](indexAnzahlLieferungen)
@@ -666,8 +688,8 @@ class DataImportParser extends Actor with ActorLogging {
         id = lieferungId,
         abotypId = abotypId,
         abotypBeschrieb = abotyp.beschreibung.getOrElse(""),
-        vertriebsartId = vertriebsartId,
-        vertriebsartBeschrieb = vaBeschrieb,
+        vertriebId = vertriebId,
+        vertriebBeschrieb = vBeschrieb,
         status = LieferungStatus(row.value[String](indexStatus)),
         datum = row.value[DateTime](indexDatum),
         durchschnittspreis = row.value[BigDecimal](indexDurchschnittspreis),
@@ -928,6 +950,7 @@ object DataImportParser {
     depots: List[Depot],
     abotypen: List[Abotyp],
     vertriebsarten: List[Vertriebsart],
+    vertriebe: List[Vertrieb],
     lieferungen: List[Lieferung],
     lieferplanungen: List[Lieferplanung],
     lieferpositionen: List[Lieferposition],

@@ -60,6 +60,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   val FALSE = false
 
   val handle: Handle = {
+    case EntityUpdatedEvent(meta, id: VertriebId, entity: VertriebModify) => updateVertrieb(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(meta, id, entity)
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: DepotlieferungAbotypModify) => updateDepotlieferungVertriebsart(meta, id, entity)
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: HeimlieferungAbotypModify) => updateHeimlieferungVertriebsart(meta, id, entity)
@@ -85,6 +86,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
       logger.warn(s"Unknown event:$e")
+  }
+
+  def updateVertrieb(meta: EventMetadata, id: VertriebId, update: VertriebModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(vertriebMapping, id) map { vertrieb =>
+        //map all updatable fields
+        val copy = copyFrom(vertrieb, update)
+        stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
+      }
+    }
   }
 
   def updateAbotyp(meta: EventMetadata, id: AbotypId, update: AbotypModify)(implicit personId: PersonId = meta.originator) = {
