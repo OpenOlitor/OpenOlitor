@@ -65,6 +65,7 @@ import com.typesafe.scalalogging.LazyLogging
 import spray.routing.RequestContext
 import java.io.InputStream
 import ch.openolitor.core.security._
+import spray.routing.RejectionHandler
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -110,6 +111,8 @@ trait RouteServiceActor
     runDBEvolution()
   }
 
+  implicit val openolitorRejectionHandler: RejectionHandler = AuthenticatorRejectionHandler()
+
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   val actorRefFactory = context
@@ -119,8 +122,20 @@ trait RouteServiceActor
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ systemRouteService.systemRoutes ~ loginRouteService.loginRoute ~
-    stammdatenRouteService.stammdatenRoute ~ buchhaltungRouteService.buchhaltungRoute ~ fileStoreRoute))
+  val initializedDB = runRoute(cors(
+    //unsecured routes
+    helloWorldRoute ~
+      systemRouteService.statusRoute ~
+      loginRouteService.loginRoute ~
+
+      //secured routes
+      authenticate(loginRouteService.openOlitorAuthenticator) { implicit personId =>
+        systemRouteService.adminRoutes ~
+          stammdatenRouteService.stammdatenRoute ~
+          buchhaltungRouteService.buchhaltungRoute ~
+          fileStoreRoute
+      }
+  ))
 
   val dbEvolutionRoutes =
     pathPrefix("db") {

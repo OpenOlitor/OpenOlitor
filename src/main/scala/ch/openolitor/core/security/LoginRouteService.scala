@@ -58,10 +58,11 @@ import ch.openolitor.stammdaten.models.PersonSummary
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
     with SprayDeserializers
-    with DefaultRouteService with LazyLogging with LoginJsonProtocol {
+    with DefaultRouteService with LazyLogging with LoginJsonProtocol
+    with XSRFTokenSessionAuthenticatorProvider {
   self: StammdatenReadRepositoryComponent =>
 
-  //TODO: get real userid from login
+  //TODO: get real userid from login  
   override val personId: PersonId = Boot.systemPersonId
 
   type EitherFuture[A] = EitherT[Future, LoginFailed, A]
@@ -82,6 +83,7 @@ trait LoginRouteService extends HttpService with ActorReferences
   lazy val config = sysConfig.mandantConfiguration.config
   lazy val requireSecondFactorAuthentication = config.getBooleanOption(s"security.second-factor-auth.require").getOrElse(true)
   lazy val sendSecondFactorEmail = config.getBooleanOption(s"security.second-factor-auth.send-email").getOrElse(true)
+  override lazy val maxRequestDelay: Option[Duration] = config.getLongOption(s"security.max-request-delay").map(_ millis)
 
   val errorUsernameOrPasswordMismatch = LoginFailed("Benutzername oder Passwort stimmen nicht überein")
   val errorTokenOrCodeMismatch = LoginFailed("Code stimmt nicht überein")
