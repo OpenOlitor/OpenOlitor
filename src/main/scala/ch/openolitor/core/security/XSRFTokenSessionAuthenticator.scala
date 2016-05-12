@@ -113,7 +113,7 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
           case token :: timeString :: Nil =>
             Try(DateTime.parse(timeString)) match {
               case TrySuccess(dateTime) => (token, dateTime).right
-              case TryFailure(e) => AuthenticatorRejection(s"Ungültiges Datumsformat im Header:$timeString -> $e").left
+              case TryFailure(e) => AuthenticatorRejection(s"Ungültiges Datumsformat im Header:$timeString").left
             }
           case token :: Nil => (token, noDateTimeValue).right
           case x => AuthenticatorRejection(s"Ungüliges Token im Header: $x").left
@@ -129,7 +129,7 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
     }
 
     private def findPersonInCache(token: String): RequestValidation[PersonId] = EitherT {
-      loginTokenCache.get(token) map (_ map (_.right)) getOrElse Future.successful(AuthenticatorRejection(s"Kein Person gefunden für token: $token").left)
+      loginTokenCache.get(token) map (_ map (_.right)) getOrElse Future.successful(AuthenticatorRejection(s"Keine Person gefunden für token: $token").left)
     }
 
     private def compareRequestTime(requestTime: DateTime): RequestValidation[Boolean] = EitherT {
