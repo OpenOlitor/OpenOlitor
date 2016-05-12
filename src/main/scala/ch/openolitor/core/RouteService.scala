@@ -66,6 +66,7 @@ import spray.routing.RequestContext
 import java.io.InputStream
 import ch.openolitor.core.security._
 import spray.routing.RejectionHandler
+import spray.routing.authentication.BasicAuth
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -124,17 +125,21 @@ trait RouteServiceActor
   val receive = runRoute(cors(dbEvolutionRoutes))
 
   val initializedDB = runRoute(cors(
-    //unsecured routes
+    // unsecured routes
     helloWorldRoute ~
       systemRouteService.statusRoute ~
       loginRouteService.loginRoute ~
 
-      //secured routes
+      // secured routes by XSRF token authenticator
       authenticate(loginRouteService.openOlitorAuthenticator) { implicit personId =>
-        systemRouteService.adminRoutes ~
-          stammdatenRouteService.stammdatenRoute ~
+        stammdatenRouteService.stammdatenRoute ~
           buchhaltungRouteService.buchhaltungRoute ~
           fileStoreRoute
+      } ~
+
+      // routes secured by basicauth mainly used for service accounts
+      authenticate(BasicAuth(loginRouteService.basicAuthValidation _, realm = "OpenOlitor")) { implicit personId =>
+        systemRouteService.adminRoutes
       }
   ))
 

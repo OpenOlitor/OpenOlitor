@@ -494,7 +494,7 @@ object V1Scripts {
   val InitialDataScript = new Script with LazyLogging with StammdatenDBMappings with BaseWriteRepository with NoPublishEventStream {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       //Create initial account
-      val pwd = BCrypt.hashpw("openOlit0rAdmin1", BCrypt.gensalt());
+      val pwd = BCrypt.hashpw("admin", BCrypt.gensalt());
       val pid = sysConfig.mandantConfiguration.dbSeeds.get(classOf[PersonId]).getOrElse(1L)
       implicit val personId = PersonId(pid)
       val kid = sysConfig.mandantConfiguration.dbSeeds.get(classOf[KundeId]).getOrElse(1L)

@@ -55,6 +55,7 @@ import Scalaz._
 import ch.openolitor.util.ConfigUtil._
 import ch.openolitor.stammdaten.models.PersonSummary
 import ch.openolitor.core.domain.SystemEvents
+import spray.routing.authentication.UserPass
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -126,14 +127,14 @@ trait LoginRouteService extends HttpService with ActorReferences
 
   def validateLogin(form: LoginForm): EitherFuture[LoginResult] = {
     for {
-      person <- personByEmail(form)
-      pwdValid <- validatePassword(form, person)
+      person <- personByEmail(form.email)
+      pwdValid <- validatePassword(form.passwort, person)
       personValid <- validatePerson(person)
       result <- handleLoggedIn(person)
     } yield result
   }
 
-  def transform[A](o: Option[Future[A]]): Future[Option[A]] = {
+  private def transform[A](o: Option[Future[A]]): Future[Option[A]] = {
     o.map(f => f.map(Option(_))).getOrElse(Future.successful(None))
   }
 
@@ -151,7 +152,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def readTokenFromCache(form: SecondFactorLoginForm): EitherFuture[SecondFactor] = {
+  private def readTokenFromCache(form: SecondFactorLoginForm): EitherFuture[SecondFactor] = {
     EitherT {
       transform(secondFactorTokenCache.get(form.token)) map {
         case Some(factor @ SecondFactor(form.token, form.code, _)) => factor.right
@@ -160,29 +161,29 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def personByEmail(form: LoginForm): EitherFuture[Person] = {
+  private def personByEmail(email: String): EitherFuture[Person] = {
     EitherT {
-      stammdatenReadRepository.getPersonByEmail(form.email) map (_ map (_.right) getOrElse {
+      stammdatenReadRepository.getPersonByEmail(email) map (_ map (_.right) getOrElse {
         logger.debug(s"No person found for email")
         errorUsernameOrPasswordMismatch.left
       })
     }
   }
 
-  def personById(personId: PersonId): EitherFuture[Person] = {
+  private def personById(personId: PersonId): EitherFuture[Person] = {
     EitherT {
       stammdatenReadRepository.getPerson(personId) map (_ map (_.right) getOrElse (errorPersonNotFound.left))
     }
   }
 
-  def handleLoggedIn(person: Person): EitherFuture[LoginResult] = {
+  private def handleLoggedIn(person: Person): EitherFuture[LoginResult] = {
     requireSecondFactorAuthentifcation(person) flatMap {
       case false => doLogin(person)
       case true => sendSecondFactorAuthentication(person)
     }
   }
 
-  def doLogin(person: Person): EitherFuture[LoginResult] = {
+  private def doLogin(person: Person): EitherFuture[LoginResult] = {
     //generate token
     val token = generateToken
     EitherT {
@@ -196,7 +197,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def sendSecondFactorAuthentication(person: Person): EitherFuture[LoginResult] = {
+  private def sendSecondFactorAuthentication(person: Person): EitherFuture[LoginResult] = {
     for {
       secondFactor <- generateSecondFactor(person)
       emailSent <- sendEmail(secondFactor, person)
@@ -206,7 +207,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def generateSecondFactor(person: Person): EitherFuture[SecondFactor] = {
+  private def generateSecondFactor(person: Person): EitherFuture[SecondFactor] = {
     EitherT {
       val token = generateToken
       val code = generateCode
@@ -214,7 +215,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
+  private def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
     Future {
       logger.debug(s"=====================================================================")
       logger.debug(s"| Send Email to: ${person.email}")
@@ -229,7 +230,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def requireSecondFactorAuthentifcation(person: Person): EitherFuture[Boolean] = EitherT {
+  private def requireSecondFactorAuthentifcation(person: Person): EitherFuture[Boolean] = EitherT {
     requireSecondFactorAuthentication match {
       case false => Future.successful(false.right)
       case true if (person.rolle.isEmpty) => Future.successful(true.right)
@@ -240,10 +241,10 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def validatePassword(form: LoginForm, person: Person): EitherFuture[Boolean] = EitherT {
+  private def validatePassword(password: String, person: Person): EitherFuture[Boolean] = EitherT {
     Future {
       person.passwort map { pwd =>
-        BCrypt.checkpw(form.passwort, new String(pwd)) match {
+        BCrypt.checkpw(password, new String(pwd)) match {
           case true => true.right
           case false =>
             logger.debug(s"Password mismatch")
@@ -256,7 +257,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def validatePerson(person: Person): EitherFuture[Boolean] = EitherT {
+  private def validatePerson(person: Person): EitherFuture[Boolean] = EitherT {
     Future {
       person.loginAktiv match {
         case true => true.right
@@ -265,8 +266,29 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  def generateToken = UUID.randomUUID.toString
-  def generateCode = (Random.alphanumeric take 6).mkString.toLowerCase
+  private def generateToken = UUID.randomUUID.toString
+  private def generateCode = (Random.alphanumeric take 6).mkString.toLowerCase
+
+  /**
+   * Validate user password used by basic authentication. Using basic auth we never to a two factor
+   * authentication
+   */
+  def basicAuthValidation(userPass: Option[UserPass]): Future[Option[PersonId]] = {
+    logger.debug(s"Perform basic authentication")
+    (for {
+      up <- validateUserPass(userPass)
+      person <- personByEmail(up.user)
+      pwdValid <- validatePassword(up.pass, person)
+      personValid <- validatePerson(person)
+      result <- doLogin(person)
+    } yield person.id).run.map(_.toOption)
+  }
+
+  private def validateUserPass(userPass: Option[UserPass]): EitherFuture[UserPass] = EitherT {
+    Future {
+      userPass map (_.right) getOrElse (errorUsernameOrPasswordMismatch.left)
+    }
+  }
 }
 
 class DefaultLoginRouteService(
