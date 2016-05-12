@@ -128,6 +128,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     pendenzIdPersister,
     pendenzCreatePersister,
     vertriebModifyPersister,
+    vertriebIdPersister,
     vertriebsartDLPersister,
     vertriebsartPLPersister,
     vertriebsartHLPersister,
