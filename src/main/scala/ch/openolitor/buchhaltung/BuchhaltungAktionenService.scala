@@ -57,6 +57,9 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     with BuchhaltungDBMappings {
   self: BuchhaltungWriteRepositoryComponent =>
 
+  val False = false
+  val Zero = 0
+
   val handle: Handle = {
     case RechnungVerschicktEvent(meta, id: RechnungId) =>
       rechnungVerschicken(meta, id)
@@ -68,6 +71,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       rechnungStornieren(meta, id)
     case ZahlungsImportCreatedEvent(meta, entity: ZahlungsImportCreate) =>
       createZahlungsImport(meta, entity)
+    case ZahlungsEingangErledigtEvent(meta, entity: ZahlungsEingangModifyErledigt) =>
+      zahlungsEingangErledigen(meta, entity)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -94,14 +99,18 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungBezahlen(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        if (Verschickt == rechnung.status || MahnungVerschickt == rechnung.status) {
-          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(
-            einbezahlterBetrag = Some(entity.einbezahlterBetrag),
-            eingangsDatum = Some(entity.eingangsDatum),
-            status = Bezahlt
-          ))
-        }
+      rechnungBezahlenUpdate(id, entity)
+    }
+  }
+
+  def rechnungBezahlenUpdate(id: RechnungId, entity: RechnungModifyBezahlt)(implicit personId: PersonId, session: DBSession) = {
+    buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
+      if (Verschickt == rechnung.status || MahnungVerschickt == rechnung.status) {
+        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(
+          einbezahlterBetrag = Some(entity.einbezahlterBetrag),
+          eingangsDatum = Some(entity.eingangsDatum),
+          status = Bezahlt
+        ))
       }
     }
   }
@@ -121,6 +130,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     def createZahlungsEingang(zahlungsEingangCreate: ZahlungsEingangCreate)(implicit session: DBSession) = {
       val zahlungsEingang = copyTo[ZahlungsEingangCreate, ZahlungsEingang](
         zahlungsEingangCreate,
+        "erledigt" -> False,
+        "bemerkung" -> None,
         "erstelldat" -> meta.timestamp,
         "ersteller" -> meta.originator,
         "modifidat" -> meta.timestamp,
@@ -132,7 +143,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
     val zahlungsImport = copyTo[ZahlungsImportCreate, ZahlungsImport](
       entity,
-      "status" -> Neu,
+      "anzahlZahlungsEingaenge" -> entity.zahlungsEingaenge.size,
+      "anzahlZahlungsEingaengeErledigt" -> Zero,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -156,6 +168,20 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
         }
       }
       buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
+    }
+  }
+
+  def zahlungsEingangErledigen(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt)(implicit personId: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
+        if (eingang.status == Ok) {
+          eingang.rechnungId map { rechnungId =>
+            rechnungBezahlenUpdate(rechnungId, RechnungModifyBezahlt(eingang.betrag, eingang.gutschriftsDatum))
+          }
+        }
+
+        buchhaltungWriteRepository.updateEntity[ZahlungsEingang, ZahlungsEingangId](eingang.copy(erledigt = true, bemerkung = entity.bemerkung))
+      }
     }
   }
 }

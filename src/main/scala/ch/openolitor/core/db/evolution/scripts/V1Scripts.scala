@@ -624,7 +624,8 @@ object V1Scripts {
       sql"""create table ${zahlungsImportMapping.table} (
         id BIGINT not null,
         file varchar(255) not null,
-        status varchar(50) not null,
+        anzahl_zahlungs_eingaenge int not null,
+        anzahl_zahlungs_eingaenge_erledigt int not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -643,6 +644,8 @@ object V1Scripts {
         verarbeitungs_datum datetime,
         gutschrifts_datum datetime,
         status varchar(50) not null,
+        erledigt varchar(1) not null,
+        bemerkung varchar(2000),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
