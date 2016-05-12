@@ -29,6 +29,7 @@ import akka.actor.SupervisorStrategy.Restart
 import ch.openolitor._
 import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.domain._
+import ch.openolitor.core.AkkaEventStream
 
 trait EventService[E <: PersistentEvent] {
   type Handle = (E => Unit)

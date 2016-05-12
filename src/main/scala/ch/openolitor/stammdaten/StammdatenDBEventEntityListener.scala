@@ -24,6 +24,7 @@ package ch.openolitor.stammdaten
 
 import akka.actor._
 import ch.openolitor.core.models._
+import ch.openolitor.core.domain.SystemEvents
 import ch.openolitor.core.ws._
 import spray.json._
 import ch.openolitor.stammdaten.models._
@@ -55,6 +56,7 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with StammdatenDBMappings with AsyncConnectionPoolContextAware {
   this: StammdatenWriteRepositoryComponent with StammdatenReadRepositoryComponent =>
   import StammdatenDBEventEntityListener._
+  import SystemEvents._
 
   override def preStart() {
     super.preStart()
@@ -93,6 +95,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityCreated(userId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(userId)
 
     case e @ EntityModified(userId, entity: Lieferung, orig: Lieferung) => handleLieferungModified(entity, orig)(userId)
+
+    case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
     case x => //log.debug(s"receive unused event $x")
   }
@@ -453,6 +457,16 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             statusLF
           }
         }
+      }
+    }
+  }
+
+  def handlePersonLoggedIn(personId: PersonId, timestamp: DateTime) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        implicit val pid = SystemEvents.SystemPersonId
+        val updated = person.copy(letzteAnmeldung = Some(timestamp))
+        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
       }
     }
   }

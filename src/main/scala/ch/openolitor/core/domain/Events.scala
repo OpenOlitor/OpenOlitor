@@ -31,3 +31,13 @@ trait PersistentEvent extends Serializable {
   val meta: EventMetadata
 }
 
+case class PersistentSystemEvent(meta: EventMetadata, event: SystemEvent) extends PersistentEvent
+
+trait SystemEvent
+
+object SystemEvents {
+
+  val SystemPersonId = PersonId(0)
+
+  case class PersonLoggedIn(personId: PersonId, timestamp: DateTime) extends SystemEvent
+}

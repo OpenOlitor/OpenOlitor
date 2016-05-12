@@ -68,13 +68,14 @@ import ch.openolitor.core.security._
 import spray.routing.RejectionHandler
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load)
+  def props(entityStore: ActorRef, eventStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load)
 }
 
 trait RouteServiceComponent {
 
   val entityStore: ActorRef
+  val eventStore: ActorRef
   val sysConfig: SystemConfig
   val system: ActorSystem
   val fileStore: FileStore
@@ -87,10 +88,10 @@ trait RouteServiceComponent {
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent {
-  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
-  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
-  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -284,6 +285,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
 class DefaultRouteServiceActor(
   override val entityStore: ActorRef,
+  override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val mandant: String,

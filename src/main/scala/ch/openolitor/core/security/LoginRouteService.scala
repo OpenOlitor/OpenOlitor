@@ -54,6 +54,7 @@ import scalaz._
 import Scalaz._
 import ch.openolitor.util.ConfigUtil._
 import ch.openolitor.stammdaten.models.PersonSummary
+import ch.openolitor.core.domain.SystemEvents
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -61,6 +62,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     with DefaultRouteService with LazyLogging with LoginJsonProtocol
     with XSRFTokenSessionAuthenticatorProvider {
   self: StammdatenReadRepositoryComponent =>
+  import SystemEvents._
 
   //TODO: get real userid from login  
   override val personId: PersonId = Boot.systemPersonId
@@ -186,6 +188,9 @@ trait LoginRouteService extends HttpService with ActorReferences
     EitherT {
       loginTokenCache(token)(person.id) map { _ =>
         val personSummary = copyTo[Person, PersonSummary](person)
+
+        eventStore ! PersonLoggedIn(person.id, org.joda.time.DateTime.now)
+
         LoginResult(LoginOk, token, personSummary).right
       }
     }
@@ -266,6 +271,7 @@ trait LoginRouteService extends HttpService with ActorReferences
 
 class DefaultLoginRouteService(
   override val entityStore: ActorRef,
+  override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
