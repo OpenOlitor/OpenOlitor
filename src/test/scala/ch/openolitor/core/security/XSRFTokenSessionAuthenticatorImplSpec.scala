@@ -36,10 +36,12 @@ import org.joda.time.DateTime
 class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeConversions {
   import AuthCookies._
   "Authenticate" should {
+    val token = "asdasd"
+    val personId = PersonId(123)
+    val subject = Subject(personId, None)
+
     "Succeed without time limitation" in {
-      val token = "asdasd"
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(None)
-      val personId = PersonId(123)
 
       // prepare requestcontext
       val cookie = Cookie(Seq(HttpCookie(CsrfTokenCookieName, token)))
@@ -49,18 +51,17 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
       val ctx = RequestContext(request, null, null)
 
       // prepare cache
-      provider.loginTokenCache(token)(personId)
+      provider.loginTokenCache(token)(subject)
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.right.e must beRight(personId)).await
+      result.map(_.right.e must beRight(subject)).await
     }
 
     "Succeed with time limitation" in {
-      val token = "asdasd"
       val delay = 10 seconds
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(Some(delay))
-      val personId = PersonId(123)
+
       val time = DateTime.now.toString
       val headerValue = s"$token::$time"
 
@@ -72,18 +73,16 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
       val ctx = RequestContext(request, null, null)
 
       // prepare cache
-      provider.loginTokenCache(token)(personId)
+      provider.loginTokenCache(token)(subject)
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.right.e must beRight(personId)).await
+      result.map(_.right.e must beRight(subject)).await
     }
 
     "Fail when missing cookie param" in {
-      val token = "asdasd"
       val delay = 10 seconds
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(Some(delay))
-      val personId = PersonId(123)
       val time = DateTime.now.toString
       val headerValue = s"$token::$time"
 
@@ -93,7 +92,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
       val ctx = RequestContext(request, null, null)
 
       // prepare cache
-      provider.loginTokenCache(token)(personId)
+      provider.loginTokenCache(token)(subject)
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
@@ -101,10 +100,8 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
     }
 
     "Fail when missing header param" in {
-      val token = "asdasd"
       val delay = 10 seconds
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(Some(delay))
-      val personId = PersonId(123)
       val time = DateTime.now.toString
       val headerValue = s"$token::$time"
 
@@ -115,7 +112,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
       val ctx = RequestContext(request, null, null)
 
       // prepare cache
-      provider.loginTokenCache(token)(personId)
+      provider.loginTokenCache(token)(subject)
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
@@ -123,10 +120,8 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
     }
 
     "Fail when header param does not contain correct time" in {
-      val token = "asdasd"
       val delay = 10 seconds
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(Some(delay))
-      val personId = PersonId(123)
       val time = DateTime.now.toString
       val headerValue = s"$token::asdasdsd"
 
@@ -138,7 +133,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
       val ctx = RequestContext(request, null, null)
 
       // prepare cache
-      provider.loginTokenCache(token)(personId)
+      provider.loginTokenCache(token)(subject)
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
@@ -146,10 +141,8 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
     }
 
     "Fail when header token and cookie token mismatch" in {
-      val token = "asdasd"
       val delay = 10 seconds
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(Some(delay))
-      val personId = PersonId(123)
       val time = DateTime.now.toString
       val headerValue = s"$token::$time"
 
@@ -161,7 +154,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
       val ctx = RequestContext(request, null, null)
 
       // prepare cache
-      provider.loginTokenCache(token)(personId)
+      provider.loginTokenCache(token)(subject)
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
@@ -169,10 +162,8 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
     }
 
     "Fail when delay exceeded" in {
-      val token = "asdasd"
       val delay = 1 milli
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(Some(delay))
-      val personId = PersonId(123)
       val time = DateTime.now.toString
       val headerValue = s"$token::asdasdsd"
 
@@ -184,7 +175,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
       val ctx = RequestContext(request, null, null)
 
       // prepare cache
-      provider.loginTokenCache(token)(personId)
+      provider.loginTokenCache(token)(subject)
 
       Thread.sleep(100)
 
@@ -194,10 +185,8 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
     }
 
     "Fail when no person match token" in {
-      val token = "asdasd"
       val delay = 10 seconds
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(Some(delay))
-      val personId = PersonId(123)
       val time = DateTime.now.toString
       val headerValue = s"$token::$time"
 
@@ -216,5 +205,5 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 }
 
 class MockXSRFTokenSessionAuthenticatorProvider(override val maxRequestDelay: Option[Duration]) extends XSRFTokenSessionAuthenticatorProvider {
-  override val loginTokenCache: Cache[PersonId] = LruCache()
+  override val loginTokenCache: Cache[Subject] = LruCache()
 }

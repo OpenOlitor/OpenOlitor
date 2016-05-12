@@ -131,14 +131,14 @@ trait RouteServiceActor
       loginRouteService.loginRoute ~
 
       // secured routes by XSRF token authenticator
-      authenticate(loginRouteService.openOlitorAuthenticator) { implicit personId =>
+      authenticate(loginRouteService.openOlitorAuthenticator) { implicit subject =>
         stammdatenRouteService.stammdatenRoute ~
           buchhaltungRouteService.buchhaltungRoute ~
           fileStoreRoute
       } ~
 
       // routes secured by basicauth mainly used for service accounts
-      authenticate(BasicAuth(loginRouteService.basicAuthValidation _, realm = "OpenOlitor")) { implicit personId =>
+      authenticate(BasicAuth(loginRouteService.basicAuthValidation _, realm = "OpenOlitor")) { implicit subject =>
         systemRouteService.adminRoutes
       }
   ))

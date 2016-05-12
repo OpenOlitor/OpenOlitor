@@ -74,16 +74,16 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
    * Configure max time since
    */
   val maxRequestDelay: Option[Duration]
-  val loginTokenCache: Cache[PersonId]
-  lazy val openOlitorAuthenticator: ContextAuthenticator[PersonId] = new XSRFTokenSessionAuthenticatorImpl(loginTokenCache)
+  val loginTokenCache: Cache[Subject]
+  lazy val openOlitorAuthenticator: ContextAuthenticator[Subject] = new XSRFTokenSessionAuthenticatorImpl(loginTokenCache)
 
-  private class XSRFTokenSessionAuthenticatorImpl(tokenCache: Cache[PersonId]) extends ContextAuthenticator[PersonId] {
+  private class XSRFTokenSessionAuthenticatorImpl(tokenCache: Cache[Subject]) extends ContextAuthenticator[Subject] {
 
     val noDateTimeValue = new DateTime(0, 1, 1, 0, 0, 0, DateTimeZone.UTC);
 
     type RequestValidation[V] = EitherT[Future, AuthenticatorRejection, V]
 
-    def apply(ctx: RequestContext): Future[Authentication[PersonId]] = {
+    def apply(ctx: RequestContext): Future[Authentication[Subject]] = {
       (for {
         cookieToken <- findCookieToken(ctx)
         headerToken <- findHeaderToken(ctx)
@@ -91,8 +91,8 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
         (token, requestTime) = pair
         valid <- validateCookieAndHeaderToken(cookieToken, token)
         time <- compareRequestTime(requestTime)
-        personId <- findPersonInCache(token)
-      } yield personId).run.map(_.toEither)
+        subject <- findSubjectInCache(token)
+      } yield subject).run.map(_.toEither)
     }
 
     private def findCookieToken(ctx: RequestContext): RequestValidation[String] = EitherT {
@@ -128,7 +128,7 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
       }
     }
 
-    private def findPersonInCache(token: String): RequestValidation[PersonId] = EitherT {
+    private def findSubjectInCache(token: String): RequestValidation[Subject] = EitherT {
       loginTokenCache.get(token) map (_ map (_.right)) getOrElse Future.successful(AuthenticatorRejection(s"Keine Person gefunden für token: $token").left)
     }
 

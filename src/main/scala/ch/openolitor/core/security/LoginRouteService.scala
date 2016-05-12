@@ -72,7 +72,7 @@ trait LoginRouteService extends HttpService with ActorReferences
 
   lazy val loginRoutes = loginRoute
 
-  val loginTokenCache = LruCache[PersonId](
+  val loginTokenCache = LruCache[Subject](
     maxCapacity = 10000,
     timeToLive = 1 day,
     timeToIdle = 4 hours
@@ -187,7 +187,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     //generate token
     val token = generateToken
     EitherT {
-      loginTokenCache(token)(person.id) map { _ =>
+      loginTokenCache(token)(Subject(person.id, person.rolle)) map { _ =>
         val personSummary = copyTo[Person, PersonSummary](person)
 
         eventStore ! PersonLoggedIn(person.id, org.joda.time.DateTime.now)
@@ -273,7 +273,7 @@ trait LoginRouteService extends HttpService with ActorReferences
    * Validate user password used by basic authentication. Using basic auth we never to a two factor
    * authentication
    */
-  def basicAuthValidation(userPass: Option[UserPass]): Future[Option[PersonId]] = {
+  def basicAuthValidation(userPass: Option[UserPass]): Future[Option[Subject]] = {
     logger.debug(s"Perform basic authentication")
     (for {
       up <- validateUserPass(userPass)
@@ -281,7 +281,7 @@ trait LoginRouteService extends HttpService with ActorReferences
       pwdValid <- validatePassword(up.pass, person)
       personValid <- validatePerson(person)
       result <- doLogin(person)
-    } yield person.id).run.map(_.toOption)
+    } yield Subject(person.id, person.rolle)).run.map(_.toOption)
   }
 
   private def validateUserPass(userPass: Option[UserPass]): EitherFuture[UserPass] = EitherT {
