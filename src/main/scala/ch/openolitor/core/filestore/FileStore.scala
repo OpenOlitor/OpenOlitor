@@ -129,7 +129,7 @@ class S3FileStore(override val mandant: String, config: Config, actorSystem: Act
 
   override def createBuckets: Future[Either[FileStoreError, FileStoreSuccess]] = {
     val res = FileStoreBucket.AllFileStoreBuckets map { b =>
-      client.createBucket(new CreateBucketRequest(b.toString)) map {
+      client.createBucket(new CreateBucketRequest(bucketName(b))) map {
         _.fold(e => Left(e), _ => Right(true))
       }
     }
