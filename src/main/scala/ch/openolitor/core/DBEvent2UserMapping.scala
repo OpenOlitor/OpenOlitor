@@ -29,7 +29,7 @@ import spray.json._
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.StammdatenReadRepository
-import ch.openolitor.buchhaltung.models.Rechnung
+import ch.openolitor.buchhaltung.models._
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 
 object DBEvent2UserMapping extends DefaultJsonProtocol {
@@ -144,6 +144,12 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityCreated(userId, entity: Rechnung) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
     case e @ EntityModified(userId, entity: Rechnung, _) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
     case e @ EntityDeleted(userId, entity: Rechnung) => send(userId, e.asInstanceOf[DBEvent[Rechnung]])
+
+    case e @ EntityCreated(userId, entity: ZahlungsImport) => send(userId, e.asInstanceOf[DBEvent[ZahlungsImport]])
+    case e @ EntityDeleted(userId, entity: ZahlungsImport) => send(userId, e.asInstanceOf[DBEvent[ZahlungsImport]])
+
+    case e @ EntityModified(userId, entity: ZahlungsEingang, _) => send(userId, e.asInstanceOf[DBEvent[ZahlungsEingang]])
+    case e @ EntityDeleted(userId, entity: ZahlungsEingang) => send(userId, e.asInstanceOf[DBEvent[ZahlungsEingang]])
 
     case x => log.debug(s"receive unknown event $x")
   }

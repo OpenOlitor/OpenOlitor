@@ -99,14 +99,18 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungBezahlen(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt)(implicit userId: UserId = meta.originator) = {
     DB autoCommit { implicit session =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        if (Verschickt == rechnung.status || MahnungVerschickt == rechnung.status) {
-          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(
-            einbezahlterBetrag = Some(entity.einbezahlterBetrag),
-            eingangsDatum = Some(entity.eingangsDatum),
-            status = Bezahlt
-          ))
-        }
+      rechnungBezahlenUpdate(id, entity)
+    }
+  }
+
+  def rechnungBezahlenUpdate(id: RechnungId, entity: RechnungModifyBezahlt)(implicit userId: UserId, session: DBSession) = {
+    buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
+      if (Verschickt == rechnung.status || MahnungVerschickt == rechnung.status) {
+        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(
+          einbezahlterBetrag = Some(entity.einbezahlterBetrag),
+          eingangsDatum = Some(entity.eingangsDatum),
+          status = Bezahlt
+        ))
       }
     }
   }
@@ -168,8 +172,14 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
   }
 
   def zahlungsEingangErledigen(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt)(implicit userId: UserId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTx { implicit session =>
       buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
+        if (eingang.status == Ok) {
+          eingang.rechnungId map { rechnungId =>
+            rechnungBezahlenUpdate(rechnungId, RechnungModifyBezahlt(eingang.betrag, eingang.gutschriftsDatum))
+          }
+        }
+
         buchhaltungWriteRepository.updateEntity[ZahlungsEingang, ZahlungsEingangId](eingang.copy(erledigt = true, bemerkung = entity.bemerkung))
       }
     }
