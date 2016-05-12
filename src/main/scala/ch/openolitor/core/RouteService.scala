@@ -48,7 +48,6 @@ import ch.openolitor.core.BaseJsonProtocol._
 import ch.openolitor.stammdaten._
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import spray.routing.Route
 import scala.util._
 import ch.openolitor.core.BaseJsonProtocol.IdResponse
@@ -68,11 +67,10 @@ import ch.openolitor.core.security._
 
 object RouteServiceActor {
   def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load)
+    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandantConfiguration.name)
 }
 
 trait RouteServiceComponent {
-
   val entityStore: ActorRef
   val sysConfig: SystemConfig
   val system: ActorSystem
@@ -271,8 +269,7 @@ class DefaultRouteServiceActor(
   override val entityStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
-  override val mandant: String,
-  override val config: Config
+  override val mandant: String
 )
     extends RouteServiceActor
     with DefaultRouteServiceComponent

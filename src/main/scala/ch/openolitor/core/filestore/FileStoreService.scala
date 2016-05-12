@@ -34,10 +34,10 @@ trait FileStoreComponent {
 
 trait DefaultFileStoreComponent extends FileStoreComponent with LazyLogging {
   val mandant: String
-  val config: Config
+  val sysConfig: SystemConfig
   val system: ActorSystem
 
-  override val fileStore = new S3FileStore(mandant, config, system)
+  override val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration.config, system)
 
   fileStore.createBuckets map {
     _.fold(

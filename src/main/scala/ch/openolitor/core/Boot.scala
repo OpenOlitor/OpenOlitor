@@ -78,11 +78,14 @@ object Boot extends App with LazyLogging {
       socket.getLocalPort()
     }.opt.getOrElse(sys.error(s"Couldn't aquire new free server port"))
   }
-  logger.debug(s"application_name: " + System.getenv("application_config"))
-  logger.debug(s"config-file java prop: " + System.getProperty("config-file"))
-  logger.debug(s"port: " + System.getenv("PORT"))
 
-  val config = ConfigFactory.load
+  logger.debug(s"application_name: " + sys.env.get("application_config"))
+  logger.debug(s"config-file java prop: " + sys.props.get("config-file"))
+  logger.debug(s"port: " + sys.env.get("PORT"))
+
+  val config = sys.env.get("OO_CONFIG") map { ooConfig =>
+    ConfigFactory.load(ConfigFactory.parseString(ooConfig))
+  } getOrElse (ConfigFactory.load)
 
   //TODO: replace with real userid after login succeeded
   val systemPersonId = PersonId(1000)

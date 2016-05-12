@@ -24,7 +24,6 @@ package ch.openolitor.core.eventsourcing
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.serialization._
-import com.typesafe.config.ConfigFactory
 import stamina._
 import stamina.json._
 import ch.openolitor.core.domain.EntityStoreJsonProtocol

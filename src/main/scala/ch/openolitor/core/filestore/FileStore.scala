@@ -70,7 +70,7 @@ trait FileStore {
 class S3FileStore(override val mandant: String, config: Config, actorSystem: ActorSystem) extends FileStore with LazyLogging {
   lazy val createSystem = ActorSystem(mandant)
 
-  def props = S3ClientProps(config.getString("AWS_ACCESS_KEY_ID"), config.getString("AWS_SECRET_ACCESS_KEY"), Timeout(30 seconds), createSystem, createSystem, config.getString("AWS_ENDPOINT"))
+  def props = S3ClientProps(config.getString("s3.aws-access-key-id"), config.getString("s3.aws-secret-acccess-key"), Timeout(30 seconds), createSystem, createSystem, config.getString("s3.aws-endpoint"))
 
   val client = new S3Client(props)
 
