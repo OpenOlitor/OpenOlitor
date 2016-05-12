@@ -139,7 +139,12 @@ trait LoginRouteService extends HttpService with ActorReferences
       person <- personById(secondFactor.personId)
       personValid <- validatePerson(person)
       result <- doLogin(person)
-    } yield result
+    } yield {
+      //cleanup code from cache
+      secondFactorTokenCache.remove(form.token)
+
+      result
+    }
   }
 
   def readTokenFromCache(form: SecondFactorLoginForm): EitherFuture[SecondFactor] = {

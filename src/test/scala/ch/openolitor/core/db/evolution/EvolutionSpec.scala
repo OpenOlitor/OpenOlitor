@@ -31,7 +31,6 @@ import scalikejdbc.specs2.mutable.AutoRollback
 import ch.openolitor.core.models.DBSchema
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.BuchhaltungConfig
 import ch.openolitor.core.MandantConfiguration
 
 class EvolutionSpec extends Specification with Mockito with TestDB {
@@ -48,8 +47,7 @@ class EvolutionSpec extends Specification with Mockito with TestDB {
     	PRIMARY KEY (id));""".execute.apply()
   }
 
-  val buchhaltung = BuchhaltungConfig(0, 0, "", "")
-  val mandant = MandantConfiguration("", "", "", 0, 0, Map(), buchhaltung)
+  val mandant = MandantConfiguration("", "", "", 0, 0, Map(), null)
   val cfg = SystemConfig(mandant, null, null)
 
   "Evolution" should {
