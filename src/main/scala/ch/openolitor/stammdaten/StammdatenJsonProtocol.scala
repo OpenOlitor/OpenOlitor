@@ -191,8 +191,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
-  implicit val vertriebModifyFormat = jsonFormat3(VertriebModify)
-
   implicit val postlieferungModifyFormat = jsonFormat0(PostlieferungModify)
   implicit val depotlieferungModifyFormat = jsonFormat1(DepotlieferungModify)
   implicit val heimlieferungModifyFormat = jsonFormat1(HeimlieferungModify)
