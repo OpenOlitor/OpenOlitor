@@ -28,16 +28,15 @@ import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.MandantConfiguration
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.BuchhaltungConfig
+import akka.actor.ActorSystem
 
 class BuchhaltungInsertServiceSpec extends Specification {
   "BuchhaltungInsertService" should {
     val config = SystemConfig(MandantConfiguration(
-      "", "", "", 0, 0, Map(),
-      BuchhaltungConfig(6, 5, "777777777", "")
+      "", "", "", 0, 0, Map(), null
     ), null, null)
 
-    val service = new DefaultBuchhaltungInsertService(config, null)
+    val service = new MockBuchhaltungInsertService(config, null, 6, 5, "777777777", "")
 
     "calculate correct checksum according to definition matrix" in {
       service.calculateChecksum("00000001290381204712347234".toList map (_.asDigit)) === 0
@@ -107,11 +106,10 @@ class BuchhaltungInsertServiceSpec extends Specification {
 
   "BuchhaltungInsertService" should {
     val config = SystemConfig(MandantConfiguration(
-      "", "", "", 0, 0, Map(),
-      BuchhaltungConfig(6, 5, "132", "")
+      "", "", "", 0, 0, Map(), null
     ), null, null)
 
-    val service = new DefaultBuchhaltungInsertService(config, null)
+    val service = new MockBuchhaltungInsertService(config, null, 6, 5, "132", "")
 
     "fill teilnehmernummer from right" in {
       val rechnung = RechnungModify(
@@ -136,4 +134,12 @@ class BuchhaltungInsertServiceSpec extends Specification {
       service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>000000000000000000003215552+ 000000132>"
     }
   }
+}
+
+class MockBuchhaltungInsertService(sysConfig: SystemConfig, override val system: ActorSystem, RechnungIdLengthP: Int,
+    KundeIdLengthP: Int, TeilnehmernummerP: String, ReferenznummerPrefixP: String) extends DefaultBuchhaltungInsertService(sysConfig, system) {
+  override lazy val RechnungIdLength = RechnungIdLengthP
+  override lazy val KundeIdLength = KundeIdLengthP
+  override lazy val Teilnehmernummer = TeilnehmernummerP
+  override lazy val ReferenznummerPrefix = ReferenznummerPrefixP
 }

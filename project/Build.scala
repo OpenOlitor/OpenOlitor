@@ -27,6 +27,7 @@ object BuildSettings {
     libraryDependencies ++= {	  
 	  Seq(
 	    "io.spray"            %%  "spray-can"     					           % sprayV,
+	    "io.spray"            %%  "spray-caching"     					           % sprayV,
 	    "io.spray"            %%  "spray-routing-shapeless2" 		       % sprayV,
 	    "io.spray"            %%  "spray-testkit" 					           % sprayV  % "test",
 	    "io.spray" 			      %%  "spray-json"    					           % sprayV,
