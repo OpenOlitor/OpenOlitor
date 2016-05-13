@@ -499,7 +499,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(lieferungMapping as lieferung)
-        .where.eq(lieferung.abotypId, abotypId).and.not.eq(lieferung.status, Ungeplant)
+        .where.eq(lieferung.abotypId, parameter(abotypId)).and.not.eq(lieferung.status, parameter(Ungeplant))
         .orderBy(lieferung.datum).desc
         .limit(1)
     }.map(lieferungMapping(lieferung)).single
