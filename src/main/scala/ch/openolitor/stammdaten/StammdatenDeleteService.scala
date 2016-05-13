@@ -72,6 +72,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     case EntityDeletedEvent(meta, id: ProduktProduktekategorieId) => deleteProduktProduktekategorie(id)
     case EntityDeletedEvent(meta, id: ProduzentId) => deleteProduzent(id)
     case EntityDeletedEvent(meta, id: TourId) => deleteTour(id)
+    case EntityDeletedEvent(meta, id: VertriebId) => deleteVertrieb(id)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -197,4 +198,11 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.deleteEntity[Tour, TourId](id)
     }
   }
+
+  def deleteVertrieb(id: VertriebId) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.deleteEntity[Vertrieb, VertriebId](id)
+    }
+  }
+
 }

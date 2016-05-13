@@ -71,6 +71,10 @@ class DBEvent2UserMapping extends Actor
 
   val receive: Receive = {
     //TODO: resolve module based json formats of entities, maybe create module based sealed interfaces?
+    case e @ EntityModified(personId, entity: Vertrieb, _) => send(personId, e.asInstanceOf[DBEvent[Vertrieb]])
+    case e @ EntityCreated(personId, entity: Vertrieb) => send(personId, e.asInstanceOf[DBEvent[Vertrieb]])
+    case e @ EntityDeleted(personId, entity: Vertrieb) => send(personId, e.asInstanceOf[DBEvent[Vertrieb]])
+
     case e @ EntityModified(personId, entity: Abotyp, _) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
     case e @ EntityCreated(personId, entity: Abotyp) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
     case e @ EntityDeleted(personId, entity: Abotyp) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
