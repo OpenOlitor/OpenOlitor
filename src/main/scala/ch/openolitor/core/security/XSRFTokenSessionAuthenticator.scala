@@ -42,7 +42,7 @@ import scala.util.{ Try, Success => TrySuccess, Failure => TryFailure }
 
 object AuthCookies {
   val CsrfTokenCookieName = "XSRF-TOKEN"
-  val CsrfTokenHeaderName = "X-XSRF-TOKEN"
+  val CsrfTokenHeaderName = "OO-XSRF-TOKEN"
 }
 
 /** If anything goes wrong during authentication, this is the rejection to use. */

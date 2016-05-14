@@ -122,6 +122,16 @@ trait LoginRouteService extends HttpService with ActorReferences
             }
           }
         }
+      } ~
+      path("user") {
+        authenticate(openOlitorAuthenticator) { implicit subject =>
+          onSuccess(personById(subject.personId).run) {
+            case -\/(error) =>
+              complete(StatusCodes.Unauthorized)
+            case \/-(person) =>
+              complete(person)
+          }
+        }
       }
   }
 
