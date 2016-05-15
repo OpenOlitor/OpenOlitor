@@ -28,21 +28,31 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 
+case class VertriebId(id: Long) extends BaseId
+case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: String,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId) extends BaseEntity[VertriebId]
+
+case class VertriebModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: String) extends JSONSerializable
+
 case class VertriebsartId(id: Long) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
-case class Depotlieferung(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt,
+case class Depotlieferung(id: VertriebsartId, vertriebId: VertriebId, depotId: DepotId,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends Vertriebsart
-case class Heimlieferung(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt,
+case class Heimlieferung(id: VertriebsartId, vertriebId: VertriebId, tourId: TourId,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends Vertriebsart
-case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt,
+case class Postlieferung(id: VertriebsartId, vertriebId: VertriebId,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -50,19 +60,19 @@ case class Postlieferung(id: VertriebsartId, abotypId: AbotypId, liefertag: Lief
   modifikator: PersonId) extends Vertriebsart
 
 sealed trait VertriebsartDetail extends JSONSerializable
-case class DepotlieferungDetail(id: VertriebsartId, abotypId: AbotypId, depotId: DepotId, depot: DepotSummary, liefertag: Lieferzeitpunkt,
+case class DepotlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, depotId: DepotId, depot: DepotSummary,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends VertriebsartDetail
-case class HeimlieferungDetail(id: VertriebsartId, abotypId: AbotypId, tourId: TourId, tour: Tour, liefertag: Lieferzeitpunkt,
+case class HeimlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, tourId: TourId, tour: Tour,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends VertriebsartDetail
-case class PostlieferungDetail(id: VertriebsartId, abotypId: AbotypId, liefertag: Lieferzeitpunkt,
+case class PostlieferungDetail(id: VertriebsartId, vertriebId: VertriebId,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -70,11 +80,11 @@ case class PostlieferungDetail(id: VertriebsartId, abotypId: AbotypId, liefertag
   modifikator: PersonId) extends VertriebsartDetail
 
 sealed trait VertriebsartModify extends JSONSerializable
-case class DepotlieferungModify(depotId: DepotId, liefertag: Lieferzeitpunkt) extends VertriebsartModify
-case class HeimlieferungModify(tourId: TourId, liefertag: Lieferzeitpunkt) extends VertriebsartModify
-case class PostlieferungModify(liefertag: Lieferzeitpunkt) extends VertriebsartModify
+case class DepotlieferungModify(depotId: DepotId) extends VertriebsartModify
+case class HeimlieferungModify(tourId: TourId) extends VertriebsartModify
+case class PostlieferungModify() extends VertriebsartModify
 
 sealed trait VertriebsartAbotypModify extends JSONSerializable
-case class DepotlieferungAbotypModify(abotypId: AbotypId, depotId: DepotId, liefertag: Lieferzeitpunkt) extends VertriebsartAbotypModify
-case class HeimlieferungAbotypModify(abotypId: AbotypId, tourId: TourId, liefertag: Lieferzeitpunkt) extends VertriebsartAbotypModify
-case class PostlieferungAbotypModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt) extends VertriebsartAbotypModify
+case class DepotlieferungAbotypModify(vertriebId: VertriebId, depotId: DepotId) extends VertriebsartAbotypModify
+case class HeimlieferungAbotypModify(vertriebId: VertriebId, tourId: TourId) extends VertriebsartAbotypModify
+case class PostlieferungAbotypModify(vertriebId: VertriebId) extends VertriebsartAbotypModify

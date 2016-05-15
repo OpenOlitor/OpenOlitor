@@ -71,6 +71,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val kundentypIdPath = long2BaseIdPathMatcher(CustomKundentypId.apply)
   implicit val depotIdPath = long2BaseIdPathMatcher(DepotId.apply)
   implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
+  implicit val vertriebIdPath = long2BaseIdPathMatcher(VertriebId.apply)
   implicit val vertriebsartIdPath = long2BaseIdPathMatcher(VertriebsartId.apply)
   implicit val lieferungIdPath = long2BaseIdPathMatcher(LieferungId.apply)
   implicit val lieferplanungIdPath = long2BaseIdPathMatcher(LieferplanungId.apply)
@@ -184,37 +185,46 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           (put | post)(update[AbotypModify, AbotypId](id)) ~
           delete(remove(id))
       } ~
-      path("abotypen" / abotypIdPath / "vertriebsarten") { abotypId =>
-        get(list(stammdatenReadRepository.getVertriebsarten(abotypId))) ~
+      path("abotypen" / abotypIdPath / "vertriebe") { abotypId =>
+        get(list(stammdatenReadRepository.getVertriebe(abotypId))) ~
+          post(create[VertriebModify, VertriebId](VertriebId.apply _))
+      } ~
+      path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath) { (abotypId, vertriebId) =>
+        get(detail(stammdatenReadRepository.getVertrieb(vertriebId))) ~
+          (put | post)(update[VertriebModify, VertriebId](vertriebId)) ~
+          delete(remove(vertriebId))
+      } ~
+      path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "vertriebsarten") { (abotypId, vertriebId) =>
+        get(list(stammdatenReadRepository.getVertriebsarten(vertriebId))) ~
           post {
             requestInstance { request =>
               entity(as[VertriebsartModify]) {
                 case dl: DepotlieferungModify =>
-                  created(request)(copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId))
+                  created(request)(copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "vertriebId" -> vertriebId))
                 case hl: HeimlieferungModify =>
-                  created(request)(copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId))
+                  created(request)(copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "vertriebId" -> vertriebId))
                 case pl: PostlieferungModify =>
-                  created(request)(copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId))
+                  created(request)(copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "vertriebId" -> vertriebId))
               }
             }
           }
       } ~
-      path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath) { (abotypId, vertriebsartId) =>
+      path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "vertriebsarten" / vertriebsartIdPath) { (abotypId, vertriebId, vertriebsartId) =>
         get(detail(stammdatenReadRepository.getVertriebsart(vertriebsartId))) ~
           (put | post) {
             entity(as[VertriebsartModify]) {
               case dl: DepotlieferungModify =>
-                updated(vertriebsartId, copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "abotypId" -> abotypId))
+                updated(vertriebsartId, copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "vertriebId" -> vertriebId))
               case hl: HeimlieferungModify =>
-                updated(vertriebsartId, copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "abotypId" -> abotypId))
+                updated(vertriebsartId, copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "vertriebId" -> vertriebId))
               case pl: PostlieferungModify =>
-                updated(vertriebsartId, copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "abotypId" -> abotypId))
+                updated(vertriebsartId, copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "vertriebId" -> vertriebId))
             }
           } ~
           delete(remove(vertriebsartId))
       } ~
-      path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath / "lieferungen") { (abotypId, vertriebsartId) =>
-        get(list(stammdatenReadRepository.getUngeplanteLieferungen(abotypId, vertriebsartId))) ~
+      path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen") { (abotypId, vertriebId) =>
+        get(list(stammdatenReadRepository.getUngeplanteLieferungen(abotypId, vertriebId))) ~
           post {
             requestInstance { request =>
               entity(as[LieferungAbotypCreate]) { entity =>
@@ -223,7 +233,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             }
           }
       } ~
-      path("abotypen" / abotypIdPath / "vertriebsarten" / vertriebsartIdPath / "lieferungen" / lieferungIdPath) { (abotypId, vertriebsartId, lieferungId) =>
+      path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / lieferungIdPath) { (abotypId, vertriebId, lieferungId) =>
         delete(remove(lieferungId))
       }
 
@@ -334,19 +344,19 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "verrechnen") { id =>
         (post)(lieferplanungVerrechnen(id))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
+        get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / "create") { lieferplanungId =>
+        post(create[BestellungenCreate, BestellungId](BestellungId.apply _))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
+        get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, bestellungId) =>
+        (post)(bestellungErneutVersenden(bestellungId))
       }
-  path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
-    get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))
-  } ~
-    path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / "create") { lieferplanungId =>
-      post(create[BestellungenCreate, BestellungId](BestellungId.apply _))
-    } ~
-    path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
-      get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
-    } ~
-    path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, bestellungId) =>
-      (post)(bestellungErneutVersenden(bestellungId))
-    }
 
   def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
     onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(personId, id)) {

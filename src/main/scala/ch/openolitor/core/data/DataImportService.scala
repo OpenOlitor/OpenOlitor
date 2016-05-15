@@ -91,7 +91,7 @@ trait DataImportService extends Actor with ActorLogging
     case e: ParseError =>
       e.error.printStackTrace
       originator.map(_ ! e)
-    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, lieferungen,
+    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, vertriebe, lieferungen,
       lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
       produzenten, produktProduzenten, bestellungen, bestellpositionen) =>
       log.debug(s"Received parse result, start importing...")
@@ -132,6 +132,7 @@ trait DataImportService extends Actor with ActorLogging
           }
           result = result + ("Vertriebsarten" -> vertriebsarten.length)
 
+          result = importEntityList[Vertrieb, VertriebId]("Vertriebe", vertriebe, result)
           result = importEntityList[Lieferung, LieferungId]("Lieferungen", lieferungen, result)
           result = importEntityList[Lieferplanung, LieferplanungId]("Lieferplanungen", lieferplanungen, result)
           result = importEntityList[Lieferposition, LieferpositionId]("Lieferpositionen", lieferpositionen, result)

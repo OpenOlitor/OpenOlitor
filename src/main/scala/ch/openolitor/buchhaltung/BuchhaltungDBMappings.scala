@@ -50,12 +50,10 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
   implicit val optionRechnungIdBinder: TypeBinder[Option[RechnungId]] = optionBaseIdTypeBinder(RechnungId.apply _)
 
   implicit val zahlungsEingangStatusTypeBinder: TypeBinder[ZahlungsEingangStatus] = string.map(ZahlungsEingangStatus.apply)
-  implicit val zahlungsImportStatusTypeBinder: TypeBinder[ZahlungsImportStatus] = string.map(ZahlungsImportStatus.apply)
 
   //DB parameter binders for write and query operationsit
   implicit val rechnungStatusBinder = toStringSqlBinder[RechnungStatus]
   implicit val zahlungsEingangStatusBinder = toStringSqlBinder[ZahlungsEingangStatus]
-  implicit val zahlungsImportStatusBinder = toStringSqlBinder[ZahlungsImportStatus]
 
   implicit val rechnungIdSqlBinder = baseIdSqlBinder[RechnungId]
   implicit val optionRechnungIdSqlBinder = optionSqlBinder[RechnungId]
@@ -111,7 +109,8 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
     override def updateParameters(entity: ZahlungsImport) = {
       super.updateParameters(entity) ++ Seq(
         column.file -> parameter(entity.file),
-        column.status -> parameter(entity.status)
+        column.anzahlZahlungsEingaenge -> parameter(entity.anzahlZahlungsEingaenge),
+        column.anzahlZahlungsEingaengeErledigt -> parameter(entity.anzahlZahlungsEingaengeErledigt)
       )
     }
   }
@@ -129,17 +128,8 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
     override def updateParameters(entity: ZahlungsEingang) = {
       super.updateParameters(entity) ++ Seq(
-        column.zahlungsImportId -> parameter(entity.zahlungsImportId),
-        column.rechnungId -> parameter(entity.rechnungId),
-        column.transaktionsart -> parameter(entity.transaktionsart),
-        column.teilnehmerNummer -> parameter(entity.teilnehmerNummer),
-        column.referenzNummer -> parameter(entity.referenzNummer),
-        column.waehrung -> parameter(entity.waehrung),
-        column.betrag -> parameter(entity.betrag),
-        column.aufgabeDatum -> parameter(entity.aufgabeDatum),
-        column.verarbeitungsDatum -> parameter(entity.verarbeitungsDatum),
-        column.gutschriftsDatum -> parameter(entity.gutschriftsDatum),
-        column.status -> parameter(entity.status)
+        column.erledigt -> parameter(entity.erledigt),
+        column.bemerkung -> parameter(entity.bemerkung)
       )
     }
   }

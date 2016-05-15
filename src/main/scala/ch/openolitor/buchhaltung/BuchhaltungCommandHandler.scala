@@ -62,8 +62,11 @@ object BuchhaltungCommandHandler {
   case class RechnungStorniertEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
 
   case class ZahlungsImportCreateCommand(originator: PersonId, file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult]) extends UserCommand
+  case class ZahlungsEingangErledigenCommand(originator: PersonId, entity: ZahlungsEingangModifyErledigt) extends UserCommand
+  case class ZahlungsEingaengeErledigenCommand(originator: PersonId, entities: Seq[ZahlungsEingangModifyErledigt]) extends UserCommand
 
   case class ZahlungsImportCreatedEvent(meta: EventMetadata, entity: ZahlungsImportCreate) extends PersistentEvent with JSONSerializable
+  case class ZahlungsEingangErledigtEvent(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt) extends PersistentEvent with JSONSerializable
 }
 
 trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware with AsyncConnectionPoolContextAware {
@@ -121,31 +124,52 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
       }
 
     case ZahlungsImportCreateCommand(personId, file, zahlungsEingaengeRecords) => idFactory => meta =>
-      DB readOnly { implicit session =>
-        val id = ZahlungsImportId(idFactory(classOf[ZahlungsImportId]))
-        val zahlungsEingaenge = zahlungsEingaengeRecords collect {
-          // ignoring total records for now
-          case result: ZahlungsImportRecord =>
-            val zahlungsEingangId = ZahlungsEingangId(idFactory(classOf[ZahlungsEingangId]))
+      val id = ZahlungsImportId(idFactory(classOf[ZahlungsImportId]))
+      val zahlungsEingaenge = zahlungsEingaengeRecords collect {
+        // ignoring total records for now
+        case result: ZahlungsImportRecord =>
+          val zahlungsEingangId = ZahlungsEingangId(idFactory(classOf[ZahlungsEingangId]))
 
-            ZahlungsEingangCreate(
-              zahlungsEingangId,
-              id,
-              None,
-              result.transaktionsart.toString,
-              result.teilnehmerNummer,
-              result.referenzNummer,
-              result.waehrung,
-              result.betrag,
-              result.aufgabeDatum,
-              result.verarbeitungsDatum,
-              result.gutschriftsDatum,
-              Ok
-            )
-        }
-
-        Success(Seq(ZahlungsImportCreatedEvent(meta, ZahlungsImportCreate(id, file, zahlungsEingaenge))))
+          ZahlungsEingangCreate(
+            zahlungsEingangId,
+            id,
+            None,
+            result.transaktionsart.toString,
+            result.teilnehmerNummer,
+            result.referenzNummer,
+            result.waehrung,
+            result.betrag,
+            result.aufgabeDatum,
+            result.verarbeitungsDatum,
+            result.gutschriftsDatum,
+            Ok
+          )
       }
+
+      Success(Seq(ZahlungsImportCreatedEvent(meta, ZahlungsImportCreate(id, file, zahlungsEingaenge))))
+
+    case ZahlungsEingangErledigenCommand(personId, entity) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
+          if (!eingang.erledigt) {
+            Success(Seq(ZahlungsEingangErledigtEvent(meta, entity)))
+          } else {
+            Success(Seq())
+          }
+        } getOrElse (Failure(new InvalidStateException(s"Kein Zahlungseingang mit der Nr. ${entity.id} gefunden")))
+      }
+
+    case ZahlungsEingaengeErledigenCommand(userId, entities) => idFactory => meta =>
+      val (successfuls, failures) = entities map { entity =>
+        handle(ZahlungsEingangErledigenCommand(userId, entity))(idFactory)(meta)
+      } partition (_.isSuccess)
+
+      if (successfuls.isEmpty) {
+        Failure(new InvalidStateException(s"Keiner der Zahlungseingänge konnte abgearbeitet werden"))
+      } else {
+        Success(successfuls flatMap (_.get))
+      }
+
     /*
        * Insert command handling
        */

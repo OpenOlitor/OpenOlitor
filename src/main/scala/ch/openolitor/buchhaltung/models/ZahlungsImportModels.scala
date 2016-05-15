@@ -31,6 +31,7 @@ import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 
 sealed trait ZahlungsEingangStatus
 case object Ok extends ZahlungsEingangStatus
+case object Storno extends ZahlungsEingangStatus
 case object AbgelehntFinanzinstitut extends ZahlungsEingangStatus
 case object BetragNichtKorrekt extends ZahlungsEingangStatus
 case object BereitsVerarbeitet extends ZahlungsEingangStatus
@@ -38,17 +39,7 @@ case object ReferenznummerNichtGefunden extends ZahlungsEingangStatus
 
 object ZahlungsEingangStatus {
   def apply(value: String): ZahlungsEingangStatus = {
-    Vector(Ok, AbgelehntFinanzinstitut, BetragNichtKorrekt, BereitsVerarbeitet, ReferenznummerNichtGefunden).find(_.toString == value).getOrElse(Ok)
-  }
-}
-
-sealed trait ZahlungsImportStatus
-case object Neu extends ZahlungsImportStatus
-case object Importiert extends ZahlungsImportStatus
-
-object ZahlungsImportStatus {
-  def apply(value: String): ZahlungsImportStatus = {
-    Vector(Neu, Importiert).find(_.toString == value).getOrElse(Neu)
+    Vector(Ok, Storno, AbgelehntFinanzinstitut, BetragNichtKorrekt, BereitsVerarbeitet, ReferenznummerNichtGefunden).find(_.toString == value).getOrElse(Ok)
   }
 }
 
@@ -59,7 +50,8 @@ case class ZahlungsImportId(id: Long) extends BaseId
 case class ZahlungsImport(
   id: ZahlungsImportId,
   file: String,
-  status: ZahlungsImportStatus,
+  anzahlZahlungsEingaenge: Int,
+  anzahlZahlungsEingaengeErledigt: Int,
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -97,6 +89,8 @@ case class ZahlungsEingang(
   verarbeitungsDatum: DateTime,
   gutschriftsDatum: DateTime,
   status: ZahlungsEingangStatus,
+  erledigt: Boolean,
+  bemerkung: Option[String],
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -117,4 +111,9 @@ case class ZahlungsEingangCreate(
   verarbeitungsDatum: DateTime,
   gutschriftsDatum: DateTime,
   status: ZahlungsEingangStatus
+) extends JSONSerializable
+
+case class ZahlungsEingangModifyErledigt(
+  id: ZahlungsEingangId,
+  bemerkung: Option[String]
 ) extends JSONSerializable

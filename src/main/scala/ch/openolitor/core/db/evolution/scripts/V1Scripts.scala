@@ -44,6 +44,7 @@ object V1Scripts {
       //drop all tables
       logger.debug(s"oo-system: cleanupDatabase - drop tables - stammdaten")
 
+      sql"drop table if exists ${vertriebMapping.table}".execute.apply()
       sql"drop table if exists ${postlieferungMapping.table}".execute.apply()
       sql"drop table if exists ${depotlieferungMapping.table}".execute.apply()
       sql"drop table if exists ${heimlieferungMapping.table}".execute.apply()
@@ -74,10 +75,19 @@ object V1Scripts {
       logger.debug(s"oo-system: cleanupDatabase - create tables - stammdaten")
       //create tables
 
-      sql"""create table ${postlieferungMapping.table}  (
+      sql"""create table ${vertriebMapping.table}  (
         id BIGINT not null,
         abotyp_id BIGINT not null,
         liefertag varchar(10),
+        beschrieb varchar(2000),
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${postlieferungMapping.table}  (
+        id BIGINT not null,
+        vertrieb_id BIGINT not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -85,9 +95,8 @@ object V1Scripts {
 
       sql"""create table ${depotlieferungMapping.table} (
         id BIGINT not null,
-        abotyp_id BIGINT not null,
+        vertrieb_id BIGINT not null,
         depot_id BIGINT not null,
-        liefertag varchar(10),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -95,9 +104,8 @@ object V1Scripts {
 
       sql"""create table ${heimlieferungMapping.table} (
         id BIGINT not null,
-        abotyp_id BIGINT not null,
+        vertrieb_id BIGINT not null,
         tour_id BIGINT not null,
-        liefertag varchar(10),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -314,8 +322,8 @@ object V1Scripts {
         id varchar(36) not null,
         abotyp_id varchar(36) not null,
         abotyp_beschrieb varchar(100) not null,
-        vertriebsart_id varchar(36) not null,
-        vertriebsart_beschrieb varchar(100) not null,
+        vertrieb_id varchar(36) not null,
+        vertrieb_beschrieb varchar(100) not null,
         status varchar(50) not null,
         datum datetime not null,
         durchschnittspreis DECIMAL(7,2) not null,
@@ -624,7 +632,8 @@ object V1Scripts {
       sql"""create table ${zahlungsImportMapping.table} (
         id BIGINT not null,
         file varchar(255) not null,
-        status varchar(50) not null,
+        anzahl_zahlungs_eingaenge int not null,
+        anzahl_zahlungs_eingaenge_erledigt int not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -643,6 +652,8 @@ object V1Scripts {
         verarbeitungs_datum datetime,
         gutschrifts_datum datetime,
         status varchar(50) not null,
+        erledigt varchar(1) not null,
+        bemerkung varchar(2000),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,

@@ -102,6 +102,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val liefereinheitFormat = enumFormat(Liefereinheit.apply)
 
   //id formats
+  implicit val vertriebIdFormat = baseIdFormat(VertriebId)
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId)
   implicit val abotypIdFormat = baseIdFormat(AbotypId)
   implicit val depotIdFormat = baseIdFormat(DepotId)
@@ -190,9 +191,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
-  implicit val postlieferungModifyFormat = jsonFormat1(PostlieferungModify)
-  implicit val depotlieferungModifyFormat = jsonFormat2(DepotlieferungModify)
-  implicit val heimlieferungModifyFormat = jsonFormat2(HeimlieferungModify)
+  implicit val postlieferungModifyFormat = jsonFormat0(PostlieferungModify)
+  implicit val depotlieferungModifyFormat = jsonFormat1(DepotlieferungModify)
+  implicit val heimlieferungModifyFormat = jsonFormat1(HeimlieferungModify)
 
   implicit val vertriebsartModifyFormat = new RootJsonFormat[VertriebsartModify] {
     def write(obj: VertriebsartModify): JsValue =
@@ -211,9 +212,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
     }
   }
 
-  implicit val postlieferungAbotypModifyFormat = jsonFormat2(PostlieferungAbotypModify)
-  implicit val depotlieferungAbotypModifyFormat = jsonFormat3(DepotlieferungAbotypModify)
-  implicit val heimlieferungAbotypModifyFormat = jsonFormat3(HeimlieferungAbotypModify)
+  implicit val postlieferungAbotypModifyFormat = jsonFormat1(PostlieferungAbotypModify)
+  implicit val depotlieferungAbotypModifyFormat = jsonFormat2(DepotlieferungAbotypModify)
+  implicit val heimlieferungAbotypModifyFormat = jsonFormat2(HeimlieferungAbotypModify)
 
   implicit val vertriebsartAbotypModifyFormat = new RootJsonFormat[VertriebsartAbotypModify] {
     def write(obj: VertriebsartAbotypModify): JsValue =

@@ -83,6 +83,7 @@ object ParseImportDataApp extends App {
         print(r.touren)
         print(r.depots)
         print(r.abotypen)
+        print(r.vertriebe)
         print(r.vertriebsarten)
         print(r.lieferungen)
         print(r.lieferplanungen)

@@ -97,7 +97,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
+    case e @ EntityModified(userId, entity: Vertriebsart, orig: Vertriebsart) => handleVertriebsartModified(entity, orig)(userId)
+
     case x => //log.debug(s"receive unused event $x")
+  }
+
+  def handleVertriebsartModified(vertriebsart: Vertriebsart, orig: Vertriebsart)(implicit personId: PersonId) = {
+    //update Beschrieb on Vertrieb
   }
 
   def handleDepotlieferungAboCreated(abo: DepotlieferungAbo)(implicit personId: PersonId) = {

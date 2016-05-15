@@ -48,6 +48,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder(TourId.apply _)
   implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder(DepotId.apply _)
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder(AbotypId.apply _)
+  implicit val vertriebIdBinder: TypeBinder[VertriebId] = baseIdTypeBinder(VertriebId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
   implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
   implicit val pendenzIdBinder: TypeBinder[PendenzId] = baseIdTypeBinder(PendenzId.apply _)
@@ -116,6 +117,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
+  implicit val vertriebIdSqlBinder = baseIdSqlBinder[VertriebId]
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
   implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
   implicit val pendenzIdSqlBinder = baseIdSqlBinder[PendenzId]
@@ -318,8 +320,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(lieferung) ++ Seq(
         column.abotypId -> parameter(lieferung.abotypId),
         column.abotypBeschrieb -> parameter(lieferung.abotypBeschrieb),
-        column.vertriebsartId -> parameter(lieferung.vertriebsartId),
-        column.vertriebsartBeschrieb -> parameter(lieferung.vertriebsartBeschrieb),
+        column.vertriebId -> parameter(lieferung.vertriebId),
+        column.vertriebBeschrieb -> parameter(lieferung.vertriebBeschrieb),
         column.status -> parameter(lieferung.status),
         column.datum -> parameter(lieferung.datum),
         column.durchschnittspreis -> parameter(lieferung.durchschnittspreis),
@@ -483,6 +485,25 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
+  implicit val vertriebMapping = new BaseEntitySQLSyntaxSupport[Vertrieb] {
+    override val tableName = "Vertrieb"
+
+    override lazy val columns = autoColumns[Vertrieb]()
+
+    def apply(rn: ResultName[Vertrieb])(rs: WrappedResultSet): Vertrieb =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Vertrieb): Seq[Any] = parameters(Vertrieb.unapply(entity).get)
+
+    override def updateParameters(vertrieb: Vertrieb) = {
+      super.updateParameters(vertrieb) ++ Seq(
+        column.abotypId -> parameter(vertrieb.abotypId),
+        column.liefertag -> parameter(vertrieb.liefertag),
+        column.beschrieb -> parameter(vertrieb.beschrieb)
+      )
+    }
+  }
+
   implicit val heimlieferungMapping = new BaseEntitySQLSyntaxSupport[Heimlieferung] {
     override val tableName = "Heimlieferung"
 
@@ -495,7 +516,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(lieferung: Heimlieferung) = {
       super.updateParameters(lieferung) ++ Seq(
-        column.liefertag -> parameter(lieferung.liefertag),
         column.tourId -> parameter(lieferung.tourId)
       )
     }
@@ -514,7 +534,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(lieferung: Depotlieferung) = {
       super.updateParameters(lieferung) ++ Seq(
-        column.liefertag -> parameter(lieferung.liefertag),
         column.depotId -> parameter(lieferung.depotId)
       )
     }
@@ -531,7 +550,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Postlieferung) = {
-      super.updateParameters(lieferung) ++ Seq(column.liefertag -> parameter(lieferung.liefertag))
+      super.updateParameters(lieferung) ++ Seq(column.vertriebId -> parameter(lieferung.vertriebId))
     }
   }
 

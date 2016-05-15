@@ -64,6 +64,7 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
     case e @ EntityCreated(personId, entity: Rechnung) => handleRechnungCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Rechnung) => handleRechnungDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) => handleRechnungModified(entity, orig)(personId)
+    case e @ EntityModified(personId, entity: ZahlungsEingang, orig: ZahlungsEingang) => handleZahlungsEingangModified(entity, orig)(personId)
 
     case x => //log.debug(s"receive unused event $x")
   }
@@ -75,6 +76,20 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
   }
 
   def handleRechnungCreated(rechnung: Rechnung)(implicit personId: PersonId) = {
+  }
+
+  def handleZahlungsEingangModified(entity: ZahlungsEingang, orig: ZahlungsEingang)(implicit userId: PersonId) = {
+    DB autoCommit { implicit session =>
+      if (!orig.erledigt && entity.erledigt) {
+        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId, { zahlungsImport =>
+          zahlungsImport.copy(anzahlZahlungsEingaengeErledigt = zahlungsImport.anzahlZahlungsEingaengeErledigt + 1)
+        })
+      } else if (orig.erledigt && !entity.erledigt) {
+        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId, { zahlungsImport =>
+          zahlungsImport.copy(anzahlZahlungsEingaengeErledigt = zahlungsImport.anzahlZahlungsEingaengeErledigt - 1)
+        })
+      }
+    }
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
