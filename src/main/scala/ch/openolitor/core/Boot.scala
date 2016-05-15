@@ -88,7 +88,8 @@ object Boot extends App with LazyLogging {
   val systemPersonId = PersonId(1000)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
-  val configs = getMandantConfiguration(config)
+  val ooConfig = config.getConfig("openolitor")
+  val configs = getMandantConfiguration(ooConfig)
   implicit val timeout = Timeout(5.seconds)
   val mandanten = startServices(configs)
 
@@ -105,11 +106,10 @@ object Boot extends App with LazyLogging {
   val proxyService = config.getBooleanOption("openolitor.run-proxy-service").getOrElse(false)
   //start proxy service 
   if (proxyService) {
-    startProxyService(mandanten)
+    startProxyService(mandanten, ooConfig)
   }
 
-  def getMandantConfiguration(config: Config): NonEmptyList[MandantConfiguration] = {
-    val ooConfig = config.getConfig("openolitor")
+  def getMandantConfiguration(ooConfig: Config): NonEmptyList[MandantConfiguration] = {
     val mandanten = ooConfig.getStringList("mandanten").toList
 
     mandanten.toNel.map(_.zipWithIndex.map {
@@ -132,10 +132,10 @@ object Boot extends App with LazyLogging {
     }
   }
 
-  def startProxyService(mandanten: NonEmptyList[MandantSystem]) = {
+  def startProxyService(mandanten: NonEmptyList[MandantSystem], config: Config) = {
     implicit val proxySystem = ActorSystem("oo-proxy")
 
-    val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten), "oo-proxy-service")
+    val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten, config), "oo-proxy-service")
     IO(UHttp) ? Http.Bind(proxyService, interface = rootInterface, port = rootPort)
     logger.debug(s"oo-proxy-system: configured proxy listener on port ${rootPort}")
   }

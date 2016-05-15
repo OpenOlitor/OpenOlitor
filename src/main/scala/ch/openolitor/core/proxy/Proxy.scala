@@ -37,6 +37,7 @@ import spray.can.Http
 import spray.can.websocket._
 import spray.can.websocket.WebSocketServerWorker
 import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.config.Config
 
 /**
  * Borrowed from:
@@ -68,14 +69,14 @@ trait Proxy extends LazyLogging {
 }
 
 object ProxyServiceActor {
-  def props(mandanten: NonEmptyList[MandantSystem]): Props = Props(classOf[ProxyServiceActor], mandanten)
+  def props(mandanten: NonEmptyList[MandantSystem], config: Config): Props = Props(classOf[ProxyServiceActor], mandanten, config)
 }
 
 /**
  * Proxy Service which redirects routes matching a mandant key in first row to either
  * the websocket or service redirect url using their actor system
  */
-class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
+class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem], override val config: Config)
     extends Actor
     with ActorLogging
     with HttpService

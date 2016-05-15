@@ -84,6 +84,7 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
     type RequestValidation[V] = EitherT[Future, AuthenticatorRejection, V]
 
     def apply(ctx: RequestContext): Future[Authentication[Subject]] = {
+      logger.debug(s"${ctx.request.uri}:${ctx.request.method}")
       (for {
         cookieToken <- findCookieToken(ctx)
         headerToken <- findHeaderToken(ctx)
@@ -97,6 +98,7 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
 
     private def findCookieToken(ctx: RequestContext): RequestValidation[String] = EitherT {
       Future {
+        logger.debug(s"Check cookies:${ctx.request.cookies}")
         ctx.request.cookies.find(_.name == CsrfTokenCookieName).map(_.content.right).getOrElse(AuthenticatorRejection("Kein XSRF-Token im Cookie gefunden").left)
       }
     }

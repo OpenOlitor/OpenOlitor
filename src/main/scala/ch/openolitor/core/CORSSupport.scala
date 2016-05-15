@@ -22,21 +22,27 @@
 \*                                                                           */
 package ch.openolitor.core
 
-import spray.http.{ HttpMethods, HttpMethod, HttpResponse, AllOrigins }
+import spray.http.{ HttpMethods, HttpMethod, HttpResponse, AllOrigins, HttpOrigin, SomeOrigins }
 import spray.http.HttpHeaders._
 import spray.http.HttpMethods._
 import spray.routing._
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.util.ConfigUtil._
+import com.typesafe.config.Config
 
 // see also https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
 trait CORSSupport extends LazyLogging {
   this: HttpService =>
 
-  private val allowOriginHeader = `Access-Control-Allow-Origin`(AllOrigins)
+  val config: Config
+  lazy val allowOrigin = config.getStringListOption(s"security.cors.allow-origin").map(list => SomeOrigins(list.map(HttpOrigin.apply))).getOrElse(AllOrigins)
+
+  private val allowOriginHeader = `Access-Control-Allow-Origin`(allowOrigin)
   private val optionsCorsHeaders = List(
     `Access-Control-Allow-Headers`("Origin, X-Requested-With, Content-Type, Accept, Accept-Encoding, Accept-Language, Host, Referer, User-Agent, OO-XSRF-TOKEN"),
     `Access-Control-Max-Age`(1728000)
   )
+  logger.debug(s"$this:allowOriginHeader:$allowOriginHeader")
 
   def cors[T]: Directive0 = mapRequestContext { ctx =>
     ctx.withRouteResponseHandling({
@@ -45,7 +51,7 @@ trait CORSSupport extends LazyLogging {
         val allowedMethods: List[HttpMethod] = x.filter(_.isInstanceOf[MethodRejection]).map(rejection => {
           rejection.asInstanceOf[MethodRejection].supported
         })
-        logger.debug(s"Got cors request:$x:$allowedMethods")
+        logger.debug(s"Got cors request:${ctx.request.uri}:$x:$allowedMethods")
         ctx.complete(HttpResponse().withHeaders(
           `Access-Control-Allow-Methods`(OPTIONS, allowedMethods: _*) :: allowOriginHeader ::
             optionsCorsHeaders

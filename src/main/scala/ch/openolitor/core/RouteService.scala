@@ -70,7 +70,7 @@ import spray.routing.authentication.BasicAuth
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load)
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name)
 }
 
 trait RouteServiceComponent {
@@ -293,8 +293,8 @@ class DefaultRouteServiceActor(
   override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
-  override val mandant: String,
-  override val config: Config
-)
-    extends RouteServiceActor
-    with DefaultRouteServiceComponent
+  override val mandant: String
+) extends RouteServiceActor
+    with DefaultRouteServiceComponent {
+  override val config = sysConfig.mandantConfiguration.config
+}
