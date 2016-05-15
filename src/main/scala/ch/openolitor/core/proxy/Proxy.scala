@@ -76,7 +76,7 @@ object ProxyServiceActor {
  * Proxy Service which redirects routes matching a mandant key in first row to either
  * the websocket or service redirect url using their actor system
  */
-class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem], override val config: Config)
+class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem], override val ooConfig: Config)
     extends Actor
     with ActorLogging
     with HttpService

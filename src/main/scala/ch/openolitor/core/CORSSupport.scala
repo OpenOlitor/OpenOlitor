@@ -34,17 +34,20 @@ import com.typesafe.config.Config
 trait CORSSupport extends LazyLogging {
   this: HttpService =>
 
-  val config: Config
-  lazy val allowOrigin = config.getStringListOption(s"security.cors.allow-origin").map(list => SomeOrigins(list.map(HttpOrigin.apply))).getOrElse(AllOrigins)
+  val ooConfig: Config
+
+  lazy val allowOrigin = ooConfig.getStringListOption(s"security.cors.allow-origin").map(list => SomeOrigins(list.map(HttpOrigin.apply))).getOrElse(AllOrigins)
 
   private val allowOriginHeader = `Access-Control-Allow-Origin`(allowOrigin)
+  val allowCredentialsHeader = `Access-Control-Allow-Credentials`(true)
+  val allowHeaders = `Access-Control-Allow-Headers`("Origin, X-Requested-With, Content-Type, Accept, Accept-Encoding, Accept-Language, Host, Referer, User-Agent, OO-XSRF-TOKEN")
   private val optionsCorsHeaders = List(
-    `Access-Control-Allow-Headers`("Origin, X-Requested-With, Content-Type, Accept, Accept-Encoding, Accept-Language, Host, Referer, User-Agent, OO-XSRF-TOKEN"),
+    allowHeaders,
     `Access-Control-Max-Age`(1728000)
   )
   logger.debug(s"$this:allowOriginHeader:$allowOriginHeader")
 
-  def cors[T]: Directive0 = mapRequestContext { ctx =>
+  def corsDirective[T]: Directive0 = mapRequestContext { ctx =>
     ctx.withRouteResponseHandling({
       //It is an option requeset for a resource that responds to some other method
       case Rejected(x) if (ctx.request.method.equals(HttpMethods.OPTIONS) && !x.filter(_.isInstanceOf[MethodRejection]).isEmpty) => {
@@ -53,12 +56,23 @@ trait CORSSupport extends LazyLogging {
         })
         logger.debug(s"Got cors request:${ctx.request.uri}:$x:$allowedMethods")
         ctx.complete(HttpResponse().withHeaders(
-          `Access-Control-Allow-Methods`(OPTIONS, allowedMethods: _*) :: allowOriginHeader ::
+          `Access-Control-Allow-Methods`(OPTIONS, allowedMethods: _*) :: allowCredentialsHeader :: allowOriginHeader ::
             optionsCorsHeaders
         ))
       }
     }).withHttpResponseHeadersMapped { headers =>
-      allowOriginHeader :: headers
+      allowCredentialsHeader :: allowOriginHeader :: headers
     }
+  }
+
+  private def preflightRequestHandler: Route = options {
+    complete(HttpResponse(200).withHeaders(
+      `Access-Control-Allow-Methods`(OPTIONS, POST, PUT, GET, DELETE) ::
+        allowCredentialsHeader :: allowOriginHeader :: allowHeaders :: Nil
+    ))
+  }
+
+  def cors(r: Route) = preflightRequestHandler ~ corsDirective {
+    r
   }
 }

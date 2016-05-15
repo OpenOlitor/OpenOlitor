@@ -32,7 +32,7 @@ object ConfigUtil {
   implicit class MyConfig(self: Config) {
 
     private def getOption[T](path: String)(get: String => T): Option[T] = {
-      if (self.hasPath(path)) {
+      if (self != null && path != null && self.hasPath(path)) {
         Some(get(path))
       } else {
         None

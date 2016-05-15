@@ -114,19 +114,19 @@ object Boot extends App with LazyLogging {
 
     mandanten.toNel.map(_.zipWithIndex.map {
       case (mandant, index) =>
-        val ifc = config.getStringOption(s"openolitor.$mandant.interface").getOrElse(rootInterface)
-        val port = config.getIntOption(s"openolitor.$mandant.port").getOrElse(freePort)
-        val wsPort = config.getIntOption(s"openolitor.$mandant.webservicePort").getOrElse(freePort)
-        val name = config.getStringOption(s"openolitor.$mandant.name").getOrElse(mandant)
-
         val mandantConfig = ooConfig.getConfig(mandant).withFallback(ooConfig)
+
+        val ifc = mandantConfig.getStringOption(s"interface").getOrElse(rootInterface)
+        val port = mandantConfig.getIntOption(s"port").getOrElse(freePort)
+        val wsPort = mandantConfig.getIntOption(s"webservicePort").getOrElse(freePort)
+        val name = mandantConfig.getStringOption(s"name").getOrElse(mandant)
 
         MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(mandantConfig), mandantConfig)
     }).getOrElse {
       //default if no list of mandanten is configured
       val ifc = rootInterface
       val port = rootPort
-      val wsPort = config.getIntOption("openolitor.webservicePort").getOrElse(9001)
+      val wsPort = ooConfig.getIntOption("webservicePort").getOrElse(9001)
 
       NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(ooConfig), ooConfig))
     }
