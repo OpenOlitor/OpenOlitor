@@ -84,8 +84,7 @@ object Boot extends App with LazyLogging {
 
   val config = ConfigFactory.load
 
-  //TODO: replace with real userid after login succeeded
-  val systemPersonId = PersonId(1000)
+  val systemPersonId = PersonId(0)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
   val ooConfig = config.getConfig("openolitor")

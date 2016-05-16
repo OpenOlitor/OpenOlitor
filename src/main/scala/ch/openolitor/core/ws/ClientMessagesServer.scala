@@ -64,8 +64,6 @@ class ClientMessagesServer extends Actor with ActorLogging {
 
   import ClientMessagesJsonProtocol._
 
-  def actorName(id: PersonId): String = "uid:" + id.id.toString
-
   override def preStart() {
     super.preStart()
     //register ourself as listener to sendtoclient commands
@@ -83,22 +81,16 @@ class ClientMessagesServer extends Actor with ActorLogging {
       log.debug(s"Connected to websocket:$remoteAddress, $localAddress")
       val serverConnection = sender()
 
-      //...how to we get userid?
-      val personId = Boot.systemPersonId
-
-      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), actorName(personId) + "-" + System.currentTimeMillis)
+      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), remoteAddress.getAddress.toString + "-" + System.currentTimeMillis)
       serverConnection ! Http.Register(conn)
     case SendToClient(senderPersonId, msg, Nil) =>
       //broadcast to all      
       log.debug(s"Broadcast client message:$msg")
-      context.children.map(c => c ! Push(msg))
+      context.children.map(c => c ! Push(Nil, msg))
     case SendToClient(senderPersonId, msg, receivers) =>
       //send to specific clients only
       log.debug(s"send client message:$msg:$receivers")
-      receivers.map { receiver =>
-        val name = actorName(receiver)
-        context.children.filter(_.path.name.startsWith(name)).map(_ ! Push(msg))
-      }
+      context.children.map(_ ! Push(receivers, msg))
     case x =>
       log.debug(s"Received unkown event:$x")
   }

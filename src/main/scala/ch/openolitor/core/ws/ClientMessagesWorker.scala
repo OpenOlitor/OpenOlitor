@@ -30,9 +30,10 @@ import spray.http._
 import spray.can.websocket._
 import spray.can.websocket.{ Send, SendStream, UpgradedToWebSocket }
 import akka.util.ByteString
+import ch.openolitor.core.models.PersonId
 
 object ClientMessagesWorker {
-  case class Push(msg: String)
+  case class Push(receivers: List[PersonId] = Nil, msg: String)
 
   def props(serverConnection: ActorRef) = Props(classOf[ClientMessagesWorker], serverConnection)
 }
@@ -40,14 +41,24 @@ class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceAc
 
   import ClientMessagesWorker._
 
-  val helloServerPattern = """(.*)("type:"HelloServer",)(.*)""".r
+  val helloServerPattern = """(.*)("type":\s*"HelloServer"),("token":\s*)(\w)(.*)""".r
+  var personId: Option[PersonId] = None
+
+  def businessLogicLoggedIn: Receive = {
+    case Push(Nil, msg) =>
+      log.debug(s"Broadcast to client:$msg")
+      send(TextFrame(msg))
+    case Push(receivers, msg) =>
+      personId map { id =>
+        receivers.find(_ == id).headOption.map { rec =>
+          log.debug(s"Push to client:$msg")
+          send(TextFrame(msg))
+        }
+      }
+  }
 
   def businessLogic: Receive = {
 
-    case Push(msg) =>
-      log.debug(s"Push to client:$msg")
-      send(TextFrame(msg))
-    // just bounce frames back for Autobahn testsuite
     case x: BinaryFrame =>
       log.debug(s"Got from binary data:$x")
     case x: TextFrame =>
@@ -56,7 +67,9 @@ class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceAc
       msg match {
         case "Ping" =>
           send(TextFrame("Pong"))
-        case helloServerPattern(_, _, _) =>
+        case helloServerPattern(_, _, _, token, _) =>
+          log.debug("Got message token from client: $token")
+
           send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
         case _ =>
         //TODO: handle client messages internally   

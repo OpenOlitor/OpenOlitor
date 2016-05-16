@@ -23,6 +23,7 @@
 package ch.openolitor.core.security
 
 import spray.routing._
+
 import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
@@ -64,9 +65,6 @@ trait LoginRouteService extends HttpService with ActorReferences
     with XSRFTokenSessionAuthenticatorProvider {
   self: StammdatenReadRepositoryComponent =>
   import SystemEvents._
-
-  //TODO: get real userid from login  
-  override val personId: PersonId = Boot.systemPersonId
 
   type EitherFuture[A] = EitherT[Future, LoginFailed, A]
 
