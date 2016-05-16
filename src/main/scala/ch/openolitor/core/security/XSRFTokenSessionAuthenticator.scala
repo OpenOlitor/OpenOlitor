@@ -67,14 +67,13 @@ object AuthenticatorRejectionHandler extends LazyLogging {
  * 4. Request Zeit darf eine maximale Duration nicht überschreiten (Request kann nicht zu einem späteren Zeitpunkt erneut ausgeführt werden)
  * 5. Im lokalen Cache muss eine PersonId für das entsprechende token gespeichert sein
  */
-trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging {
+trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging with TokenCache {
   import AuthCookies._
 
   /*
    * Configure max time since
    */
   val maxRequestDelay: Option[Duration]
-  val loginTokenCache: Cache[Subject]
   lazy val openOlitorAuthenticator: ContextAuthenticator[Subject] = new XSRFTokenSessionAuthenticatorImpl(loginTokenCache)
 
   private class XSRFTokenSessionAuthenticatorImpl(tokenCache: Cache[Subject]) extends ContextAuthenticator[Subject] {

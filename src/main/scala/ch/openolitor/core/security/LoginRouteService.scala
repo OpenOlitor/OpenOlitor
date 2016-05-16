@@ -70,11 +70,6 @@ trait LoginRouteService extends HttpService with ActorReferences
 
   lazy val loginRoutes = loginRoute
 
-  val loginTokenCache = LruCache[Subject](
-    maxCapacity = 10000,
-    timeToLive = 1 day,
-    timeToIdle = 4 hours
-  )
   val secondFactorTokenCache = LruCache[SecondFactor](
     maxCapacity = 1000,
     timeToLive = 20 minutes,
@@ -304,7 +299,8 @@ class DefaultLoginRouteService(
   override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val fileStore: FileStore,
-  override val actorRefFactory: ActorRefFactory
+  override val actorRefFactory: ActorRefFactory,
+  override val loginTokenCache: Cache[Subject]
 )
     extends LoginRouteService
     with DefaultStammdatenReadRepositoryComponent

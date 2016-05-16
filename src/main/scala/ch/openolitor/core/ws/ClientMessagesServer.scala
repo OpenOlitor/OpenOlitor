@@ -30,6 +30,8 @@ import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.ws.ControlCommands.SendToClient
 import ch.openolitor.core.ws.ClientMessagesWorker.Push
 import spray.json.RootJsonWriter
+import spray.caching.Cache
+import ch.openolitor.core.security.Subject
 
 trait ClientReceiverComponent {
   val clientReceiver: ClientReceiver
@@ -58,9 +60,9 @@ trait ClientReceiver extends EventStream {
 }
 
 object ClientMessagesServer {
-  def props() = Props(classOf[ClientMessagesServer])
+  def props(loginTokenCache: Cache[Subject]) = Props(classOf[ClientMessagesServer], loginTokenCache)
 }
-class ClientMessagesServer extends Actor with ActorLogging {
+class ClientMessagesServer(loginTokenCache: Cache[Subject]) extends Actor with ActorLogging {
 
   import ClientMessagesJsonProtocol._
 
@@ -81,7 +83,7 @@ class ClientMessagesServer extends Actor with ActorLogging {
       log.debug(s"Connected to websocket:$remoteAddress, $localAddress")
       val serverConnection = sender()
 
-      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), remoteAddress.getAddress.toString + "-" + System.currentTimeMillis)
+      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection, loginTokenCache), remoteAddress.getAddress.toString + "-" + System.currentTimeMillis)
       serverConnection ! Http.Register(conn)
     case SendToClient(senderPersonId, msg, Nil) =>
       //broadcast to all      

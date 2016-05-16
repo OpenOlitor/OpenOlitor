@@ -31,17 +31,21 @@ import spray.can.websocket._
 import spray.can.websocket.{ Send, SendStream, UpgradedToWebSocket }
 import akka.util.ByteString
 import ch.openolitor.core.models.PersonId
+import spray.caching.Cache
+import ch.openolitor.core.security.Subject
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object ClientMessagesWorker {
   case class Push(receivers: List[PersonId] = Nil, msg: String)
 
-  def props(serverConnection: ActorRef) = Props(classOf[ClientMessagesWorker], serverConnection)
+  def props(serverConnection: ActorRef, loginTokenCache: Cache[Subject]) = Props(classOf[ClientMessagesWorker], serverConnection, loginTokenCache)
 }
-class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
+class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cache[Subject]) extends HttpServiceActor with websocket.WebSocketServerWorker {
 
   import ClientMessagesWorker._
 
-  val helloServerPattern = """(.*)("type":\s*"HelloServer"),("token":\s*)(\w)(.*)""".r
+  val helloServerPattern = """(.*)("type":\s*"HelloServer")(.*)""".r
+  val loginPattern = """(.*)("type":\s*"Login"),("token":\s*)(\w)(.*)""".r
   var personId: Option[PersonId] = None
 
   def businessLogicLoggedIn: Receive = {
@@ -67,10 +71,20 @@ class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceAc
       msg match {
         case "Ping" =>
           send(TextFrame("Pong"))
-        case helloServerPattern(_, _, _, token, _) =>
+        case helloServerPattern(_, _, _) =>
+          send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
+        case loginPattern(_, _, _, token, _) =>
           log.debug("Got message token from client: $token")
 
-          send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
+          loginTokenCache.get(token).map {
+            _ map { subject =>
+              personId = Some(subject.personId)
+
+              context become businessLogicLoggedIn
+
+              send(TextFrame("""{"type":"LoggedIn","personId":"${subject.personId.id}"}"""))
+            }
+          }
         case _ =>
         //TODO: handle client messages internally   
       }

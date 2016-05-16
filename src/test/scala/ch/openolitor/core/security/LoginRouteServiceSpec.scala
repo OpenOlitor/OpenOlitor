@@ -42,6 +42,8 @@ import akka.testkit.TestActorRef
 import ch.openolitor.core.domain.DefaultSystemEventStore
 import akka.actor.Actor
 import akka.actor.ActorSystem
+import spray.caching.Cache
+import spray.caching.LruCache
 
 class LoginRouteServiceSpec extends Specification with Mockito {
   val email = "info@test.com"
@@ -247,6 +249,7 @@ class MockLoginRouteService(
   override val sysConfig: SystemConfig = SystemConfig(null, null, MultipleAsyncConnectionPoolContext())
   override val fileStore: FileStore = null
   override val actorRefFactory: ActorRefFactory = null
+  override val loginTokenCache: Cache[Subject] = LruCache()
 
   override lazy val requireSecondFactorAuthentication = requireSecondFactorAuthenticationP
   override lazy val sendSecondFactorEmail = sendSecondFactorEmailP

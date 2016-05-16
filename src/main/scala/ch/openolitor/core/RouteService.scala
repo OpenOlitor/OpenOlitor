@@ -68,10 +68,11 @@ import ch.openolitor.core.security._
 import spray.routing.RejectionHandler
 import spray.routing.authentication.BasicAuth
 import com.typesafe.sslconfig.util.ConfigLoader
+import spray.caching.Cache
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef, eventStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load, sysConfig.mandantConfiguration.config)
+  def props(entityStore: ActorRef, eventStore: ActorRef, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load, sysConfig.mandantConfiguration.config, loginTokenCache)
 }
 
 trait RouteServiceComponent {
@@ -89,11 +90,11 @@ trait RouteServiceComponent {
   val loginRouteService: LoginRouteService
 }
 
-trait DefaultRouteServiceComponent extends RouteServiceComponent {
+trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, sysConfig, fileStore, actorRefFactory, loginTokenCache)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -295,6 +296,7 @@ class DefaultRouteServiceActor(
   override val system: ActorSystem,
   override val mandant: String,
   override val config: Config,
-  override val ooConfig: Config
+  override val ooConfig: Config,
+  override val loginTokenCache: Cache[Subject]
 ) extends RouteServiceActor
     with DefaultRouteServiceComponent
