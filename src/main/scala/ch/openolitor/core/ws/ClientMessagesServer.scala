@@ -82,8 +82,7 @@ class ClientMessagesServer(loginTokenCache: Cache[Subject]) extends Actor with A
     case Http.Connected(remoteAddress, localAddress) =>
       log.debug(s"Connected to websocket:$remoteAddress, $localAddress")
       val serverConnection = sender()
-
-      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection, loginTokenCache), remoteAddress.getAddress.toString + "-" + System.currentTimeMillis)
+      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection, loginTokenCache))
       serverConnection ! Http.Register(conn)
     case SendToClient(senderPersonId, msg, Nil) =>
       //broadcast to all      

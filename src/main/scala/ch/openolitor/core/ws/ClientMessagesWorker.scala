@@ -45,7 +45,8 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
   import ClientMessagesWorker._
 
   val helloServerPattern = """(.*)("type":\s*"HelloServer")(.*)""".r
-  val loginPattern = """(.*)("type":\s*"Login"),("token":\s*)(\w)(.*)""".r
+  val loginPattern = """\{(.*)("type":"Login"),("token":"([\w|-]+)")(.*)\}""".r
+  val logoutPattern = """(.*)("type":"Logout")(.*)""".r
   var personId: Option[PersonId] = None
 
   def businessLogicLoggedIn: Receive = {
@@ -58,6 +59,22 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
           log.debug(s"Push to client:$msg")
           send(TextFrame(msg))
         }
+      }
+    case x: TextFrame =>
+      val msg = x.payload.decodeString("UTF-8")
+
+      msg match {
+        case "Ping" =>
+          send(TextFrame("Pong"))
+        case logoutPattern(_, _, _) =>
+          log.debug(s"User logged out from websocket")
+
+          personId = None
+          context become businessLogic
+
+          send(TextFrame("""{"type":"LoggedOut"}"""))
+        case _ =>
+          log.debug(s"Received unknown textframe. State: logged in. $msg")
       }
   }
 
@@ -78,15 +95,17 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
 
           loginTokenCache.get(token).map {
             _ map { subject =>
+              log.debug(s"User logged in to websocket:$token:${subject.personId}")
+
               personId = Some(subject.personId)
 
               context become businessLogicLoggedIn
 
-              send(TextFrame("""{"type":"LoggedIn","personId":"${subject.personId.id}"}"""))
+              send(TextFrame(s"""{"type":"LoggedIn","personId":"${subject.personId.id}"}"""))
             }
           }
         case _ =>
-        //TODO: handle client messages internally   
+          log.debug(s"Received unknown textframe. State: not logged in. $msg")
       }
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
