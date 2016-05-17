@@ -26,6 +26,7 @@ import scalikejdbc.config._
 import scalikejdbc._
 import com.typesafe.config.Config
 import ch.openolitor.core.MandantConfiguration
+import com.typesafe.scalalogging.LazyLogging
 
 /**
  * Mandant specific dbs
@@ -33,7 +34,8 @@ import ch.openolitor.core.MandantConfiguration
 case class MandantDBs(mandantConfiguration: MandantConfiguration) extends DBs
     with TypesafeConfigReader
     with TypesafeConfig
-    with EnvPrefix {
+    with EnvPrefix
+    with LazyLogging {
 
   override lazy val config = mandantConfiguration.config
 
@@ -58,7 +60,10 @@ case class MandantDBs(mandantConfiguration: MandantConfiguration) extends DBs
         val _url = "jdbc:mysql://%s/%s".format(_host, _dbname + addDefaultPropertiesIfNeeded)
         _factory.apply(_url, _user, _password, settings)
       case _ =>
-        _factory.apply(url, user, password, settings)
+        // strip ?user,pw
+        val _url = if (url.indexOf('?') > 0) url.substring(0, url.indexOf('?')) else url
+        logger.debug(s"stripped user and password param from database name orig: $url, stripped: ${_url}")
+        _factory.apply(_url, user, password, settings)
     }
   }
 
