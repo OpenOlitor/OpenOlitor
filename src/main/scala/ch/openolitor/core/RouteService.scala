@@ -69,6 +69,7 @@ import spray.routing.RejectionHandler
 import spray.routing.authentication.BasicAuth
 import com.typesafe.sslconfig.util.ConfigLoader
 import spray.caching.Cache
+import ch.openolitor.stammdaten.models.AdministratorZugang
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -107,7 +108,8 @@ trait RouteServiceActor
     with FileStoreRoutes
     with DefaultFileStoreComponent
     with CORSSupport
-    with BaseJsonProtocol {
+    with BaseJsonProtocol
+    with RoleBasedAuthorization {
   self: RouteServiceComponent =>
 
   //initially run db evolution  
@@ -135,14 +137,18 @@ trait RouteServiceActor
       // secured routes by XSRF token authenticator
       authenticate(loginRouteService.openOlitorAuthenticator) { implicit subject =>
         loginRouteService.logoutRoute ~
-          stammdatenRouteService.stammdatenRoute ~
-          buchhaltungRouteService.buchhaltungRoute ~
-          fileStoreRoute
+          authorize(hasRole(AdministratorZugang)) {
+            stammdatenRouteService.stammdatenRoute ~
+              buchhaltungRouteService.buchhaltungRoute ~
+              fileStoreRoute
+          }
       } ~
 
       // routes secured by basicauth mainly used for service accounts
       authenticate(BasicAuth(loginRouteService.basicAuthValidation _, realm = "OpenOlitor")) { implicit subject =>
-        systemRouteService.adminRoutes
+        authorize(hasRole(AdministratorZugang)) {
+          systemRouteService.adminRoutes
+        }
       }
   ))
 
