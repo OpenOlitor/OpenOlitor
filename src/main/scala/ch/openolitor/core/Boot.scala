@@ -59,6 +59,7 @@ import scala.util._
 import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
 import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 import ch.openolitor.core.models.BaseId
+import com.typesafe.config.ConfigValueFactory
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -83,9 +84,7 @@ object Boot extends App with LazyLogging {
   logger.debug(s"config-file java prop: " + sys.props.get("config-file"))
   logger.debug(s"port: " + sys.env.get("PORT"))
 
-  val config = sys.env.get("OO_CONFIG") map { ooConfig =>
-    ConfigFactory.load(ConfigFactory.parseString(ooConfig))
-  } getOrElse (ConfigFactory.load)
+  val config = ConfigLoader.loadConfig
 
   //TODO: replace with real userid after login succeeded
   val systemPersonId = PersonId(1000)
@@ -94,9 +93,6 @@ object Boot extends App with LazyLogging {
   val configs = getMandantConfiguration(config)
   implicit val timeout = Timeout(5.seconds)
   val mandanten = startServices(configs)
-
-  //configure default settings for scalikejdbc
-  scalikejdbc.config.DBs.loadGlobalSettings()
 
   val nonConfigPort = Option(System.getenv("PORT")).getOrElse("8080")
 
@@ -136,7 +132,7 @@ object Boot extends App with LazyLogging {
   }
 
   def startProxyService(mandanten: NonEmptyList[MandantSystem]) = {
-    implicit val proxySystem = ActorSystem("oo-proxy")
+    implicit val proxySystem = ActorSystem("oo-proxy", config)
 
     val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten), "oo-proxy-service")
     IO(UHttp) ? Http.Bind(proxyService, interface = rootInterface, port = rootPort)
@@ -193,16 +189,16 @@ object Boot extends App with LazyLogging {
   }
 
   def dbSeeds(config: Config) = {
-    val models = config.getStringList("db.seed.models")
+    val models = config.getStringList("db.default.seed.models")
     val mappings: Seq[(Class[_], Long)] = models.map { model =>
-      Class.forName(model) -> config.getLong(s"db.seed.mappings.$model")
+      Class.forName(model) -> config.getLong(s"db.default.seed.mappings.$model")
     }.toSeq
     mappings.toMap
   }
 
   def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant))
 
-  def connectionPoolContext(mandant: MandantConfiguration) = MandantDBs(mandant.configKey).connectionPoolContext
+  def connectionPoolContext(mandantConfig: MandantConfiguration) = MandantDBs(mandantConfig).connectionPoolContext
 
-  def asyncConnectionPoolContext(mandant: MandantConfiguration) = AsyncMandantDBs(mandant.configKey).connectionPoolContext
+  def asyncConnectionPoolContext(mandantConfig: MandantConfiguration) = AsyncMandantDBs(mandantConfig).connectionPoolContext
 }

@@ -20,29 +20,57 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.core
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
 import com.typesafe.config.Config
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.LazyLogging
+import scala.collection.JavaConversions._
+import com.typesafe.config.ConfigList
+import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigObject
+import com.typesafe.config.ConfigResolveOptions
+import com.typesafe.config.ConfigParseOptions
 
-trait FileStoreComponent {
-  val fileStore: FileStore
-}
+object ConfigLoader {
+  val ObjectIdentifier = "-object"
 
-trait DefaultFileStoreComponent extends FileStoreComponent with LazyLogging {
-  val mandant: String
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+  def loadConfig: Config = {
+    loadEnvironmentConfigs()
+  }
 
-  override lazy val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration, system)
+  def loadEnvironmentConfigs() = {
+    val envConfigIds = ConfigFactory.load("envvars").getStringList("environment-config-list")
 
-  fileStore.createBuckets map {
-    _.fold(
-      error => logger.error(s"Error creating buckets for $mandant: ${error.message}"),
-      success => logger.debug(s"Created file store buckets for $mandant")
-    )
+    val merged = (envConfigIds foldLeft ConfigFactory.empty) {
+      case (result, envConfigId) =>
+        sys.env.get(envConfigId) map { external =>
+          result.withFallback(transformToObjectConfig(ConfigFactory.parseString(external)).atPath(envConfigId))
+        } getOrElse {
+          result
+        }
+    }
+
+    val result = ConfigFactory.defaultApplication(ConfigParseOptions.defaults().setAllowMissing(true)).withFallback(merged)
+    ConfigFactory.load(result)
+  }
+
+  def transformToObjectConfig(config: Config): Config = {
+    val result = config.entrySet.foldLeft(ConfigFactory.empty) {
+      case (result, m) =>
+        if (m.getValue.isInstanceOf[ConfigList]) {
+          result.withValue(m.getKey, m.getValue).withValue(m.getKey + ObjectIdentifier, listToObject(m.getValue.asInstanceOf[ConfigList]))
+        } else {
+          result.withValue(m.getKey, m.getValue)
+        }
+    }
+
+    result
+  }
+
+  def listToObject(config: ConfigList): ConfigObject = {
+    val configObject = (config.indices zip config map { case (i, v) => (i.toString, v) }).toMap
+
+    ConfigValueFactory.fromMap(configObject)
   }
 }
