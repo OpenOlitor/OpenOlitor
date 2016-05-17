@@ -55,6 +55,7 @@ import akka.actor._
 import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
+import ch.openolitor.core.security.Subject
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -86,14 +87,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   import EntityStore._
 
-  //TODO: get real userid from login
-  override val personId: PersonId = Boot.systemPersonId
-
-  lazy val stammdatenRoute = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
+  def stammdatenRoute(implicit subect: Subject) = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
     kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
     produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute
 
-  lazy val kundenRoute =
+  def kundenRoute(implicit subect: Subject) =
     path("kunden") {
       get(list(stammdatenReadRepository.getKunden)) ~
         post(create[KundeModify, KundeId](KundeId.apply _))
@@ -165,7 +163,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(buchhaltungReadRepository.getKundenRechnungen(kundeId)))
       }
 
-  lazy val kundentypenRoute =
+  def kundentypenRoute(implicit subect: Subject) =
     path("kundentypen") {
       get(list(stammdatenReadRepository.getKundentypen)) ~
         post(create[CustomKundentypCreate, CustomKundentypId](CustomKundentypId.apply _))
@@ -175,7 +173,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(kundentypId))
       }
 
-  lazy val aboTypenRoute =
+  def aboTypenRoute(implicit subect: Subject) =
     path("abotypen") {
       get(list(stammdatenReadRepository.getAbotypen)) ~
         post(create[AbotypModify, AbotypId](AbotypId.apply _))
@@ -237,7 +235,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         delete(remove(lieferungId))
       }
 
-  lazy val depotsRoute =
+  def depotsRoute(implicit subect: Subject) =
     path("depots") {
       get(list(stammdatenReadRepository.getDepots)) ~
         post(create[DepotModify, DepotId](DepotId.apply _))
@@ -248,17 +246,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  lazy val aboRoute =
+  def aboRoute(implicit subect: Subject) =
     path("abos") {
       get(list(stammdatenReadRepository.getAbos))
     }
 
-  lazy val pendenzenRoute =
+  def pendenzenRoute(implicit subect: Subject) =
     path("pendenzen") {
       get(list(stammdatenReadRepository.getPendenzen))
     }
 
-  lazy val produkteRoute =
+  def produkteRoute(implicit subect: Subject) =
     path("produkte") {
       get(list(stammdatenReadRepository.getProdukte)) ~
         post(create[ProduktModify, ProduktId](ProduktId.apply _))
@@ -268,7 +266,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  lazy val produktekategorienRoute =
+  def produktekategorienRoute(implicit subect: Subject) =
     path("produktekategorien") {
       get(list(stammdatenReadRepository.getProduktekategorien)) ~
         post(create[ProduktekategorieModify, ProduktekategorieId](ProduktekategorieId.apply _))
@@ -278,7 +276,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  lazy val produzentenRoute =
+  def produzentenRoute(implicit subect: Subject) =
     path("produzenten") {
       get(list(stammdatenReadRepository.getProduzenten)) ~
         post(create[ProduzentModify, ProduzentId](ProduzentId.apply _))
@@ -289,7 +287,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  lazy val tourenRoute =
+  def tourenRoute(implicit subect: Subject) =
     path("touren") {
       get(list(stammdatenReadRepository.getTouren)) ~
         post(create[TourModify, TourId](TourId.apply _))
@@ -299,7 +297,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  lazy val projektRoute =
+  def projektRoute(implicit subect: Subject) =
     path("projekt") {
       get(detail(stammdatenReadRepository.getProjekt)) ~
         post(create[ProjektModify, ProjektId](ProjektId.apply _))
@@ -316,7 +314,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           })
       }
 
-  lazy val lieferplanungRoute =
+  def lieferplanungRoute(implicit subect: Subject) =
     path("lieferplanungen") {
       get(list(stammdatenReadRepository.getLieferplanungen)) ~
         post(create[LieferplanungCreate, LieferplanungId](LieferplanungId.apply _))
@@ -358,8 +356,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         (post)(bestellungErneutVersenden(bestellungId))
       }
 
-  def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(personId, id)) {
+  def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(subject.personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
       case _ =>
@@ -367,8 +365,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
-  def lieferplanungVerrechnen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _]) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbrechnenCommand(personId, id)) {
+  def lieferplanungVerrechnen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbrechnenCommand(subject.personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Verrechnet")
       case _ =>
@@ -376,8 +374,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
-  def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _]) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(personId, bestellungId)) {
+  def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(subject.personId, bestellungId)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
       case _ =>

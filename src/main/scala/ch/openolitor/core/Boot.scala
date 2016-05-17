@@ -59,6 +59,8 @@ import scala.util._
 import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
 import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 import ch.openolitor.core.models.BaseId
+import spray.caching.LruCache
+import ch.openolitor.core.security.Subject
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -84,8 +86,7 @@ object Boot extends App with LazyLogging {
 
   val config = ConfigFactory.load
 
-  //TODO: replace with real userid after login succeeded
-  val systemPersonId = PersonId(1000)
+  val systemPersonId = PersonId(0)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
   val ooConfig = config.getConfig("openolitor")
@@ -117,9 +118,9 @@ object Boot extends App with LazyLogging {
         val mandantConfig = ooConfig.getConfig(mandant).withFallback(ooConfig)
 
         val ifc = mandantConfig.getStringOption(s"interface").getOrElse(rootInterface)
-        val port = mandantConfig.getIntOption(s"port").getOrElse(freePort)
-        val wsPort = mandantConfig.getIntOption(s"webservicePort").getOrElse(freePort)
-        val name = mandantConfig.getStringOption(s"name").getOrElse(mandant)
+        val port = ooConfig.getIntOption(s"$mandant.port").getOrElse(freePort)
+        val wsPort = ooConfig.getIntOption(s"$mandant.webservicePort").getOrElse(freePort)
+        val name = ooConfig.getStringOption(s"$mandant.name").getOrElse(mandant)
 
         MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(mandantConfig), mandantConfig)
     }).getOrElse {
@@ -149,6 +150,13 @@ object Boot extends App with LazyLogging {
 
       implicit val sysCfg = systemConfig(cfg)
 
+      // declare token cache used in multiple locations in app
+      val loginTokenCache = LruCache[Subject](
+        maxCapacity = 10000,
+        timeToLive = 1 day,
+        timeToIdle = 4 hours
+      )
+
       //initialuze root actors
       val duration = Duration.create(1, SECONDS);
       val system = app.actorOf(SystemActor.props, "oo-system")
@@ -167,7 +175,7 @@ object Boot extends App with LazyLogging {
       val buchhaltungDBEventListener = Await.result(system ? SystemActor.Child(BuchhaltungDBEventEntityListener.props, "buchhaltung-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
 
       //start websocket service
-      val clientMessages = Await.result(system ? SystemActor.Child(ClientMessagesServer.props, "ws-client-messages"), duration).asInstanceOf[ActorRef]
+      val clientMessages = Await.result(system ? SystemActor.Child(ClientMessagesServer.props(loginTokenCache), "ws-client-messages"), duration).asInstanceOf[ActorRef]
 
       //start actor mapping dbevents to client messages
       val dbEventClientMessageMapper = Await.result(system ? SystemActor.Child(DBEvent2UserMapping.props, "db-event-mapper"), duration).asInstanceOf[ActorRef]
@@ -177,7 +185,7 @@ object Boot extends App with LazyLogging {
       stammdatenEntityStoreView ! EntityStoreView.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler

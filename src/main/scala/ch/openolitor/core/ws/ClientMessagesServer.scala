@@ -30,6 +30,8 @@ import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.ws.ControlCommands.SendToClient
 import ch.openolitor.core.ws.ClientMessagesWorker.Push
 import spray.json.RootJsonWriter
+import spray.caching.Cache
+import ch.openolitor.core.security.Subject
 
 trait ClientReceiverComponent {
   val clientReceiver: ClientReceiver
@@ -58,13 +60,11 @@ trait ClientReceiver extends EventStream {
 }
 
 object ClientMessagesServer {
-  def props() = Props(classOf[ClientMessagesServer])
+  def props(loginTokenCache: Cache[Subject]) = Props(classOf[ClientMessagesServer], loginTokenCache)
 }
-class ClientMessagesServer extends Actor with ActorLogging {
+class ClientMessagesServer(loginTokenCache: Cache[Subject]) extends Actor with ActorLogging {
 
   import ClientMessagesJsonProtocol._
-
-  def actorName(id: PersonId): String = "uid:" + id.id.toString
 
   override def preStart() {
     super.preStart()
@@ -82,23 +82,16 @@ class ClientMessagesServer extends Actor with ActorLogging {
     case Http.Connected(remoteAddress, localAddress) =>
       log.debug(s"Connected to websocket:$remoteAddress, $localAddress")
       val serverConnection = sender()
-
-      //...how to we get userid?
-      val personId = Boot.systemPersonId
-
-      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection), actorName(personId) + "-" + System.currentTimeMillis)
+      val conn = context.actorOf(ClientMessagesWorker.props(serverConnection, loginTokenCache))
       serverConnection ! Http.Register(conn)
     case SendToClient(senderPersonId, msg, Nil) =>
       //broadcast to all      
       log.debug(s"Broadcast client message:$msg")
-      context.children.map(c => c ! Push(msg))
+      context.children.map(c => c ! Push(Nil, msg))
     case SendToClient(senderPersonId, msg, receivers) =>
       //send to specific clients only
       log.debug(s"send client message:$msg:$receivers")
-      receivers.map { receiver =>
-        val name = actorName(receiver)
-        context.children.filter(_.path.name.startsWith(name)).map(_ ! Push(msg))
-      }
+      context.children.map(_ ! Push(receivers, msg))
     case x =>
       log.debug(s"Received unkown event:$x")
   }

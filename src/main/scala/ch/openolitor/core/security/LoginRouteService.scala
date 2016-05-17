@@ -23,6 +23,7 @@
 package ch.openolitor.core.security
 
 import spray.routing._
+
 import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
@@ -65,18 +66,10 @@ trait LoginRouteService extends HttpService with ActorReferences
   self: StammdatenReadRepositoryComponent =>
   import SystemEvents._
 
-  //TODO: get real userid from login  
-  override val personId: PersonId = Boot.systemPersonId
-
   type EitherFuture[A] = EitherT[Future, LoginFailed, A]
 
   lazy val loginRoutes = loginRoute
 
-  val loginTokenCache = LruCache[Subject](
-    maxCapacity = 10000,
-    timeToLive = 1 day,
-    timeToIdle = 4 hours
-  )
   val secondFactorTokenCache = LruCache[SecondFactor](
     maxCapacity = 1000,
     timeToLive = 20 minutes,
@@ -92,6 +85,22 @@ trait LoginRouteService extends HttpService with ActorReferences
   val errorTokenOrCodeMismatch = LoginFailed("Code stimmt nicht überein")
   val errorPersonNotFound = LoginFailed("Person konnte nicht gefunden werden")
   val errorPersonLoginNotActive = LoginFailed("Login wurde deaktiviert")
+
+  def logoutRoute(implicit subject: Subject) = pathPrefix("auth") {
+    path("logout") {
+      post {
+        onSuccess(doLogout) {
+          case _ => complete("Logged out")
+        }
+      }
+    }
+  }
+
+  private def doLogout(implicit subject: Subject) = {
+    logger.debug(s"Logout user:${subject.personId}, invalidate token:${subject.token}")
+    //remove token from cache
+    loginTokenCache.remove(subject.token).getOrElse(Future.successful(subject))
+  }
 
   def loginRoute = pathPrefix("auth") {
     path("login") {
@@ -197,7 +206,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     //generate token
     val token = generateToken
     EitherT {
-      loginTokenCache(token)(Subject(person.id, person.rolle)) map { _ =>
+      loginTokenCache(token)(Subject(token, person.id, person.rolle)) map { _ =>
         val personSummary = copyTo[Person, PersonSummary](person)
 
         eventStore ! PersonLoggedIn(person.id, org.joda.time.DateTime.now)
@@ -291,7 +300,7 @@ trait LoginRouteService extends HttpService with ActorReferences
       pwdValid <- validatePassword(up.pass, person)
       personValid <- validatePerson(person)
       result <- doLogin(person)
-    } yield Subject(person.id, person.rolle)).run.map(_.toOption)
+    } yield Subject(result.token, person.id, person.rolle)).run.map(_.toOption)
   }
 
   private def validateUserPass(userPass: Option[UserPass]): EitherFuture[UserPass] = EitherT {
@@ -306,7 +315,8 @@ class DefaultLoginRouteService(
   override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val fileStore: FileStore,
-  override val actorRefFactory: ActorRefFactory
+  override val actorRefFactory: ActorRefFactory,
+  override val loginTokenCache: Cache[Subject]
 )
     extends LoginRouteService
     with DefaultStammdatenReadRepositoryComponent

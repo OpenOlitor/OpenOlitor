@@ -23,7 +23,6 @@
 package ch.openolitor.buchhaltung
 
 import akka.persistence.PersistentView
-
 import akka.actor._
 import ch.openolitor.core._
 import ch.openolitor.core.db._
@@ -35,6 +34,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.buchhaltung.models._
 import scala.concurrent.ExecutionContext.Implicits.global
+import ch.openolitor.core.models.PersonId
 
 object BuchhaltungDeleteService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungDeleteService = new DefaultBuchhaltungDeleteService(sysConfig, system)
@@ -52,16 +52,13 @@ class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends Eve
   self: BuchhaltungWriteRepositoryComponent =>
   import EntityStore._
 
-  //TODO: replace with credentials of logged in user
-  implicit val personId = Boot.systemPersonId
-
   val handle: Handle = {
-    case EntityDeletedEvent(meta, id: RechnungId) => deleteRechnung(id)
+    case EntityDeletedEvent(meta, id: RechnungId) => deleteRechnung(meta, id)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
 
-  def deleteRechnung(id: RechnungId) = {
+  def deleteRechnung(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.deleteEntity[Rechnung, RechnungId](id)
     }
