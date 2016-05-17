@@ -35,7 +35,7 @@ case class MandantDBs(mandantConfiguration: MandantConfiguration) extends DBs
     with TypesafeConfigReader
     with TypesafeConfig
     with EnvPrefix
-    with LazyLogging {
+    with DbNameFixer {
 
   override lazy val config = mandantConfiguration.config
 
@@ -61,8 +61,7 @@ case class MandantDBs(mandantConfiguration: MandantConfiguration) extends DBs
         _factory.apply(_url, _user, _password, settings)
       case _ =>
         // strip ?user,pw
-        val _url = if (url.indexOf('?') > 0) url.substring(0, url.indexOf('?')) else url
-        logger.debug(s"stripped user and password param from database name orig: $url, stripped: ${_url}")
+        val _url = fixDbName(url)
         _factory.apply(_url, user, password, settings)
     }
   }
