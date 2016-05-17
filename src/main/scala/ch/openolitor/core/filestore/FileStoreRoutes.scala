@@ -79,9 +79,6 @@ trait StreamSupport {
 trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeserializers with DefaultRouteService with LazyLogging {
   self: FileStoreComponent =>
 
-  //TODO: get real userid from login
-  override val personId: PersonId = Boot.systemPersonId
-
   lazy val fileStoreRoute =
     pathPrefix("filestore") {
       fileStoreFileTypeRoute

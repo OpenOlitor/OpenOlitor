@@ -29,9 +29,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Boot
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.filestore.FileStore
+import ch.openolitor.core.security.Subject
 
 class DefaultSystemRouteService(
   override val entityStore: ActorRef,
+  override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val fileStore: FileStore,
@@ -43,23 +45,17 @@ trait SystemRouteService extends HttpService with ActorReferences
 
   private var error: Option[Throwable] = None
   val system: ActorSystem
-  lazy val importService = system.actorOf(DataImportService.props(sysConfig, entityStore, system), "oo-import-service")
+  def importService(implicit subject: Subject) = system.actorOf(DataImportService.props(sysConfig, entityStore, system, subject.personId), "oo-import-service")
 
-  //TODO: get real userid from login
-  override val personId: PersonId = Boot.systemPersonId
-
-  lazy val systemRoutes = statusRoute ~ adminRoutes
-
-  lazy val adminRoutes = pathPrefix("admin") {
-    logger.error(s"Request admin route")
-    adminRoute()
+  def adminRoutes(implicit subject: Subject) = pathPrefix("admin") {
+    adminRoute
   }
 
   def handleError(er: Throwable) = {
     error = Some(er)
   }
 
-  def adminRoute(): Route =
+  def adminRoute(implicit subject: Subject): Route =
     path("status") {
       get {
         error map { e =>

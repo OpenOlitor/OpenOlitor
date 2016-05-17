@@ -37,6 +37,13 @@ import scala.concurrent.Future
 import org.mindrot.jbcrypt.BCrypt
 import ch.openolitor.stammdaten.models._
 import scala.concurrent.ExecutionContext
+import ch.openolitor.core.domain.SystemEventStore
+import akka.testkit.TestActorRef
+import ch.openolitor.core.domain.DefaultSystemEventStore
+import akka.actor.Actor
+import akka.actor.ActorSystem
+import spray.caching.Cache
+import spray.caching.LruCache
 
 class LoginRouteServiceSpec extends Specification with Mockito {
   val email = "info@test.com"
@@ -237,9 +244,12 @@ class MockLoginRouteService(
     extends LoginRouteService
     with MockStammdatenReadRepositoryComponent {
   override val entityStore: ActorRef = null
+  implicit val system = ActorSystem("test")
+  override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(null))
   override val sysConfig: SystemConfig = SystemConfig(null, null, MultipleAsyncConnectionPoolContext())
   override val fileStore: FileStore = null
   override val actorRefFactory: ActorRefFactory = null
+  override val loginTokenCache: Cache[Subject] = LruCache()
 
   override lazy val requireSecondFactorAuthentication = requireSecondFactorAuthenticationP
   override lazy val sendSecondFactorEmail = sendSecondFactorEmailP

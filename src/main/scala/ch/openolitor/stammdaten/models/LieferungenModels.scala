@@ -86,8 +86,8 @@ case class Lieferung(
   id: LieferungId,
   abotypId: AbotypId,
   abotypBeschrieb: String,
-  vertriebsartId: VertriebsartId,
-  vertriebsartBeschrieb: String,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: String,
   status: LieferungStatus,
   datum: DateTime,
   durchschnittspreis: BigDecimal,
@@ -109,7 +109,7 @@ case class Lieferung(
 case class LieferungModify(
   abotypId: AbotypId,
   abotypBeschrieb: String,
-  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   vertriebsartBeschrieb: String,
   status: LieferungStatus,
   datum: DateTime,
@@ -128,7 +128,7 @@ case class LieferungPlanungRemove() extends JSONSerializable
 
 case class LieferungAbotypCreate(
   abotypId: AbotypId,
-  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   datum: DateTime
 ) extends JSONSerializable
 

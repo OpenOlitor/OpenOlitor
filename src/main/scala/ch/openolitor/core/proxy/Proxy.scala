@@ -30,6 +30,7 @@ import spray.can.server.UHttp
 import ch.openolitor.core.DefaultRouteService
 import ch.openolitor.core.CORSSupport
 import ch.openolitor.core.ActorReferences
+import ch.openolitor.core.SystemConfig
 import scalaz.NonEmptyList
 import ch.openolitor.core.Boot.MandantSystem
 import org.jfarcand.wcs.WebSocket
@@ -37,6 +38,7 @@ import spray.can.Http
 import spray.can.websocket._
 import spray.can.websocket.WebSocketServerWorker
 import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.config.Config
 
 /**
  * Borrowed from:
@@ -68,14 +70,14 @@ trait Proxy extends LazyLogging {
 }
 
 object ProxyServiceActor {
-  def props(mandanten: NonEmptyList[MandantSystem]): Props = Props(classOf[ProxyServiceActor], mandanten)
+  def props(mandanten: NonEmptyList[MandantSystem], ooConfig: Config): Props = Props(classOf[ProxyServiceActor], mandanten, config)
 }
 
 /**
  * Proxy Service which redirects routes matching a mandant key in first row to either
  * the websocket or service redirect url using their actor system
  */
-class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
+class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem], override val ooConfig: Config)
     extends Actor
     with ActorLogging
     with HttpService

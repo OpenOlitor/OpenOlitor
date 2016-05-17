@@ -30,24 +30,56 @@ import spray.http._
 import spray.can.websocket._
 import spray.can.websocket.{ Send, SendStream, UpgradedToWebSocket }
 import akka.util.ByteString
+import ch.openolitor.core.models.PersonId
+import spray.caching.Cache
+import ch.openolitor.core.security.Subject
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object ClientMessagesWorker {
-  case class Push(msg: String)
+  case class Push(receivers: List[PersonId] = Nil, msg: String)
 
-  def props(serverConnection: ActorRef) = Props(classOf[ClientMessagesWorker], serverConnection)
+  def props(serverConnection: ActorRef, loginTokenCache: Cache[Subject]) = Props(classOf[ClientMessagesWorker], serverConnection, loginTokenCache)
 }
-class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
+class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cache[Subject]) extends HttpServiceActor with websocket.WebSocketServerWorker {
 
   import ClientMessagesWorker._
 
-  val helloServerPattern = """(.*)("type:"HelloServer",)(.*)""".r
+  val helloServerPattern = """(.*)("type":\s*"HelloServer")(.*)""".r
+  val loginPattern = """\{(.*)("type":"Login"),("token":"([\w|-]+)")(.*)\}""".r
+  val logoutPattern = """(.*)("type":"Logout")(.*)""".r
+  var personId: Option[PersonId] = None
+
+  def businessLogicLoggedIn: Receive = {
+    case Push(Nil, msg) =>
+      log.debug(s"Broadcast to client:$msg")
+      send(TextFrame(msg))
+    case Push(receivers, msg) =>
+      personId map { id =>
+        receivers.find(_ == id).headOption.map { rec =>
+          log.debug(s"Push to client:$msg")
+          send(TextFrame(msg))
+        }
+      }
+    case x: TextFrame =>
+      val msg = x.payload.decodeString("UTF-8")
+
+      msg match {
+        case "Ping" =>
+          send(TextFrame("Pong"))
+        case logoutPattern(_, _, _) =>
+          log.debug(s"User logged out from websocket")
+
+          personId = None
+          context become businessLogic
+
+          send(TextFrame("""{"type":"LoggedOut"}"""))
+        case _ =>
+          log.debug(s"Received unknown textframe. State: logged in. $msg")
+      }
+  }
 
   def businessLogic: Receive = {
 
-    case Push(msg) =>
-      log.debug(s"Push to client:$msg")
-      send(TextFrame(msg))
-    // just bounce frames back for Autobahn testsuite
     case x: BinaryFrame =>
       log.debug(s"Got from binary data:$x")
     case x: TextFrame =>
@@ -58,8 +90,22 @@ class ClientMessagesWorker(val serverConnection: ActorRef) extends HttpServiceAc
           send(TextFrame("Pong"))
         case helloServerPattern(_, _, _) =>
           send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
+        case loginPattern(_, _, _, token, _) =>
+          log.debug("Got message token from client: $token")
+
+          loginTokenCache.get(token).map {
+            _ map { subject =>
+              log.debug(s"User logged in to websocket:$token:${subject.personId}")
+
+              personId = Some(subject.personId)
+
+              context become businessLogicLoggedIn
+
+              send(TextFrame(s"""{"type":"LoggedIn","personId":"${subject.personId.id}"}"""))
+            }
+          }
         case _ =>
-        //TODO: handle client messages internally   
+          log.debug(s"Received unknown textframe. State: not logged in. $msg")
       }
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)

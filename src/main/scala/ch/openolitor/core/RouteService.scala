@@ -64,14 +64,19 @@ import com.typesafe.scalalogging.LazyLogging
 import spray.routing.RequestContext
 import java.io.InputStream
 import ch.openolitor.core.security._
+import spray.routing.RejectionHandler
+import spray.routing.authentication.BasicAuth
+import spray.caching.Cache
+import ch.openolitor.stammdaten.models.AdministratorZugang
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandantConfiguration.name)
+  def props(entityStore: ActorRef, eventStore: ActorRef, loginTokenCache: Cache[Subject], ooConfig: Config)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, ooConfig, system, sysConfig.mandantConfiguration.name, loginTokenCache)
 }
 
 trait RouteServiceComponent {
   val entityStore: ActorRef
+  val eventStore: ActorRef
   val sysConfig: SystemConfig
   val system: ActorSystem
   val fileStore: FileStore
@@ -83,11 +88,11 @@ trait RouteServiceComponent {
   val loginRouteService: LoginRouteService
 }
 
-trait DefaultRouteServiceComponent extends RouteServiceComponent {
-  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
-  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
-  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, sysConfig, fileStore, actorRefFactory)
+trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, sysConfig, fileStore, actorRefFactory, loginTokenCache)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -100,13 +105,16 @@ trait RouteServiceActor
     with FileStoreRoutes
     with DefaultFileStoreComponent
     with CORSSupport
-    with BaseJsonProtocol {
+    with BaseJsonProtocol
+    with RoleBasedAuthorization {
   self: RouteServiceComponent =>
 
   //initially run db evolution  
   override def preStart() = {
     runDBEvolution()
   }
+
+  implicit val openolitorRejectionHandler: RejectionHandler = AuthenticatorRejectionHandler()
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -117,8 +125,29 @@ trait RouteServiceActor
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ systemRouteService.systemRoutes ~ loginRouteService.loginRoute ~
-    stammdatenRouteService.stammdatenRoute ~ buchhaltungRouteService.buchhaltungRoute ~ fileStoreRoute))
+  val initializedDB = runRoute(cors(
+    // unsecured routes
+    helloWorldRoute ~
+      systemRouteService.statusRoute ~
+      loginRouteService.loginRoute ~
+
+      // secured routes by XSRF token authenticator
+      authenticate(loginRouteService.openOlitorAuthenticator) { implicit subject =>
+        loginRouteService.logoutRoute ~
+          authorize(hasRole(AdministratorZugang)) {
+            stammdatenRouteService.stammdatenRoute ~
+              buchhaltungRouteService.buchhaltungRoute ~
+              fileStoreRoute
+          }
+      } ~
+
+      // routes secured by basicauth mainly used for service accounts
+      authenticate(BasicAuth(loginRouteService.basicAuthValidation _, realm = "OpenOlitor")) { implicit subject =>
+        authorize(hasRole(AdministratorZugang)) {
+          systemRouteService.adminRoutes
+        }
+      }
+  ))
 
   val dbEvolutionRoutes =
     pathPrefix("db") {
@@ -151,12 +180,11 @@ trait RouteServiceActor
 // this trait defines our service behavior independently from the service actor
 trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport with FileStoreComponent with LazyLogging {
 
-  val personId: PersonId
   implicit val timeout = Timeout(5.seconds)
 
   def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit
     um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], persister: Persister[E, _]) = {
+    tr: ToResponseMarshaller[I], persister: Persister[E, _], subject: Subject) = {
     requestInstance { request =>
       entity(as[E]) { entity =>
         created(request)(entity)
@@ -164,9 +192,9 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  def created[E <: AnyRef: ClassTag, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister: Persister[E, _]) = {
+  def created[E <: AnyRef: ClassTag, I <: BaseId](request: HttpRequest)(entity: E)(implicit persister: Persister[E, _], subject: Subject) = {
     //create entity
-    onSuccess(entityStore ? EntityStore.InsertEntityCommand(personId, entity)) {
+    onSuccess(entityStore ? EntityStore.InsertEntityCommand(subject.personId, entity)) {
       case event: EntityInsertedEvent[_, _] =>
         respondWithHeaders(Location(request.uri.withPath(request.uri.path / event.id.toString))) {
           respondWithStatus(StatusCodes.Created) {
@@ -180,19 +208,19 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
   def update[E <: AnyRef: ClassTag, I <: BaseId](id: I)(implicit
     um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
+    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _], subject: Subject) = {
     entity(as[E]) { entity => updated(id, entity) }
   }
 
   def update[E <: AnyRef: ClassTag, I <: BaseId](id: I, entity: E)(implicit
     um: FromRequestUnmarshaller[E],
-    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
+    tr: ToResponseMarshaller[I], idPersister: Persister[I, _], entityPersister: Persister[E, _], subject: Subject) = {
     updated(id, entity)
   }
 
-  def updated[E <: AnyRef: ClassTag, I <: BaseId](id: I, entity: E)(implicit idPersister: Persister[I, _], entityPersister: Persister[E, _]) = {
+  def updated[E <: AnyRef: ClassTag, I <: BaseId](id: I, entity: E)(implicit idPersister: Persister[I, _], entityPersister: Persister[E, _], subject: Subject) = {
     //update entity
-    onSuccess(entityStore ? EntityStore.UpdateEntityCommand(personId, id, entity)) { result =>
+    onSuccess(entityStore ? EntityStore.UpdateEntityCommand(subject.personId, id, entity)) { result =>
       complete(StatusCodes.Accepted, "")
     }
   }
@@ -214,8 +242,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   /**
    * @persister declare format to ensure that format exists for persising purposes
    */
-  def remove[I <: BaseId](id: I)(implicit persister: Persister[I, _]) = {
-    onSuccess(entityStore ? EntityStore.DeleteEntityCommand(personId, id)) { result =>
+  def remove[I <: BaseId](id: I)(implicit persister: Persister[I, _], subject: Subject) = {
+    onSuccess(entityStore ? EntityStore.DeleteEntityCommand(subject.personId, id)) { result =>
       complete("")
     }
   }
@@ -267,9 +295,11 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
 class DefaultRouteServiceActor(
   override val entityStore: ActorRef,
+  override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
+  override val ooConfig: Config,
   override val system: ActorSystem,
-  override val mandant: String
-)
-    extends RouteServiceActor
+  override val mandant: String,
+  override val loginTokenCache: Cache[Subject]
+) extends RouteServiceActor
     with DefaultRouteServiceComponent

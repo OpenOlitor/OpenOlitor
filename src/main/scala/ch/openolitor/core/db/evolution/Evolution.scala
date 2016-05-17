@@ -60,6 +60,7 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = V1Scripts.script
         val dbIds = Seq(
           adjustSeed[Abotyp, AbotypId](seeds, abotypMapping),
           adjustSeed[Depot, DepotId](seeds, depotMapping),
+          adjustSeed[Vertrieb, VertriebId](seeds, vertriebMapping),
           adjustSeeds[VertriebsartId](
             seeds,
             maxId[Depotlieferung, VertriebsartId](depotlieferungMapping),

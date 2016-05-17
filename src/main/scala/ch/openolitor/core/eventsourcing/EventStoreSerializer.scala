@@ -53,14 +53,19 @@ class EventStoreSerializer extends StaminaAkkaSerializer(EventStoreSerializer.ev
 object EventStoreSerializer extends EntityStoreJsonProtocol
     with StammdatenEventStoreSerializer
     with BuchhaltungEventStoreSerializer
-    with CoreEventStoreSerializer {
+    with CoreEventStoreSerializer
+    with SystemEventSerializer {
 
+  // entity store serialization
   val entityPersisters = Persisters(corePersisters ++ stammdatenPersisters ++ buchhaltungPersisters)
-
   val entityStoreInitializedPersister = persister[EntityStoreInitialized]("entity-store-initialized")
   val entityInsertEventPersister = new EntityInsertEventPersister[V1](entityPersisters)
   val entityUpdatedEventPersister = new EntityUpdatedEventPersister[V1](entityPersisters)
   val entityDeletedEventPersister = new EntityDeletedEventPersister[V1](entityPersisters)
 
-  val eventStorePersisters = List(entityStoreInitializedPersister, entityInsertEventPersister, entityUpdatedEventPersister, entityDeletedEventPersister) ++ corePersisters ++ stammdatenPersisters ++ buchhaltungPersisters
+  // system event serialization
+  val eventPersisters = Persisters(systemEventPersisters)
+  val systemEventPersister = new SystemEventPersister[V1](eventPersisters)
+
+  val eventStorePersisters = List(entityStoreInitializedPersister, entityInsertEventPersister, entityUpdatedEventPersister, entityDeletedEventPersister, systemEventPersister) ++ corePersisters ++ stammdatenPersisters ++ buchhaltungPersisters ++ systemEventPersisters
 }

@@ -78,6 +78,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createLieferung(meta, id, lieferung)
     case EntityInsertedEvent(meta, id: LieferpositionId, lieferpositionenCreate: LieferpositionenCreate) =>
       createLieferpositionen(meta, id, lieferpositionenCreate)
+    case EntityInsertedEvent(meta, id: VertriebId, vertrieb: VertriebModify) =>
+      createVertrieb(meta, id, vertrieb)
     case EntityInsertedEvent(meta, id: VertriebsartId, lieferung: HeimlieferungAbotypModify) =>
       createHeimlieferungVertriebsart(meta, id, lieferung)
     case EntityInsertedEvent(meta, id: VertriebsartId, lieferung: PostlieferungAbotypModify) =>
@@ -127,6 +129,22 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  def createVertrieb(meta: EventMetadata, id: VertriebId, vertrieb: VertriebModify)(implicit personId: PersonId = meta.originator) = {
+    val vertriebCreate = copyTo[VertriebModify, Vertrieb](
+      vertrieb,
+      "id" -> id,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator
+    )
+
+    DB autoCommit { implicit session =>
+      //create abotyp
+      stammdatenWriteRepository.insertEntity[Vertrieb, VertriebId](vertriebCreate)
+    }
+  }
+
   def createDepotlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit personId: PersonId = meta.originator) = {
     val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> id,
       "erstelldat" -> meta.timestamp,
@@ -166,39 +184,35 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator) = {
     stammdatenReadRepository.getAbotypDetail(lieferung.abotypId) map {
       case Some(abotyp) =>
-        stammdatenReadRepository.getVertriebsart(lieferung.vertriebsartId) map {
-          case Some(vertriebsart) =>
-            val vaBeschrieb = vertriebsart match {
-              case dl: DepotlieferungDetail => dl.depot.name
-              case hl: HeimlieferungDetail => hl.tour.name
-              case pl: PostlieferungDetail => ""
-            }
-            val atBeschrieb = abotyp.name
+        DB autoCommit { implicit session =>
+          stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) map {
+            vertrieb =>
+              val vBeschrieb = vertrieb.beschrieb
+              val atBeschrieb = abotyp.name
 
-            val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
-              "abotypBeschrieb" -> atBeschrieb,
-              "vertriebsartBeschrieb" -> vaBeschrieb,
-              "anzahlAbwesenheiten" -> ZERO,
-              "durchschnittspreis" -> ZERO,
-              "anzahlLieferungen" -> ZERO,
-              "anzahlKoerbeZuLiefern" -> ZERO,
-              "anzahlSaldoZuTief" -> ZERO,
-              "zielpreis" -> abotyp.zielpreis,
-              "preisTotal" -> ZERO,
-              "status" -> Ungeplant,
-              "lieferplanungId" -> None,
-              "lieferplanungNr" -> None,
-              "erstelldat" -> meta.timestamp,
-              "ersteller" -> meta.originator,
-              "modifidat" -> meta.timestamp,
-              "modifikator" -> meta.originator)
+              val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
+                "abotypBeschrieb" -> atBeschrieb,
+                "vertriebBeschrieb" -> vBeschrieb,
+                "anzahlAbwesenheiten" -> ZERO,
+                "durchschnittspreis" -> ZERO,
+                "anzahlLieferungen" -> ZERO,
+                "anzahlKoerbeZuLiefern" -> ZERO,
+                "anzahlSaldoZuTief" -> ZERO,
+                "zielpreis" -> abotyp.zielpreis,
+                "preisTotal" -> ZERO,
+                "status" -> Ungeplant,
+                "lieferplanungId" -> None,
+                "lieferplanungNr" -> None,
+                "erstelldat" -> meta.timestamp,
+                "ersteller" -> meta.originator,
+                "modifidat" -> meta.timestamp,
+                "modifikator" -> meta.originator)
 
-            DB autoCommit { implicit session =>
-              //create lieferung
-              stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
-            }
-          case _ =>
-            logger.error(s"Vertriebsart with id ${lieferung.vertriebsartId} not found.")
+              DB autoCommit { implicit session =>
+                //create lieferung
+                stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
+              }
+          }
         }
       case _ =>
         logger.error(s"Abotyp with id ${lieferung.abotypId} not found.")

@@ -51,17 +51,18 @@ object DataImportService {
   case class ImportData(clearDatabaseBeforeImport: Boolean, document: InputStream)
   case class ImportResult(error: Option[String], result: Map[String, Int])
 
-  def props(sysConfig: SystemConfig, entityStore: ActorRef, system: ActorSystem): Props = Props(classOf[DefaultDataImportService], sysConfig, entityStore, system)
+  def props(sysConfig: SystemConfig, entityStore: ActorRef, system: ActorSystem, personId: PersonId): Props = Props(classOf[DefaultDataImportService], sysConfig, entityStore, system, personId)
 }
 
 trait DataImportServiceComponent {
 }
 
-class DefaultDataImportService(override val sysConfig: SystemConfig, override val entityStore: ActorRef, override val system: ActorSystem) extends DataImportService
-  with DefaultStammdatenWriteRepositoryComponent
-  with DefaultBuchhaltungWriteRepositoryComponent
+class DefaultDataImportService(override val sysConfig: SystemConfig, override val entityStore: ActorRef,
+  override val system: ActorSystem, override implicit val personId: PersonId) extends DataImportService
+    with DefaultStammdatenWriteRepositoryComponent
+    with DefaultBuchhaltungWriteRepositoryComponent
 
-trait DataImportService extends Actor with ActorLogging
+abstract class DataImportService(implicit val personId: PersonId) extends Actor with ActorLogging
     with BaseWriteRepository
     with NoPublishEventStream
     with StammdatenDBMappings
@@ -91,7 +92,7 @@ trait DataImportService extends Actor with ActorLogging
     case e: ParseError =>
       e.error.printStackTrace
       originator.map(_ ! e)
-    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, lieferungen,
+    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, vertriebe, lieferungen,
       lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
       produzenten, produktProduzenten, bestellungen, bestellpositionen) =>
       log.debug(s"Received parse result, start importing...")
@@ -105,8 +106,6 @@ trait DataImportService extends Actor with ActorLogging
           }
 
           //import entities
-          //TODO: get userid from login
-          implicit val personId = Boot.systemPersonId
           log.debug(s"Start importing data")
           log.debug(s"Import Projekt...")
           var result = Map[String, Int]()
@@ -132,6 +131,7 @@ trait DataImportService extends Actor with ActorLogging
           }
           result = result + ("Vertriebsarten" -> vertriebsarten.length)
 
+          result = importEntityList[Vertrieb, VertriebId]("Vertriebe", vertriebe, result)
           result = importEntityList[Lieferung, LieferungId]("Lieferungen", lieferungen, result)
           result = importEntityList[Lieferplanung, LieferplanungId]("Lieferplanungen", lieferplanungen, result)
           result = importEntityList[Lieferposition, LieferpositionId]("Lieferpositionen", lieferpositionen, result)
@@ -178,8 +178,7 @@ trait DataImportService extends Actor with ActorLogging
   def importEntityList[E <: BaseEntity[I], I <: BaseId](name: String, entities: List[E], result: Map[String, Int])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
-    user: PersonId) = {
+    binder: SqlBinder[I]) = {
     log.debug(s"Import ${entities.length} $name...")
     entities.map { entity =>
       insertEntity[E, I](entity)
