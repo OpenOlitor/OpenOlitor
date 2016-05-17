@@ -84,7 +84,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       val result = service.validateLogin(LoginForm(email, pwd)).run
 
-      result.map { _.toEither must beLeft(LoginFailed("Login wurde deaktiviert")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Login wurde deaktiviert")) }.await
     }
 
     "Fail on password mismatch" in {
@@ -95,7 +95,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       val result = service.validateLogin(LoginForm(email, "wrongPwd")).run
 
-      result.map { _.toEither must beLeft(LoginFailed("Benutzername oder Passwort stimmen nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Benutzername oder Passwort stimmen nicht überein")) }.await
     }
 
     "Fail when no person was found" in {
@@ -106,7 +106,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       val result = service.validateLogin(LoginForm("anyEmail", pwd)).run
 
-      result.map { _.toEither must beLeft(LoginFailed("Benutzername oder Passwort stimmen nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Benutzername oder Passwort stimmen nicht überein")) }.await
     }
   }
 
@@ -164,7 +164,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
 
-      result.map { _.toEither must beLeft(LoginFailed("Login wurde deaktiviert")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Login wurde deaktiviert")) }.await
     }
 
     "Fail when code does not match" in {
@@ -180,7 +180,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm(token, "anyCode")).run
 
-      result.map { _.toEither must beLeft(LoginFailed("Code stimmt nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await
     }
 
     "Fail when token does not match" in {
@@ -196,7 +196,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm("anyToken", code)).run
 
-      result.map { _.toEither must beLeft(LoginFailed("Code stimmt nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await
     }
 
     "Fail when person not found" in {
@@ -212,7 +212,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
 
-      result.map { _.toEither must beLeft(LoginFailed("Person konnte nicht gefunden werden")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Person konnte nicht gefunden werden")) }.await
     }
 
     "Ensure token gets deleted after successful login" in {
@@ -232,7 +232,7 @@ class LoginRouteServiceSpec extends Specification with Mockito {
 
       //second try
       val result2 = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
-      result2.map { _.toEither must beLeft(LoginFailed("Code stimmt nicht überein")) }.await
+      result2.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await
     }
   }
 }
