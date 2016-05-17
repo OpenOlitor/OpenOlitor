@@ -32,15 +32,18 @@ import akka.actor.ActorSystem
 import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.Macros._
+import com.fasterxml.jackson.databind.JsonSerializable
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class BestellungErneutVersenden(originator: PersonId, id: BestellungId) extends UserCommand
+  case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char]) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
+  case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -84,6 +87,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
       }
+    case PasswortWechselCommand(originator, personId, pwd) => idFactory => meta =>
+      Success(Seq(PasswortGewechseltEvent(meta, personId, pwd)))
 
     /*
        * Insert command handling

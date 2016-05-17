@@ -23,7 +23,6 @@
 package ch.openolitor.core.security
 
 import spray.routing._
-
 import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
@@ -57,6 +56,8 @@ import ch.openolitor.util.ConfigUtil._
 import ch.openolitor.stammdaten.models.PersonSummary
 import ch.openolitor.core.domain.SystemEvents
 import spray.routing.authentication.UserPass
+import ch.openolitor.stammdaten.StammdatenCommandHandler._
+import akka.pattern.ask
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -66,7 +67,7 @@ trait LoginRouteService extends HttpService with ActorReferences
   self: StammdatenReadRepositoryComponent =>
   import SystemEvents._
 
-  type EitherFuture[A] = EitherT[Future, LoginFailed, A]
+  type EitherFuture[A] = EitherT[Future, RequestFailed, A]
 
   lazy val loginRoutes = loginRoute
 
@@ -81,10 +82,18 @@ trait LoginRouteService extends HttpService with ActorReferences
   lazy val sendSecondFactorEmail = config.getBooleanOption(s"security.second-factor-auth.send-email").getOrElse(true)
   override lazy val maxRequestDelay: Option[Duration] = config.getLongOption(s"security.max-request-delay").map(_ millis)
 
-  val errorUsernameOrPasswordMismatch = LoginFailed("Benutzername oder Passwort stimmen nicht überein")
-  val errorTokenOrCodeMismatch = LoginFailed("Code stimmt nicht überein")
-  val errorPersonNotFound = LoginFailed("Person konnte nicht gefunden werden")
-  val errorPersonLoginNotActive = LoginFailed("Login wurde deaktiviert")
+  //pasword validation options
+  lazy val passwordMinLength = config.getIntOption("security.password-validation.min-length").getOrElse(6)
+  lazy val passwordMustContainSpecialCharacter = config.getBooleanOption("security.password-validation.special-character-required").getOrElse(false)
+  lazy val passwordSpecialCharacterList = config.getStringListOption("security.password-validation.special-characters").getOrElse(List("$", ".", ",", "?", "_", "-"))
+  lazy val passwordMustContainLowerAndUpperCase = config.getBooleanOption("security.password-validation.lower-and-upper-case").getOrElse(true)
+  lazy val passwordRegex = config.getStringOption("security.password-validation.regex").map(_.r).getOrElse("""(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z])""".r)
+  lazy val passwordRegexFailMessage = config.getStringOption("security.password-validation.regex-error").getOrElse("Das Password entspricht nicht den konfigurierten Sicherheitsbestimmungen")
+
+  val errorUsernameOrPasswordMismatch = RequestFailed("Benutzername oder Passwort stimmen nicht überein")
+  val errorTokenOrCodeMismatch = RequestFailed("Code stimmt nicht überein")
+  val errorPersonNotFound = RequestFailed("Person konnte nicht gefunden werden")
+  val errorPersonLoginNotActive = RequestFailed("Login wurde deaktiviert")
 
   def logoutRoute(implicit subject: Subject) = pathPrefix("auth") {
     path("logout") {
@@ -93,6 +102,64 @@ trait LoginRouteService extends HttpService with ActorReferences
           case _ => complete("Logged out")
         }
       }
+    } ~
+      path("passwd") {
+        post {
+          requestInstance { request =>
+            entity(as[ChangePasswordForm]) { form =>
+              logger.debug(s"requested password change")
+              onSuccess(validatePasswordChange(form, subject.personId).run) {
+                case -\/(error) =>
+                  logger.debug(s"Password change failed ${error.msg}")
+                  complete(StatusCodes.BadRequest, error.msg)
+                case \/-(result) =>
+                  complete("Ok")
+              }
+            }
+          }
+        }
+      }
+  }
+
+  def validatePasswordChange(form: ChangePasswordForm, personId: PersonId)(implicit subject: Subject): EitherFuture[Boolean] = {
+    for {
+      person <- personById(personId)
+      pwdValid <- validatePassword(form.alt, person)
+      newPwdValid <- validateNewPassword(form.neu)
+      result <- changePassword(person, form.neu)
+    } yield result
+  }
+
+  private def containsOneOf(src: String, chars: List[String]): Boolean = {
+    chars match {
+      case Nil => false
+      case head :: tail if src.indexOf(head) > 0 => true
+      case head :: tail => containsOneOf(src, tail)
+    }
+  }
+
+  private def validateNewPassword(password: String): EitherFuture[Boolean] = EitherT {
+    Future {
+      password match {
+        case p if p.length < passwordMinLength => RequestFailed(s"Das Password muss aus mindestens aus $passwordMinLength Zeichen bestehen").left
+        case p if passwordMustContainSpecialCharacter && !containsOneOf(p, passwordSpecialCharacterList) => RequestFailed(s"Das Password muss aus mindestens ein Sonderzeichen beinhalten").left
+        case p if passwordMustContainLowerAndUpperCase && p == p.toLowerCase => RequestFailed(s"Das Passwort muss mindestens einen Grossbuchstaben enthalten").left
+        case p if passwordMustContainLowerAndUpperCase && p == p.toUpperCase => RequestFailed(s"Das Passwort muss mindestens einen Kleinbuchstaben enthalten").left
+        case p if passwordRegex.findFirstMatchIn(p).isDefined => true.right
+        case p =>
+          logger.debug(s"Password does not match regex:$passwordRegex")
+          RequestFailed(passwordRegexFailMessage).left
+      }
+    }
+  }
+
+  private def changePassword(person: Person, newPassword: String)(implicit subject: Subject): EitherFuture[Boolean] = EitherT {
+    //hash password
+    val hash = BCrypt.hashpw(newPassword, BCrypt.gensalt())
+
+    (entityStore ? PasswortWechselCommand(subject.personId, person.id, hash.toCharArray)).map {
+      case p: PasswortGewechseltEvent => true.right
+      case _ => RequestFailed(s"Das Passwort konnte nicht gewechselt werden").left
     }
   }
 
