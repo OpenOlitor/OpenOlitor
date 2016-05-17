@@ -118,9 +118,9 @@ object Boot extends App with LazyLogging {
         val mandantConfig = ooConfig.getConfig(mandant).withFallback(ooConfig)
 
         val ifc = mandantConfig.getStringOption(s"interface").getOrElse(rootInterface)
-        val port = mandantConfig.getIntOption(s"port").getOrElse(freePort)
-        val wsPort = mandantConfig.getIntOption(s"webservicePort").getOrElse(freePort)
-        val name = mandantConfig.getStringOption(s"name").getOrElse(mandant)
+        val port = ooConfig.getIntOption(s"$mandant.port").getOrElse(freePort)
+        val wsPort = ooConfig.getIntOption(s"$mandant.webservicePort").getOrElse(freePort)
+        val name = ooConfig.getStringOption(s"$mandant.name").getOrElse(mandant)
 
         MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(mandantConfig), mandantConfig)
     }).getOrElse {
