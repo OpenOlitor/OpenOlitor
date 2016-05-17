@@ -45,4 +45,4 @@ case class LoginResult(status: LoginStatus, token: String, person: PersonSummary
 
 case class LoginFailed(msg: String)
 
-case class Subject(personId: PersonId, rolle: Option[Rolle])
+case class Subject(token: String, personId: PersonId, rolle: Option[Rolle])

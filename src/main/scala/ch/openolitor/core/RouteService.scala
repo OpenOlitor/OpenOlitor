@@ -134,7 +134,8 @@ trait RouteServiceActor
 
       // secured routes by XSRF token authenticator
       authenticate(loginRouteService.openOlitorAuthenticator) { implicit subject =>
-        stammdatenRouteService.stammdatenRoute ~
+        loginRouteService.logoutRoute ~
+          stammdatenRouteService.stammdatenRoute ~
           buchhaltungRouteService.buchhaltungRoute ~
           fileStoreRoute
       } ~
