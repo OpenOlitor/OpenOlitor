@@ -65,15 +65,19 @@ import com.typesafe.scalalogging.LazyLogging
 import spray.routing.RequestContext
 import java.io.InputStream
 import ch.openolitor.core.security._
+import spray.routing.RejectionHandler
+import spray.routing.authentication.BasicAuth
+import com.typesafe.sslconfig.util.ConfigLoader
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load)
+  def props(entityStore: ActorRef, eventStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load, sysConfig.mandantConfiguration.config)
 }
 
 trait RouteServiceComponent {
 
   val entityStore: ActorRef
+  val eventStore: ActorRef
   val sysConfig: SystemConfig
   val system: ActorSystem
   val fileStore: FileStore
@@ -86,10 +90,10 @@ trait RouteServiceComponent {
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent {
-  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
-  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, sysConfig, fileStore, actorRefFactory)
-  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
+  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, sysConfig, fileStore, actorRefFactory)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -110,6 +114,8 @@ trait RouteServiceActor
     runDBEvolution()
   }
 
+  implicit val openolitorRejectionHandler: RejectionHandler = AuthenticatorRejectionHandler()
+
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
   val actorRefFactory = context
@@ -119,8 +125,24 @@ trait RouteServiceActor
   // or timeout handling
   val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(helloWorldRoute ~ systemRouteService.systemRoutes ~ loginRouteService.loginRoute ~
-    stammdatenRouteService.stammdatenRoute ~ buchhaltungRouteService.buchhaltungRoute ~ fileStoreRoute))
+  val initializedDB = runRoute(cors(
+    // unsecured routes
+    helloWorldRoute ~
+      systemRouteService.statusRoute ~
+      loginRouteService.loginRoute ~
+
+      // secured routes by XSRF token authenticator
+      authenticate(loginRouteService.openOlitorAuthenticator) { implicit subject =>
+        stammdatenRouteService.stammdatenRoute ~
+          buchhaltungRouteService.buchhaltungRoute ~
+          fileStoreRoute
+      } ~
+
+      // routes secured by basicauth mainly used for service accounts
+      authenticate(BasicAuth(loginRouteService.basicAuthValidation _, realm = "OpenOlitor")) { implicit subject =>
+        systemRouteService.adminRoutes
+      }
+  ))
 
   val dbEvolutionRoutes =
     pathPrefix("db") {
@@ -269,10 +291,11 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
 class DefaultRouteServiceActor(
   override val entityStore: ActorRef,
+  override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val mandant: String,
-  override val config: Config
-)
-    extends RouteServiceActor
+  override val config: Config,
+  override val ooConfig: Config
+) extends RouteServiceActor
     with DefaultRouteServiceComponent

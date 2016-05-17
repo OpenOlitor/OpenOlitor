@@ -88,7 +88,8 @@ object Boot extends App with LazyLogging {
   val systemPersonId = PersonId(1000)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
-  val configs = getMandantConfiguration(config)
+  val ooConfig = config.getConfig("openolitor")
+  val configs = getMandantConfiguration(ooConfig)
   implicit val timeout = Timeout(5.seconds)
   val mandanten = startServices(configs)
 
@@ -105,37 +106,36 @@ object Boot extends App with LazyLogging {
   val proxyService = config.getBooleanOption("openolitor.run-proxy-service").getOrElse(false)
   //start proxy service 
   if (proxyService) {
-    startProxyService(mandanten)
+    startProxyService(mandanten, ooConfig)
   }
 
-  def getMandantConfiguration(config: Config): NonEmptyList[MandantConfiguration] = {
-    val ooConfig = config.getConfig("openolitor")
+  def getMandantConfiguration(ooConfig: Config): NonEmptyList[MandantConfiguration] = {
     val mandanten = ooConfig.getStringList("mandanten").toList
 
     mandanten.toNel.map(_.zipWithIndex.map {
       case (mandant, index) =>
-        val ifc = config.getStringOption(s"openolitor.$mandant.interface").getOrElse(rootInterface)
-        val port = config.getIntOption(s"openolitor.$mandant.port").getOrElse(freePort)
-        val wsPort = config.getIntOption(s"openolitor.$mandant.webservicePort").getOrElse(freePort)
-        val name = config.getStringOption(s"openolitor.$mandant.name").getOrElse(mandant)
-
         val mandantConfig = ooConfig.getConfig(mandant).withFallback(ooConfig)
+
+        val ifc = mandantConfig.getStringOption(s"interface").getOrElse(rootInterface)
+        val port = mandantConfig.getIntOption(s"port").getOrElse(freePort)
+        val wsPort = mandantConfig.getIntOption(s"webservicePort").getOrElse(freePort)
+        val name = mandantConfig.getStringOption(s"name").getOrElse(mandant)
 
         MandantConfiguration(mandant, name, ifc, port, wsPort, dbSeeds(mandantConfig), mandantConfig)
     }).getOrElse {
       //default if no list of mandanten is configured
       val ifc = rootInterface
       val port = rootPort
-      val wsPort = config.getIntOption("openolitor.webservicePort").getOrElse(9001)
+      val wsPort = ooConfig.getIntOption("webservicePort").getOrElse(9001)
 
       NonEmptyList(MandantConfiguration("m1", "openolitor", ifc, port, wsPort, dbSeeds(ooConfig), ooConfig))
     }
   }
 
-  def startProxyService(mandanten: NonEmptyList[MandantSystem]) = {
+  def startProxyService(mandanten: NonEmptyList[MandantSystem], config: Config) = {
     implicit val proxySystem = ActorSystem("oo-proxy")
 
-    val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten), "oo-proxy-service")
+    val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten, config), "oo-proxy-service")
     IO(UHttp) ? Http.Bind(proxyService, interface = rootInterface, port = rootPort)
     logger.debug(s"oo-proxy-system: configured proxy listener on port ${rootPort}")
   }
@@ -155,6 +155,9 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system:$system")
       val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(new Evolution(sysCfg)), "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
+      val eventStore = Await.result(system ? SystemActor.Child(SystemEventStore.props, "event-store"), duration).asInstanceOf[ActorRef]
+      logger.debug(s"oo-system:$system -> eventStore:$eventStore")
+      eventStore ! "Nop"
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 
       //start actor listening on dbevents to modify calculated fields
@@ -174,7 +177,7 @@ object Boot extends App with LazyLogging {
       stammdatenEntityStoreView ! EntityStoreView.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler

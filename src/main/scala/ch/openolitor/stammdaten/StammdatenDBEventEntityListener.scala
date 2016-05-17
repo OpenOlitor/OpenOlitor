@@ -23,7 +23,9 @@
 package ch.openolitor.stammdaten
 
 import akka.actor._
+
 import ch.openolitor.core.models._
+import ch.openolitor.core.domain._
 import ch.openolitor.core.ws._
 import spray.json._
 import ch.openolitor.stammdaten.models._
@@ -34,14 +36,10 @@ import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
 import scala.concurrent.ExecutionContext.Implicits.global;
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.buchhaltung.models.Rechnung
-import ch.openolitor.buchhaltung.models.{ Erstellt, Bezahlt }
+import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
 import scala.util.Random
 import scala.concurrent.Future
-import ch.openolitor.stammdaten.models.FaelltAusAbwesend
-import ch.openolitor.stammdaten.models.FaelltAusSaldoZuTief
-import ch.openolitor.stammdaten.models.WirdGeliefert
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -55,14 +53,17 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with StammdatenDBMappings with AsyncConnectionPoolContextAware {
   this: StammdatenWriteRepositoryComponent with StammdatenReadRepositoryComponent =>
   import StammdatenDBEventEntityListener._
+  import SystemEvents._
 
   override def preStart() {
     super.preStart()
     context.system.eventStream.subscribe(self, classOf[DBEvent[_]])
+    context.system.eventStream.subscribe(self, classOf[SystemEvent])
   }
 
   override def postStop() {
     context.system.eventStream.unsubscribe(self, classOf[DBEvent[_]])
+    context.system.eventStream.unsubscribe(self, classOf[SystemEvent])
     super.postStop()
   }
 
@@ -93,6 +94,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityCreated(userId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(userId)
 
     case e @ EntityModified(userId, entity: Lieferung, orig: Lieferung) => handleLieferungModified(entity, orig)(userId)
+
+    case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
     case e @ EntityModified(userId, entity: Vertriebsart, orig: Vertriebsart) => handleVertriebsartModified(entity, orig)(userId)
 
@@ -459,6 +462,16 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             statusLF
           }
         }
+      }
+    }
+  }
+
+  def handlePersonLoggedIn(personId: PersonId, timestamp: DateTime) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        implicit val pid = SystemEvents.SystemPersonId
+        val updated = person.copy(letzteAnmeldung = Some(timestamp))
+        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
       }
     }
   }

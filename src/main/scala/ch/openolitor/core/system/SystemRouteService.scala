@@ -32,6 +32,7 @@ import ch.openolitor.core.filestore.FileStore
 
 class DefaultSystemRouteService(
   override val entityStore: ActorRef,
+  override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val fileStore: FileStore,
@@ -51,7 +52,6 @@ trait SystemRouteService extends HttpService with ActorReferences
   lazy val systemRoutes = statusRoute ~ adminRoutes
 
   lazy val adminRoutes = pathPrefix("admin") {
-    logger.error(s"Request admin route")
     adminRoute()
   }
 

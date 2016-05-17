@@ -23,6 +23,7 @@
 package ch.openolitor.util
 
 import com.typesafe.config.Config
+import scala.collection.JavaConversions._
 
 object ConfigUtil {
   /**
@@ -31,7 +32,7 @@ object ConfigUtil {
   implicit class MyConfig(self: Config) {
 
     private def getOption[T](path: String)(get: String => T): Option[T] = {
-      if (self.hasPath(path)) {
+      if (self != null && path != null && self.hasPath(path)) {
         Some(get(path))
       } else {
         None
@@ -39,8 +40,10 @@ object ConfigUtil {
     }
 
     def getStringOption(path: String): Option[String] = getOption(path)(path => self.getString(path))
+    def getStringListOption(path: String): Option[List[String]] = getOption(path)(path => self.getStringList(path).toList)
     def getIntOption(path: String): Option[Int] = getOption(path)(path => self.getInt(path))
     def getBooleanOption(path: String): Option[Boolean] = getOption(path)(path => self.getBoolean(path))
+    def getLongOption(path: String): Option[Long] = getOption(path)(path => self.getLong(path))
   }
 
 }

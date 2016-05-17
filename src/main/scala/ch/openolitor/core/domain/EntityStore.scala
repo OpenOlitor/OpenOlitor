@@ -53,7 +53,7 @@ object EntityStore {
 
   val persistenceId = "entity-store"
 
-  case class EventStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], Long]) extends State
+  case class EntityStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], Long]) extends State
   def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultEntityStore], sysConfig, evolution)
 
   //base commands
@@ -105,8 +105,8 @@ trait EntityStore extends AggregateRoot
 
   override def persistenceId: String = EntityStore.persistenceId
 
-  type S = EventStoreState
-  override var state: EventStoreState = EventStoreState(0, 0, Map())
+  type S = EntityStoreState
+  override var state: EntityStoreState = EntityStoreState(0, 0, Map())
 
   lazy val moduleCommandHandlers: List[CommandHandler] = List(stammdatenCommandHandler, buchhaltungCommandHandler, baseCommandHandler)
 
@@ -189,7 +189,7 @@ trait EntityStore extends AggregateRoot
     state match {
       case Removed => context become removed
       case Created => context become created
-      case s: EventStoreState => this.state = s
+      case s: EntityStoreState => this.state = s
     }
   }
 

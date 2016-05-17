@@ -175,4 +175,30 @@ package events {
       }
     }
   }
+
+  class SystemEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
+      extends PersistedEventPersister[PersistentSystemEvent, V]("system-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+
+    def toBytes(t: PersistentSystemEvent): ByteString = {
+      //build custom json
+      val meta = metadataFormat.write(t.meta)
+      val event = persistEntity(t.event)
+
+      fromJson(JsObject(
+        "meta" -> meta,
+        "event" -> event
+      ))
+    }
+
+    def fromBytes(bytes: ByteString): PersistentSystemEvent = {
+      toJson(bytes).asJsObject.getFields("meta", "event") match {
+        case Seq(metaJson, eventJson) =>
+          val meta = metadataFormat.read(metaJson)
+          val event: SystemEvent = unpersistEntity(eventJson)
+
+          PersistentSystemEvent(meta, event)
+        case x => throw new DeserializationException(s"PersistentSystemEvent data expected, received:$x")
+      }
+    }
+  }
 }
