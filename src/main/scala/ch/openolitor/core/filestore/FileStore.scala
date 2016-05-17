@@ -41,6 +41,7 @@ import com.amazonaws.services.s3.model.CreateBucketRequest
 import com.amazonaws.services.s3.model.ListObjectsRequest
 import com.typesafe.scalalogging.LazyLogging
 import com.amazonaws.services.s3.model.ListBucketsRequest
+import ch.openolitor.core.MandantConfiguration
 
 case class FileStoreError(message: String)
 case class FileStoreSuccess()
@@ -67,10 +68,17 @@ trait FileStore {
   }
 }
 
-class S3FileStore(override val mandant: String, config: Config, actorSystem: ActorSystem) extends FileStore with LazyLogging {
-  lazy val createSystem = ActorSystem(mandant)
+class S3FileStore(override val mandant: String, mandantConfiguration: MandantConfiguration, actorSystem: ActorSystem) extends FileStore with LazyLogging {
+  lazy val createSystem = ActorSystem(mandant, mandantConfiguration.config)
 
-  def props = S3ClientProps(config.getString("AWS_ACCESS_KEY_ID"), config.getString("AWS_SECRET_ACCESS_KEY"), Timeout(30 seconds), createSystem, createSystem, config.getString("AWS_ENDPOINT"))
+  def props = S3ClientProps(
+    mandantConfiguration.config.getString("s3.aws-access-key-id"),
+    mandantConfiguration.config.getString("s3.aws-secret-acccess-key"),
+    Timeout(30 seconds),
+    createSystem,
+    createSystem,
+    mandantConfiguration.config.getString("s3.aws-endpoint")
+  )
 
   val client = new S3Client(props)
 

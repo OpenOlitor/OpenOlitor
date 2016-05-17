@@ -42,8 +42,6 @@ import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import ch.openolitor.core.filestore.FileStoreBucket
 import scala.io.Source
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.Config
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportTotalRecord
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware

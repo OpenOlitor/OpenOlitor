@@ -48,7 +48,6 @@ import ch.openolitor.core.BaseJsonProtocol._
 import ch.openolitor.stammdaten._
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import spray.routing.Route
 import scala.util._
 import ch.openolitor.core.BaseJsonProtocol.IdResponse
@@ -67,17 +66,15 @@ import java.io.InputStream
 import ch.openolitor.core.security._
 import spray.routing.RejectionHandler
 import spray.routing.authentication.BasicAuth
-import com.typesafe.sslconfig.util.ConfigLoader
 import spray.caching.Cache
 import ch.openolitor.stammdaten.models.AdministratorZugang
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef, eventStore: ActorRef, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name, ConfigFactory.load, sysConfig.mandantConfiguration.config, loginTokenCache)
+  def props(entityStore: ActorRef, eventStore: ActorRef, loginTokenCache: Cache[Subject], ooConfig: Config)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, ooConfig, system, sysConfig.mandantConfiguration.name, loginTokenCache)
 }
 
 trait RouteServiceComponent {
-
   val entityStore: ActorRef
   val eventStore: ActorRef
   val sysConfig: SystemConfig
@@ -300,10 +297,9 @@ class DefaultRouteServiceActor(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
+  override val ooConfig: Config,
   override val system: ActorSystem,
   override val mandant: String,
-  override val config: Config,
-  override val ooConfig: Config,
   override val loginTokenCache: Cache[Subject]
 ) extends RouteServiceActor
     with DefaultRouteServiceComponent

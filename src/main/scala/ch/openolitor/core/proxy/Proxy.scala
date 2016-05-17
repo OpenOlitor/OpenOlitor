@@ -30,6 +30,7 @@ import spray.can.server.UHttp
 import ch.openolitor.core.DefaultRouteService
 import ch.openolitor.core.CORSSupport
 import ch.openolitor.core.ActorReferences
+import ch.openolitor.core.SystemConfig
 import scalaz.NonEmptyList
 import ch.openolitor.core.Boot.MandantSystem
 import org.jfarcand.wcs.WebSocket
@@ -69,7 +70,7 @@ trait Proxy extends LazyLogging {
 }
 
 object ProxyServiceActor {
-  def props(mandanten: NonEmptyList[MandantSystem], config: Config): Props = Props(classOf[ProxyServiceActor], mandanten, config)
+  def props(mandanten: NonEmptyList[MandantSystem], ooConfig: Config): Props = Props(classOf[ProxyServiceActor], mandanten, config)
 }
 
 /**

@@ -25,16 +25,17 @@ package ch.openolitor.core.db
 import scalikejdbc.config._
 import scalikejdbc._
 import scalikejdbc.async._
+import ch.openolitor.core.MandantConfiguration
 
 /**
  * Mandant specific dbs for async scalikejdbc framework
  */
-case class AsyncMandantDBs(configKey: String) extends DBs
+case class AsyncMandantDBs(mandantConfiguration: MandantConfiguration) extends DBs
     with TypesafeConfigReader
-    with StandardTypesafeConfig
+    with TypesafeConfig
     with EnvPrefix {
 
-  override val env = Option(configKey)
+  override lazy val config = mandantConfiguration.config
 
   def connectionPool(name: Any, url: String, user: String, password: String,
     settings: AsyncConnectionPoolSettings = AsyncConnectionPoolSettings()): AsyncConnectionPool =

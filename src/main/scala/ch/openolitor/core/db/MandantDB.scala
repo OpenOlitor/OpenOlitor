@@ -24,16 +24,18 @@ package ch.openolitor.core.db
 
 import scalikejdbc.config._
 import scalikejdbc._
+import com.typesafe.config.Config
+import ch.openolitor.core.MandantConfiguration
 
 /**
  * Mandant specific dbs
  */
-case class MandantDBs(configKey: String) extends DBs
+case class MandantDBs(mandantConfiguration: MandantConfiguration) extends DBs
     with TypesafeConfigReader
-    with StandardTypesafeConfig
+    with TypesafeConfig
     with EnvPrefix {
 
-  override val env = Option(configKey)
+  override lazy val config = mandantConfiguration.config
 
   def connectionPool(name: Any, url: String, user: String, password: String,
     settings: ConnectionPoolSettings = ConnectionPoolSettings())(implicit factory: ConnectionPoolFactory = ConnectionPool.DEFAULT_CONNECTION_POOL_FACTORY): ConnectionPool = {

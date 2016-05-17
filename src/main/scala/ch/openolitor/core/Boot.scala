@@ -80,11 +80,12 @@ object Boot extends App with LazyLogging {
       socket.getLocalPort()
     }.opt.getOrElse(sys.error(s"Couldn't aquire new free server port"))
   }
-  logger.debug(s"application_name: " + System.getenv("application_config"))
-  logger.debug(s"config-file java prop: " + System.getProperty("config-file"))
-  logger.debug(s"port: " + System.getenv("PORT"))
 
-  val config = ConfigFactory.load
+  logger.debug(s"application_name: " + sys.env.get("application_config"))
+  logger.debug(s"config-file java prop: " + sys.props.get("config-file"))
+  logger.debug(s"port: " + sys.env.get("PORT"))
+
+  val config = ConfigLoader.loadConfig
 
   val systemPersonId = PersonId(0)
 
@@ -93,9 +94,6 @@ object Boot extends App with LazyLogging {
   val configs = getMandantConfiguration(ooConfig)
   implicit val timeout = Timeout(5.seconds)
   val mandanten = startServices(configs)
-
-  //configure default settings for scalikejdbc
-  scalikejdbc.config.DBs.loadGlobalSettings()
 
   val nonConfigPort = Option(System.getenv("PORT")).getOrElse("8080")
 
@@ -134,7 +132,7 @@ object Boot extends App with LazyLogging {
   }
 
   def startProxyService(mandanten: NonEmptyList[MandantSystem], config: Config) = {
-    implicit val proxySystem = ActorSystem("oo-proxy")
+    implicit val proxySystem = ActorSystem("oo-proxy", config)
 
     val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten, config), "oo-proxy-service")
     IO(UHttp) ? Http.Bind(proxyService, interface = rootInterface, port = rootPort)
@@ -185,7 +183,7 @@ object Boot extends App with LazyLogging {
       stammdatenEntityStoreView ! EntityStoreView.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, loginTokenCache, ooConfig), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler
@@ -201,16 +199,16 @@ object Boot extends App with LazyLogging {
   }
 
   def dbSeeds(config: Config) = {
-    val models = config.getStringList("db.seed.models")
+    val models = config.getStringList("db.default.seed.models")
     val mappings: Seq[(Class[_], Long)] = models.map { model =>
-      Class.forName(model) -> config.getLong(s"db.seed.mappings.$model")
+      Class.forName(model) -> config.getLong(s"db.default.seed.mappings.$model")
     }.toSeq
     mappings.toMap
   }
 
   def systemConfig(mandant: MandantConfiguration) = SystemConfig(mandant, connectionPoolContext(mandant), asyncConnectionPoolContext(mandant))
 
-  def connectionPoolContext(mandant: MandantConfiguration) = MandantDBs(mandant.configKey).connectionPoolContext
+  def connectionPoolContext(mandantConfig: MandantConfiguration) = MandantDBs(mandantConfig).connectionPoolContext
 
-  def asyncConnectionPoolContext(mandant: MandantConfiguration) = AsyncMandantDBs(mandant.configKey).connectionPoolContext
+  def asyncConnectionPoolContext(mandantConfig: MandantConfiguration) = AsyncMandantDBs(mandantConfig).connectionPoolContext
 }
