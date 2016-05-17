@@ -38,9 +38,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.UUID
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
-import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
-import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
-import ch.openolitor.stammdaten.StammdatenCommandHandler.BestellungVersendenEvent
+import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.stammdaten.models.Verrechnet
 import ch.openolitor.stammdaten.models.Abgeschlossen
 import org.joda.time.DateTime
@@ -67,6 +65,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
       lieferplanungVerrechnet(meta, id)
     case BestellungVersendenEvent(meta, id: BestellungId) =>
       bestellungVersenden(meta, id)
+    case PasswortGewechseltEvent(meta, personId, pwd) =>
+      updatePasswort(meta, personId, pwd)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -121,5 +121,14 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
 
   def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
     ???
+  }
+
+  def updatePasswort(meta: EventMetadata, id: PersonId, pwd: Array[Char])(implicit personId: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, id) map { person =>
+        val updated = person.copy(passwort = Some(pwd))
+        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
+      }
+    }
   }
 }

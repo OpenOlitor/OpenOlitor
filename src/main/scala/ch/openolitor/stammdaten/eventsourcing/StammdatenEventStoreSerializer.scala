@@ -30,9 +30,7 @@ import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.domain.EntityStoreJsonProtocol
 import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
-import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbschliessenEvent
-import ch.openolitor.stammdaten.StammdatenCommandHandler.LieferplanungAbrechnenEvent
-import ch.openolitor.stammdaten.StammdatenCommandHandler.BestellungVersendenEvent
+import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.core.eventsourcing.CoreEventStoreSerializer
 
 trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol with CoreEventStoreSerializer {
@@ -111,9 +109,10 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent]("lieferplanung-abschliessen-event")
   implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
-  implicit val BestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
+  implicit val bestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
+  implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent]("passwort-gewechselt")
 
-  implicit val korbCratePersister = persister[KorbCreate]("korb-create")
+  implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val korbModifyPersister = persister[KorbModify]("korb-modify")
 
   val stammdatenPersisters = List(
@@ -171,10 +170,13 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     projektIdPersister,
     abwesenheitCreatePersister,
     abwesenheitIdPersister,
+    korbCreatePersister,
+    korbModifyPersister,
+
+    //event persisters
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
-    BestellungVersendenEventPersister,
-    korbCratePersister,
-    korbModifyPersister
+    bestellungVersendenEventPersister,
+    passwortGewechseltEventPersister
   )
 }
