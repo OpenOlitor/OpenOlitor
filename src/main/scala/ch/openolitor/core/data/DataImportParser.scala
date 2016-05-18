@@ -993,7 +993,9 @@ object DataImportParser {
 
   implicit class MyCell(self: Cell) {
     val allSupportedDateFormats = List(
+      DateTimeFormat.forPattern("dd.MM.yy"),
       DateTimeFormat.forPattern("dd.MM.yyyy"),
+      DateTimeFormat.forPattern("MM/dd/yy"),
       DateTimeFormat.forPattern("MM/dd/yyyy")
     )
 
