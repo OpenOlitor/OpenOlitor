@@ -1,3 +1,4 @@
+
 /*                                                                           *\
 *    ____                   ____  ___ __                                      *
 *   / __ \____  ___  ____  / __ \/ (_) /_____  _____                          *
@@ -22,39 +23,8 @@
 \*                                                                           */
 package ch.openolitor.core.db
 
-import scalikejdbc.config._
-import scalikejdbc._
-import scalikejdbc.async._
-import ch.openolitor.core.MandantConfiguration
-
-/**
- * Mandant specific dbs for async scalikejdbc framework
- */
-case class AsyncMandantDBs(mandantConfiguration: MandantConfiguration) extends DBs
-    with TypesafeConfigReader
-    with TypesafeConfig
-    with EnvPrefix
-    with DbNameFixer {
-
-  override lazy val config = mandantConfiguration.config
-
-  def connectionPool(name: Any, url: String, user: String, password: String,
-    settings: AsyncConnectionPoolSettings = AsyncConnectionPoolSettings()): AsyncConnectionPool =
-    AsyncConnectionPoolFactory.apply(url, user, password, settings)
-
-  implicit def toAsyncConnectionPoolSettings(cpSettings: ConnectionPoolSettings): AsyncConnectionPoolSettings = AsyncConnectionPoolSettings(maxPoolSize = cpSettings.maxSize)
-
-  def loadConnectionPool(dbName: Symbol = ConnectionPool.DEFAULT_NAME): AsyncConnectionPool = {
-    val JDBCSettings(url, user, password, driver) = readJDBCSettings(dbName)
-    val cpSettings = readConnectionPoolSettings(dbName)
-    Class.forName(driver)
-    val _url = fixDbName(url)
-    connectionPool(dbName, _url, user, password, cpSettings)
-  }
-
-  def connectionPoolContext(): MultipleAsyncConnectionPoolContext = {
-    val context = for (dbName <- dbNames) yield (Symbol(dbName), loadConnectionPool(Symbol(dbName)))
-    //: _* converts list into a varargs parameter of type tuple2
-    MultipleAsyncConnectionPoolContext(context: _*)
+trait DbNameFixer {
+  def fixDbName(url: String): String = {
+    if (url.indexOf('?') > 0) url.substring(0, url.indexOf('?')) else url
   }
 }

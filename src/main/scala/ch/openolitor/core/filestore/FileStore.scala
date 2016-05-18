@@ -80,6 +80,8 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
     mandantConfiguration.config.getString("s3.aws-endpoint")
   )
 
+  logger.debug(s"Connection settings for s3 endpoint: ${props.endpoint}")
+
   val client = new S3Client(props)
 
   def generateId = UUID.randomUUID.toString
@@ -138,7 +140,10 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
   override def createBuckets: Future[Either[FileStoreError, FileStoreSuccess]] = {
     val res = FileStoreBucket.AllFileStoreBuckets map { b =>
       client.createBucket(new CreateBucketRequest(bucketName(b))) map {
-        _.fold(e => Left(e), _ => Right(true))
+        _.fold(
+          e => if (302 == e.getStatusCode) Right(true) else Left(e),
+          _ => Right(true)
+        )
       }
     }
 
