@@ -9,6 +9,7 @@ applications:
   buildpack: https://github.com/cloudfoundry/java-buildpack.git
   stack: cflinuxfs2
   env:
+    TIMEOUT: "180"
     JBP_CONFIG_OPEN_JDK_JRE: "{jre: { version: 1.8.0_+ }}"
     application_config: openolitor-server-prod
     JAVA_OPTS: "-Dconfig.resource=openolitor-server-prod.conf"
