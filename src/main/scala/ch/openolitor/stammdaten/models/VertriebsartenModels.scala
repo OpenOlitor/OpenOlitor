@@ -39,8 +39,8 @@ case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpun
 
 case class VertriebVertriebsarten(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
-  depotlieferungen: Seq[Depotlieferung],
-  heimlieferungen: Seq[Heimlieferung],
+  depotlieferungen: Seq[DepotlieferungDetail],
+  heimlieferungen: Seq[HeimlieferungDetail],
   postlieferungen: Seq[Postlieferung],
   //modification flags
   erstelldat: DateTime,
