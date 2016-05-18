@@ -80,6 +80,8 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
     mandantConfiguration.config.getString("s3.aws-endpoint")
   )
 
+  logger.debug(s"Connection settings for s3 endpoint: ${props.endpoint}")
+
   val client = new S3Client(props)
 
   def generateId = UUID.randomUUID.toString
