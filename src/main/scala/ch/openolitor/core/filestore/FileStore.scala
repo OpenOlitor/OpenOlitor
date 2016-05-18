@@ -140,7 +140,10 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
   override def createBuckets: Future[Either[FileStoreError, FileStoreSuccess]] = {
     val res = FileStoreBucket.AllFileStoreBuckets map { b =>
       client.createBucket(new CreateBucketRequest(bucketName(b))) map {
-        _.fold(e => Left(e), _ => Right(true))
+        _.fold(
+          e => if (302 == e.getStatusCode) Right(true) else Left(e),
+          _ => Right(true)
+        )
       }
     }
 
