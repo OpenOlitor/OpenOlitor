@@ -28,7 +28,6 @@ import akka.actor._
 import akka.io.IO
 import spray.can.server.UHttp
 import ch.openolitor.core.DefaultRouteService
-import ch.openolitor.core.CORSSupport
 import ch.openolitor.core.ActorReferences
 import ch.openolitor.core.SystemConfig
 import scalaz.NonEmptyList
@@ -38,7 +37,6 @@ import spray.can.Http
 import spray.can.websocket._
 import spray.can.websocket.WebSocketServerWorker
 import com.typesafe.scalalogging.LazyLogging
-import com.typesafe.config.Config
 
 /**
  * Borrowed from:
@@ -70,18 +68,17 @@ trait Proxy extends LazyLogging {
 }
 
 object ProxyServiceActor {
-  def props(mandanten: NonEmptyList[MandantSystem], ooConfig: Config): Props = Props(classOf[ProxyServiceActor], mandanten, config)
+  def props(mandanten: NonEmptyList[MandantSystem]): Props = Props(classOf[ProxyServiceActor], mandanten)
 }
 
 /**
  * Proxy Service which redirects routes matching a mandant key in first row to either
  * the websocket or service redirect url using their actor system
  */
-class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem], override val ooConfig: Config)
+class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
     extends Actor
     with ActorLogging
-    with HttpService
-    with CORSSupport {
+    with HttpService {
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test

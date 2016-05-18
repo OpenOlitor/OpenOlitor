@@ -134,7 +134,7 @@ object Boot extends App with LazyLogging {
   def startProxyService(mandanten: NonEmptyList[MandantSystem], config: Config) = {
     implicit val proxySystem = ActorSystem("oo-proxy", config)
 
-    val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten, config), "oo-proxy-service")
+    val proxyService = proxySystem.actorOf(ProxyServiceActor.props(mandanten), "oo-proxy-service")
     IO(UHttp) ? Http.Bind(proxyService, interface = rootInterface, port = rootPort)
     logger.debug(s"oo-proxy-system: configured proxy listener on port ${rootPort}")
   }
