@@ -641,7 +641,7 @@ class DataImportParser extends Actor with ActorLogging {
 
       val vertriebId = VertriebId(id)
       val abotypId = AbotypId(row.value[Long](indexAbotypId))
-      val beschrieb = row.value[String](indexBeschrieb)
+      val beschrieb = row.value[Option[String]](indexBeschrieb)
       /*val vaBeschrieb = vertriebsart match {
           case dl: Depotlieferung =>
             depots.find(_.id == dl.depotId).getOrElse(throw ParseException(s"No depot found for id ${dl.depotId}")).name

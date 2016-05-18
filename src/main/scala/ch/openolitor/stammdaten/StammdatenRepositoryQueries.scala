@@ -636,8 +636,19 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(vertriebMapping as vertrieb)
+        .leftJoin(depotlieferungMapping as depotlieferung).on(depotlieferung.vertriebId, vertrieb.id)
+        .leftJoin(heimlieferungMapping as heimlieferung).on(heimlieferung.vertriebId, vertrieb.id)
+        .leftJoin(postlieferungMapping as postlieferung).on(postlieferung.vertriebId, vertrieb.id)
         .where.eq(vertrieb.abotypId, parameter(abotypId))
-    }.map(vertriebMapping(vertrieb)).list
+    }.one(vertriebMapping(vertrieb))
+      .toManies(
+        rs => postlieferungMapping.opt(postlieferung)(rs),
+        rs => heimlieferungMapping.opt(heimlieferung)(rs),
+        rs => depotlieferungMapping.opt(depotlieferung)(rs)
+      )
+      .map({ (vertrieb, pl, hl, dl) =>
+        copyTo[Vertrieb, VertriebVertriebsarten](vertrieb, "depotlieferungen" -> dl, "heimlieferungen" -> hl, "postlieferungen" -> pl)
+      }).list
   }
 
   // MODIFY and DELETE Queries

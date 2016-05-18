@@ -29,7 +29,7 @@ import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 
 case class VertriebId(id: Long) extends BaseId
-case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: String,
+case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
@@ -37,7 +37,18 @@ case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpun
   modifidat: DateTime,
   modifikator: PersonId) extends BaseEntity[VertriebId]
 
-case class VertriebModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: String) extends JSONSerializable
+case class VertriebVertriebsarten(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
+  anzahlAbos: Int,
+  depotlieferungen: Seq[Depotlieferung],
+  heimlieferungen: Seq[Heimlieferung],
+  postlieferungen: Seq[Postlieferung],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId) extends BaseEntity[VertriebId]
+
+case class VertriebModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String]) extends JSONSerializable
 
 case class VertriebsartId(id: Long) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId] {
