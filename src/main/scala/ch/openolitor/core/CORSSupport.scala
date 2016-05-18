@@ -40,7 +40,7 @@ trait CORSSupport extends LazyLogging {
 
   private val allowOriginHeader = `Access-Control-Allow-Origin`(allowOrigin)
   val allowCredentialsHeader = `Access-Control-Allow-Credentials`(true)
-  val allowHeaders = `Access-Control-Allow-Headers`("Origin, X-Requested-With, Content-Type, Accept, Accept-Encoding, Accept-Language, Host, Referer, User-Agent, OO-XSRF-TOKEN")
+  val allowHeaders = `Access-Control-Allow-Headers`("Origin, X-Requested-With, Content-Type, Accept, Accept-Encoding, Accept-Language, Host, Referer, User-Agent, XSRF-TOKEN")
   private val optionsCorsHeaders = List(
     allowHeaders,
     `Access-Control-Max-Age`(1728000)
