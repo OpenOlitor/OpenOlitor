@@ -42,7 +42,7 @@ import scala.util.{ Try, Success => TrySuccess, Failure => TryFailure }
 
 object AuthCookies {
   val CsrfTokenCookieName = "XSRF-TOKEN"
-  val CsrfTokenHeaderName = "OO-XSRF-TOKEN"
+  val CsrfTokenHeaderName = "XSRF-TOKEN"
 }
 
 /** If anything goes wrong during authentication, this is the rejection to use. */
@@ -86,11 +86,10 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging with TokenCache 
     def apply(ctx: RequestContext): Future[Authentication[Subject]] = {
       logger.debug(s"${ctx.request.uri}:${ctx.request.method}")
       (for {
-        cookieToken <- findCookieToken(ctx)
         headerToken <- findHeaderToken(ctx)
         pair <- extractTimeFromHeaderToken(headerToken)
         (token, requestTime) = pair
-        valid <- validateCookieAndHeaderToken(cookieToken, token)
+        valid <- validateCookieAndHeaderToken(token, token)
         time <- compareRequestTime(requestTime)
         subject <- findSubjectInCache(token)
       } yield subject).run.map(_.toEither)
@@ -99,13 +98,14 @@ trait XSRFTokenSessionAuthenticatorProvider extends LazyLogging with TokenCache 
     private def findCookieToken(ctx: RequestContext): RequestValidation[String] = EitherT {
       Future {
         logger.debug(s"Check cookies:${ctx.request.cookies}")
-        ctx.request.cookies.find(_.name == CsrfTokenCookieName).map(_.content.right).getOrElse(AuthenticatorRejection("Kein XSRF-Token im Cookie gefunden").left)
+        ctx.request.cookies.find(_.name.toLowerCase == CsrfTokenCookieName.toLowerCase).map(_.content.right).getOrElse(AuthenticatorRejection("Kein XSRF-Token im Cookie gefunden").left)
       }
     }
 
     private def findHeaderToken(ctx: RequestContext): RequestValidation[String] = EitherT {
       Future {
-        ctx.request.headers.find(_.name == CsrfTokenHeaderName).map(_.value.right).getOrElse(AuthenticatorRejection("Kein XSRF-Token im Header gefunden").left)
+        logger.debug(s"Headers present: ${ctx.request.headers}")
+        ctx.request.headers.find(_.name.toLowerCase == CsrfTokenHeaderName.toLowerCase).map(_.value.right).getOrElse(AuthenticatorRejection("Kein XSRF-Token im Header gefunden").left)
       }
     }
 
