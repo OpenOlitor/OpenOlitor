@@ -53,8 +53,9 @@ object AuthenticatorRejectionHandler extends LazyLogging {
   import spray.http.StatusCodes._
 
   def apply(): RejectionHandler = RejectionHandler {
-    case AuthenticatorRejection(reason) :: _ =>
-      logger.debug(s"Request unauthorized:$reason")
+    case rejections if rejections.find(_.isInstanceOf[AuthenticatorRejection]).isDefined =>
+      val reason = rejections.find(_.isInstanceOf[AuthenticatorRejection]).get.asInstanceOf[AuthenticatorRejection].reason
+      logger.debug(s"Request unauthorized ${reason}")
       complete(Unauthorized)
   }
 }
