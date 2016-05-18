@@ -410,20 +410,21 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseVertriebsarten = {
-    parse[Vertriebsart, VertriebsartId]("id", Seq("vertrieb_id", "depot_id", "tour_id") ++ modifiCols) { id => indexes => row =>
+    parse[Vertriebsart, VertriebsartId]("id", Seq("vertrieb_id", "depot_id", "tour_id", "anzahl_abos") ++ modifiCols) { id => indexes => row =>
       //match column indexes
-      val Seq(indexVertriebId, indexDepotId, indexTourId) = indexes.take(3)
+      val Seq(indexVertriebId, indexDepotId, indexTourId, indexAnzahlAbos) = indexes.take(4)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val vertriebsartId = VertriebsartId(id)
       val vertriebId = VertriebId(row.value[Long](indexVertriebId))
       val depotIdOpt = row.value[Option[Long]](indexDepotId).map(DepotId)
       val tourIdOpt = row.value[Option[Long]](indexTourId).map(TourId)
+      val anzahlAbos = row.value[Int](indexAnzahlAbos)
 
       depotIdOpt.map { depotId =>
         Depotlieferung(
           vertriebsartId,
-          vertriebId, depotId,
+          vertriebId, depotId, anzahlAbos,
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -432,14 +433,14 @@ class DataImportParser extends Actor with ActorLogging {
         )
       }.getOrElse {
         tourIdOpt.map { tourId =>
-          Heimlieferung(vertriebsartId, vertriebId, tourId,
+          Heimlieferung(vertriebsartId, vertriebId, tourId, anzahlAbos,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
             ersteller = PersonId(row.value[Long](indexErsteller)),
             modifidat = row.value[DateTime](indexModifidat),
             modifikator = PersonId(row.value[Long](indexModifikator)))
         }.getOrElse {
-          Postlieferung(vertriebsartId, vertriebId,
+          Postlieferung(vertriebsartId, vertriebId, anzahlAbos,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
             ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -634,8 +635,8 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseVertriebe(vertriebsarten: List[Vertriebsart]) = {
-    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "liefertag") ++ modifiCols) { id => indexes => row =>
-      val Seq(indexAbotypId, indexBeschrieb, indexLiefertag) = indexes.take(3)
+    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "liefertag", "anzahl_abos") ++ modifiCols) { id => indexes => row =>
+      val Seq(indexAbotypId, indexBeschrieb, indexLiefertag, indexAnzahlAbos) = indexes.take(4)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val vertriebId = VertriebId(id)
@@ -649,8 +650,10 @@ class DataImportParser extends Actor with ActorLogging {
           case pl: Postlieferung => ""
         }*/
       val liefertag = Lieferzeitpunkt(row.value[String](indexLiefertag))
+      val anzahlAbos = row.value[Int](indexAnzahlAbos)
 
       Vertrieb(vertriebId, abotypId, liefertag, beschrieb,
+        anzahlAbos,
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -758,18 +761,18 @@ class DataImportParser extends Actor with ActorLogging {
         depotIdOpt.map { depotIdInt =>
           val depotId = depotIdMapping.getOrElse(depotIdInt, throw ParseException(s"Depot id $depotIdInt referenced from abo not found"))
           val depotName = depots.filter(_.id == depotId).headOption.map(_.name).getOrElse(s"Depot not found with id:$depotId")
-          DepotlieferungAbo(aboId, kundeId, kunde, vertriebsartId, abotypId, abotypName, depotId, depotName,
+          DepotlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, abotypId, abotypName, depotId, depotName,
             start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
             anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
         }.getOrElse {
           tourIdOpt.map { tourIdInt =>
             val tourId = tourIdMapping.getOrElse(tourIdInt, throw ParseException(s"Tour id tourIdInt referenced from abo not found"))
             val tourName = tours.filter(_.id == tourId).headOption.map(_.name).getOrElse(s"Tour not found with id:$tourId")
-            HeimlieferungAbo(aboId, kundeId, kunde, vertriebsartId, abotypId, abotypName, tourId, tourName,
+            HeimlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, abotypId, abotypName, tourId, tourName,
               start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
               anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
           }.getOrElse {
-            PostlieferungAbo(aboId, kundeId, kunde, vertriebsartId, abotypId, abotypName,
+            PostlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, abotypId, abotypName,
               start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
               anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
           }

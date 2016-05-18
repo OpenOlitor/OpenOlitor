@@ -33,6 +33,7 @@ case class AboId(id: Long) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
   val vertriebsartId: VertriebsartId
+  val vertriebId: VertriebId
   val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
@@ -50,6 +51,7 @@ sealed trait Abo extends BaseEntity[AboId] {
 
 sealed trait AboDetail extends JSONSerializable {
   val vertriebsartId: VertriebsartId
+  val vertriebId: VertriebId
   val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
@@ -80,6 +82,7 @@ case class DepotlieferungAbo(
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
@@ -105,6 +108,7 @@ case class DepotlieferungAboDetail(
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
@@ -125,7 +129,8 @@ case class DepotlieferungAboDetail(
   modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]
+  abotyp: Option[Abotyp],
+  vertrieb: Option[Vertrieb]
 ) extends AboDetail
 
 case class DepotlieferungAboModify(
@@ -142,6 +147,7 @@ case class HeimlieferungAbo(
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
@@ -167,6 +173,7 @@ case class HeimlieferungAboDetail(
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
@@ -187,7 +194,8 @@ case class HeimlieferungAboDetail(
   modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]
+  abotyp: Option[Abotyp],
+  vertrieb: Option[Vertrieb]
 ) extends AboDetail
 
 case class HeimlieferungAboModify(
@@ -204,6 +212,7 @@ case class PostlieferungAbo(
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   start: DateTime,
@@ -227,6 +236,7 @@ case class PostlieferungAboDetail(
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   start: DateTime,
@@ -245,7 +255,8 @@ case class PostlieferungAboDetail(
   modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]
+  abotyp: Option[Abotyp],
+  vertrieb: Option[Vertrieb]
 ) extends AboDetail
 
 case class PostlieferungAboModify(

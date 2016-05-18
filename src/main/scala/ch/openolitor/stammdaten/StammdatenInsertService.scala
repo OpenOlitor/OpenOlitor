@@ -134,6 +134,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val vertriebCreate = copyTo[VertriebModify, Vertrieb](
       vertrieb,
       "id" -> id,
+      "anzahlAbos" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -148,6 +149,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createDepotlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit personId: PersonId = meta.originator) = {
     val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> id,
+      "anzahlAbos" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -160,6 +162,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createHeimlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: HeimlieferungAbotypModify)(implicit personId: PersonId = meta.originator) = {
     val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> id,
+      "anzahlAbos" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -172,6 +175,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createPostlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: PostlieferungAbotypModify)(implicit personId: PersonId = meta.originator) = {
     val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> id,
+      "anzahlAbos" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -291,11 +295,11 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def aboParameters(create: AboModify)(abotyp: Abotyp): (Abotyp, Option[Int], Option[DateTime]) = {
+  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[DateTime]) = {
     abotyp.laufzeiteinheit match {
-      case Unbeschraenkt => (abotyp, None, None)
-      case Lieferungen => (abotyp, abotyp.laufzeit, None)
-      case Monate => (abotyp, None, Some(create.start.plusMonths(abotyp.laufzeit.get)))
+      case Unbeschraenkt => (None, None)
+      case Lieferungen => (abotyp.laufzeit, None)
+      case Monate => (None, Some(create.start.plusMonths(abotyp.laufzeit.get)))
     }
   }
 
@@ -313,8 +317,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     stammdatenWriteRepository.getById(vertriebMapping, vertriebId)
   }
 
-  private def abotypByVertriebartId(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[Abotyp] = {
-    vertriebsartById(vertriebsartId) flatMap (v => vertriebById(v.vertriebId) flatMap (v => abotypById(v.abotypId)))
+  private def abotypByVertriebartId(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[(Vertriebsart, Vertrieb, Abotyp)] = {
+    vertriebsartById(vertriebsartId) flatMap (va => vertriebById(va.vertriebId) flatMap (v => abotypById(v.abotypId).map(at => (va, v, at))))
   }
 
   private def depotById(depotId: DepotId)(implicit session: DBSession): Option[Depot] = {
@@ -328,70 +332,75 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createAbo(meta: EventMetadata, id: AboId, create: AboModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       val emptyMap: TreeMap[String, Int] = TreeMap()
-      abotypByVertriebartId(create.vertriebsartId) map aboParameters(create) map {
-        case (abotyp, guthaben, ende) =>
+      abotypByVertriebartId(create.vertriebsartId) map {
+        case (vertriebsart, vertrieb, abotyp) =>
+          aboParameters(create)(abotyp) match {
+            case (guthaben, ende) =>
+              val abo = create match {
+                case create: DepotlieferungAboModify =>
+                  val depotName = depotById(create.depotId).map(_.name).getOrElse("")
 
-          val abo = create match {
-            case create: DepotlieferungAboModify =>
-              val depotName = depotById(create.depotId).map(_.name).getOrElse("")
+                  stammdatenWriteRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](
+                    create,
+                    "id" -> id,
+                    "vertriebId" -> vertrieb.id,
+                    "abotypId" -> abotyp.id,
+                    "abotypName" -> abotyp.name,
+                    "depotName" -> depotName,
+                    "ende" -> ende,
+                    "guthabenVertraglich" -> guthaben,
+                    "guthaben" -> ZERO,
+                    "guthabenInRechnung" -> ZERO,
+                    "letzteLieferung" -> None,
+                    "anzahlAbwesenheiten" -> emptyMap,
+                    "anzahlLieferungen" -> emptyMap,
+                    "erstelldat" -> meta.timestamp,
+                    "ersteller" -> meta.originator,
+                    "modifidat" -> meta.timestamp,
+                    "modifikator" -> meta.originator
+                  ))
+                case create: HeimlieferungAboModify =>
+                  val tourName = tourById(create.tourId).map(_.name).getOrElse("")
 
-              stammdatenWriteRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](
-                create,
-                "id" -> id,
-                "abotypId" -> abotyp.id,
-                "abotypName" -> abotyp.name,
-                "depotName" -> depotName,
-                "ende" -> ende,
-                "guthabenVertraglich" -> guthaben,
-                "guthaben" -> ZERO,
-                "guthabenInRechnung" -> ZERO,
-                "letzteLieferung" -> None,
-                "anzahlAbwesenheiten" -> emptyMap,
-                "anzahlLieferungen" -> emptyMap,
-                "erstelldat" -> meta.timestamp,
-                "ersteller" -> meta.originator,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> meta.originator
-              ))
-            case create: HeimlieferungAboModify =>
-              val tourName = tourById(create.tourId).map(_.name).getOrElse("")
-
-              stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](
-                create,
-                "id" -> id,
-                "abotypId" -> abotyp.id,
-                "abotypName" -> abotyp.name,
-                "tourName" -> tourName,
-                "ende" -> ende,
-                "guthabenVertraglich" -> guthaben,
-                "guthaben" -> ZERO,
-                "guthabenInRechnung" -> ZERO,
-                "letzteLieferung" -> None,
-                "anzahlAbwesenheiten" -> emptyMap,
-                "anzahlLieferungen" -> emptyMap,
-                "erstelldat" -> meta.timestamp,
-                "ersteller" -> meta.originator,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> meta.originator
-              ))
-            case create: PostlieferungAboModify =>
-              stammdatenWriteRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](
-                create,
-                "id" -> id,
-                "abotypId" -> abotyp.id,
-                "abotypName" -> abotyp.name,
-                "ende" -> ende,
-                "guthabenVertraglich" -> guthaben,
-                "guthaben" -> ZERO,
-                "guthabenInRechnung" -> ZERO,
-                "letzteLieferung" -> None,
-                "anzahlAbwesenheiten" -> emptyMap,
-                "anzahlLieferungen" -> emptyMap,
-                "erstelldat" -> meta.timestamp,
-                "ersteller" -> meta.originator,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> meta.originator
-              ))
+                  stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](
+                    create,
+                    "id" -> id,
+                    "vertriebId" -> vertrieb.id,
+                    "abotypId" -> abotyp.id,
+                    "abotypName" -> abotyp.name,
+                    "tourName" -> tourName,
+                    "ende" -> ende,
+                    "guthabenVertraglich" -> guthaben,
+                    "guthaben" -> ZERO,
+                    "guthabenInRechnung" -> ZERO,
+                    "letzteLieferung" -> None,
+                    "anzahlAbwesenheiten" -> emptyMap,
+                    "anzahlLieferungen" -> emptyMap,
+                    "erstelldat" -> meta.timestamp,
+                    "ersteller" -> meta.originator,
+                    "modifidat" -> meta.timestamp,
+                    "modifikator" -> meta.originator
+                  ))
+                case create: PostlieferungAboModify =>
+                  stammdatenWriteRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](
+                    create,
+                    "id" -> id,
+                    "vertriebId" -> vertrieb.id,
+                    "abotypId" -> abotyp.id,
+                    "abotypName" -> abotyp.name,
+                    "ende" -> ende,
+                    "guthabenVertraglich" -> guthaben,
+                    "guthaben" -> ZERO,
+                    "guthabenInRechnung" -> ZERO,
+                    "letzteLieferung" -> None,
+                    "anzahlAbwesenheiten" -> emptyMap,
+                    "anzahlLieferungen" -> emptyMap,
+                    "erstelldat" -> meta.timestamp,
+                    "ersteller" -> meta.originator,
+                    "modifidat" -> meta.timestamp,
+                    "modifikator" -> meta.originator
+                  ))
+              }
           }
       }
     }

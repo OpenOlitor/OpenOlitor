@@ -30,6 +30,7 @@ import ch.openolitor.core.JSONSerializable
 
 case class VertriebId(id: Long) extends BaseId
 case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: String,
+  anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -41,40 +42,50 @@ case class VertriebModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschr
 case class VertriebsartId(id: Long) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId] {
   val vertriebId: VertriebId
+  val anzahlAbos: Int
 }
 case class Depotlieferung(id: VertriebsartId, vertriebId: VertriebId, depotId: DepotId,
+  anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends Vertriebsart
 case class Heimlieferung(id: VertriebsartId, vertriebId: VertriebId, tourId: TourId,
+  anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends Vertriebsart
 case class Postlieferung(id: VertriebsartId, vertriebId: VertriebId,
+  anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends Vertriebsart
 
-sealed trait VertriebsartDetail extends JSONSerializable
+sealed trait VertriebsartDetail extends JSONSerializable {
+  val vertriebId: VertriebId
+  val anzahlAbos: Int
+}
 case class DepotlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, depotId: DepotId, depot: DepotSummary,
+  anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends VertriebsartDetail
 case class HeimlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, tourId: TourId, tour: Tour,
+  anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId) extends VertriebsartDetail
 case class PostlieferungDetail(id: VertriebsartId, vertriebId: VertriebId,
+  anzahlAbos: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

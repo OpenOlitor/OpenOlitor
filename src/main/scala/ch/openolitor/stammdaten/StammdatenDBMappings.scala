@@ -559,6 +559,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(abo) ++ Seq(
         column.kundeId -> parameter(abo.kundeId),
         column.kunde -> parameter(abo.kunde),
+        column.vertriebsartId -> parameter(abo.vertriebsartId),
         column.abotypId -> parameter(abo.abotypId),
         column.abotypName -> parameter(abo.abotypName),
         column.start -> parameter(abo.start),
