@@ -43,6 +43,7 @@ import Scalaz._
 import scala.util.Random
 import scala.collection.immutable.Nil
 import ch.openolitor.stammdaten.models.LieferpositionenCreate
+import scalikejdbc.DBSession
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -290,25 +291,56 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[DateTime]) = {
+  def aboParameters(create: AboModify)(abotyp: Abotyp): (Abotyp, Option[Int], Option[DateTime]) = {
     abotyp.laufzeiteinheit match {
-      case Unbeschraenkt => (None, None)
-      case Lieferungen => (abotyp.laufzeit, None)
-      case Monate => (None, Some(create.start.plusMonths(abotyp.laufzeit.get)))
+      case Unbeschraenkt => (abotyp, None, None)
+      case Lieferungen => (abotyp, abotyp.laufzeit, None)
+      case Monate => (abotyp, None, Some(create.start.plusMonths(abotyp.laufzeit.get)))
     }
+  }
+
+  private def vertriebsartById(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[Vertriebsart] = {
+    stammdatenWriteRepository.getById(depotlieferungMapping, vertriebsartId) orElse
+      stammdatenWriteRepository.getById(heimlieferungMapping, vertriebsartId) orElse
+      stammdatenWriteRepository.getById(postlieferungMapping, vertriebsartId)
+  }
+
+  private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
+    stammdatenWriteRepository.getById(abotypMapping, abotypId)
+  }
+
+  private def vertriebById(vertriebId: VertriebId)(implicit session: DBSession): Option[Vertrieb] = {
+    stammdatenWriteRepository.getById(vertriebMapping, vertriebId)
+  }
+
+  private def abotypByVertriebartId(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[Abotyp] = {
+    vertriebsartById(vertriebsartId) flatMap (v => vertriebById(v.vertriebId) flatMap (v => abotypById(v.abotypId)))
+  }
+
+  private def depotById(depotId: DepotId)(implicit session: DBSession): Option[Depot] = {
+    stammdatenWriteRepository.getById(depotMapping, depotId)
+  }
+
+  private def tourById(tourId: TourId)(implicit session: DBSession): Option[Tour] = {
+    stammdatenWriteRepository.getById(tourMapping, tourId)
   }
 
   def createAbo(meta: EventMetadata, id: AboId, create: AboModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       val emptyMap: TreeMap[String, Int] = TreeMap()
-      stammdatenWriteRepository.getById(abotypMapping, create.abotypId) map aboParameters(create) map {
-        case (guthaben, ende) =>
+      abotypByVertriebartId(create.vertriebsartId) map aboParameters(create) map {
+        case (abotyp, guthaben, ende) =>
 
           val abo = create match {
             case create: DepotlieferungAboModify =>
+              val depotName = depotById(create.depotId).map(_.name).getOrElse("")
+
               stammdatenWriteRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](
                 create,
                 "id" -> id,
+                "abotypId" -> abotyp.id,
+                "abotypName" -> abotyp.name,
+                "depotName" -> depotName,
                 "ende" -> ende,
                 "guthabenVertraglich" -> guthaben,
                 "guthaben" -> ZERO,
@@ -322,9 +354,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 "modifikator" -> meta.originator
               ))
             case create: HeimlieferungAboModify =>
+              val tourName = tourById(create.tourId).map(_.name).getOrElse("")
+
               stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](
                 create,
                 "id" -> id,
+                "abotypId" -> abotyp.id,
+                "abotypName" -> abotyp.name,
+                "tourName" -> tourName,
                 "ende" -> ende,
                 "guthabenVertraglich" -> guthaben,
                 "guthaben" -> ZERO,
@@ -341,6 +378,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               stammdatenWriteRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](
                 create,
                 "id" -> id,
+                "abotypId" -> abotyp.id,
+                "abotypName" -> abotyp.name,
                 "ende" -> ende,
                 "guthabenVertraglich" -> guthaben,
                 "guthaben" -> ZERO,

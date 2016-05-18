@@ -39,7 +39,9 @@ case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpun
 case class VertriebModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: String) extends JSONSerializable
 
 case class VertriebsartId(id: Long) extends BaseId
-sealed trait Vertriebsart extends BaseEntity[VertriebsartId]
+sealed trait Vertriebsart extends BaseEntity[VertriebsartId] {
+  val vertriebId: VertriebId
+}
 case class Depotlieferung(id: VertriebsartId, vertriebId: VertriebId, depotId: DepotId,
   //modification flags
   erstelldat: DateTime,
