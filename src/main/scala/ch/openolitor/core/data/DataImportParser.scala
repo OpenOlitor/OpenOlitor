@@ -22,8 +22,8 @@
 \*                                                                           */
 package ch.openolitor.core.data
 
-import ch.openolitor.core.models._
-
+import ch.openolitor.core.models.
+  _
 import ch.openolitor.stammdaten.models._
 import org.odftoolkit.simple._
 import org.odftoolkit.simple.table._
@@ -39,6 +39,7 @@ import ch.openolitor.util.DateTimeUtil
 import scala.collection.immutable.TreeMap
 import java.io.InputStream
 import scala.util._
+import org.joda.time.format.DateTimeFormatter
 
 case class ParseException(msg: String) extends Exception(msg)
 
@@ -991,34 +992,64 @@ object DataImportParser {
   }
 
   implicit class MyCell(self: Cell) {
-    val format = DateTimeFormat.forPattern("dd.MM.yyyy")
+    val allSupportedDateFormats = List(
+      DateTimeFormat.forPattern("dd.MM.yyyy"),
+      DateTimeFormat.forPattern("MM/dd/yyyy")
+    )
+
+    def tryParseDate(value: String, nextFormats: List[DateTimeFormatter] = allSupportedDateFormats): DateTime = {
+      nextFormats match {
+        case head :: tail => try {
+          DateTime.parse(value, head)
+        } catch {
+          case e: Exception => tryParseDate(value, tail)
+        }
+        case Nil => throw ParseException(s"No matching date format found for value:$value")
+      }
+    }
 
     def value[T: TypeTag]: T = {
       val typ = typeOf[T]
-      (typ match {
-        case t if t =:= typeOf[Boolean] => self.getStringValue match {
-          case "true" | "1" | "x" | "X" => true
-          case "false" | "0" => false
-          case x => throw ParseException(s"Unsupported boolean format:'$x' on col:${self.getColumnIndex}, row:${self.getRowIndex}")
-        }
+      try {
+        (typ match {
+          case t if t =:= typeOf[Boolean] => self.getStringValue.toLowerCase match {
+            case "true" | "1" | "x" => true
+            case "false" | "0" => false
+            case x => throw ParseException(s"Unsupported boolean format:'$x' on col:${self.getColumnIndex}, row:${self.getRowIndex}")
+          }
 
-        case t if t =:= typeOf[String] => self.getStringValue
-        case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
-        case t if t =:= typeOf[Double] => self.getStringValue.toDouble
-        case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
-        case t if t =:= typeOf[Option[BigDecimal]] => self.getStringOptionValue.map(s => BigDecimal(s.toDouble))
-        case t if t =:= typeOf[Date] => self.getDateValue
-        case t if t =:= typeOf[DateTime] => DateTime.parse(self.getStringValue, format)
-        case t if t =:= typeOf[Option[DateTime]] => self.getStringOptionValue.map(s => DateTime.parse(s, format))
-        case t if t =:= typeOf[Int] => self.getStringValue.toInt
-        case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
-        case t if t =:= typeOf[Long] => self.getStringValue.toLong
-        case t if t =:= typeOf[Option[Long]] => getStringOptionValue.map(_.toLong)
-        case t if t =:= typeOf[Float] => self.getStringValue.toFloat
-        case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
-        case _ =>
-          throw ParseException(s"Unsupported format:$typ on col:${self.getColumnIndex}, row:${self.getRowIndex}")
-      }).asInstanceOf[T]
+          case t if t =:= typeOf[String] => self.getStringValue
+          case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
+          case t if t =:= typeOf[Double] => self.getStringValue.toDouble
+          case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
+          case t if t =:= typeOf[Option[BigDecimal]] => self.getStringOptionValue.map(s => BigDecimal(s.toDouble))
+          case t if t =:= typeOf[Date] => self.getDateValue
+          case t if t =:= typeOf[DateTime] => tryParseDate(self.getStringValue)
+          case t if t =:= typeOf[Option[DateTime]] => self.getStringOptionValue.map(s => tryParseDate(s))
+          case t if t =:= typeOf[Int] => self.getStringValue.toInt
+          case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
+          case t if t =:= typeOf[Long] => self.getStringValue.toLong
+          case t if t =:= typeOf[Option[Long]] => getStringOptionValue.map(_.toLong)
+          case t if t =:= typeOf[Float] => self.getStringValue.toFloat
+          case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
+          case _ =>
+            throw ParseException(s"Unsupported format:$typ on col:${self.getColumnIndex}, row:${self.getRowIndex}")
+        }).asInstanceOf[T]
+      } catch {
+        case error: Throwable => {
+          val sheet = self.getTable.getTableName
+          val row = self.getRowIndex
+          val col = self.getColumnIndex
+          val displayValue = self.getDisplayText
+          val title: String = if (row > 0) {
+            self.getTable.getRowByIndex(0).getCellByIndex(col).getDisplayText
+          } else {
+            "<notitle>"
+          }
+
+          throw new ParseException(s"Couldn't parse value in sheet:$sheet, column:$col, row:$row, title:$title => displayValue=$displayValue, error:$error")
+        }
+      }
     }
 
     def getStringOptionValue: Option[String] = {
