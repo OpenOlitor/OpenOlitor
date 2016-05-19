@@ -48,7 +48,7 @@ object StammdatenAktionenService {
 }
 
 class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenWriteRepositoryComponent with DefaultStammdatenReadRepositoryComponent {
+    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenWriteRepositoryComponent {
 }
 
 /**
@@ -56,7 +56,7 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
  */
 class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with StammdatenDBMappings {
-  self: StammdatenWriteRepositoryComponent with StammdatenReadRepositoryComponent =>
+  self: StammdatenWriteRepositoryComponent =>
 
   val handle: Handle = {
     case LieferplanungAbschliessenEvent(meta, id: LieferplanungId) =>
@@ -72,48 +72,40 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
   }
 
   def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB futureLocalTx { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Offen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
         }
       }
-      stammdatenReadRepository.getLieferungen(id) map { lieferungen =>
-        lieferungen map { lieferung =>
-          if (Offen == lieferung.status) {
-            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Abgeschlossen))
-          }
+      stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
+        if (Offen == lieferung.status) {
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Abgeschlossen))
         }
       }
-      stammdatenReadRepository.getBestellungen(id) map { bestellungen =>
-        bestellungen map { bestellung =>
-          if (Offen == bestellung.status) {
-            stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
-          }
+      stammdatenWriteRepository.getBestellungen(id) map { bestellung =>
+        if (Offen == bestellung.status) {
+          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
         }
       }
     }
   }
 
   def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB futureLocalTx { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Abgeschlossen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Verrechnet))
         }
       }
-      stammdatenReadRepository.getLieferungen(id) map { lieferungen =>
-        lieferungen map { lieferung =>
-          if (Abgeschlossen == lieferung.status) {
-            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Verrechnet))
-          }
+      stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
+        if (Abgeschlossen == lieferung.status) {
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Verrechnet))
         }
       }
-      stammdatenReadRepository.getBestellungen(id) map { bestellungen =>
-        bestellungen map { bestellung =>
-          if (Abgeschlossen == bestellung.status) {
-            stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Verrechnet, datumAbrechnung = Some(DateTime.now)))
-          }
+      stammdatenWriteRepository.getBestellungen(id) map { bestellung =>
+        if (Abgeschlossen == bestellung.status) {
+          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Verrechnet, datumAbrechnung = Some(DateTime.now)))
         }
       }
     }

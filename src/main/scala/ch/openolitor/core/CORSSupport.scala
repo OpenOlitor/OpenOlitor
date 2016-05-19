@@ -34,9 +34,9 @@ import com.typesafe.config.Config
 trait CORSSupport extends LazyLogging {
   this: HttpService =>
 
-  val ooConfig: Config
+  val sysConfig: SystemConfig
 
-  lazy val allowOrigin = ooConfig.getStringListOption(s"security.cors.allow-origin").map(list => SomeOrigins(list.map(HttpOrigin.apply))).getOrElse(AllOrigins)
+  lazy val allowOrigin = sysConfig.mandantConfiguration.config.getStringListOption(s"security.cors.allow-origin").map(list => SomeOrigins(list.map(HttpOrigin.apply))).getOrElse(AllOrigins)
 
   private val allowOriginHeader = `Access-Control-Allow-Origin`(allowOrigin)
   val allowCredentialsHeader = `Access-Control-Allow-Credentials`(true)
