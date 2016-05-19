@@ -452,10 +452,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def createKoerbe(lieferungId: LieferungId)(implicit personId: PersonId) = {
+    logger.debug(s"Create Koerbe:$lieferungId")
     DB localTx { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
         stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
-          val statusL = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.datum) map { abo =>
+          val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
+          logger.debug(s"Aktive abos:$abos for abotyp:${lieferung.abotypId} and datum: ${lieferung.datum}")
+          val statusL = abos map { abo =>
             val abwCount = stammdatenWriteRepository.countAbwesend(lieferungId, abo.id)
             val retAbw = abwCount match {
               case Some(abw) if abw > 0 => 1

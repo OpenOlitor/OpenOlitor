@@ -56,6 +56,8 @@ import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging

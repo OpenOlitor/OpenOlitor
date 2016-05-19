@@ -66,7 +66,6 @@ trait StammdatenReadRepository {
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]]
-  def getAktiveAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
 
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Int]]
 
@@ -271,28 +270,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Int]] = {
     countAbwesendQuery(lieferungId, aboId).future
-  }
-
-  def getAktiveAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]] = {
-    for {
-      d <- getAktiveDepotlieferungAbos(abotypId, lieferdatum)
-      h <- getAktiveHeimlieferungAbos(abotypId, lieferdatum)
-      p <- getAktivePostlieferungAbos(abotypId, lieferdatum)
-    } yield {
-      d ::: h ::: p
-    }
-  }
-
-  def getAktiveDepotlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotlieferungAbo]] = {
-    getAktiveDepotlieferungAbosQuery(abotypId, lieferdatum).future
-  }
-
-  def getAktiveHeimlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[HeimlieferungAbo]] = {
-    getAktiveHeimlieferungAbosQuery(abotypId, lieferdatum).future
-  }
-
-  def getAktivePostlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostlieferungAbo]] = {
-    getAktivePostlieferungAbosQuery(abotypId, lieferdatum).future
   }
 
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {

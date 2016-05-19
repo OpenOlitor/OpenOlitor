@@ -20,10 +20,9 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryImpl
-
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
 
 trait StammdatenReadRepositoryComponent {

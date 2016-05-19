@@ -320,27 +320,27 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(_.int(1)).single
   }
 
-  protected def getAktiveDepotlieferungAbosQuery(abotypId: AbotypId, lieferdatum: DateTime) = {
+  protected def getAktiveDepotlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
-        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+        .where.eq(depotlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
-  protected def getAktiveHeimlieferungAbosQuery(abotypId: AbotypId, lieferdatum: DateTime) = {
+  protected def getAktiveHeimlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
-        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+        .where.eq(heimlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.gt(heimlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
-  protected def getAktivePostlieferungAbosQuery(abotypId: AbotypId, lieferdatum: DateTime) = {
+  protected def getAktivePostlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
-        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+        .where.eq(postlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.gt(postlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 
