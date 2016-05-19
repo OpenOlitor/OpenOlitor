@@ -1015,8 +1015,8 @@ object DataImportParser {
       try {
         (typ match {
           case t if t =:= typeOf[Boolean] => self.getStringValue.toLowerCase match {
-            case "true" | "1" | "x" => true
-            case "false" | "0" => false
+            case "true" | "richtig" | "wahr" | "1" | "x" => true
+            case "false" | "falsch" | "0" => false
             case x => throw ParseException(s"Unsupported boolean format:'$x' on col:${self.getColumnIndex}, row:${self.getRowIndex}")
           }
 
