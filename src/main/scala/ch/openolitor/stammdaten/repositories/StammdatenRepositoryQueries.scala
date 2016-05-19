@@ -504,6 +504,19 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferungMapping(lieferung)).single
   }
 
+  protected def getLieferungenDetailsQuery(id: LieferplanungId) = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .innerJoin(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .where.eq(lieferung.lieferplanungId, parameter(id))
+    }.one(lieferungMapping(lieferung))
+      .toOne(abotypMapping(aboTyp))
+      .map { (lieferung, abotyp) =>
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp)
+      }.list
+  }
+
   protected def getLieferungenQuery(id: LieferplanungId) = {
     withSQL {
       select

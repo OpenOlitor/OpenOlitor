@@ -335,7 +335,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           (put | post)(update[LieferplanungModify, LieferplanungId](id))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen") { lieferplanungId =>
-        get(list(stammdatenReadRepository.getLieferungen(lieferplanungId)))
+        get(list(stammdatenReadRepository.getLieferungenDetails(lieferplanungId)))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "getNichtInkludierteAbotypenLieferungen") { lieferplanungId =>
         get(list(stammdatenReadRepository.getNichtInkludierteAbotypenLieferungen(lieferplanungId)))
