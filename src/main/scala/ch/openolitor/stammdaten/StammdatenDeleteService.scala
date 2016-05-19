@@ -42,7 +42,7 @@ object StammdatenDeleteService {
 }
 
 class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenWriteRepositoryComponent with DefaultStammdatenReadRepositoryComponent {
+    extends StammdatenDeleteService(sysConfig: SystemConfig) with DefaultStammdatenWriteRepositoryComponent {
 }
 
 /**
@@ -50,7 +50,7 @@ class DefaultStammdatenDeleteService(sysConfig: SystemConfig, override val syste
  */
 class StammdatenDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent[_]]
     with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
-  self: StammdatenWriteRepositoryComponent with StammdatenReadRepositoryComponent =>
+  self: StammdatenWriteRepositoryComponent =>
   import EntityStore._
 
   val handle: Handle = {
@@ -101,9 +101,9 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.deleteEntity[Kunde, KundeId](kundeId, { kunde: Kunde => kunde.anzahlAbos == 0 }) match {
         case Some(kunde) =>
           //delete all personen as well
-          stammdatenReadRepository.getPersonen(kundeId).map(_.map(person => deletePerson(meta, person.id)))
+          stammdatenWriteRepository.getPersonen(kundeId).map(person => deletePerson(meta, person.id))
           //delete all pendenzen as well
-          stammdatenReadRepository.getPendenzen(kundeId).map(_.map(pendenz => deletePendenz(meta, pendenz.id)))
+          stammdatenWriteRepository.getPendenzen(kundeId).map(pendenz => deletePendenz(meta, pendenz.id))
         case None =>
       }
 
@@ -136,10 +136,10 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
         case Some(kundentyp) =>
           if (kundentyp.anzahlVerknuepfungen > 0) {
             //remove kundentyp from kunden
-            stammdatenReadRepository.getKunden.map(_.filter(_.typen.contains(kundentyp.kundentyp)).map { kunde =>
+            stammdatenWriteRepository.getKunden.filter(_.typen.contains(kundentyp.kundentyp)).map { kunde =>
               val copy = kunde.copy(typen = kunde.typen - kundentyp.kundentyp)
               stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
-            })
+            }
           }
         case None =>
       }

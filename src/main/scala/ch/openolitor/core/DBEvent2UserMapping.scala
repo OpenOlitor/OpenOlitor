@@ -28,7 +28,7 @@ import ch.openolitor.core.ws._
 import spray.json._
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.StammdatenReadRepository
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 
