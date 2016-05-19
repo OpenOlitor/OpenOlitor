@@ -123,7 +123,8 @@ case class LieferungDetail(
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
   lieferplanungNr: Option[Int],
-  abotyp: Abotyp,
+  abotyp: Option[Abotyp],
+  lieferpositionen: Seq[Lieferposition],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

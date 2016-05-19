@@ -435,6 +435,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleLieferungModified(lieferung: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
+    logger.debug(s"handleLieferungModified: lieferung:\n$lieferung\norig:$orig")
     if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) {
       //Lieferung was planed in a Lieferplanung
       createKoerbe(lieferung.id)
@@ -457,7 +458,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
         stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
           val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
-          logger.debug(s"Aktive abos:$abos for abotyp:${lieferung.abotypId} and datum: ${lieferung.datum}")
           val statusL = abos map { abo =>
             val abwCount = stammdatenWriteRepository.countAbwesend(lieferungId, abo.id)
             val retAbw = abwCount match {
