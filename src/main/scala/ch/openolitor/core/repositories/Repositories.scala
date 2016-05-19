@@ -120,6 +120,8 @@ trait BaseWriteRepository extends DBMappings with LazyLogging {
 
       //publish event to stream
       publish(EntityModified(user, entity, orig))
+
+      entity
     }
   }
 

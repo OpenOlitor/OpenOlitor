@@ -1,29 +1,18 @@
-package ch.openolitor.stammdaten
+package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
 import scalikejdbc._
-import scalikejdbc.async._
-import scalikejdbc.async.FutureImplicits._
-import scala.concurrent.ExecutionContext
+import sqls.{ distinct, count }
 import ch.openolitor.core.db._
-import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
 import ch.openolitor.core.repositories.BaseRepository._
-import ch.openolitor.core.repositories.BaseWriteRepository
-import scala.concurrent._
-import akka.event.Logging
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.EventStream
-import ch.openolitor.core.Boot
-import akka.actor.ActorSystem
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
-import ch.openolitor.core.AkkaEventStream
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
-import sqls.distinct
-import sqls.{ min, count }
+import ch.openolitor.stammdaten.StammdatenDBMappings
 
 trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
 

@@ -20,10 +20,9 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
-import java.util.UUID
 import scalikejdbc._
 import scalikejdbc.async._
 import scala.concurrent.ExecutionContext
@@ -31,22 +30,13 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
 import ch.openolitor.core.repositories.BaseRepository._
-import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
-import akka.event.Logging
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.EventStream
-import ch.openolitor.core.Boot
-import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
-import sqls.distinct
-import sqls.{ min, count }
-import scalaz.IsEmpty
-import ch.openolitor.core.AkkaEventStream
 
 trait StammdatenReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]]
@@ -120,19 +110,7 @@ trait StammdatenReadRepository {
   def getBestellpositionByBestellungProdukt(bestellungId: BestellungId, produktId: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Bestellposition]]
 }
 
-trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-
-  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int
-  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int
-
-  def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
-
-  def getProjekt(implicit session: DBSession): Option[Projekt]
-}
-
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
-
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     getAbotypenQuery.future
   }
@@ -435,57 +413,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Korb]] = {
     getKorbQuery(lieferungId, aboId).future
-  }
-
-}
-
-class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with AkkaEventStream with StammdatenRepositoryQueries {
-
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB localTx { implicit session =>
-      sql"truncate table ${postlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotlieferungMapping.table}".execute.apply()
-      sql"truncate table ${heimlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotMapping.table}".execute.apply()
-      sql"truncate table ${tourMapping.table}".execute.apply()
-      sql"truncate table ${abotypMapping.table}".execute.apply()
-      sql"truncate table ${kundeMapping.table}".execute.apply()
-      sql"truncate table ${pendenzMapping.table}".execute.apply()
-      sql"truncate table ${customKundentypMapping.table}".execute.apply()
-      sql"truncate table ${personMapping.table}".execute.apply()
-      sql"truncate table ${depotlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${heimlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${postlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${lieferplanungMapping.table}".execute.apply()
-      sql"truncate table ${lieferungMapping.table}".execute.apply()
-      sql"truncate table ${lieferpositionMapping.table}".execute.apply()
-      sql"truncate table ${bestellungMapping.table}".execute.apply()
-      sql"truncate table ${bestellpositionMapping.table}".execute.apply()
-      sql"truncate table ${produktMapping.table}".execute.apply()
-      sql"truncate table ${produktekategorieMapping.table}".execute.apply()
-      sql"truncate table ${produzentMapping.table}".execute.apply()
-      sql"truncate table ${projektMapping.table}".execute.apply()
-      sql"truncate table ${produktProduzentMapping.table}".execute.apply()
-      sql"truncate table ${produktProduktekategorieMapping.table}".execute.apply()
-      sql"truncate table ${abwesenheitMapping.table}".execute.apply()
-      sql"truncate table ${korbMapping.table}".execute.apply()
-    }
-  }
-
-  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int = {
-    deleteLieferpositionenQuery(id).update.apply
-  }
-
-  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int = {
-    deleteKoerbeQuery(id).update.apply
-  }
-
-  def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
-    getAbotypDetailQuery(id).apply()
-  }
-
-  def getProjekt(implicit session: DBSession): Option[Projekt] = {
-    getProjektQuery.apply()
   }
 
 }

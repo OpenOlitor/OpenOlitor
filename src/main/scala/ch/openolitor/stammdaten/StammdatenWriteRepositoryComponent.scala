@@ -23,6 +23,8 @@
 package ch.openolitor.stammdaten
 
 import akka.actor.ActorSystem
+import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
+import ch.openolitor.stammdaten.repositories.StammdatenWriteRepository
 
 trait StammdatenWriteRepositoryComponent {
   val stammdatenWriteRepository: StammdatenWriteRepository
