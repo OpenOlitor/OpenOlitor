@@ -123,10 +123,12 @@ trait StammdatenReadRepository {
 trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 
-  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int]
-  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int]
+  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int
+  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int
 
-  def getProjekt(implicit cpContext: ConnectionPoolContext): Option[Projekt]
+  def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
+
+  def getProjekt(implicit session: DBSession): Option[Projekt]
 }
 
 class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
@@ -470,18 +472,20 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     }
   }
 
-  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int] = {
-    deleteLieferpositionenQuery(id).update.future
+  def deleteLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int = {
+    deleteLieferpositionenQuery(id).update.apply
   }
 
-  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Int] = {
-    deleteKoerbeQuery(id).update.future
+  def deleteKoerbe(id: LieferungId)(implicit context: ExecutionContext, session: DBSession): Int = {
+    deleteKoerbeQuery(id).update.apply
   }
 
-  def getProjekt(implicit cpContext: ConnectionPoolContext): Option[Projekt] = {
-    DB readOnly { implicit session =>
-      getProjektQuery.apply()
-    }
+  def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
+    getAbotypDetailQuery(id).apply()
+  }
+
+  def getProjekt(implicit session: DBSession): Option[Projekt] = {
+    getProjektQuery.apply()
   }
 
 }

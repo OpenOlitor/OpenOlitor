@@ -231,6 +231,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             }
           }
       } ~
+      path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / "aktionen" / "generieren") { (abotypId, vertriebId) =>
+        post {
+          requestInstance { request =>
+            entity(as[LieferungenAbotypCreate]) { entity =>
+              created(request)(entity)
+            }
+          }
+        }
+      } ~
       path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / lieferungIdPath) { (abotypId, vertriebId, lieferungId) =>
         delete(remove(lieferungId))
       }
