@@ -66,7 +66,6 @@ trait StammdatenReadRepository {
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]]
-  def getAktiveAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]]
 
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Int]]
 
@@ -95,8 +94,8 @@ trait StammdatenReadRepository {
   def getLatestLieferplanung(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Lieferplanung]]
   def getLieferungenNext()(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getLastGeplanteLieferung(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Lieferung]]
-  def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
-  def getNichtInkludierteAbotypenLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
+  def getLieferungenDetails(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[LieferungDetail]]
+  def getVerfuegbareLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[LieferungDetail]]
   def getLieferpositionen(id: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
@@ -273,28 +272,6 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     countAbwesendQuery(lieferungId, aboId).future
   }
 
-  def getAktiveAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abo]] = {
-    for {
-      d <- getAktiveDepotlieferungAbos(abotypId, lieferdatum)
-      h <- getAktiveHeimlieferungAbos(abotypId, lieferdatum)
-      p <- getAktivePostlieferungAbos(abotypId, lieferdatum)
-    } yield {
-      d ::: h ::: p
-    }
-  }
-
-  def getAktiveDepotlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotlieferungAbo]] = {
-    getAktiveDepotlieferungAbosQuery(abotypId, lieferdatum).future
-  }
-
-  def getAktiveHeimlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[HeimlieferungAbo]] = {
-    getAktiveHeimlieferungAbosQuery(abotypId, lieferdatum).future
-  }
-
-  def getAktivePostlieferungAbos(abotypId: AbotypId, lieferdatum: DateTime)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostlieferungAbo]] = {
-    getAktivePostlieferungAbosQuery(abotypId, lieferdatum).future
-  }
-
   def getPendenzen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Pendenz]] = {
     getPendenzenQuery.future
   }
@@ -371,12 +348,12 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
     getLastGeplanteLieferungQuery(abotypId).future
   }
 
-  def getLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
-    getLieferungenQuery(id).future
+  def getLieferungenDetails(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[LieferungDetail]] = {
+    getLieferungenDetailsQuery(id).future
   }
 
-  def getNichtInkludierteAbotypenLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]] = {
-    getNichtInkludierteAbotypenLieferungenQuery(id).future
+  def getVerfuegbareLieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[LieferungDetail]] = {
+    getVerfuegbareLieferungenQuery(id).future
   }
 
   def getBestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellung]] = {

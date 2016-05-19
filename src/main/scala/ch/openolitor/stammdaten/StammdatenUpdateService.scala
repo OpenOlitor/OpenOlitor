@@ -414,6 +414,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           "status" -> Ungeplant,
           "modifidat" -> meta.timestamp,
           "modifikator" -> personId)
+        logger.debug(s"Removed lieferung $id from lieferplanung: ${lieferung.lieferplanungId} => $copy")
         stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
       }
     }

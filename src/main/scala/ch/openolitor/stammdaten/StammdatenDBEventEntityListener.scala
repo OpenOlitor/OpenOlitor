@@ -85,7 +85,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ EntityCreated(personId, entity: Pendenz) => handlePendenzCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Pendenz) => handlePendenzDeleted(entity)(personId)
-
+    case e @ EntityModified(personId, entity: Pendenz, orig: Pendenz) => handlePendenzModified(entity, orig)(personId)
+    
     case e @ EntityCreated(personId, entity: Rechnung) => handleRechnungCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Rechnung) => handleRechnungDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if (orig.status == Erstellt && entity.status == Bezahlt) =>
@@ -339,6 +340,23 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       })
     }
   }
+  
+  def handlePendenzModified(pendenz: Pendenz, orig: Pendenz)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+	    if (pendenz.status == Erledigt && orig.status != Erledigt) {
+	      modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
+	        log.debug(s"Remove pendenz count from kunde:${kunde.id}")
+	        kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen - 1)
+	      })
+	    }
+	    else if (pendenz.status != Erledigt && orig.status == Erledigt) {
+	      modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
+	        log.debug(s"Remove pendenz count from kunde:${kunde.id}")
+	        kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
+	      })
+	    }
+    }    
+  }
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
     DB localTx { implicit session =>
@@ -435,6 +453,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleLieferungModified(lieferung: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
+    logger.debug(s"handleLieferungModified: lieferung:\n$lieferung\norig:$orig")
     if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) {
       //Lieferung was planed in a Lieferplanung
       createKoerbe(lieferung.id)
@@ -452,10 +471,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def createKoerbe(lieferungId: LieferungId)(implicit personId: PersonId) = {
+    logger.debug(s"Create Koerbe:$lieferungId")
     DB localTx { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
         stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
-          val statusL = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.datum) map { abo =>
+          val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
+          val statusL = abos map { abo =>
             val abwCount = stammdatenWriteRepository.countAbwesend(lieferungId, abo.id)
             val retAbw = abwCount match {
               case Some(abw) if abw > 0 => 1

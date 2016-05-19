@@ -106,6 +106,32 @@ case class Lieferung(
   modifikator: PersonId
 ) extends BaseEntity[LieferungId]
 
+case class LieferungDetail(
+  id: LieferungId,
+  abotypId: AbotypId,
+  abotypBeschrieb: String,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
+  status: LieferungStatus,
+  datum: DateTime,
+  durchschnittspreis: BigDecimal,
+  anzahlLieferungen: Int,
+  anzahlKoerbeZuLiefern: Int,
+  anzahlAbwesenheiten: Int,
+  anzahlSaldoZuTief: Int,
+  zielpreis: Option[BigDecimal],
+  preisTotal: BigDecimal,
+  lieferplanungId: Option[LieferplanungId],
+  lieferplanungNr: Option[Int],
+  abotyp: Option[Abotyp],
+  lieferpositionen: Seq[Lieferposition],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[LieferungId]
+
 case class LieferungModify(
   abotypId: AbotypId,
   abotypBeschrieb: String,

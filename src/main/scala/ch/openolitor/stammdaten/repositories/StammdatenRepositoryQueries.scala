@@ -320,27 +320,27 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(_.int(1)).single
   }
 
-  protected def getAktiveDepotlieferungAbosQuery(abotypId: AbotypId, lieferdatum: DateTime) = {
+  protected def getAktiveDepotlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
-        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+        .where.eq(depotlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
-  protected def getAktiveHeimlieferungAbosQuery(abotypId: AbotypId, lieferdatum: DateTime) = {
+  protected def getAktiveHeimlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
-        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+        .where.eq(heimlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.gt(heimlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
-  protected def getAktivePostlieferungAbosQuery(abotypId: AbotypId, lieferdatum: DateTime) = {
+  protected def getAktivePostlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
-        .where.eq(depotlieferungAbo.abotypId, abotypId).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.gt(depotlieferungAbo.ende, lieferdatum) }
+        .where.eq(postlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.gt(postlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 
@@ -504,6 +504,23 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferungMapping(lieferung)).single
   }
 
+  protected def getLieferungenDetailsQuery(id: LieferplanungId) = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .leftJoin(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(id))
+    }.one(lieferungMapping(lieferung))
+      .toManies(
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => lieferpositionMapping.opt(lieferposition)(rs)
+      )
+      .map { (lieferung, abotyp, positionen) =>
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp.headOption, "lieferpositionen" -> positionen)
+      }.list
+  }
+
   protected def getLieferungenQuery(id: LieferplanungId) = {
     withSQL {
       select
@@ -512,12 +529,13 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferungMapping(lieferung)).list
   }
 
-  protected def getNichtInkludierteAbotypenLieferungenQuery(id: LieferplanungId) = {
+  protected def getVerfuegbareLieferungenQuery(id: LieferplanungId) = {
     sql"""
         SELECT
-          ${lieferung.result.*}
+          ${lieferung.result.*}, ${aboTyp.result.*}
         FROM
           ${lieferungMapping as lieferung}
+          INNER JOIN ${abotypMapping as aboTyp} ON ${lieferung.abotypId} = ${aboTyp.id}
         INNER JOIN
 		      (SELECT ${lieferung.abotypId} AS abotypId, MIN(${lieferung.datum}) AS MinDateTime
 		       FROM ${lieferungMapping as lieferung}
@@ -532,7 +550,12 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 		       GROUP BY ${lieferung.abotypId}) groupedLieferung
 		    ON ${lieferung.abotypId} = groupedLieferung.abotypId 
 		    AND ${lieferung.datum} = groupedLieferung.MinDateTime
-      """.map(lieferungMapping(lieferung)).list
+      """.one(lieferungMapping(lieferung))
+      .toOne(abotypMapping.opt(aboTyp))
+      .map { (lieferung, abotyp) =>
+        val emptyPosition = Seq.empty[Lieferposition]
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp, "lieferpositionen" -> emptyPosition)
+      }.list
   }
 
   protected def getBestellungenQuery(id: LieferplanungId) = {
