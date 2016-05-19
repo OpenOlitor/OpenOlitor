@@ -187,9 +187,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator) = {
-    stammdatenReadRepository.getAbotypDetail(lieferung.abotypId) map {
-      case Some(abotyp) =>
-        DB autoCommit { implicit session =>
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getAbotypDetail(lieferung.abotypId) match {
+        case Some(abotyp) =>
           stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) map {
             vertrieb =>
               val vBeschrieb = vertrieb.beschrieb
@@ -213,14 +213,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 "modifidat" -> meta.timestamp,
                 "modifikator" -> meta.originator)
 
-              DB autoCommit { implicit session =>
-                //create lieferung
-                stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
-              }
+              //create lieferung
+              stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
           }
-        }
-      case _ =>
-        logger.error(s"Abotyp with id ${lieferung.abotypId} not found.")
+        case _ =>
+          logger.error(s"Abotyp with id ${lieferung.abotypId} not found.")
+      }
     }
   }
 
@@ -700,25 +698,23 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createLieferpositionen(meta: EventMetadata, id: LieferpositionId, creates: LieferpositionenCreate)(implicit personId: PersonId = meta.originator) = {
     val lieferungId = creates.lieferungId
-    DB futureLocalTx { implicit session =>
-      stammdatenWriteRepository.deleteLieferpositionen(lieferungId) andThen {
-        case x =>
-          stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
-            //save Lieferpositionen
-            creates.lieferpositionen map { create =>
-              val lpId = LieferpositionId(Random.nextLong)
-              val newObj = copyTo[LieferpositionModify, Lieferposition](
-                create,
-                "id" -> lpId,
-                "lieferungId" -> lieferungId,
-                "erstelldat" -> meta.timestamp,
-                "ersteller" -> meta.originator,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> meta.originator
-              )
-              stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
-            }
-          }
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
+      stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
+        //save Lieferpositionen
+        creates.lieferpositionen map { create =>
+          val lpId = LieferpositionId(Random.nextLong)
+          val newObj = copyTo[LieferpositionModify, Lieferposition](
+            create,
+            "id" -> lpId,
+            "lieferungId" -> lieferungId,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator
+          )
+          stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
+        }
       }
     }
   }

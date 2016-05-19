@@ -39,9 +39,13 @@ trait CommandHandler extends LazyLogging {
   val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]]
 
   def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, meta: EventMetadata, entity: E, f: Long => I): Try[Seq[PersistentEvent]] = {
+    Success(Seq(insertEntityEvent(idFactory, meta, entity, f)))
+  }
+
+  def insertEntityEvent[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, meta: EventMetadata, entity: E, f: Long => I): PersistentEvent = {
     val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
     logger.debug(s"created => Insert entity:$entity")
     val id = f(idFactory(clOf))
-    Success(Seq(EntityInsertedEvent(meta, id, entity)))
+    EntityInsertedEvent(meta, id, entity)
   }
 }

@@ -441,19 +441,17 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit personId: PersonId = meta.originator) = {
-    DB futureLocalTx { implicit session =>
-      stammdatenWriteRepository.deleteLieferpositionen(id) andThen {
-        case x =>
-          stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-            //map all updatable fields
-            val copy = copyFrom(lieferung, update,
-              "lieferplanungId" -> None,
-              "lieferplanungNr" -> None,
-              "status" -> Ungeplant,
-              "modifidat" -> meta.timestamp,
-              "modifikator" -> personId)
-            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-          }
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.deleteLieferpositionen(id)
+      stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, update,
+          "lieferplanungId" -> None,
+          "lieferplanungNr" -> None,
+          "status" -> Ungeplant,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> personId)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
       }
     }
 

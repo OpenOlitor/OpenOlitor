@@ -132,6 +132,8 @@ case class LieferungAbotypCreate(
   datum: DateTime
 ) extends JSONSerializable
 
+case class LieferungenAbotypCreate(abotypId: AbotypId, vertriebId: VertriebId, daten: Seq[DateTime]) extends JSONSerializable
+
 case class LieferpositionId(id: Long) extends BaseId
 
 case class Lieferposition(

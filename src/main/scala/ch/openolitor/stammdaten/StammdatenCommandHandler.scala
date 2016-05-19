@@ -95,6 +95,12 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
        */
     case e @ InsertEntityCommand(personId, entity: CustomKundentypCreate) => idFactory => meta =>
       handleEntityInsert[CustomKundentypCreate, CustomKundentypId](idFactory, meta, entity, CustomKundentypId.apply)
+    case e @ InsertEntityCommand(personId, entity: LieferungenAbotypCreate) => idFactory => meta =>
+      val events = entity.daten.map { datum =>
+        val lieferungCreate = copyTo[LieferungenAbotypCreate, LieferungAbotypCreate](entity, "datum" -> datum)
+        insertEntityEvent[LieferungAbotypCreate, LieferungId](idFactory, meta, lieferungCreate, LieferungId.apply)
+      }
+      Success(events)
     case e @ InsertEntityCommand(personId, entity: LieferungAbotypCreate) => idFactory => meta =>
       handleEntityInsert[LieferungAbotypCreate, LieferungId](idFactory, meta, entity, LieferungId.apply)
     case e @ InsertEntityCommand(personId, entity: LieferplanungCreate) => idFactory => meta =>

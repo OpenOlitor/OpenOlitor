@@ -214,10 +214,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit personId: PersonId) = {
-    stammdatenWriteRepository.getProjekt map { projekt =>
-      val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getProjekt map { projekt =>
+        val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
-      DB autoCommit { implicit session =>
         modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
           val value = Math.max(abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ - 1).getOrElse(0), 0)
           log.debug(s"Remove abwesenheit from abo:${abo.id}, new value:$value")
@@ -271,10 +271,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleAbwesenheitCreated(abw: Abwesenheit)(implicit personId: PersonId) = {
-    stammdatenWriteRepository.getProjekt map { projekt =>
-      val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getProjekt map { projekt =>
+        val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
-      DB autoCommit { implicit session =>
         modifyEntity[DepotlieferungAbo, AboId](abw.aboId, { abo =>
           val value = abo.anzahlAbwesenheiten.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
           log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
