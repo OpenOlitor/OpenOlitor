@@ -32,6 +32,8 @@ import scala.collection.immutable.TreeMap
 case class AboId(id: Long) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
+  val vertriebsartId: VertriebsartId
+  val vertriebId: VertriebId
   val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
@@ -48,6 +50,8 @@ sealed trait Abo extends BaseEntity[AboId] {
 }
 
 sealed trait AboDetail extends JSONSerializable {
+  val vertriebsartId: VertriebsartId
+  val vertriebId: VertriebId
   val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
@@ -68,8 +72,7 @@ sealed trait AboDetail extends JSONSerializable {
 sealed trait AboModify extends JSONSerializable {
   val kundeId: KundeId
   val kunde: String
-  val abotypId: AbotypId
-  val abotypName: String
+  val vertriebsartId: VertriebsartId
   val start: DateTime
   val ende: Option[DateTime]
 }
@@ -78,6 +81,8 @@ case class DepotlieferungAbo(
   id: AboId,
   kundeId: KundeId,
   kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
@@ -102,6 +107,8 @@ case class DepotlieferungAboDetail(
   id: AboId,
   kundeId: KundeId,
   kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
@@ -122,16 +129,15 @@ case class DepotlieferungAboDetail(
   modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]
+  abotyp: Option[Abotyp],
+  vertrieb: Option[Vertrieb]
 ) extends AboDetail
 
 case class DepotlieferungAboModify(
   kundeId: KundeId,
   kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
+  vertriebsartId: VertriebsartId,
   depotId: DepotId,
-  depotName: String,
   start: DateTime,
   ende: Option[DateTime]
 ) extends AboModify
@@ -140,6 +146,8 @@ case class HeimlieferungAbo(
   id: AboId,
   kundeId: KundeId,
   kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
@@ -164,6 +172,8 @@ case class HeimlieferungAboDetail(
   id: AboId,
   kundeId: KundeId,
   kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
@@ -184,16 +194,15 @@ case class HeimlieferungAboDetail(
   modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]
+  abotyp: Option[Abotyp],
+  vertrieb: Option[Vertrieb]
 ) extends AboDetail
 
 case class HeimlieferungAboModify(
   kundeId: KundeId,
   kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
+  vertriebsartId: VertriebsartId,
   tourId: TourId,
-  tourName: String,
   start: DateTime,
   ende: Option[DateTime]
 ) extends AboModify
@@ -202,6 +211,8 @@ case class PostlieferungAbo(
   id: AboId,
   kundeId: KundeId,
   kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   start: DateTime,
@@ -224,6 +235,8 @@ case class PostlieferungAboDetail(
   id: AboId,
   kundeId: KundeId,
   kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
   abotypId: AbotypId,
   abotypName: String,
   start: DateTime,
@@ -242,14 +255,14 @@ case class PostlieferungAboDetail(
   modifikator: PersonId,
   abwesenheiten: Seq[Abwesenheit],
   lieferdaten: Seq[Lieferung],
-  abotyp: Option[Abotyp]
+  abotyp: Option[Abotyp],
+  vertrieb: Option[Vertrieb]
 ) extends AboDetail
 
 case class PostlieferungAboModify(
   kundeId: KundeId,
   kunde: String,
-  abotypId: AbotypId,
-  abotypName: String,
+  vertriebsartId: VertriebsartId,
   start: DateTime,
   ende: Option[DateTime]
 ) extends AboModify

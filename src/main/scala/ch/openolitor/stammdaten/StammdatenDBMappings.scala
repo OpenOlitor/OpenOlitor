@@ -499,12 +499,22 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(vertrieb) ++ Seq(
         column.abotypId -> parameter(vertrieb.abotypId),
         column.liefertag -> parameter(vertrieb.liefertag),
-        column.beschrieb -> parameter(vertrieb.beschrieb)
+        column.beschrieb -> parameter(vertrieb.beschrieb),
+        column.anzahlAbos -> parameter(vertrieb.anzahlAbos)
       )
     }
   }
 
-  implicit val heimlieferungMapping = new BaseEntitySQLSyntaxSupport[Heimlieferung] {
+  trait LieferungMapping[E <: Vertriebsart] extends BaseEntitySQLSyntaxSupport[E] {
+    override def updateParameters(lieferung: E) = {
+      super.updateParameters(lieferung) ++ Seq(
+        column.vertriebId -> parameter(lieferung.vertriebId),
+        column.anzahlAbos -> parameter(lieferung.anzahlAbos)
+      )
+    }
+  }
+
+  implicit val heimlieferungMapping = new LieferungMapping[Heimlieferung] {
     override val tableName = "Heimlieferung"
 
     override lazy val columns = autoColumns[Heimlieferung]()
@@ -521,7 +531,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
-  implicit val depotlieferungMapping = new BaseEntitySQLSyntaxSupport[Depotlieferung] {
+  implicit val depotlieferungMapping = new LieferungMapping[Depotlieferung] {
     override val tableName = "Depotlieferung"
 
     override lazy val columns = autoColumns[Depotlieferung]()
@@ -539,7 +549,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
-  implicit val postlieferungMapping = new BaseEntitySQLSyntaxSupport[Postlieferung] {
+  implicit val postlieferungMapping = new LieferungMapping[Postlieferung] {
     override val tableName = "Postlieferung"
 
     override lazy val columns = autoColumns[Postlieferung]()
@@ -550,7 +560,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Postlieferung) = {
-      super.updateParameters(lieferung) ++ Seq(column.vertriebId -> parameter(lieferung.vertriebId))
+      super.updateParameters(lieferung)
     }
   }
 
@@ -559,6 +569,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(abo) ++ Seq(
         column.kundeId -> parameter(abo.kundeId),
         column.kunde -> parameter(abo.kunde),
+        column.vertriebsartId -> parameter(abo.vertriebsartId),
         column.abotypId -> parameter(abo.abotypId),
         column.abotypName -> parameter(abo.abotypName),
         column.start -> parameter(abo.start),

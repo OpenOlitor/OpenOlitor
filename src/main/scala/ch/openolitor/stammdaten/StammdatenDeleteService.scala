@@ -148,9 +148,9 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteVertriebsart(meta: EventMetadata, id: VertriebsartId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Depotlieferung, VertriebsartId](id)
-      stammdatenWriteRepository.deleteEntity[Heimlieferung, VertriebsartId](id)
-      stammdatenWriteRepository.deleteEntity[Postlieferung, VertriebsartId](id)
+      stammdatenWriteRepository.deleteEntity[Depotlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
+      stammdatenWriteRepository.deleteEntity[Heimlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
+      stammdatenWriteRepository.deleteEntity[Postlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
     }
   }
 
@@ -192,7 +192,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteVertrieb(meta: EventMetadata, id: VertriebId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Vertrieb, VertriebId](id)
+      stammdatenWriteRepository.deleteEntity[Vertrieb, VertriebId](id, { vertrieb: Vertrieb => vertrieb.anzahlAbos == 0 })
     }
   }
 

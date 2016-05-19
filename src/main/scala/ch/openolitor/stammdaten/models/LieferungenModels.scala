@@ -50,7 +50,7 @@ case object FaelltAusGekuendigt extends KorbStatus
 
 object KorbStatus {
   def apply(value: String): KorbStatus = {
-    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief).find(_.toString == value).getOrElse(WirdGeliefert)
+    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief, FaelltAusGekuendigt).find(_.toString == value).getOrElse(WirdGeliefert)
   }
 }
 
@@ -87,7 +87,7 @@ case class Lieferung(
   abotypId: AbotypId,
   abotypBeschrieb: String,
   vertriebId: VertriebId,
-  vertriebBeschrieb: String,
+  vertriebBeschrieb: Option[String],
   status: LieferungStatus,
   datum: DateTime,
   durchschnittspreis: BigDecimal,
@@ -110,7 +110,7 @@ case class LieferungModify(
   abotypId: AbotypId,
   abotypBeschrieb: String,
   vertriebId: VertriebId,
-  vertriebsartBeschrieb: String,
+  vertriebsartBeschrieb: Option[String],
   status: LieferungStatus,
   datum: DateTime,
   durchschnittspreis: BigDecimal,

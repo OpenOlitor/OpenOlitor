@@ -258,17 +258,21 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
-        .where.eq(depotlieferungAbo.id, parameter(id)).and.isNull(lieferung.lieferplanungId)
+        .leftJoin(vertriebMapping as vertrieb).on(vertrieb.abotypId, aboTyp.id)
+        .where.eq(depotlieferungAbo.id, parameter(id))
+        .and.isNull(lieferung.lieferplanungId)
     }
       .one(depotlieferungAboMapping(depotlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => abotypMapping.opt(aboTyp)(rs)
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => vertriebMapping.opt(vertrieb)(rs)
       )
-      .map((abo, abw, lieferungen, aboTyp) => {
+      .map((abo, abw, lieferungen, aboTyp, vertriebe) => {
         val sortedAbw = abw.sortBy(_.datum)
-        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
+        copyTo[DepotlieferungAbo, DepotlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen,
+          "abotyp" -> aboTyp.headOption, "vertrieb" -> vertriebe.headOption)
       }).single
   }
 
@@ -279,16 +283,19 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(abwesenheitMapping as abwesenheit).on(heimlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(lieferungMapping as lieferung).on(heimlieferungAbo.abotypId, lieferung.abotypId)
         .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(vertriebMapping as vertrieb).on(vertrieb.abotypId, aboTyp.id)
         .where.eq(heimlieferungAbo.id, parameter(id)).and.isNull(lieferung.lieferplanungId)
     }.one(heimlieferungAboMapping(heimlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => abotypMapping.opt(aboTyp)(rs)
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => vertriebMapping.opt(vertrieb)(rs)
       )
-      .map((abo, abw, lieferungen, aboTyp) => {
+      .map((abo, abw, lieferungen, aboTyp, vertriebe) => {
         val sortedAbw = abw.sortBy(_.datum)
-        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
+        copyTo[HeimlieferungAbo, HeimlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen,
+          "abotyp" -> aboTyp.headOption, "vertrieb" -> vertriebe.headOption)
       }).single
   }
 
@@ -299,16 +306,19 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(abwesenheitMapping as abwesenheit).on(postlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(lieferungMapping as lieferung).on(postlieferungAbo.abotypId, lieferung.abotypId)
         .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(vertriebMapping as vertrieb).on(vertrieb.abotypId, aboTyp.id)
         .where.eq(postlieferungAbo.id, parameter(id)).and.isNull(lieferung.lieferplanungId)
     }.one(postlieferungAboMapping(postlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => abotypMapping.opt(aboTyp)(rs)
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => vertriebMapping.opt(vertrieb)(rs)
       )
-      .map((abo, abw, lieferungen, aboTyp) => {
+      .map((abo, abw, lieferungen, aboTyp, vertriebe) => {
         val sortedAbw = abw.sortBy(_.datum)
-        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen, "abotyp" -> aboTyp.headOption)
+        copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> lieferungen,
+          "abotyp" -> aboTyp.headOption, "vertrieb" -> vertriebe.headOption)
       }).single
   }
 
@@ -610,7 +620,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(korbMapping as korb)
         .where.eq(korb.lieferungId, parameter(lieferungId))
-        .and.eq(korb.aboId, parameter(aboId)).and.not.eq(korb.status, Geliefert)
+        .and.eq(korb.aboId, parameter(aboId)).and.not.eq(korb.status, parameter(Geliefert))
     }.map(korbMapping(korb)).single
   }
 
@@ -626,8 +636,33 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(vertriebMapping as vertrieb)
+        .leftJoin(depotlieferungMapping as depotlieferung).on(depotlieferung.vertriebId, vertrieb.id)
+        .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
+        .leftJoin(heimlieferungMapping as heimlieferung).on(heimlieferung.vertriebId, vertrieb.id)
+        .leftJoin(tourMapping as tour).on(heimlieferung.tourId, tour.id)
+        .leftJoin(postlieferungMapping as postlieferung).on(postlieferung.vertriebId, vertrieb.id)
         .where.eq(vertrieb.abotypId, parameter(abotypId))
-    }.map(vertriebMapping(vertrieb)).list
+    }.one(vertriebMapping(vertrieb))
+      .toManies(
+        rs => postlieferungMapping.opt(postlieferung)(rs),
+        rs => heimlieferungMapping.opt(heimlieferung)(rs),
+        rs => depotlieferungMapping.opt(depotlieferung)(rs),
+        rs => depotMapping.opt(depot)(rs),
+        rs => tourMapping.opt(tour)(rs)
+      )
+      .map({ (vertrieb, pl, hls, dls, depots, touren) =>
+        val dl = dls.map { lieferung =>
+          val depot = depots.find(_.id == lieferung.depotId).head
+          val summary = copyTo[Depot, DepotSummary](depot)
+          copyTo[Depotlieferung, DepotlieferungDetail](lieferung, "depot" -> summary)
+        }
+        val hl = hls.map { lieferung =>
+          val tour = touren.find(_.id == lieferung.tourId).head
+          copyTo[Heimlieferung, HeimlieferungDetail](lieferung, "tour" -> tour)
+        }
+
+        copyTo[Vertrieb, VertriebVertriebsarten](vertrieb, "depotlieferungen" -> dl, "heimlieferungen" -> hl, "postlieferungen" -> pl)
+      }).list
   }
 
   // MODIFY and DELETE Queries
