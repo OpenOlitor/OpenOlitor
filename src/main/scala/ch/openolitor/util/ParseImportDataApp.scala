@@ -62,20 +62,13 @@ object ParseImportDataApp extends App {
 
     def print[E <: BaseEntity[_]: TypeTag](resultList: List[E]): Unit = {
       val typ = typeOf[E]
-      print("-----------------------------------------------------------------------------------------")
-      print(typ.toString)
-      print("-----------------------------------------------------------------------------------------")
-      resultList.map(x => print(x))
-    }
-
-    def print[E <: BaseEntity[_]: TypeTag](result: E): Unit = {
-      print(s"id:${result.id} => ${result}")
+      print(s"${typ.toString}: ${resultList.length} Einträge gefunden")
     }
 
     def receive = {
       case r: ParseResult =>
         print("Received import result")
-        print(r.projekt)
+        print(s"Projekt: + Eintrag gefunden")
         print(r.kundentypen)
         print(r.kunden)
         print(r.personen)
@@ -100,7 +93,8 @@ object ParseImportDataApp extends App {
         print("Parsing finished")
         context.system.terminate()
       case ParseError(error) =>
-        log.error(s"Couldn't parse file", error)
+        log.error(s"Couldn't parse file {}", error)
+        error.printStackTrace
       case Terminated(_) =>
         log.info("{} has terminated, shutting down system", parser.path)
         context.system.terminate()
