@@ -76,6 +76,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val pendenzCreatePersister = persister[PendenzCreate]("pendenz-create")
 
   implicit val lieferungAbotypCreatePersister = persister[LieferungAbotypCreate]("lieferung-abotyp-create")
+  implicit val lieferungenAbotypCreatePersister = persister[LieferungenAbotypCreate]("lieferungen-abotyp-create")
   implicit val lieferungIdPersister = persister[LieferungId]("lieferung-id")
   implicit val lieferungModifyPersister = persister[LieferungModify]("lieferung-modify")
   implicit val lieferungPlanungAddPersister = persister[LieferungPlanungAdd]("lieferung-planungadd-modify")
@@ -143,6 +144,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     customKundetypIdPersister,
     pendenzModifyPersister,
     lieferungAbotypCreatePersister,
+    lieferungenAbotypCreatePersister,
     lieferungIdPersister,
     lieferungModifyPersister,
     lieferungPlanungAddPersister,

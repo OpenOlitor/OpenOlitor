@@ -56,6 +56,8 @@ import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -231,6 +233,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             }
           }
       } ~
+      path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / "aktionen" / "generieren") { (abotypId, vertriebId) =>
+        post {
+          requestInstance { request =>
+            entity(as[LieferungenAbotypCreate]) { entity =>
+              created(request)(entity)
+            }
+          }
+        }
+      } ~
       path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / lieferungIdPath) { (abotypId, vertriebId, lieferungId) =>
         delete(remove(lieferungId))
       }
@@ -324,10 +335,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           (put | post)(update[LieferplanungModify, LieferplanungId](id))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen") { lieferplanungId =>
-        get(list(stammdatenReadRepository.getLieferungen(lieferplanungId)))
+        get(list(stammdatenReadRepository.getLieferungenDetails(lieferplanungId)))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "getNichtInkludierteAbotypenLieferungen") { lieferplanungId =>
-        get(list(stammdatenReadRepository.getNichtInkludierteAbotypenLieferungen(lieferplanungId)))
+      path("lieferplanungen" / lieferplanungIdPath / "getVerfuegbareLieferungen") { lieferplanungId =>
+        get(list(stammdatenReadRepository.getVerfuegbareLieferungen(lieferplanungId)))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
         (put | post)(update[LieferungPlanungAdd, LieferungId](lieferungId)) ~

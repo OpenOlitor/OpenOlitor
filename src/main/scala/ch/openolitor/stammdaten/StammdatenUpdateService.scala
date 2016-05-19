@@ -48,14 +48,14 @@ object StammdatenUpdateService {
 }
 
 class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends StammdatenUpdateService(sysConfig) with DefaultStammdatenWriteRepositoryComponent with DefaultStammdatenReadRepositoryComponent {
+    extends StammdatenUpdateService(sysConfig) with DefaultStammdatenWriteRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
  */
 class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
-  self: StammdatenWriteRepositoryComponent with StammdatenReadRepositoryComponent =>
+  self: StammdatenWriteRepositoryComponent =>
 
   val FALSE = false
 
@@ -99,24 +99,22 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateAbotyp(meta: EventMetadata, id: AbotypId, update: AbotypModify)(implicit personId: PersonId = meta.originator) = {
-    DB futureLocalTx { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(abotypMapping, id) map { abotyp =>
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
         stammdatenWriteRepository.updateEntity[Abotyp, AbotypId](copy)
       }
 
-      stammdatenReadRepository.getUngeplanteLieferungen(id) map { lieferungen =>
-        lieferungen map { lieferung =>
-          //update einiger Felder auf den Lieferungen
-          val updatedLieferung = copyTo[Lieferung, Lieferung](
-            lieferung,
-            "zielpreis" -> update.zielpreis,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> personId
-          )
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
-        }
+      stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
+        //update einiger Felder auf den Lieferungen
+        val updatedLieferung = copyTo[Lieferung, Lieferung](
+          lieferung,
+          "zielpreis" -> update.zielpreis,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> personId
+        )
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
       }
     }
   }
@@ -156,61 +154,51 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     if (update.ansprechpersonen.isEmpty) {
       logger.error(s"Update kunde without ansprechperson:$kundeId, update:$update")
     } else {
-      DB futureLocalTx { implicit session =>
-        for {
-          kunde <- updateKundendaten(meta, kundeId, update)
-          pesonen <- updatePersonen(meta, kundeId, update)
-          pendenzen <- updatePendenzen(meta, kundeId, update)
-        } yield {
-          kunde
-        }
+      DB localTx { implicit session =>
+        updateKundendaten(meta, kundeId, update)
+        updatePersonen(meta, kundeId, update)
+        updatePendenzen(meta, kundeId, update)
       }
     }
   }
 
   private def updateKundendaten(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
-    Future {
-      stammdatenWriteRepository.getById(kundeMapping, kundeId) map { kunde =>
-        //map all updatable fields
-        val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
-        val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length,
-          "anzahlPendenzen" -> update.pendenzen.length, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        DB autoCommit { implicit session =>
-          stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
-        }
-      }
+    stammdatenWriteRepository.getById(kundeMapping, kundeId) map { kunde =>
+      //map all updatable fields
+      val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
+      val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length,
+        "anzahlPendenzen" -> update.pendenzen.length, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+      stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
     }
   }
 
   private def updatePersonen(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
-    stammdatenReadRepository.getPersonen(kundeId) map { personen =>
-      update.ansprechpersonen.zipWithIndex.map {
-        case (updatePerson, index) =>
-          updatePerson.id.map { id =>
-            personen.filter(_.id == id).headOption.map { person =>
-              logger.debug(s"Update person with at index:$index, data -> $updatePerson")
-              val copy = copyFrom(person, updatePerson, "id" -> person.id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+    val personen = stammdatenWriteRepository.getPersonen(kundeId)
+    update.ansprechpersonen.zipWithIndex.map {
+      case (updatePerson, index) =>
+        updatePerson.id.map { id =>
+          personen.filter(_.id == id).headOption.map { person =>
+            logger.debug(s"Update person with at index:$index, data -> $updatePerson")
+            val copy = copyFrom(person, updatePerson, "id" -> person.id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
 
-              stammdatenWriteRepository.updateEntity[Person, PersonId](copy)
-            }
+            stammdatenWriteRepository.updateEntity[Person, PersonId](copy)
           }
-      }
+        }
     }
   }
 
   private def updatePendenzen(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
-    stammdatenReadRepository.getPendenzen(kundeId) map { pendenzen =>
-      update.pendenzen.map {
-        case updatePendenz =>
-          updatePendenz.id.map { id =>
-            pendenzen.filter(_.id == id).headOption.map { pendenz =>
-              logger.debug(s"Update pendenz with data -> updatePendenz")
-              val copy = copyFrom(pendenz, updatePendenz, "id" -> pendenz.id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+    val pendenzen = stammdatenWriteRepository.getPendenzen(kundeId)
+    update.pendenzen.map {
+      case updatePendenz =>
+        updatePendenz.id.map { id =>
+          pendenzen.filter(_.id == id).headOption.map { pendenz =>
+            logger.debug(s"Update pendenz with data -> updatePendenz")
+            val copy = copyFrom(pendenz, updatePendenz, "id" -> pendenz.id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
 
-              stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
-            }
+            stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
           }
-      }
+        }
     }
   }
 
@@ -285,85 +273,64 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateProdukt(meta: EventMetadata, id: ProduktId, update: ProduktModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(produktMapping, id) map { produkt =>
         //map all updatable fields
         val copy = copyFrom(produkt, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
         stammdatenWriteRepository.updateEntity[Produkt, ProduktId](copy)
-      }
-    }
 
-    stammdatenReadRepository.getProduktProduzenten(id) map { produktProduzent =>
-      DB autoCommit { implicit session =>
         //remove all ProduktProduzent-Mappings
-        produktProduzent.map {
-          produktProduzentToDelete =>
-            stammdatenWriteRepository.deleteEntity[ProduktProduzent, ProduktProduzentId](produktProduzentToDelete.id)
+        stammdatenWriteRepository.getProduktProduzenten(id) map { produktProduzent =>
+          stammdatenWriteRepository.deleteEntity[ProduktProduzent, ProduktProduzentId](produktProduzent.id)
         }
-      }
-    } andThen {
-      case x =>
-        DB autoCommit { implicit session =>
-          //recreate new ProduktProduzent-Mappings
-          update.produzenten.map { updateProduzentKurzzeichen =>
-            val produktProduzentId = ProduktProduzentId(System.currentTimeMillis)
-            stammdatenReadRepository.getProduzentDetailByKurzzeichen(updateProduzentKurzzeichen) map {
-              case Some(prod) =>
-                val newProduktProduzent = ProduktProduzent(produktProduzentId, id, prod.id, meta.timestamp, personId, meta.timestamp, personId)
-                logger.debug(s"Create new ProduktProduzent :$produktProduzentId, data -> $newProduktProduzent")
-                stammdatenWriteRepository.insertEntity[ProduktProduzent, ProduktProduzentId](newProduktProduzent)
-              case None => logger.debug(s"Produzent was not found with kurzzeichen :$updateProduzentKurzzeichen")
-            }
+        //recreate new ProduktProduzent-Mappings
+        update.produzenten.map { updateProduzentKurzzeichen =>
+          val produktProduzentId = ProduktProduzentId(System.currentTimeMillis)
+          stammdatenWriteRepository.getProduzentDetailByKurzzeichen(updateProduzentKurzzeichen) match {
+            case Some(prod) =>
+              val newProduktProduzent = ProduktProduzent(produktProduzentId, id, prod.id, meta.timestamp, personId, meta.timestamp, personId)
+              logger.debug(s"Create new ProduktProduzent :$produktProduzentId, data -> $newProduktProduzent")
+              stammdatenWriteRepository.insertEntity[ProduktProduzent, ProduktProduzentId](newProduktProduzent)
+            case None => logger.debug(s"Produzent was not found with kurzzeichen :$updateProduzentKurzzeichen")
           }
         }
-    }
 
-    stammdatenReadRepository.getProduktProduktekategorien(id) map { produktProduktekategorien =>
-      DB autoCommit { implicit session =>
         //remove all ProduktProduktekategorie-Mappings
-        produktProduktekategorien.map {
-          produktProduktekategorieToDelete =>
-            stammdatenWriteRepository.deleteEntity[ProduktProduktekategorie, ProduktProduktekategorieId](produktProduktekategorieToDelete.id)
+        stammdatenWriteRepository.getProduktProduktekategorien(id) map { produktProduktekategorien =>
+          stammdatenWriteRepository.deleteEntity[ProduktProduktekategorie, ProduktProduktekategorieId](produktProduktekategorien.id)
         }
-      }
-    } andThen {
-      case x =>
-        DB autoCommit { implicit session =>
-          //recreate new ProduktProduktekategorie-Mappings
-          update.kategorien.map { updateKategorieBezeichnung =>
-            val produktProduktekategorieId = ProduktProduktekategorieId(System.currentTimeMillis)
-            stammdatenReadRepository.getProduktekategorieByBezeichnung(updateKategorieBezeichnung) map {
-              case Some(kat) =>
-                val newProduktProduktekategorie = ProduktProduktekategorie(produktProduktekategorieId, id, kat.id, meta.timestamp, personId, meta.timestamp, personId)
-                logger.debug(s"Create new ProduktProduktekategorie :produktProduktekategorieId, data -> newProduktProduktekategorie")
-                stammdatenWriteRepository.insertEntity[ProduktProduktekategorie, ProduktProduktekategorieId](newProduktProduktekategorie)
-              case None => logger.debug(s"Produktekategorie was not found with bezeichnung :$updateKategorieBezeichnung")
-            }
+        //recreate new ProduktProduktekategorie-Mappings
+        update.kategorien.map { updateKategorieBezeichnung =>
+          val produktProduktekategorieId = ProduktProduktekategorieId(System.currentTimeMillis)
+          stammdatenWriteRepository.getProduktekategorieByBezeichnung(updateKategorieBezeichnung) match {
+            case Some(kat) =>
+              val newProduktProduktekategorie = ProduktProduktekategorie(produktProduktekategorieId, id, kat.id, meta.timestamp, personId, meta.timestamp, personId)
+              logger.debug(s"Create new ProduktProduktekategorie :produktProduktekategorieId, data -> newProduktProduktekategorie")
+              stammdatenWriteRepository.insertEntity[ProduktProduktekategorie, ProduktProduktekategorieId](newProduktProduktekategorie)
+            case None => logger.debug(s"Produktekategorie was not found with bezeichnung :$updateKategorieBezeichnung")
           }
         }
+      }
     }
   }
 
   def updateProduktekategorie(meta: EventMetadata, id: ProduktekategorieId, update: ProduktekategorieModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(produktekategorieMapping, id) map { produktekategorie =>
 
-        stammdatenReadRepository.getProdukteByProduktekategorieBezeichnung(produktekategorie.beschreibung) map {
-          produkte =>
-            produkte map {
-              produkt =>
-                //update Produktekategorie-String on Produkt
-                val newKategorien = produkt.kategorien map {
-                  case produktekategorie.beschreibung => update.beschreibung
-                  case x => x
-                }
-                val copyProdukt = copyTo[Produkt, Produkt](produkt, "kategorien" -> newKategorien,
-                  "erstelldat" -> meta.timestamp,
-                  "ersteller" -> personId,
-                  "modifidat" -> meta.timestamp,
-                  "modifikator" -> personId)
-                stammdatenWriteRepository.updateEntity[Produkt, ProduktId](copyProdukt)
+        stammdatenWriteRepository.getProdukteByProduktekategorieBezeichnung(produktekategorie.beschreibung) map {
+          produkt =>
+            //update Produktekategorie-String on Produkt
+            val newKategorien = produkt.kategorien map {
+              case produktekategorie.beschreibung => update.beschreibung
+              case x => x
             }
+            val copyProdukt = copyTo[Produkt, Produkt](produkt, "kategorien" -> newKategorien,
+              "erstelldat" -> meta.timestamp,
+              "ersteller" -> personId,
+              "modifidat" -> meta.timestamp,
+              "modifikator" -> personId)
+            stammdatenWriteRepository.updateEntity[Produkt, ProduktId](copyProdukt)
         }
 
         //map all updatable fields
@@ -417,43 +384,38 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, update.lieferplanungId) map { lieferplanung =>
         stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-          DB futureLocalTx { implicit session =>
-            stammdatenReadRepository.getLastGeplanteLieferung(lieferung.abotypId) map { letzteLieferung =>
-              val lpId = Some(update.lieferplanungId)
-              val anzahlLieferungen = letzteLieferung match {
-                case Some(l) => l.anzahlLieferungen + 1
-                case None => 1
-              }
-              //map lieferplanungId und Nr
-              val copy = copyFrom(lieferung, update,
-                "lieferplanungId" -> lpId,
-                "lieferplanungnr" -> lieferplanung.nr,
-                "status" -> Offen,
-                "anzahlLieferungen" -> anzahlLieferungen,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> personId)
-              stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-            }
+          val anzahlLieferungen = stammdatenWriteRepository.getLastGeplanteLieferung(lieferung.abotypId) match {
+            case Some(l) => l.anzahlLieferungen + 1
+            case None => 1
           }
+          val lpId = Some(update.lieferplanungId)
+          //map lieferplanungId und Nr
+          val copy = copyFrom(lieferung, update,
+            "lieferplanungId" -> lpId,
+            "lieferplanungnr" -> lieferplanung.nr,
+            "status" -> Offen,
+            "anzahlLieferungen" -> anzahlLieferungen,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> personId)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
         }
       }
     }
   }
 
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit personId: PersonId = meta.originator) = {
-    DB futureLocalTx { implicit session =>
-      stammdatenWriteRepository.deleteLieferpositionen(id) andThen {
-        case x =>
-          stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-            //map all updatable fields
-            val copy = copyFrom(lieferung, update,
-              "lieferplanungId" -> None,
-              "lieferplanungNr" -> None,
-              "status" -> Ungeplant,
-              "modifidat" -> meta.timestamp,
-              "modifikator" -> personId)
-            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-          }
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.deleteLieferpositionen(id)
+      stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
+        //map all updatable fields
+        val copy = copyFrom(lieferung, update,
+          "lieferplanungId" -> None,
+          "lieferplanungNr" -> None,
+          "status" -> Ungeplant,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> personId)
+        logger.debug(s"Removed lieferung $id from lieferplanung: ${lieferung.lieferplanungId} => $copy")
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
       }
     }
 

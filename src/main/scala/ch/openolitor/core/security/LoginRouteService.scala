@@ -34,8 +34,8 @@ import spray.caching._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
 import akka.actor.ActorRef
 import ch.openolitor.core.filestore.FileStore
 import akka.actor.ActorRefFactory

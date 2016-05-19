@@ -45,7 +45,14 @@ trait SystemRouteService extends HttpService with ActorReferences
 
   private var error: Option[Throwable] = None
   val system: ActorSystem
-  def importService(implicit subject: Subject) = system.actorOf(DataImportService.props(sysConfig, entityStore, system, subject.personId), "oo-import-service")
+  def importService(implicit subject: Subject) = {
+    val serviceName = s"oo-import-service-${subject.personId.id}"
+    val identifyId = 1
+    (system.actorSelection(system.child(serviceName)) ? Identify(identifyId)) map {
+      case ActorIdentity(`identifyId`, Some(ref)) => ref
+      case ActorIdentity(`identifyId`, None) => system.actorOf(DataImportService.props(sysConfig, entityStore, system, subject.personId), serviceName)
+    }
+  }
 
   def adminRoutes(implicit subject: Subject) = pathPrefix("admin") {
     adminRoute
@@ -85,7 +92,7 @@ trait SystemRouteService extends HttpService with ActorReferences
 
             implicit val timeout = Timeout(300.seconds)
             file.map { file =>
-              onSuccess(importService ? ImportData(clearBeforeImport, file._1)) {
+              onSuccess(importService.flatMap(_ ? ImportData(clearBeforeImport, file._1))) {
                 case ImportResult(Some(error), _) =>
                   logger.warn(s"Couldn't import data, received error:$error")
                   complete(StatusCodes.BadRequest, error)

@@ -22,8 +22,8 @@
 \*                                                                           */
 package ch.openolitor.core.data
 
-import ch.openolitor.core.models._
-
+import ch.openolitor.core.models.
+  _
 import ch.openolitor.stammdaten.models._
 import org.odftoolkit.simple._
 import org.odftoolkit.simple.table._
@@ -39,6 +39,7 @@ import ch.openolitor.util.DateTimeUtil
 import scala.collection.immutable.TreeMap
 import java.io.InputStream
 import scala.util._
+import org.joda.time.format.DateTimeFormatter
 
 case class ParseException(msg: String) extends Exception(msg)
 
@@ -79,10 +80,10 @@ class DataImportParser extends Actor with ActorLogging {
       (abotypen, abotypIdMapping) <- Try(doc.withSheet("Abotypen")(parseAbotypen))
       (depots, depotIdMapping) <- Try(doc.withSheet("Depots")(parseDepots))
       (abwesenheiten, _) <- Try(doc.withSheet("Abwesenheiten")(parseAbwesenheit))
-      (abos, _) <- Try(doc.withSheet("Abos")(parseAbos(kundeIdMapping, kunden, abotypIdMapping, abotypen, depotIdMapping, depots, tourIdMapping, tours, abwesenheiten)))
-      (lieferplanungen, _) <- Try(doc.withSheet("Lieferplanungen")(parseLieferplanungen))
-      (vertriebsarten, _) <- Try(doc.withSheet("Vertriebsarten")(parseVertriebsarten))
+      (vertriebsarten, vertriebsartIdMapping) <- Try(doc.withSheet("Vertriebsarten")(parseVertriebsarten))
       (vertriebe, _) <- Try(doc.withSheet("Vertriebe")(parseVertriebe(vertriebsarten)))
+      (abos, _) <- Try(doc.withSheet("Abos")(parseAbos(kundeIdMapping, kunden, vertriebsartIdMapping, vertriebsarten, vertriebe, abotypen, depotIdMapping, depots, tourIdMapping, tours, abwesenheiten)))
+      (lieferplanungen, _) <- Try(doc.withSheet("Lieferplanungen")(parseLieferplanungen))
       (lieferungen, _) <- Try(doc.withSheet("Lieferungen")(parseLieferungen(abotypen, vertriebe, abwesenheiten, lieferplanungen, depots, tours)))
       (produzenten, _) <- Try(doc.withSheet("Produzenten")(parseProduzenten))
       (produktkategorien, _) <- Try(doc.withSheet("Produktekategorien")(parseProduktekategorien))
@@ -410,20 +411,21 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseVertriebsarten = {
-    parse[Vertriebsart, VertriebsartId]("id", Seq("vertrieb_id", "depot_id", "tour_id") ++ modifiCols) { id => indexes => row =>
+    parse[Vertriebsart, VertriebsartId]("id", Seq("vertrieb_id", "depot_id", "tour_id", "anzahl_abos") ++ modifiCols) { id => indexes => row =>
       //match column indexes
-      val Seq(indexVertriebId, indexDepotId, indexTourId) = indexes.take(3)
+      val Seq(indexVertriebId, indexDepotId, indexTourId, indexAnzahlAbos) = indexes.take(4)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val vertriebsartId = VertriebsartId(id)
       val vertriebId = VertriebId(row.value[Long](indexVertriebId))
       val depotIdOpt = row.value[Option[Long]](indexDepotId).map(DepotId)
       val tourIdOpt = row.value[Option[Long]](indexTourId).map(TourId)
+      val anzahlAbos = row.value[Int](indexAnzahlAbos)
 
       depotIdOpt.map { depotId =>
         Depotlieferung(
           vertriebsartId,
-          vertriebId, depotId,
+          vertriebId, depotId, anzahlAbos,
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -432,14 +434,14 @@ class DataImportParser extends Actor with ActorLogging {
         )
       }.getOrElse {
         tourIdOpt.map { tourId =>
-          Heimlieferung(vertriebsartId, vertriebId, tourId,
+          Heimlieferung(vertriebsartId, vertriebId, tourId, anzahlAbos,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
             ersteller = PersonId(row.value[Long](indexErsteller)),
             modifidat = row.value[DateTime](indexModifidat),
             modifikator = PersonId(row.value[Long](indexModifikator)))
         }.getOrElse {
-          Postlieferung(vertriebsartId, vertriebId,
+          Postlieferung(vertriebsartId, vertriebId, anzahlAbos,
             //modification flags
             erstelldat = row.value[DateTime](indexErstelldat),
             ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -634,13 +636,13 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseVertriebe(vertriebsarten: List[Vertriebsart]) = {
-    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "liefertag") ++ modifiCols) { id => indexes => row =>
-      val Seq(indexAbotypId, indexBeschrieb, indexLiefertag) = indexes.take(3)
+    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "liefertag", "anzahl_abos") ++ modifiCols) { id => indexes => row =>
+      val Seq(indexAbotypId, indexBeschrieb, indexLiefertag, indexAnzahlAbos) = indexes.take(4)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       val vertriebId = VertriebId(id)
       val abotypId = AbotypId(row.value[Long](indexAbotypId))
-      val beschrieb = row.value[String](indexBeschrieb)
+      val beschrieb = row.value[Option[String]](indexBeschrieb)
       /*val vaBeschrieb = vertriebsart match {
           case dl: Depotlieferung =>
             depots.find(_.id == dl.depotId).getOrElse(throw ParseException(s"No depot found for id ${dl.depotId}")).name
@@ -649,8 +651,10 @@ class DataImportParser extends Actor with ActorLogging {
           case pl: Postlieferung => ""
         }*/
       val liefertag = Lieferzeitpunkt(row.value[String](indexLiefertag))
+      val anzahlAbos = row.value[Int](indexAnzahlAbos)
 
       Vertrieb(vertriebId, abotypId, liefertag, beschrieb,
+        anzahlAbos,
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -710,21 +714,21 @@ class DataImportParser extends Actor with ActorLogging {
     }
   }
 
-  def parseAbos(kundeIdMapping: Map[Long, KundeId], kunden: List[Kunde], abotypIdMapping: Map[Long, AbotypId],
+  def parseAbos(kundeIdMapping: Map[Long, KundeId], kunden: List[Kunde], vertriebsartIdMapping: Map[Long, VertriebsartId], vertriebsarten: List[Vertriebsart], vertriebe: List[Vertrieb],
     abotypen: List[Abotyp], depotIdMapping: Map[Long, DepotId], depots: List[Depot],
     tourIdMapping: Map[Long, TourId], tours: List[Tour], abwesenheiten: List[Abwesenheit]) = {
-    parse[Abo, AboId]("id", Seq("kunde_id", "abotyp_id", "start", "ende",
+    parse[Abo, AboId]("id", Seq("kunde_id", "vertriebsart_id", "start", "ende",
       "guthaben_vertraglich", "guthaben", "guthaben_in_rechnung", "letzte_lieferung", "anzahl_abwesenheiten", "anzahl_lieferungen",
       "depot_id", "tour_id") ++ modifiCols) { id => indexes =>
       row =>
         //match column indexes
-        val Seq(kundeIdIndex, abotypIdIndex, startIndex, endeIndex,
+        val Seq(kundeIdIndex, vertriebsartIdIndex, startIndex, endeIndex,
           guthabenVertraglichIndex, guthabenIndex, guthabenInRechnungIndex, indexLetzteLieferung, indexAnzahlAbwesenheiten, lieferungenIndex,
           depotIdIndex, tourIdIndex) = indexes.take(12)
         val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
         val kundeIdInt = row.value[Long](kundeIdIndex)
-        val abotypIdInt = row.value[Long](abotypIdIndex)
+        val vertriebsartIdInt = row.value[Long](vertriebsartIdIndex)
         val start = row.value[DateTime](startIndex)
         val ende = row.value[Option[DateTime]](endeIndex)
         val aboId = AboId(id)
@@ -745,7 +749,12 @@ class DataImportParser extends Actor with ActorLogging {
 
         val kundeId = kundeIdMapping.getOrElse(kundeIdInt, throw ParseException(s"Kunde id $kundeIdInt referenced from abo not found"))
         val kunde = kunden.filter(_.id == kundeId).headOption.map(_.bezeichnung).getOrElse(throw ParseException(s"Kunde not found for id:$kundeId"))
-        val abotypId = abotypIdMapping.getOrElse(abotypIdInt, throw ParseException(s"Abotyp id $abotypIdInt referenced from abo not found"))
+
+        val vertriebsartId = vertriebsartIdMapping.getOrElse(vertriebsartIdInt, throw ParseException(s"Vertriebsart id $vertriebsartIdInt referenced from abo not found"))
+        val vertriebsart = vertriebsarten.filter(_.id == vertriebsartId).headOption.getOrElse(throw ParseException(s"Vertriebsart not found for id:$vertriebsartId"))
+        val vertriebId = vertriebsart.vertriebId
+        val vertrieb = vertriebe.filter(_.id == vertriebId).headOption.getOrElse(throw ParseException(s"Vertrieb not found for id:$vertriebId"))
+        val abotypId = vertrieb.abotypId;
         val abotypName = abotypen.filter(_.id == abotypId).headOption.map(_.name).getOrElse(throw ParseException(s"Abotyp not found for id:$abotypId"))
         val depotIdOpt = row.value[Option[Long]](depotIdIndex)
         val tourIdOpt = row.value[Option[Long]](tourIdIndex)
@@ -753,18 +762,18 @@ class DataImportParser extends Actor with ActorLogging {
         depotIdOpt.map { depotIdInt =>
           val depotId = depotIdMapping.getOrElse(depotIdInt, throw ParseException(s"Depot id $depotIdInt referenced from abo not found"))
           val depotName = depots.filter(_.id == depotId).headOption.map(_.name).getOrElse(s"Depot not found with id:$depotId")
-          DepotlieferungAbo(aboId, kundeId, kunde, abotypId, abotypName, depotId, depotName,
+          DepotlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, abotypId, abotypName, depotId, depotName,
             start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
             anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
         }.getOrElse {
           tourIdOpt.map { tourIdInt =>
             val tourId = tourIdMapping.getOrElse(tourIdInt, throw ParseException(s"Tour id tourIdInt referenced from abo not found"))
             val tourName = tours.filter(_.id == tourId).headOption.map(_.name).getOrElse(s"Tour not found with id:$tourId")
-            HeimlieferungAbo(aboId, kundeId, kunde, abotypId, abotypName, tourId, tourName,
+            HeimlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, abotypId, abotypName, tourId, tourName,
               start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
               anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
           }.getOrElse {
-            PostlieferungAbo(aboId, kundeId, kunde, abotypId, abotypName,
+            PostlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, abotypId, abotypName,
               start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
               anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
           }
@@ -983,34 +992,66 @@ object DataImportParser {
   }
 
   implicit class MyCell(self: Cell) {
-    val format = DateTimeFormat.forPattern("dd.MM.yyyy")
+    val allSupportedDateFormats = List(
+      DateTimeFormat.forPattern("dd.MM.yy"),
+      DateTimeFormat.forPattern("dd.MM.yyyy"),
+      DateTimeFormat.forPattern("MM/dd/yy"),
+      DateTimeFormat.forPattern("MM/dd/yyyy")
+    )
+
+    def tryParseDate(value: String, nextFormats: List[DateTimeFormatter] = allSupportedDateFormats): DateTime = {
+      nextFormats match {
+        case head :: tail => try {
+          DateTime.parse(value, head)
+        } catch {
+          case e: Exception => tryParseDate(value, tail)
+        }
+        case Nil => throw ParseException(s"No matching date format found for value:$value")
+      }
+    }
 
     def value[T: TypeTag]: T = {
       val typ = typeOf[T]
-      (typ match {
-        case t if t =:= typeOf[Boolean] => self.getStringValue match {
-          case "true" | "1" | "x" | "X" => true
-          case "false" | "0" => false
-          case x => throw ParseException(s"Unsupported boolean format:'$x' on col:${self.getColumnIndex}, row:${self.getRowIndex}")
-        }
+      try {
+        (typ match {
+          case t if t =:= typeOf[Boolean] => self.getStringValue.toLowerCase match {
+            case "true" | "richtig" | "wahr" | "1" | "x" => true
+            case "false" | "falsch" | "0" => false
+            case x => throw ParseException(s"Unsupported boolean format:'$x' on col:${self.getColumnIndex}, row:${self.getRowIndex}")
+          }
 
-        case t if t =:= typeOf[String] => self.getStringValue
-        case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
-        case t if t =:= typeOf[Double] => self.getStringValue.toDouble
-        case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
-        case t if t =:= typeOf[Option[BigDecimal]] => self.getStringOptionValue.map(s => BigDecimal(s.toDouble))
-        case t if t =:= typeOf[Date] => self.getDateValue
-        case t if t =:= typeOf[DateTime] => DateTime.parse(self.getStringValue, format)
-        case t if t =:= typeOf[Option[DateTime]] => self.getStringOptionValue.map(s => DateTime.parse(s, format))
-        case t if t =:= typeOf[Int] => self.getStringValue.toInt
-        case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
-        case t if t =:= typeOf[Long] => self.getStringValue.toLong
-        case t if t =:= typeOf[Option[Long]] => getStringOptionValue.map(_.toLong)
-        case t if t =:= typeOf[Float] => self.getStringValue.toFloat
-        case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
-        case _ =>
-          throw ParseException(s"Unsupported format:$typ on col:${self.getColumnIndex}, row:${self.getRowIndex}")
-      }).asInstanceOf[T]
+          case t if t =:= typeOf[String] => self.getStringValue
+          case t if t =:= typeOf[Option[String]] => self.getStringOptionValue
+          case t if t =:= typeOf[Double] => self.getStringValue.toDouble
+          case t if t =:= typeOf[BigDecimal] => BigDecimal(self.getStringValue.toDouble)
+          case t if t =:= typeOf[Option[BigDecimal]] => self.getStringOptionValue.map(s => BigDecimal(s.toDouble))
+          case t if t =:= typeOf[Date] => self.getDateValue
+          case t if t =:= typeOf[DateTime] => tryParseDate(self.getStringValue)
+          case t if t =:= typeOf[Option[DateTime]] => self.getStringOptionValue.map(s => tryParseDate(s))
+          case t if t =:= typeOf[Int] => self.getStringValue.toInt
+          case t if t =:= typeOf[Option[Int]] => getStringOptionValue.map(_.toInt)
+          case t if t =:= typeOf[Long] => self.getStringValue.toLong
+          case t if t =:= typeOf[Option[Long]] => getStringOptionValue.map(_.toLong)
+          case t if t =:= typeOf[Float] => self.getStringValue.toFloat
+          case t if t =:= typeOf[Option[Float]] => self.getStringOptionValue.map(_.toFloat)
+          case _ =>
+            throw ParseException(s"Unsupported format:$typ on col:${self.getColumnIndex}, row:${self.getRowIndex}")
+        }).asInstanceOf[T]
+      } catch {
+        case error: Throwable => {
+          val sheet = self.getTable.getTableName
+          val row = self.getRowIndex
+          val col = self.getColumnIndex
+          val displayValue = self.getDisplayText
+          val title: String = if (row > 0) {
+            self.getTable.getRowByIndex(0).getCellByIndex(col).getDisplayText
+          } else {
+            "<notitle>"
+          }
+
+          throw new ParseException(s"Couldn't parse value in sheet:$sheet, column:$col, row:$row, title:$title => displayValue=$displayValue, error:$error")
+        }
+      }
     }
 
     def getStringOptionValue: Option[String] = {
