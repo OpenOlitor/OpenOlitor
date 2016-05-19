@@ -52,7 +52,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   import EntityStore._
 
   override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
-    case LieferplanungAbschliessenCommand(personId, id: LieferplanungId) => idFactory => meta =>
+    case LieferplanungAbschliessenCommand(personId, id) => idFactory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
