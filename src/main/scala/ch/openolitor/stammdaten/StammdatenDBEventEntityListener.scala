@@ -86,7 +86,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityCreated(personId, entity: Pendenz) => handlePendenzCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Pendenz) => handlePendenzDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Pendenz, orig: Pendenz) => handlePendenzModified(entity, orig)(personId)
-    
+
     case e @ EntityCreated(personId, entity: Rechnung) => handleRechnungCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Rechnung) => handleRechnungDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if (orig.status == Erstellt && entity.status == Bezahlt) =>
@@ -340,22 +340,21 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       })
     }
   }
-  
+
   def handlePendenzModified(pendenz: Pendenz, orig: Pendenz)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-	    if (pendenz.status == Erledigt && orig.status != Erledigt) {
-	      modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
-	        log.debug(s"Remove pendenz count from kunde:${kunde.id}")
-	        kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen - 1)
-	      })
-	    }
-	    else if (pendenz.status != Erledigt && orig.status == Erledigt) {
-	      modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
-	        log.debug(s"Remove pendenz count from kunde:${kunde.id}")
-	        kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
-	      })
-	    }
-    }    
+      if (pendenz.status == Erledigt && orig.status != Erledigt) {
+        modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
+          log.debug(s"Remove pendenz count from kunde:${kunde.id}")
+          kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen - 1)
+        })
+      } else if (pendenz.status != Erledigt && orig.status == Erledigt) {
+        modifyEntity[Kunde, KundeId](pendenz.kundeId, { kunde =>
+          log.debug(s"Remove pendenz count from kunde:${kunde.id}")
+          kunde.copy(anzahlPendenzen = kunde.anzahlPendenzen + 1)
+        })
+      }
+    }
   }
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
