@@ -70,8 +70,8 @@ import spray.caching.Cache
 import ch.openolitor.stammdaten.models.AdministratorZugang
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef, eventStore: ActorRef, loginTokenCache: Cache[Subject], ooConfig: Config)(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, ooConfig, system, sysConfig.mandantConfiguration.name, loginTokenCache)
+  def props(entityStore: ActorRef, eventStore: ActorRef, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, sysConfig, system, sysConfig.mandantConfiguration.name, loginTokenCache)
 }
 
 trait RouteServiceComponent {
@@ -297,7 +297,6 @@ class DefaultRouteServiceActor(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val sysConfig: SystemConfig,
-  override val ooConfig: Config,
   override val system: ActorSystem,
   override val mandant: String,
   override val loginTokenCache: Cache[Subject]
