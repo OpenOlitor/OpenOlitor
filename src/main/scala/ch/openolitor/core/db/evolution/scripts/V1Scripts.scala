@@ -187,7 +187,7 @@ object V1Scripts {
         adress_zusatz varchar(100),
         plz varchar(10) not null,
         ort varchar(50) not null,
-        bemerkungen varchar(512),
+        bemerkungen varchar(1000),
         abweichende_lieferadresse varchar(1),
         bezeichnung_lieferung varchar(50),
         strasse_lieferung varchar(50),
