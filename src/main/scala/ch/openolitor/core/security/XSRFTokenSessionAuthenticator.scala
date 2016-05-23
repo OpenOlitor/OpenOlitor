@@ -48,18 +48,6 @@ object AuthCookies {
 /** If anything goes wrong during authentication, this is the rejection to use. */
 case class AuthenticatorRejection(reason: String) extends Rejection
 
-/** Custom RejectionHandler for dealing with AuthenticatorRejections. */
-object AuthenticatorRejectionHandler extends LazyLogging {
-  import spray.http.StatusCodes._
-
-  def apply(): RejectionHandler = RejectionHandler {
-    case rejections if rejections.find(_.isInstanceOf[AuthenticatorRejection]).isDefined =>
-      val reason = rejections.find(_.isInstanceOf[AuthenticatorRejection]).get.asInstanceOf[AuthenticatorRejection].reason
-      logger.debug(s"Request unauthorized ${reason}")
-      complete(Unauthorized)
-  }
-}
-
 /**
  * Dieser Authenticator authentisiert den Benutzer anhand folgender Kriteren:
  * 1. Im Cookie header sowie im HttpHeader muss das Token mitgeliefert werden

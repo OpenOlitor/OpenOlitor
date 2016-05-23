@@ -50,16 +50,16 @@ trait CORSSupport extends LazyLogging {
   def corsDirective[T]: Directive0 = mapRequestContext { ctx =>
     ctx.withRouteResponseHandling({
       //It is an option requeset for a resource that responds to some other method
-      case Rejected(x) if (ctx.request.method.equals(HttpMethods.OPTIONS) && !x.filter(_.isInstanceOf[MethodRejection]).isEmpty) => {
-        val allowedMethods: List[HttpMethod] = x.filter(_.isInstanceOf[MethodRejection]).map(rejection => {
-          rejection.asInstanceOf[MethodRejection].supported
-        })
+      case Rejected(x) if (ctx.request.method.equals(HttpMethods.OPTIONS) && x.exists(_.isInstanceOf[MethodRejection])) =>
+        val allowedMethods: List[HttpMethod] = x.collect {
+          case rejection: MethodRejection =>
+            rejection.supported
+        }
         logger.debug(s"Got cors request:${ctx.request.uri}:$x:$allowedMethods")
         ctx.complete(HttpResponse().withHeaders(
           `Access-Control-Allow-Methods`(OPTIONS, allowedMethods: _*) :: allowCredentialsHeader :: allowOriginHeader ::
             optionsCorsHeaders
         ))
-      }
     }).withHttpResponseHeadersMapped { headers =>
       allowCredentialsHeader :: allowOriginHeader :: headers
     }
