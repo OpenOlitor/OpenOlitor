@@ -47,6 +47,7 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
   val helloServerPattern = """(.*)("type":\s*"HelloServer")(.*)""".r
   val loginPattern = """\{(.*)("type":"Login"),("token":"([\w|-]+)")(.*)\}""".r
   val logoutPattern = """(.*)("type":"Logout")(.*)""".r
+  val clientPingPattern = """(.*)("type":"ClientPing")(.*)""".r
   var personId: Option[PersonId] = None
 
   def businessLogicLoggedIn: Receive = {
@@ -104,6 +105,8 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
               send(TextFrame(s"""{"type":"LoggedIn","personId":"${subject.personId.id}"}"""))
             }
           }
+        case clientPingPattern(_*) =>
+          send(TextFrame(s"""{"type":"ServerPong"}"""))
         case _ =>
           log.debug(s"Received unknown textframe. State: not logged in. $msg")
       }

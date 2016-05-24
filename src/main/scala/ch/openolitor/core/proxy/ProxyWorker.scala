@@ -174,13 +174,13 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap: Map[String, Mand
       wsClient = wsClient.open(url).listener(textMessageListener).listener(binaryMessageListener)
 
       //start ping-poing to keep websocket connection alive
-      cancellable =
-        Some(context.system.scheduler.schedule(
-          90 seconds,
-          90 seconds,
-          self,
-          "Ping"
-        ))
+      //      cancellable =
+      //        Some(context.system.scheduler.schedule(
+      //          10 seconds,
+      //          10 seconds,
+      //          self,
+      //          "Ping"
+      //        ))
 
       wsClient
     }
@@ -209,8 +209,13 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap: Map[String, Mand
     case x: HttpRequest => // do something
     case UpgradedToWebSocket =>
     case akka.io.Tcp.Closed =>
+      log.debug(s"Closed")
       processCloseDown
     case akka.io.Tcp.PeerClosed =>
+      log.debug(s"PeerClosed")
+      processCloseDown
+    case akka.io.Tcp.Aborted =>
+      log.debug(s"Aborted")
       processCloseDown
     case x =>
       log.warning(s"Got unmatched message:$x:" + x.getClass)
