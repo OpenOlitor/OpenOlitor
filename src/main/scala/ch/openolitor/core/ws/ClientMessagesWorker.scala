@@ -65,8 +65,6 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
       val msg = x.payload.decodeString("UTF-8")
 
       msg match {
-        case "Ping" =>
-          send(TextFrame("Pong"))
         case logoutPattern(_, _, _) =>
           log.debug(s"User logged out from websocket")
 
@@ -87,8 +85,6 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
       val msg = x.payload.decodeString("UTF-8")
 
       msg match {
-        case "Ping" =>
-          send(TextFrame("Pong"))
         case helloServerPattern(_, _, _) =>
           send(TextFrame("""{"type":"HelloClient","server":"openolitor"}"""))
         case loginPattern(_, _, _, token, _) =>
