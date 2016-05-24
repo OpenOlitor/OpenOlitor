@@ -24,7 +24,9 @@ package ch.openolitor.core.security
 
 import org.specs2.mutable._
 import org.specs2.mock.Mockito
+import org.specs2.time.NoTimeConversions
 import org.mockito.Matchers.{ eq => isEq, _ }
+import scala.concurrent.duration._
 import ch.openolitor.stammdaten.MockStammdatenReadRepositoryComponent
 import akka.actor.ActorRef
 import ch.openolitor.core.SystemConfig
@@ -44,8 +46,9 @@ import akka.actor.Actor
 import akka.actor.ActorSystem
 import spray.caching.Cache
 import spray.caching.LruCache
+import akka.util.Timeout
 
-class LoginRouteServiceSpec extends Specification with Mockito {
+class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConversions {
   val email = "info@test.com"
   val pwd = "pwd"
   val pwdHashed = BCrypt.hashpw(pwd, BCrypt.gensalt())
@@ -61,6 +64,9 @@ class LoginRouteServiceSpec extends Specification with Mockito {
   implicit val ctx = MultipleAsyncConnectionPoolContext()
 
   "Direct login" should {
+    implicit val timeout: Timeout = 5 seconds
+    implicit val timeoutAsDuration: Duration = timeout.duration
+
     "Succeed" in {
       val service = new MockLoginRouteService(false, false)
 
