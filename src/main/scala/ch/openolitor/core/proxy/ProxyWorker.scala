@@ -93,7 +93,6 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap: Map[String, Mand
   lazy val textMessageListener = new TextListener {
     override def onMessage(message: String) {
       message match {
-        case "Pong" =>
         case msg =>
           self ! Push(message)
       }
@@ -172,16 +171,6 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap: Map[String, Mand
   def openWsClient: Option[WebSocket] = {
     url.map { url =>
       wsClient = wsClient.open(url).listener(textMessageListener).listener(binaryMessageListener)
-
-      //start ping-poing to keep websocket connection alive
-      cancellable =
-        Some(context.system.scheduler.schedule(
-          90 seconds,
-          90 seconds,
-          self,
-          "Ping"
-        ))
-
       wsClient
     }
 
@@ -202,15 +191,18 @@ class ProxyWorker(val serverConnection: ActorRef, val routeMap: Map[String, Mand
     case x: TextFrame =>
       val msg = x.payload.decodeString("UTF-8")
       wsClient.send(msg)
-    case "Ping" =>
-      wsClient.send("Ping")
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
     case x: HttpRequest => // do something
     case UpgradedToWebSocket =>
     case akka.io.Tcp.Closed =>
+      log.debug(s"Closed")
       processCloseDown
     case akka.io.Tcp.PeerClosed =>
+      log.debug(s"PeerClosed")
+      processCloseDown
+    case akka.io.Tcp.Aborted =>
+      log.debug(s"Aborted")
       processCloseDown
     case x =>
       log.warning(s"Got unmatched message:$x:" + x.getClass)

@@ -114,7 +114,7 @@ trait RouteServiceActor
     runDBEvolution()
   }
 
-  implicit val openolitorRejectionHandler: RejectionHandler = AuthenticatorRejectionHandler()
+  implicit val openolitorRejectionHandler: RejectionHandler = OpenOlitorRejectionHandler()
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -250,7 +250,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
   def download(fileType: FileType, id: String) = {
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
-      case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found. Error: ${e}")
+      case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found.")
       case Right(file) => {
         val streamResponse: Stream[ByteString] = Stream.continually(file.file.read).takeWhile(_ != -1).map(ByteString(_))
         streamThenClose(streamResponse, file.file)

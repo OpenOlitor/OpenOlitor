@@ -20,16 +20,25 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.core
 
-import scala.concurrent.Future
+import spray.routing._
+import Directives._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.security.AuthenticatorRejection
 
-sealed trait FileStoreBucket
-case object VorlagenBucket extends FileStoreBucket
-case object GeneriertBucket extends FileStoreBucket
-case object StammdatenBucket extends FileStoreBucket
-case object ZahlungsImportBucket extends FileStoreBucket
+/** Custom RejectionHandler for dealing with AuthenticatorRejections. */
+object OpenOlitorRejectionHandler extends LazyLogging {
+  import spray.http.StatusCodes._
 
-object FileStoreBucket {
-  val AllFileStoreBuckets = List(VorlagenBucket, GeneriertBucket, StammdatenBucket, ZahlungsImportBucket)
+  def apply(): RejectionHandler = RejectionHandler {
+    case rejections if rejections.find(_.isInstanceOf[AuthenticatorRejection]).isDefined =>
+      val reason = rejections.find(_.isInstanceOf[AuthenticatorRejection]).get.asInstanceOf[AuthenticatorRejection].reason
+      logger.debug(s"Request unauthorized ${reason}")
+      complete(Unauthorized)
+    case rejections =>
+      ctx =>
+        logger.debug(s"Request rejected: $rejections")
+        ctx.reject(rejections: _*)
+  }
 }
