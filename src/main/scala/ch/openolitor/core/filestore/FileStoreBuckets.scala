@@ -23,7 +23,6 @@
 package ch.openolitor.core.filestore
 
 import scala.concurrent.Future
-import com.amazonaws.services.s3.model.CreateBucketRequest
 
 sealed trait FileStoreBucket
 case object VorlagenBucket extends FileStoreBucket
