@@ -42,6 +42,7 @@ import com.amazonaws.services.s3.model.ListObjectsRequest
 import com.typesafe.scalalogging.LazyLogging
 import com.amazonaws.services.s3.model.ListBucketsRequest
 import ch.openolitor.core.MandantConfiguration
+import com.amazonaws.auth.AWS3Signer
 
 case class FileStoreError(message: String)
 case class FileStoreSuccess()
@@ -82,7 +83,9 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
 
   logger.debug(s"Connection settings for s3 endpoint: ${props.endpoint}")
 
-  val client = new S3Client(props)
+  val client = new S3Client(props) {
+    override lazy val signer = new AWS3Signer()
+  }
 
   def generateId = UUID.randomUUID.toString
 
