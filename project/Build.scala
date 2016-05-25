@@ -62,8 +62,8 @@ object BuildSettings {
 	    //simple websocket client
 	    "org.jfarcand"                 %   "wcs"                                  % "1.5",
 	    "com.scalapenos"               %%  "stamina-json"                         % "0.1.1",
-      //s3 access
-      "com.sclasen"                  %%  "spray-s3"                             % "0.3.6",
+      // s3
+      "com.amazonaws"                %   "aws-java-sdk"                         % "1.11.4",
       "de.svenkubiak"                %   "jBCrypt"                              % "0.4.1"
 	  )
 	}
