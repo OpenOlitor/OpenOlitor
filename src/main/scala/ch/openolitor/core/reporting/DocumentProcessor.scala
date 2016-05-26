@@ -22,10 +22,13 @@
 \*                                                                           */
 package ch.openolitor.core.reporting
 
+import org.odftoolkit.odfdom.`type`.Color
 import org.odftoolkit.simple._
 import org.odftoolkit.simple.common.field._
 import org.odftoolkit.simple.table._
 import org.odftoolkit.simple.text._
+import org.odftoolkit.simple.draw._
+import org.odftoolkit.simple.style._
 import scala.util.Try
 import spray.json._
 import scala.collection.JavaConversions._
@@ -34,23 +37,72 @@ import com.typesafe.scalalogging.LazyLogging
 import org.odftoolkit.odfdom.pkg.OdfElement
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
+import java.text.DecimalFormat
 
 case class Value(jsValue: JsValue, value: String)
 
+class ReportException(msg: String) extends Exception(msg)
+
 trait DocumentProcessor extends LazyLogging {
+  import OdfToolkitUtils._
 
   val dateFormatPattern = """date:\s*"(.*)"""".r
+  val numberFormatPattern = """number:\s*"(\[(\w+)\])?([#,.0]+)(;((\[(\w+)\])?-([#,.0]+)))?"""".r
   val dateFormatter = ISODateTimeFormat.dateTime
+
+  val colorMap: Map[String, Color] = Map(
+    // english words
+    "AQUA" -> Color.AQUA,
+    "BLACK" -> Color.BLACK,
+    "BLUE" -> Color.BLUE,
+    "FUCHSIA" -> Color.FUCHSIA,
+    "GRAY" -> Color.GRAY,
+    "GREEN" -> Color.GREEN,
+    "LIME" -> Color.LIME,
+    "MAROON" -> Color.MAROON,
+    "NAVY" -> Color.NAVY,
+    "OLIVE" -> Color.OLIVE,
+    "ORANGE" -> Color.ORANGE,
+    "PURPLE" -> Color.PURPLE,
+    "RED" -> Color.RED,
+    "SILVER" -> Color.SILVER,
+    "TEAL" -> Color.TEAL,
+    "WHITE" -> Color.WHITE,
+    "YELLOW" -> Color.YELLOW,
+
+    // german words
+    "SCHWARZ" -> Color.BLACK,
+    "BLAU" -> Color.BLUE,
+    "GRAU" -> Color.GRAY,
+    "GRUEN" -> Color.GREEN,
+    "VIOLETT" -> Color.PURPLE,
+    "ROT" -> Color.RED,
+    "SILBER" -> Color.SILVER,
+    "WEISS" -> Color.WHITE,
+    "GELB" -> Color.YELLOW,
+
+    // french words
+    "NOIR" -> Color.BLACK,
+    "BLEU" -> Color.BLUE,
+    "GRIS" -> Color.GRAY,
+    "VERT" -> Color.GREEN,
+    "VIOLET" -> Color.PURPLE,
+    "ROUGE" -> Color.RED,
+    "BLANC" -> Color.WHITE,
+    "JAUNE" -> Color.YELLOW
+  )
 
   def processDocument(doc: TextDocument, data: JsValue, locale: Locale = Locale.getDefault): Try[Boolean] = {
     logger.debug(s"processDocument with data: $data")
+    doc.setLocale(locale)
     for {
       props <- Try(extractProperties(data))
       x <- Try(processVariables(doc.getHeader, props))
       x2 <- Try(processVariables(doc.getFooter, props))
       x3 <- Try(processVariables(doc, props))
-      x4 <- Try(processTables(doc, doc.getTableList.toList, props, locale))
+      x4 <- Try(processTables(doc, props, locale, ""))
       x5 <- Try(processSections(doc, props, locale))
+      x6 <- Try(processTextboxes(doc, props, locale))
     } yield {
       true
     }
@@ -73,23 +125,38 @@ trait DocumentProcessor extends LazyLogging {
     }
   }
 
-  def processTables(doc: TextDocument, tables: List[Table], props: Map[String, Value], locale: Locale) = {
-    tables map (table => processTable(doc, table, props, locale))
+  def processTables(doc: TableContainer, props: Map[String, Value], locale: Locale, prefix: String) = {
+    doc.getTableList map (table => processTable(doc, table, props, locale, prefix))
   }
 
   /**
    * Process table:
    * duplicate all rows except header rows. Try to replace textbox values with value from property map
    */
-  def processTable(doc: TextDocument, table: Table, props: Map[String, Value], locale: Locale) = {
-    logger.debug(s"processTable: ${table.getTableName}")
-    props.get(table.getTableName) collect {
+  def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, prefix: String) = {
+    props.get(prefix + table.getTableName) map {
       case Value(JsArray(values), _) =>
-        processTableWithValues(doc, table, props, values, locale)
+        logger.debug(s"processTable (dynamic): ${table.getTableName}")
+        processTableWithValues(doc, table, props, values, locale, prefix)
+
+    } getOrElse {
+      //static proccesing
+      logger.debug(s"processTable (static): ${table.getTableName}")
+      processStaticTable(table, props, locale, prefix)
     }
   }
 
-  def processTableWithValues(doc: TextDocument, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale) = {
+  def processStaticTable(table: Table, props: Map[String, Value], locale: Locale = Locale.getDefault, prefix: String) = {
+    for (r <- 0 to table.getRowCount - 1) {
+      //replace textfields
+      for (c <- 0 to table.getColumnCount - 1) {
+        val cell = table.getCellByPosition(c, r)
+        processTextboxes(cell, props, locale, prefix)
+      }
+    }
+  }
+
+  def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, prefix: String) = {
     val startIndex = Math.max(table.getHeaderRowCount, 0)
     val rows = table.getRowList.toList
     val nonHeaderRows = rows.takeRight(rows.length - startIndex)
@@ -97,7 +164,7 @@ trait DocumentProcessor extends LazyLogging {
     logger.debug(s"processTable: ${table.getTableName} -> Header rows: ${table.getHeaderRowCount}")
 
     for (index <- 0 to values.length - 1) {
-      val rowKey = s"${table.getTableName}.$index."
+      val rowKey = s"$prefix${table.getTableName}.$index."
 
       //copy rows
       val newRows = table.appendRows(nonHeaderRows.length).toList
@@ -109,19 +176,22 @@ trait DocumentProcessor extends LazyLogging {
           val newCell = newRows.get(r).getCellByIndex(cell)
 
           // copy cell content
-          logger.debug(s"processTable: ${table.getTableName} -> copy Cell: row: $r, col:${cell}: ${origCell.getParagraphIterator().next().getTextContent()}")
           copyCell(origCell, newCell)
-          logger.debug(s"processTable: ${table.getTableName} -> after copying: row: $r, col:${cell}: ${newCell.getParagraphIterator().next().getTextContent()}")
 
           // replace textfields
-          processTextboxes(newCell, props, rowKey, locale)
+          processTextboxes(newCell, props, locale, rowKey)
         }
       }
     }
 
     //remove template rows
-    logger.debug(s"processTable: ${table.getTableName} -> Remove template rows from:$startIndex, count: ${nonHeaderRows.length}")
-    table.removeRowsByIndex(startIndex, nonHeaderRows.length)
+    logger.debug(s"processTable: ${table.getTableName} -> Remove template rows from:$startIndex, count: ${nonHeaderRows.length}.")
+    if (nonHeaderRows.length == table.getRowCount) {
+      //remove whole table
+      table.remove()
+    } else {
+      table.removeRowsByIndex(startIndex, nonHeaderRows.length)
+    }
   }
 
   private def copyCell(source: Cell, dest: Cell) = {
@@ -144,21 +214,22 @@ trait DocumentProcessor extends LazyLogging {
   private def processSections(doc: TextDocument, props: Map[String, Value], locale: Locale) = {
     for {
       s <- doc.getSectionIterator
-    } yield processSection(doc, s, props, locale)
+    } processSection(doc, s, props, locale)
   }
 
   private def processSection(doc: TextDocument, section: Section, props: Map[String, Value], locale: Locale) = {
-    props.get(section.getName) collect {
+    props.get(section.getName) map {
       case Value(JsArray(values), _) =>
         processSectionWithValues(doc, section, props, values, locale)
-
-    }
+    } getOrElse logger.debug(s"Section not mapped to property, will be processed statically:${section.getName}")
   }
 
   private def processSectionWithValues(doc: TextDocument, section: Section, props: Map[String, Value], values: Vector[JsValue], locale: Locale) = {
-    for (index <- 0 to values.length) {
+    for (index <- 0 to values.length - 1) {
       val sectionKey = s"${section.getName}.$index."
-      processTextboxes(section, props, sectionKey, locale)
+      logger.debug(s"processSection:$sectionKey")
+      processTextboxes(section, props, locale, sectionKey)
+      processTables(section, props, locale, sectionKey)
       //append section
       doc.appendSection(section, false)
     }
@@ -170,8 +241,7 @@ trait DocumentProcessor extends LazyLogging {
   /**
    * Process textboxes and fill in content based on
    */
-  private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], pathPrefix: String = "", locale: Locale) = {
-    logger.debug(s"processTextboxes with prefix: ${pathPrefix}: ${cont.getParagraphIterator().next().getTextboxIterator().next()}")
+  private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefix: String = "") = {
     for {
       p <- cont.getParagraphIterator
       t <- p.getTextboxIterator
@@ -181,8 +251,8 @@ trait DocumentProcessor extends LazyLogging {
       logger.debug(s"processTextbox: ${propertyKey} | format:$format")
       props.get(propertyKey) map {
         case Value(_, value) =>
-          val formattedValue = format map (f => formatValue(f, value, locale)) getOrElse value
-          t.setTextContent(formattedValue)
+          val formatValue = format getOrElse ""
+          applyFormat(t, formatValue, value, locale)
       }
     }
   }
@@ -190,14 +260,35 @@ trait DocumentProcessor extends LazyLogging {
   /**
    *
    */
-  private def formatValue(format: String, value: String, locale: Locale): String = {
+  private def applyFormat(textbox: Textbox, format: String, value: String, locale: Locale) = {
     format match {
       case dateFormatPattern(pattern) =>
-        //parse date
-        dateFormatter.parseDateTime(value).toString(pattern, locale)
-      case _ =>
+        // parse date
+        val formattedDate = dateFormatter.parseDateTime(value).toString(pattern, locale)
+        textbox.setTextContent(formattedDate)
+      case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
+        // lookup color value        
+        val number = value.toDouble
+        if (number < 0 && negativeFormat != null) {
+          val formattedValue = new DecimalFormat(negativeFormat).format(value.toDouble)
+          if (negativeColor != null) {
+            val color = if (Color.isValid(negativeColor)) Color.valueOf(negativeColor) else colorMap.get(negativeColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:$negativeColor"))
+            textbox.setFontColor(color)
+          }
+          textbox.setTextContent(formattedValue)
+        } else {
+          val formattedValue = new DecimalFormat(positivePattern).format(value.toDouble)
+          if (positiveColor != null) {
+            val color = if (Color.isValid(positiveColor)) Color.valueOf(positiveColor) else colorMap.get(positiveColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:positiveColor"))
+            textbox.setFontColor(color)
+          }
+          textbox.setTextContent(formattedValue)
+        }
+      case x if format.length > 0 =>
         logger.warn(s"Unsupported format:$format")
-        value
+        textbox.setTextContent(value)
+      case _ =>
+        textbox.setTextContent(value)
     }
   }
 
@@ -226,6 +317,23 @@ trait DocumentProcessor extends LazyLogging {
       case j @ JsNull => Map(prefix -> Value(j, ""))
       case j @ JsString(value) => Map(prefix -> Value(j, value))
       case value => Map(prefix -> Value(value, value.toString))
+    }
+  }
+}
+
+object OdfToolkitUtils {
+  implicit class MyTextbox(self: Textbox) {
+    def setFontColor(color: Color) = {
+      println(s"set font color to:$color")
+      val myFont = new Font("Arial", StyleTypeDefinitions.FontStyle.ITALIC, 12, color);
+
+      self.getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
+      self.getStyleHandler().getTextPropertiesForWrite().setFont(myFont)
+      self.getParagraphIterator().next().getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
+      self.getParagraphIterator().next().getStyleHandler().getTextPropertiesForWrite().setFont(myFont)
+      self.getParagraphIterator().next().getFont().setColor(color)
+      self.getParagraphIterator().next().setFont(myFont)
+      self.setBackgroundColor(color)
     }
   }
 }
