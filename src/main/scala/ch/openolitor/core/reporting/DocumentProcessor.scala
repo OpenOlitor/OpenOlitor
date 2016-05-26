@@ -104,8 +104,36 @@ trait DocumentProcessor extends LazyLogging {
       x4 <- Try(processTables(doc, props, locale, ""))
       x5 <- Try(processSections(doc, props, locale))
       x6 <- Try(processTextboxes(doc, props, locale))
+      x7 <- Try(registerVariables(doc, props))
     } yield {
       true
+    }
+  }
+
+  /**
+   * Register all values as variables to conditional field might react on them
+   */
+  def registerVariables(doc: TextDocument, props: Map[String, Value]) = {
+    props.map {
+      case (property, Value(JsObject(_), _)) =>
+      //ignore object properties
+      case (property, Value(JsArray(values), _)) =>
+        //register length of array as variable
+        val field = Fields.createSimpleVariableField(doc, property + "_length")
+        field.updateField(values.length.toString, doc.getContentRoot)
+      case (property, value) =>
+        logger.debug(s"Register variable:$property")
+        val field = Fields.createSimpleVariableField(doc, property)
+        value match {
+          case Value(JsNull, _) =>
+            field.updateField("", doc.getContentRoot)
+          case Value(JsString(str), _) =>
+            field.updateField(str, doc.getContentRoot)
+          case Value(JsBoolean(bool), _) =>
+            field.updateField(if (bool) "1" else "0", doc.getContentRoot)
+          case Value(JsNumber(number), _) =>
+            field.updateField(number.toString, doc.getContentRoot)
+        }
     }
   }
 
