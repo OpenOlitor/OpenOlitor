@@ -49,6 +49,7 @@ trait DocumentProcessor extends LazyLogging {
   val dateFormatPattern = """date:\s*"(.*)"""".r
   val numberFormatPattern = """number:\s*"(\[(\w+)\])?([#,.0]+)(;((\[(\w+)\])?-([#,.0]+)))?"""".r
   val dateFormatter = ISODateTimeFormat.dateTime
+  val libreOfficeDateFormat = DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss")
 
   val colorMap: Map[String, Color] = Map(
     // english words
@@ -264,7 +265,7 @@ trait DocumentProcessor extends LazyLogging {
     format match {
       case dateFormatPattern(pattern) =>
         // parse date
-        val formattedDate = dateFormatter.parseDateTime(value).toString(pattern, locale)
+        val formattedDate = libreOfficeDateFormat.parseDateTime(value).toString(pattern, locale)
         textbox.setTextContent(formattedDate)
       case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
         // lookup color value        
@@ -315,6 +316,10 @@ trait DocumentProcessor extends LazyLogging {
           case (v, index) => extractProperties(v, s"$childPrefix$index")
         }.flatten.toMap + (prefix -> Value(j, ""))
       case j @ JsNull => Map(prefix -> Value(j, ""))
+      case j @ JsString(value) if Try(dateFormatter.parseDateTime(value)).isSuccess =>
+        //it is a date, convert to libreoffice compatible datetime format
+        val convertedDate = dateFormatter.parseDateTime(value).toString(libreOfficeDateFormat)
+        Map(prefix -> Value(j, convertedDate))
       case j @ JsString(value) => Map(prefix -> Value(j, value))
       case value => Map(prefix -> Value(value, value.toString))
     }
