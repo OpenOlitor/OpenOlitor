@@ -360,6 +360,11 @@ object OdfToolkitUtils {
       println(s"set font color to:$color")
       val myFont = new Font("Arial", StyleTypeDefinitions.FontStyle.ITALIC, 12, color);
 
+      val props = self.getStyleHandler().getTextPropertiesForWrite()
+      val styleName = self.getStyleHandler().getStyleElementForWrite().getAttribute("name")
+      self.getParagraphContainerElement().setAttributeNS("style", "style-name", styleName)
+      println(s"Register style name:$styleName")
+
       self.getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
       self.getStyleHandler().getTextPropertiesForWrite().setFont(myFont)
       self.getParagraphIterator().next().getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
