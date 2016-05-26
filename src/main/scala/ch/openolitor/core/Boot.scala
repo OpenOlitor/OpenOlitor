@@ -61,6 +61,7 @@ import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 import ch.openolitor.core.models.BaseId
 import spray.caching.LruCache
 import ch.openolitor.core.security.Subject
+import ch.openolitor.core.mailservice.MailService
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -155,7 +156,7 @@ object Boot extends App with LazyLogging {
         timeToIdle = 4 hours
       )
 
-      //initialuze root actors
+      // initialise root actors
       val duration = Duration.create(1, SECONDS);
       val system = app.actorOf(SystemActor.props, "oo-system")
       logger.debug(s"oo-system:$system")
@@ -164,6 +165,10 @@ object Boot extends App with LazyLogging {
       val eventStore = Await.result(system ? SystemActor.Child(SystemEventStore.props, "event-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> eventStore:$eventStore")
       eventStore ! "Nop"
+
+      val mailService = Await.result(system ? SystemActor.Child(MailService.props, "mail-service"), duration).asInstanceOf[ActorRef]
+      logger.debug(s"oo-system:$system -> eventStore:$mailService")
+
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 
       //start actor listening on dbevents to modify calculated fields

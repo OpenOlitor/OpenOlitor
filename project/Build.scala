@@ -64,7 +64,8 @@ object BuildSettings {
 	    "com.scalapenos"               %%  "stamina-json"                         % "0.1.1",
       // s3
       "com.amazonaws"                %   "aws-java-sdk"                         % "1.11.4",
-      "de.svenkubiak"                %   "jBCrypt"                              % "0.4.1"
+      "de.svenkubiak"                %   "jBCrypt"                              % "0.4.1",
+      "me.lessis"                    %%  "courier"                              % "0.1.3"
 	  )
 	}
   )
