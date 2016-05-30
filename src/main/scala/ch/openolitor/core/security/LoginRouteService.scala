@@ -58,6 +58,8 @@ import ch.openolitor.core.domain.SystemEvents
 import spray.routing.authentication.UserPass
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import akka.pattern.ask
+import ch.openolitor.core.mailservice.MailService._
+import ch.openolitor.core.mailservice.Mail
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -302,17 +304,18 @@ trait LoginRouteService extends HttpService with ActorReferences
   }
 
   private def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
-    Future {
-      logger.debug(s"=====================================================================")
-      logger.debug(s"| Send Email to: ${person.email}")
-      logger.debug(s"---------------------------------------------------------------------")
-      logger.debug(s"| Token: ${secondFactor.token}")
-      logger.debug(s"| Code: ${secondFactor.code}")
-      logger.debug(s"=====================================================================")
+    logger.debug(s"=====================================================================")
+    logger.debug(s"| Send Email to: ${person.email}")
+    logger.debug(s"---------------------------------------------------------------------")
+    logger.debug(s"| Token: ${secondFactor.token}")
+    logger.debug(s"| Code: ${secondFactor.code}")
+    logger.debug(s"=====================================================================")
 
-      //TODO: bind to email service
-
-      true.right
+    val mail = Mail(1, person.email.get, None, None, "OpenOlitor Second Factor",
+      s"""Code: ${secondFactor.code}""")
+    mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail) map {
+      case MailSentEvent =>
+        true.right
     }
   }
 
@@ -380,6 +383,7 @@ trait LoginRouteService extends HttpService with ActorReferences
 class DefaultLoginRouteService(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
+  override val mailService: ActorRef,
   override val sysConfig: SystemConfig,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory,

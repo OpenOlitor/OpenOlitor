@@ -20,13 +20,24 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core
+package ch.openolitor.mailservice
 
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
+import stamina._
+import stamina.json._
+import ch.openolitor.core.domain.EntityStore._
+import ch.openolitor.core.domain.EntityStoreJsonProtocol
+import ch.openolitor.core.mailservice.MailService._
+import zangelo.spray.json.AutoProductFormats
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.eventsourcing.CoreEventStoreSerializer
 
-trait ActorReferences {
-  val entityStore: ActorRef
-  val eventStore: ActorRef
-  val mailService: ActorRef
+trait MailEventStoreSerializer extends EntityStoreJsonProtocol with CoreEventStoreSerializer with AutoProductFormats[JSONSerializable] {
+  //V1 persisters
+  implicit val sendMailEventPersister = persister[SendMailEvent]("send-mail-event")
+  implicit val mailSentEventPersister = persister[MailSentEvent]("mail-sent-event")
+
+  val mailPersisters = List(
+    sendMailEventPersister,
+    mailSentEventPersister
+  )
 }

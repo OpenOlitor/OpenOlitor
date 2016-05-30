@@ -42,6 +42,8 @@ import scala.concurrent.Future
 import stamina.Persister
 import java.util.UUID
 import scala.collection.immutable.TreeSet
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.models.BaseId
 
 object MailService {
   import AggregateRoot._
@@ -51,13 +53,15 @@ object MailService {
 
   case class MailServiceState(startTime: DateTime, seqNr: Long, mailQueue: TreeSet[MailEnqueued]) extends State
 
-  case class SendMailCommand[M <% Persister[M, _]](originator: PersonId, entity: Mail, commandMeta: Option[M]) extends UserCommand
+  case class SendMailCommand(originator: PersonId, entity: Mail) extends UserCommand
+
+  case class SendMailCommandWithCallback(originator: PersonId, entity: Mail, commandMeta: Option[BaseId]) extends UserCommand
 
   //events raised by this aggregateroot
   case class MailServiceInitialized(meta: EventMetadata) extends PersistentEvent
   // resulting send mail event
-  case class SendMailEvent[M](meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[M]) extends PersistentEvent
-  case class MailSentEvent[M](meta: EventMetadata, uid: String, commandMeta: Option[M]) extends PersistentEvent
+  case class SendMailEvent(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[BaseId]) extends PersistentEvent with JSONSerializable
+  case class MailSentEvent(meta: EventMetadata, uid: String, commandMeta: Option[BaseId]) extends PersistentEvent with JSONSerializable
 
   def props()(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultMailService], sysConfig)
 
@@ -81,7 +85,7 @@ trait MailService extends AggregateRoot
     .as(sysConfig.mandantConfiguration.config.getString("smtp.user"), sysConfig.mandantConfiguration.config.getString("smtp.password"))
     .startTtls(true)()
 
-  override var state: MailServiceState = MailServiceState(DateTime.now, 0L, TreeSet())
+  override var state: MailServiceState = MailServiceState(DateTime.now, 0L, TreeSet.empty[MailEnqueued])
 
   def initialize(): Unit = {
     // start mail queue checker
@@ -100,7 +104,7 @@ trait MailService extends AggregateRoot
     }
   }
 
-  def sendMail(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[_]): Future[MailSentEvent[_]] = {
+  def sendMail[M <: AnyRef](meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[BaseId]): Future[MailSentEvent] = {
     var envelope = Envelope.from(new InternetAddress(fromAddress))
       .to(InternetAddress.parse(mail.to): _*)
       .subject(mail.subject)
@@ -119,8 +123,8 @@ trait MailService extends AggregateRoot
     }
   }
 
-  def enqueueMail(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[_]): Unit = {
-    state.mailQueue(MailEnqueued(meta, uid, mail, commandMeta, DateTime.now(), 0))
+  def enqueueMail[M <: AnyRef](meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[BaseId]): Unit = {
+    state = state.copy(mailQueue = state.mailQueue + MailEnqueued(meta, uid, mail, commandMeta, DateTime.now(), 0))
   }
 
   override def updateState(evt: PersistentEvent): Unit = {
@@ -166,10 +170,10 @@ trait MailService extends AggregateRoot
       sender ! state
     case CheckMailQueue =>
       checkMailQueue()
-    case SendMailCommand(personId, mail, commandMeta) =>
+    case SendMailCommand(personId, mail) =>
       val meta = metadata(personId)
       val id = newId
-      val event = SendMailEvent(meta, id, mail, commandMeta)
+      val event = SendMailEvent(meta, id, mail, None)
       persist(event)(afterEventPersisted)
     case other =>
       log.error(s"Received unknown command:$other")

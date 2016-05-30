@@ -25,10 +25,13 @@ package ch.openolitor.core.mailservice
 import ch.openolitor.core.domain.EventMetadata
 import org.joda.time.DateTime
 import ch.openolitor.core.models.BaseId
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
-case class Mail(priority: Int, to: String, cc: Option[String], bcc: Option[String], subject: String, content: String)
+case class Mail(priority: Int, to: String, cc: Option[String], bcc: Option[String], subject: String, content: String) extends JSONSerializable
 
-case class MailEnqueued(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[_], nextTry: DateTime, retries: Int) extends Ordered[MailEnqueued] {
+case class MailEnqueued(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[BaseId], nextTry: DateTime, retries: Int)
+    extends Ordered[MailEnqueued] {
   import scala.math.Ordered.orderingToOrdered
   implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
 
