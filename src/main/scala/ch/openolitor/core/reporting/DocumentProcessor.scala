@@ -23,6 +23,10 @@
 package ch.openolitor.core.reporting
 
 import org.odftoolkit.odfdom.`type`.Color
+import org.odftoolkit.odfdom.pkg.OdfElement
+import org.odftoolkit.odfdom.dom._
+import org.odftoolkit.odfdom.dom.element.text._
+import org.odftoolkit.odfdom.dom.style._
 import org.odftoolkit.simple._
 import org.odftoolkit.simple.common.field._
 import org.odftoolkit.simple.table._
@@ -34,7 +38,6 @@ import spray.json._
 import scala.collection.JavaConversions._
 import org.joda.time.format.ISODateTimeFormat
 import com.typesafe.scalalogging.LazyLogging
-import org.odftoolkit.odfdom.pkg.OdfElement
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import java.text.DecimalFormat
@@ -275,6 +278,7 @@ trait DocumentProcessor extends LazyLogging {
       p <- cont.getParagraphIterator
       t <- p.getTextboxIterator
     } {
+      t.removeCommonStyle()
       val (name, format) = parseFormat(t.getName)
       val propertyKey = s"$pathPrefix$name"
       logger.debug(s"processTextbox: ${propertyKey} | format:$format")
@@ -300,18 +304,18 @@ trait DocumentProcessor extends LazyLogging {
         val number = value.toDouble
         if (number < 0 && negativeFormat != null) {
           val formattedValue = new DecimalFormat(negativeFormat).format(value.toDouble)
+          textbox.setTextContent(formattedValue)
           if (negativeColor != null) {
             val color = if (Color.isValid(negativeColor)) Color.valueOf(negativeColor) else colorMap.get(negativeColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:$negativeColor"))
             textbox.setFontColor(color)
           }
-          textbox.setTextContent(formattedValue)
         } else {
           val formattedValue = new DecimalFormat(positivePattern).format(value.toDouble)
+          textbox.setTextContent(formattedValue)
           if (positiveColor != null) {
             val color = if (Color.isValid(positiveColor)) Color.valueOf(positiveColor) else colorMap.get(positiveColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:positiveColor"))
             textbox.setFontColor(color)
           }
-          textbox.setTextContent(formattedValue)
         }
       case x if format.length > 0 =>
         logger.warn(s"Unsupported format:$format")
@@ -356,22 +360,49 @@ trait DocumentProcessor extends LazyLogging {
 
 object OdfToolkitUtils {
   implicit class MyTextbox(self: Textbox) {
+    /**
+     * Remove style declared on draw textbox, otherwise styles applied on template won't get applied
+     */
+    def removeCommonStyle() = {
+      self.getDrawFrameElement().setDrawTextStyleNameAttribute(null)
+    }
+
     def setFontColor(color: Color) = {
-      println(s"set font color to:$color")
-      val myFont = new Font("Arial", StyleTypeDefinitions.FontStyle.ITALIC, 12, color);
+      val myFont = new Font("Arial", StyleTypeDefinitions.FontStyle.ITALIC, 24, color);
 
-      val props = self.getStyleHandler().getTextPropertiesForWrite()
-      val styleName = self.getStyleHandler().getStyleElementForWrite().getAttribute("name")
-      self.getParagraphContainerElement().setAttributeNS("style", "style-name", styleName)
-      println(s"Register style name:$styleName")
+      //      self.getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
+      //      self.getStyleHandler().getTextPropertiesForWrite().setFont(myFont)
+      val p = self.getParagraphIterator.next()
+      p.getStyleHandler.getTextPropertiesForWrite().setFontColor(color)
+      val styleName = p.getStyleName()
 
-      self.getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
-      self.getStyleHandler().getTextPropertiesForWrite().setFont(myFont)
-      self.getParagraphIterator().next().getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
-      self.getParagraphIterator().next().getStyleHandler().getTextPropertiesForWrite().setFont(myFont)
-      self.getParagraphIterator().next().getFont().setColor(color)
-      self.getParagraphIterator().next().setFont(myFont)
-      self.setBackgroundColor(color)
+      val lastNode = p.getOdfElement.getLastChild();
+      if (lastNode != null && lastNode.getNodeName() != null
+        && (lastNode.getNodeName().equals("text:a") || lastNode.getNodeName().equals("text:span"))) {
+        // register style as well on span element
+        lastNode.asInstanceOf[OdfElement].setAttributeNS("urn:oasis:names:tc:opendocument:xlmns:style:1.0", "style:style-name", styleName)
+      } else {
+        // create new style element to support coloring of font
+        val content = self.getTextContent
+        //remove last node (current text node)
+        p.getOdfElement.removeChild(lastNode)
+        val textP = p.getOdfElement.asInstanceOf[TextPElement]
+        val span = textP.newTextSpanElement()
+
+        val dom = self.getOdfElement.getOwnerDocument
+        val styles = if (dom.isInstanceOf[OdfContentDom]) {
+          dom.asInstanceOf[OdfContentDom].getAutomaticStyles
+        } else {
+          dom.asInstanceOf[OdfStylesDom].getAutomaticStyles
+        }
+        val textStyle = styles.newStyle(OdfStyleFamily.Text)
+        val styleTextPropertiesElement = textStyle.newStyleTextPropertiesElement(null)
+        styleTextPropertiesElement.setFoColorAttribute(color.toString)
+
+        // set comment content
+        span.setStyleName(textStyle.getStyleNameAttribute)
+        span.setTextContent(content)
+      }
     }
   }
 }
