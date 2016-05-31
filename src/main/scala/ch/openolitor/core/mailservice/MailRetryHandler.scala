@@ -22,18 +22,28 @@
 \*                                                                           */
 package ch.openolitor.core.mailservice
 
-import ch.openolitor.core.domain.EventMetadata
 import org.joda.time.DateTime
-import ch.openolitor.core.models.BaseId
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
+import scala.math._
 
-case class Mail(priority: Int, to: String, cc: Option[String], bcc: Option[String], subject: String, content: String) extends JSONSerializable
+trait MailRetryHandler {
+  val MaxNumberOfRetries: Int
+  def calculateRetryEnqueued(enqueued: MailEnqueued): Option[MailEnqueued]
+}
 
-case class MailEnqueued(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef], nextTry: DateTime, retries: Int)
-    extends Ordered[MailEnqueued] {
-  import scala.math.Ordered.orderingToOrdered
-  implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
+trait DefaultMailRetryHandler extends MailRetryHandler {
+  //  val RetryTime = List(10, 60, 300, 900, 3600)
+  val RetryTime = List(10, 10, 10, 10, 10)
 
-  def compare(that: MailEnqueued): Int = (this.mail.priority, this.nextTry) compare (that.mail.priority, that.nextTry)
+  override def calculateRetryEnqueued(enqueued: MailEnqueued): Option[MailEnqueued] = {
+    if (enqueued.retries < MaxNumberOfRetries && enqueued.nextTry.isBefore(DateTime.now())) {
+      Some(enqueued.copy(
+        retries = enqueued.retries + 1,
+        nextTry = enqueued.nextTry.plusSeconds(
+          if (enqueued.retries < RetryTime.size) RetryTime(enqueued.retries) else RetryTime.last
+        )
+      ))
+    } else {
+      None
+    }
+  }
 }

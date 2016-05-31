@@ -43,6 +43,7 @@ import stamina.Persister
 import java.util.UUID
 import scala.collection.immutable.TreeSet
 import ch.openolitor.core.JSONSerializable
+import scala.math._
 
 object MailService {
   import AggregateRoot._
@@ -60,6 +61,7 @@ object MailService {
   // resulting send mail event
   case class SendMailEvent(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef]) extends PersistentEvent with JSONSerializable
   case class MailSentEvent(meta: EventMetadata, uid: String, commandMeta: Option[AnyRef]) extends PersistentEvent with JSONSerializable
+  case class SendMailFailedEvent(meta: EventMetadata, uid: String, afterNumberOfRetries: Int, commandMeta: Option[AnyRef]) extends PersistentEvent with JSONSerializable
 
   def props()(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultMailService], sysConfig)
 
@@ -68,7 +70,8 @@ object MailService {
 
 trait MailService extends AggregateRoot
     with ConnectionPoolContextAware
-    with CommandHandlerComponent {
+    with CommandHandlerComponent
+    with MailRetryHandler {
 
   import MailService._
   import AggregateRoot._
@@ -77,6 +80,7 @@ trait MailService extends AggregateRoot
   type S = MailServiceState
 
   val fromAddress = sysConfig.mandantConfiguration.config.getString("smtp.from")
+  val MaxNumberOfRetries = sysConfig.mandantConfiguration.config.getInt("smtp.number-of-retries")
 
   val mailer = Mailer(sysConfig.mandantConfiguration.config.getString("smtp.endpoint"), sysConfig.mandantConfiguration.config.getInt("smtp.port"))
     .auth(true)
@@ -93,7 +97,7 @@ trait MailService extends AggregateRoot
 
   def initialize(): Unit = {
     // start mail queue checker
-    context.system.scheduler.schedule(0 seconds, 30 seconds, self, CheckMailQueue)(context.system.dispatcher)
+    context.system.scheduler.schedule(0 seconds, 10 seconds, self, CheckMailQueue)(context.system.dispatcher)
   }
 
   def checkMailQueue(): Unit = {
@@ -103,6 +107,17 @@ trait MailService extends AggregateRoot
 
         sendMail(enqueued.meta, enqueued.uid, enqueued.mail, enqueued.commandMeta) map { event =>
           persist(event)(afterEventPersisted)
+        } recoverWith {
+          case e =>
+            log.error(s"Failed to send mail ${e.getMessage}. Trying again later.")
+
+            calculateRetryEnqueued(enqueued) map { result =>
+              state = state.copy(mailQueue = state.mailQueue - enqueued + result)
+            } getOrElse {
+              persist(SendMailFailedEvent(enqueued.meta, enqueued.uid, MaxNumberOfRetries, enqueued.commandMeta))(afterEventPersisted)
+            }
+
+            Future.failed(e)
         }
       }
     }
@@ -131,6 +146,12 @@ trait MailService extends AggregateRoot
     state = state.copy(mailQueue = state.mailQueue + MailEnqueued(meta, uid, mail, commandMeta, DateTime.now(), 0))
   }
 
+  def dequeueMail(uid: String): Unit = {
+    state.mailQueue.find(_.uid == uid) map { dequeue =>
+      state = state.copy(mailQueue = state.mailQueue - dequeue)
+    }
+  }
+
   override def updateState(evt: PersistentEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
@@ -138,6 +159,8 @@ trait MailService extends AggregateRoot
       case SendMailEvent(meta, uid, mail, commandMeta) =>
         enqueueMail(meta, uid, mail, commandMeta)
         self ! CheckMailQueue
+      case SendMailFailedEvent(_, uid, _, _) =>
+        dequeueMail(uid)
       case _ =>
     }
   }
@@ -215,12 +238,14 @@ trait MailService extends AggregateRoot
 
   override def afterRecoveryCompleted(): Unit = {
     context become created
+    initialize()
   }
 
   override val receiveCommand = uninitialized
 }
 
 class DefaultMailService(override val sysConfig: SystemConfig) extends MailService
-    with DefaultCommandHandlerComponent {
+    with DefaultCommandHandlerComponent
+    with DefaultMailRetryHandler {
   val system = context.system
 }
