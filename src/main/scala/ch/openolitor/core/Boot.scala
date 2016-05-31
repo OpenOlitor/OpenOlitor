@@ -61,6 +61,7 @@ import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 import ch.openolitor.core.models.BaseId
 import spray.caching.LruCache
 import ch.openolitor.core.security.Subject
+import ch.openolitor.core.reporting._
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -165,6 +166,7 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system:$system -> eventStore:$eventStore")
       eventStore ! "Nop"
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
+      val reportSystem = Await.result(system ? SystemActor.Child(ReportSystem.props, "report"), duration).asInstanceOf[ActorRef]
 
       //start actor listening on dbevents to modify calculated fields
       val stammdatenDBEventListener = Await.result(system ? SystemActor.Child(StammdatenDBEventEntityListener.props, "stammdaten-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
@@ -183,7 +185,7 @@ object Boot extends App with LazyLogging {
       stammdatenEntityStoreView ! EntityStoreView.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, reportSystem, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler

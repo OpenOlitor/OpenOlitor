@@ -23,8 +23,6 @@
 package ch.openolitor.core.reporting
 
 import akka.actor._
-import akka.stream._
-import akka.stream.scaladsl._
 import akka.util._
 import scala.concurrent.duration._
 import java.io.InputStream
@@ -38,27 +36,39 @@ import java.nio._
 object SingleDocumentReportProcessorActor {
   def props(): Props = Props(classOf[SingleDocumentReportProcessorActor])
 
-  case class GenerateReport(file: Source[ByteString, Unit], data: JsObject)
+  case class GenerateReport(file: ByteString, data: JsObject)
+  case class ReportResult(data: JsObject, document: ByteString)
+  case class ReportError(data: JsObject, error: Throwable)
 }
 
+/**
+ * This generates a single report documet from a given json data object
+ */
 class SingleDocumentReportProcessorActor extends Actor with ActorLogging with DocumentProcessor {
   import SingleDocumentReportProcessorActor._
 
   val receive: Receive = {
     case GenerateReport(file, data) =>
-      sender ! generateReport(file, data)
+      generateReport(file, data) match {
+        case Success(result) => {
+          sender ! ReportResult(data, result)
+          self ! PoisonPill
+        }
+        case Failure(error) => {
+          sender ! ReportError(data, error)
+          self ! PoisonPill
+        }
+      }
   }
 
-  private def generateReport(file: Source[ByteString, Unit], data: JsObject): Source[Try[ByteString], Unit] = {
-    file.map { stream =>
-      for {
-        doc <- Try(TextDocument.loadDocument(new ByteBufferBackedInputStream(stream.asByteBuffer)))
-        result <- processDocument(doc, data)
-      } yield {
-        val baos = new ByteArrayOutputStream()
-        doc.save(baos)
-        ByteString(ByteBuffer.wrap(baos.toByteArray))
-      }
+  private def generateReport(file: ByteString, data: JsObject): Try[ByteString] = {
+    for {
+      doc <- Try(TextDocument.loadDocument(new ByteBufferBackedInputStream(file.asByteBuffer)))
+      result <- processDocument(doc, data)
+    } yield {
+      val baos = new ByteArrayOutputStream()
+      doc.save(baos)
+      ByteString(ByteBuffer.wrap(baos.toByteArray))
     }
   }
 }

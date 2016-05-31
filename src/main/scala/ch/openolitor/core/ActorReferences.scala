@@ -28,4 +28,5 @@ import akka.actor.ActorSystem
 trait ActorReferences {
   val entityStore: ActorRef
   val eventStore: ActorRef
+  val reportSystem: ActorRef
 }

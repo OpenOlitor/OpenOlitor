@@ -22,8 +22,33 @@
 \*                                                                           */
 package ch.openolitor.core.reporting
 
+import akka.actor._
+import akka.util.ByteString
 import spray.json._
 
-case class ReportConfig[E: JsonFormat](rows: Seq[E]) {
-  val rowsAsJson = JsArray(rows.map(_.toJson).toVector)
+object ReportSystem {
+  def props(): Props = Props(classOf[ReportSystem])
+
+  case class JobId(id: Long = System.currentTimeMillis)
+  case class ReportData[E: JsonFormat](jobId: JobId, rows: Seq[E]) {
+    val rowsAsJson = rows.map(_.toJson.asJsObject)
+  }
+
+  case class GenerateReports(file: ByteString, data: ReportData[_])
+  case class SingleReportResult(stats: GenerateReportsStats, result: Either[SingleDocumentReportProcessorActor.ReportError, SingleDocumentReportProcessorActor.ReportResult])
+  case class GenerateReportsStats(jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int)
+}
+
+/**
+ * The reportsystem is responsible to dispatch report generating request to processor actors
+ */
+class ReportSystem extends Actor with ActorLogging {
+  import ReportSystem._
+
+  val receive: Receive = {
+    case request: GenerateReports =>
+      val processor = context.actorOf(ReportProcessorActor.props)
+      //forward request to new processor-actor
+      processor forward request
+  }
 }

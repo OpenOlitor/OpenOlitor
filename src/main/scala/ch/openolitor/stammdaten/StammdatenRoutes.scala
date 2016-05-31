@@ -398,6 +398,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 class DefaultStammdatenRoutes(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
+  override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
