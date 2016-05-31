@@ -31,6 +31,7 @@ import org.odftoolkit.simple._
 import org.odftoolkit.simple.common.field._
 import org.odftoolkit.simple.table._
 import org.odftoolkit.simple.text._
+import org.odftoolkit.simple.text.list._
 import org.odftoolkit.simple.draw._
 import org.odftoolkit.simple.style._
 import scala.util.Try
@@ -101,13 +102,14 @@ trait DocumentProcessor extends LazyLogging {
     doc.setLocale(locale)
     for {
       props <- Try(extractProperties(data))
-      x <- Try(processVariables(doc.getHeader, props))
-      x2 <- Try(processVariables(doc.getFooter, props))
-      x3 <- Try(processVariables(doc, props))
-      x4 <- Try(processTables(doc, props, locale, ""))
-      x5 <- Try(processSections(doc, props, locale))
-      x6 <- Try(processTextboxes(doc, props, locale))
-      x7 <- Try(registerVariables(doc, props))
+      _ <- Try(processVariables(doc.getHeader, props))
+      _ <- Try(processVariables(doc.getFooter, props))
+      _ <- Try(processVariables(doc, props))
+      _ <- Try(processTables(doc, props, locale, ""))
+      _ <- Try(processLists(doc, props, locale, ""))
+      _ <- Try(processSections(doc, props, locale))
+      _ <- Try(processTextboxes(doc, props, locale))
+      _ <- Try(registerVariables(doc, props))
     } yield {
       true
     }
@@ -188,6 +190,25 @@ trait DocumentProcessor extends LazyLogging {
     }
   }
 
+  def processLists(doc: ListContainer, props: Map[String, Value], locale: Locale, prefix: String) = {
+    for {
+      list <- doc.getListIterator
+    } processList(doc, list, props, locale, prefix)
+  }
+
+  /**
+   * Process list:
+   * process content of every list item as paragraph container
+   */
+  def processList(doc: ListContainer, list: List, props: Map[String, Value], locale: Locale, prefix: String) = {
+    for {
+      item <- list.getItems
+    } yield {
+      val container = new GenericParagraphContainerImpl(item.getOdfElement())
+      processTextboxes(container, props, locale, prefix)
+    }
+  }
+
   def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, prefix: String) = {
     val startIndex = Math.max(table.getHeaderRowCount, 0)
     val rows = table.getRowList.toList
@@ -262,6 +283,7 @@ trait DocumentProcessor extends LazyLogging {
       logger.debug(s"processSection:$sectionKey")
       processTextboxes(section, props, locale, sectionKey)
       processTables(section, props, locale, sectionKey)
+      processLists(section, props, locale, sectionKey)
       //append section
       doc.appendSection(section, false)
     }
@@ -368,10 +390,6 @@ object OdfToolkitUtils {
     }
 
     def setFontColor(color: Color) = {
-      val myFont = new Font("Arial", StyleTypeDefinitions.FontStyle.ITALIC, 24, color);
-
-      //      self.getStyleHandler().getTextPropertiesForWrite().setFontColor(color)
-      //      self.getStyleHandler().getTextPropertiesForWrite().setFont(myFont)
       val p = self.getParagraphIterator.next()
       p.getStyleHandler.getTextPropertiesForWrite().setFontColor(color)
       val styleName = p.getStyleName()
@@ -404,5 +422,11 @@ object OdfToolkitUtils {
         span.setTextContent(content)
       }
     }
+  }
+}
+
+class GenericParagraphContainerImpl(containerElement: OdfElement) extends AbstractParagraphContainer {
+  def getParagraphContainerElement(): OdfElement = {
+    containerElement
   }
 }
