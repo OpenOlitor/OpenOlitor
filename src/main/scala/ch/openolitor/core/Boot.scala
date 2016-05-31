@@ -166,7 +166,7 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system:$system -> eventStore:$eventStore")
       eventStore ! "Nop"
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
-      val reportSystem = Await.result(system ? SystemActor.Child(ReportSystem.props, "report"), duration).asInstanceOf[ActorRef]
+      val reportSystem = Await.result(system ? SystemActor.Child(ReportSystem.props, "report-system"), duration).asInstanceOf[ActorRef]
 
       //start actor listening on dbevents to modify calculated fields
       val stammdatenDBEventListener = Await.result(system ? SystemActor.Child(StammdatenDBEventEntityListener.props, "stammdaten-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
