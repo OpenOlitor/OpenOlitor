@@ -581,14 +581,13 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseLieferplanungen = {
-    parse[Lieferplanung, LieferplanungId]("id", Seq("nr", "bemerkung", "abotyp_depot_tour", "status") ++ modifiCols) { id => indexes => row =>
+    parse[Lieferplanung, LieferplanungId]("id", Seq("bemerkung", "abotyp_depot_tour", "status") ++ modifiCols) { id => indexes => row =>
       //match column indexes
-      val Seq(indexNr, indexBemerkung, indexAbotypDepotTour, indexStatus) = indexes.take(4)
+      val Seq(indexBemerkung, indexAbotypDepotTour, indexStatus) = indexes.take(4)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes.takeRight(4)
 
       Lieferplanung(
         id = LieferplanungId(id),
-        nr = row.value[Int](indexNr),
         bemerkungen = row.value[Option[String]](indexBemerkung),
         abotypDepotTour = row.value[String](indexAbotypDepotTour),
         status = LieferungStatus(row.value[String](indexStatus)),
@@ -686,7 +685,6 @@ class DataImportParser extends Actor with ActorLogging {
       val preisTotal = row.value[BigDecimal](indexPreisTotal)
 
       val lieferplanungId = row.value[Option[Long]](indexLieferplanungId).map(LieferplanungId)
-      val lieferplanungNr = lieferplanungId.map(id => lieferplanungen.find(_.id == id).getOrElse(throw ParseException(s"No lieferplanung found for id $id")).nr)
 
       Lieferung(
         id = lieferungId,
@@ -704,7 +702,6 @@ class DataImportParser extends Actor with ActorLogging {
         zielpreis = row.value[Option[BigDecimal]](indexZielpreis),
         preisTotal = row.value[BigDecimal](indexPreisTotal),
         lieferplanungId = lieferplanungId,
-        lieferplanungNr = lieferplanungNr,
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -791,14 +788,12 @@ class DataImportParser extends Actor with ActorLogging {
       val produzent = produzenten.find(_.id == produzentId).getOrElse(throw ParseException(s"No produzent found with id $produzentId"))
 
       val lieferplanungId = LieferplanungId(row.value[Long](indexLieferplanungId))
-      val lieferplanungNr = lieferplanungen.find(_.id == id).getOrElse(throw ParseException(s"No lieferplanung found for id $id")).nr
 
       Bestellung(
         id = BestellungId(id),
         produzentId = produzentId,
         produzentKurzzeichen = produzent.kurzzeichen,
         lieferplanungId,
-        lieferplanungNr,
         status = Offen,
         datum = row.value[DateTime](indexDatum),
         datumAbrechnung = row.value[Option[DateTime]](indexDatumAbrechnung),

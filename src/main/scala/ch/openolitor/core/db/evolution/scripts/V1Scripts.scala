@@ -319,7 +319,6 @@ object V1Scripts {
 
       sql"""create table ${lieferplanungMapping.table}  (
         id varchar(36) not null,
-        nr int not null,
         bemerkungen varchar(2000),
         abotyp_depot_tour varchar(2000),
         status varchar(50) not null,
@@ -344,7 +343,6 @@ object V1Scripts {
         zielpreis DECIMAL(7,2),
         preis_total DECIMAL(7,2) not null,
         lieferplanung_id varchar(36),
-        lieferplanung_nr int,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -371,7 +369,6 @@ object V1Scripts {
         produzent_id varchar(36) not null,
         produzent_kurzzeichen varchar(6) not null,
         lieferplanung_id varchar(36) not null,
-        lieferplanung_nr int not null,
         status varchar(50) not null,
         datum datetime not null,
         datum_abrechnung datetime default null,
