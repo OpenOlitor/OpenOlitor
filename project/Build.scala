@@ -36,6 +36,7 @@ object BuildSettings {
 	    "com.typesafe.akka"            %%  "akka-persistence"                     % akkaV,    
 	    "com.typesafe.akka"            %%  "akka-persistence-query-experimental"  % akkaV,
 	    "com.typesafe.akka"            %%  "akka-slf4j"    					              % akkaV,
+	    "com.typesafe.akka"            %%  "akka-stream"    					              % akkaV,
 	    "com.typesafe.akka"            %%  "akka-testkit"  			    	            % akkaV       % "test",    
 	    "com.github.dnvriend"          %%  "akka-persistence-inmemory" 		        % "1.0.5"     % "test",
 	    "org.specs2"                   %%  "specs2-core"   					              % specs2V     % "test",
