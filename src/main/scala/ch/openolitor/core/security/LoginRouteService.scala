@@ -81,7 +81,6 @@ trait LoginRouteService extends HttpService with ActorReferences
 
   lazy val config = sysConfig.mandantConfiguration.config
   lazy val requireSecondFactorAuthentication = config.getBooleanOption(s"security.second-factor-auth.require").getOrElse(true)
-  lazy val sendSecondFactorEmail = config.getBooleanOption(s"security.second-factor-auth.send-email").getOrElse(true)
   override lazy val maxRequestDelay: Option[Duration] = config.getLongOption(s"security.max-request-delay").map(_ millis)
 
   //pasword validation options
@@ -304,26 +303,14 @@ trait LoginRouteService extends HttpService with ActorReferences
   }
 
   private def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
-
-    if (sendSecondFactorEmail) {
-      val mail = Mail(1, person.email.get, None, None, "OpenOlitor Second Factor",
-        s"""Code: ${secondFactor.code}""")
-      mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail) map {
-        case _: SendMailEvent =>
-          true.right
-        case other =>
-          logger.debug(s"Sending Mail failed resulting in $other")
-          RequestFailed(s"Mail konnte nicht zugestellt werden").left
-      }
-    } else {
-      logger.debug(s"=====================================================================")
-      logger.debug(s"| Send Email to: ${person.email}")
-      logger.debug(s"---------------------------------------------------------------------")
-      logger.debug(s"| Token: ${secondFactor.token}")
-      logger.debug(s"| Code: ${secondFactor.code}")
-      logger.debug(s"=====================================================================")
-
-      Future.successful(true.right)
+    val mail = Mail(1, person.email.get, None, None, "OpenOlitor Second Factor",
+      s"""Code: ${secondFactor.code}""")
+    mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail) map {
+      case _: SendMailEvent =>
+        true.right
+      case other =>
+        logger.debug(s"Sending Mail failed resulting in $other")
+        RequestFailed(s"Mail konnte nicht zugestellt werden").left
     }
   }
 

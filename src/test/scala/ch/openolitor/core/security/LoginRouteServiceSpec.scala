@@ -42,6 +42,7 @@ import scala.concurrent.ExecutionContext
 import ch.openolitor.core.domain.SystemEventStore
 import akka.testkit.TestActorRef
 import ch.openolitor.core.domain.DefaultSystemEventStore
+import ch.openolitor.core.mailservice.DefaultMailService
 import akka.actor.Actor
 import akka.actor.ActorSystem
 import spray.caching.Cache
@@ -68,7 +69,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     implicit val timeoutAsDuration: Duration = timeout.duration
 
     "Succeed" in {
-      val service = new MockLoginRouteService(false, false)
+      val service = new MockLoginRouteService(false)
 
       service.stammdatenReadRepository.getProjekt(any[ExecutionContext], any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(projekt))
       service.stammdatenReadRepository.getPersonByEmail(isEq(email))(any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(personAdminActive))
@@ -83,7 +84,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Fail when login not active" in {
-      val service = new MockLoginRouteService(false, false)
+      val service = new MockLoginRouteService(false)
 
       service.stammdatenReadRepository.getProjekt(any[ExecutionContext], any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(projekt))
       service.stammdatenReadRepository.getPersonByEmail(any[String])(any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(personAdminInactive))
@@ -94,7 +95,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Fail on password mismatch" in {
-      val service = new MockLoginRouteService(false, false)
+      val service = new MockLoginRouteService(false)
 
       service.stammdatenReadRepository.getProjekt(any[ExecutionContext], any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(projekt))
       service.stammdatenReadRepository.getPersonByEmail(any[String])(any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(personAdminActive))
@@ -105,7 +106,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Fail when no person was found" in {
-      val service = new MockLoginRouteService(false, false)
+      val service = new MockLoginRouteService(false)
 
       service.stammdatenReadRepository.getProjekt(any[ExecutionContext], any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(projekt))
       service.stammdatenReadRepository.getPersonByEmail(any[String])(any[MultipleAsyncConnectionPoolContext]) returns Future.successful(None)
@@ -118,7 +119,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
   "Require second factor" should {
     "be disabled when disabled in project settings" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
 
       service.stammdatenReadRepository.getProjekt(any[ExecutionContext], any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(projekt))
       service.stammdatenReadRepository.getPersonByEmail(any[String])(any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(personKundeActive))
@@ -129,7 +130,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "be enabled by project settings" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
 
       service.stammdatenReadRepository.getProjekt(any[ExecutionContext], any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(projekt))
       service.stammdatenReadRepository.getPersonByEmail(any[String])(any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(personAdminActive))
@@ -142,7 +143,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
   "Second factor login" should {
     "Succeed" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
       val token = "asdasad"
       val code = "sadfasd"
       val secondFactor = SecondFactor(token, code, personId)
@@ -158,7 +159,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Fail when login not active" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
       val token = "asdasad"
       val code = "sadfasd"
       val secondFactor = SecondFactor(token, code, personId)
@@ -174,7 +175,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Fail when code does not match" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
       val token = "asdasad"
       val code = "sadfasd"
       val secondFactor = SecondFactor(token, code, personId)
@@ -190,7 +191,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Fail when token does not match" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
       val token = "asdasad"
       val code = "sadfasd"
       val secondFactor = SecondFactor(token, code, personId)
@@ -206,7 +207,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Fail when person not found" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
       val token = "asdasad"
       val code = "sadfasd"
       val secondFactor = SecondFactor(token, code, personId)
@@ -222,7 +223,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     }
 
     "Ensure token gets deleted after successful login" in {
-      val service = new MockLoginRouteService(true, false)
+      val service = new MockLoginRouteService(true)
       val token = "asdasad"
       val code = "sadfasd"
       val secondFactor = SecondFactor(token, code, personId)
@@ -244,20 +245,18 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 }
 
 class MockLoginRouteService(
-  requireSecondFactorAuthenticationP: Boolean,
-  sendSecondFactorEmailP: Boolean
+  requireSecondFactorAuthenticationP: Boolean
 )
     extends LoginRouteService
     with MockStammdatenReadRepositoryComponent {
   override val entityStore: ActorRef = null
   implicit val system = ActorSystem("test")
   override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(null))
+  override val mailService: ActorRef = TestActorRef(new DefaultMailService(null))
   override val sysConfig: SystemConfig = SystemConfig(null, null, MultipleAsyncConnectionPoolContext())
   override val fileStore: FileStore = null
   override val actorRefFactory: ActorRefFactory = null
   override val loginTokenCache: Cache[Subject] = LruCache()
 
   override lazy val requireSecondFactorAuthentication = requireSecondFactorAuthenticationP
-  override lazy val sendSecondFactorEmail = sendSecondFactorEmailP
-
 }

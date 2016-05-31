@@ -43,7 +43,7 @@ import stamina.Persister
 import java.util.UUID
 import scala.collection.immutable.TreeSet
 import ch.openolitor.core.JSONSerializable
-import scala.math._
+import ch.openolitor.util.ConfigUtil._
 
 object MailService {
   import AggregateRoot._
@@ -79,10 +79,11 @@ trait MailService extends AggregateRoot
   override def persistenceId: String = MailService.persistenceId
   type S = MailServiceState
 
-  val fromAddress = sysConfig.mandantConfiguration.config.getString("smtp.from")
-  val MaxNumberOfRetries = sysConfig.mandantConfiguration.config.getInt("smtp.number-of-retries")
+  lazy val fromAddress = sysConfig.mandantConfiguration.config.getString("smtp.from")
+  lazy val MaxNumberOfRetries = sysConfig.mandantConfiguration.config.getInt("smtp.number-of-retries")
+  lazy val sendEmailOutbound = sysConfig.mandantConfiguration.config.getBooleanOption("smtp.send-email").getOrElse(true)
 
-  val mailer = Mailer(sysConfig.mandantConfiguration.config.getString("smtp.endpoint"), sysConfig.mandantConfiguration.config.getInt("smtp.port"))
+  lazy val mailer = Mailer(sysConfig.mandantConfiguration.config.getString("smtp.endpoint"), sysConfig.mandantConfiguration.config.getInt("smtp.port"))
     .auth(true)
     .as(sysConfig.mandantConfiguration.config.getString("smtp.user"), sysConfig.mandantConfiguration.config.getString("smtp.password"))
     .startTtls(true)()
@@ -103,8 +104,6 @@ trait MailService extends AggregateRoot
   def checkMailQueue(): Unit = {
     if (!state.mailQueue.isEmpty) {
       state.mailQueue map { enqueued =>
-        // TODO enqueued with nextTry
-
         sendMail(enqueued.meta, enqueued.uid, enqueued.mail, enqueued.commandMeta) map { event =>
           persist(event)(afterEventPersisted)
         } recoverWith {
@@ -124,21 +123,29 @@ trait MailService extends AggregateRoot
   }
 
   def sendMail(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef]): Future[MailSentEvent] = {
-    var envelope = Envelope.from(new InternetAddress(fromAddress))
-      .to(InternetAddress.parse(mail.to): _*)
-      .subject(mail.subject)
-      .content(Text(mail.content))
+    if (sendEmailOutbound) {
+      var envelope = Envelope.from(new InternetAddress(fromAddress))
+        .to(InternetAddress.parse(mail.to): _*)
+        .subject(mail.subject)
+        .content(Text(mail.content))
 
-    mail.cc map { cc =>
-      envelope = envelope.cc(InternetAddress.parse(cc): _*)
-    }
+      mail.cc map { cc =>
+        envelope = envelope.cc(InternetAddress.parse(cc): _*)
+      }
 
-    mail.bcc map { bcc =>
-      envelope = envelope.bcc(InternetAddress.parse(bcc): _*)
-    }
+      mail.bcc map { bcc =>
+        envelope = envelope.bcc(InternetAddress.parse(bcc): _*)
+      }
 
-    mailer(envelope) map { _ =>
-      MailSentEvent(meta, uid, commandMeta)
+      mailer(envelope) map { _ =>
+        MailSentEvent(meta, uid, commandMeta)
+      }
+    } else {
+      log.debug(s"=====================================================================")
+      log.debug(s"| Sending Email: ${mail}")
+      log.debug(s"=====================================================================")
+
+      Future.successful(MailSentEvent(meta, uid, commandMeta))
     }
   }
 
@@ -159,6 +166,8 @@ trait MailService extends AggregateRoot
       case SendMailEvent(meta, uid, mail, commandMeta) =>
         enqueueMail(meta, uid, mail, commandMeta)
         self ! CheckMailQueue
+      case MailSentEvent(_, uid, _) =>
+        dequeueMail(uid)
       case SendMailFailedEvent(_, uid, _, _) =>
         dequeueMail(uid)
       case _ =>
