@@ -20,24 +20,13 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.mailservice
+package ch.openolitor.core.mailservice
 
-import stamina._
-import stamina.json._
-import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.core.domain.EntityStoreJsonProtocol
-import ch.openolitor.core.mailservice.MailService._
-import zangelo.spray.json.AutoProductFormats
+import ch.openolitor.core.BaseJsonProtocol
+import spray.json._
+import spray.json.DefaultJsonProtocol
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.eventsourcing.CoreEventStoreSerializer
 
-trait MailEventStoreSerializer extends EntityStoreJsonProtocol with CoreEventStoreSerializer with AutoProductFormats[JSONSerializable] {
-  //V1 persisters
-  implicit val sendMailEventPersister = persister[SendMailEvent]("send-mail-event")
-  implicit val mailSentEventPersister = persister[MailSentEvent]("mail-sent-event")
-
-  val mailPersisters = List(
-    sendMailEventPersister,
-    mailSentEventPersister
-  )
+trait MailJsonProtocol extends BaseJsonProtocol {
+  implicit val mailFormat = jsonFormat6(Mail)
 }

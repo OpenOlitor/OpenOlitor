@@ -43,7 +43,6 @@ import stamina.Persister
 import java.util.UUID
 import scala.collection.immutable.TreeSet
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.models.BaseId
 
 object MailService {
   import AggregateRoot._
@@ -53,15 +52,14 @@ object MailService {
 
   case class MailServiceState(startTime: DateTime, seqNr: Long, mailQueue: TreeSet[MailEnqueued]) extends State
 
+  case class SendMailCommandWithCallback[M <: AnyRef <% Persister[M, _]](originator: PersonId, entity: Mail, commandMeta: M) extends UserCommand
   case class SendMailCommand(originator: PersonId, entity: Mail) extends UserCommand
-
-  case class SendMailCommandWithCallback(originator: PersonId, entity: Mail, commandMeta: Option[BaseId]) extends UserCommand
 
   //events raised by this aggregateroot
   case class MailServiceInitialized(meta: EventMetadata) extends PersistentEvent
   // resulting send mail event
-  case class SendMailEvent(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[BaseId]) extends PersistentEvent with JSONSerializable
-  case class MailSentEvent(meta: EventMetadata, uid: String, commandMeta: Option[BaseId]) extends PersistentEvent with JSONSerializable
+  case class SendMailEvent(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef]) extends PersistentEvent with JSONSerializable
+  case class MailSentEvent(meta: EventMetadata, uid: String, commandMeta: Option[AnyRef]) extends PersistentEvent with JSONSerializable
 
   def props()(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultMailService], sysConfig)
 
@@ -75,7 +73,7 @@ trait MailService extends AggregateRoot
   import MailService._
   import AggregateRoot._
 
-  override def persistenceId: String = SystemEventStore.persistenceId
+  override def persistenceId: String = MailService.persistenceId
   type S = MailServiceState
 
   val fromAddress = sysConfig.mandantConfiguration.config.getString("smtp.from")
@@ -86,6 +84,12 @@ trait MailService extends AggregateRoot
     .startTtls(true)()
 
   override var state: MailServiceState = MailServiceState(DateTime.now, 0L, TreeSet.empty[MailEnqueued])
+
+  override protected def afterEventPersisted(evt: PersistentEvent): Unit = {
+    updateState(evt)
+    publish(evt)
+    state = incState
+  }
 
   def initialize(): Unit = {
     // start mail queue checker
@@ -104,7 +108,7 @@ trait MailService extends AggregateRoot
     }
   }
 
-  def sendMail[M <: AnyRef](meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[BaseId]): Future[MailSentEvent] = {
+  def sendMail(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef]): Future[MailSentEvent] = {
     var envelope = Envelope.from(new InternetAddress(fromAddress))
       .to(InternetAddress.parse(mail.to): _*)
       .subject(mail.subject)
@@ -123,7 +127,7 @@ trait MailService extends AggregateRoot
     }
   }
 
-  def enqueueMail[M <: AnyRef](meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[BaseId]): Unit = {
+  def enqueueMail(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef]): Unit = {
     state = state.copy(mailQueue = state.mailQueue + MailEnqueued(meta, uid, mail, commandMeta, DateTime.now(), 0))
   }
 
@@ -170,11 +174,22 @@ trait MailService extends AggregateRoot
       sender ! state
     case CheckMailQueue =>
       checkMailQueue()
+    case SendMailCommandWithCallback(personId, mail, commandMeta) =>
+      val meta = metadata(personId)
+      val id = newId
+      val event = SendMailEvent(meta, id, mail, Some(commandMeta))
+      persist(event) { result =>
+        afterEventPersisted(result)
+        sender ! result
+      }
     case SendMailCommand(personId, mail) =>
       val meta = metadata(personId)
       val id = newId
       val event = SendMailEvent(meta, id, mail, None)
-      persist(event)(afterEventPersisted)
+      persist(event) { result =>
+        afterEventPersisted(result)
+        sender ! result
+      }
     case other =>
       log.error(s"Received unknown command:$other")
   }
@@ -190,6 +205,10 @@ trait MailService extends AggregateRoot
 
   def metadata(personId: PersonId) = {
     EventMetadata(personId, VERSION, DateTime.now, state.seqNr, persistenceId)
+  }
+
+  def incState = {
+    state.copy(seqNr = state.seqNr + 1)
   }
 
   def newId: String = UUID.randomUUID.toString

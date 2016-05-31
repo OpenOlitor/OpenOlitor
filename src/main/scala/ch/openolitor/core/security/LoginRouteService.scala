@@ -304,18 +304,26 @@ trait LoginRouteService extends HttpService with ActorReferences
   }
 
   private def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
-    logger.debug(s"=====================================================================")
-    logger.debug(s"| Send Email to: ${person.email}")
-    logger.debug(s"---------------------------------------------------------------------")
-    logger.debug(s"| Token: ${secondFactor.token}")
-    logger.debug(s"| Code: ${secondFactor.code}")
-    logger.debug(s"=====================================================================")
 
-    val mail = Mail(1, person.email.get, None, None, "OpenOlitor Second Factor",
-      s"""Code: ${secondFactor.code}""")
-    mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail) map {
-      case MailSentEvent =>
-        true.right
+    if (sendSecondFactorEmail) {
+      val mail = Mail(1, person.email.get, None, None, "OpenOlitor Second Factor",
+        s"""Code: ${secondFactor.code}""")
+      mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail) map {
+        case _: SendMailEvent =>
+          true.right
+        case other =>
+          logger.debug(s"Sending Mail failed resulting in $other")
+          RequestFailed(s"Mail konnte nicht zugestellt werden").left
+      }
+    } else {
+      logger.debug(s"=====================================================================")
+      logger.debug(s"| Send Email to: ${person.email}")
+      logger.debug(s"---------------------------------------------------------------------")
+      logger.debug(s"| Token: ${secondFactor.token}")
+      logger.debug(s"| Code: ${secondFactor.code}")
+      logger.debug(s"=====================================================================")
+
+      Future.successful(true.right)
     }
   }
 

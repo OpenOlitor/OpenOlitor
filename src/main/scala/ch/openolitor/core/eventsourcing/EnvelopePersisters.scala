@@ -32,6 +32,9 @@ import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.models.BaseId
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.mailservice._
+import ch.openolitor.core.mailservice.MailService._
+import zangelo.spray.json.AutoProductFormats
 
 package events {
 
@@ -198,6 +201,75 @@ package events {
 
           PersistentSystemEvent(meta, event)
         case x => throw new DeserializationException(s"PersistentSystemEvent data expected, received:$x")
+      }
+    }
+  }
+
+  class SendMailEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
+      extends PersistedEventPersister[SendMailEvent, V]("send-mail-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol with MailJsonProtocol {
+
+    def toBytes(t: SendMailEvent): ByteString = {
+      //build custom json
+      val meta = metadataFormat.write(t.meta)
+      val mail = mailFormat.write(t.mail)
+      val commandMeta = t.commandMeta map (persistEntity) getOrElse JsNull
+
+      fromJson(JsObject(
+        "meta" -> meta,
+        "uid" -> JsString(t.uid),
+        "mail" -> mail,
+        "commandMeta" -> commandMeta
+      ))
+    }
+
+    def fromBytes(bytes: ByteString): SendMailEvent = {
+      def toSendMailEvent(metaJson: JsValue, uid: String, mailJson: JsValue, commandMeta: Option[AnyRef]) = {
+        val meta = metadataFormat.read(metaJson)
+        val mail: Mail = mailFormat.read(mailJson)
+
+        SendMailEvent(meta, uid, mail, commandMeta)
+      }
+
+      toJson(bytes).asJsObject.getFields("meta", "uid", "mail", "commandMeta") match {
+        case Seq(metaJson, JsString(uid), mailJson, JsNull) =>
+          toSendMailEvent(metaJson, uid, mailJson, None)
+        case Seq(metaJson, JsString(uid), mailJson, commandMetaJson) =>
+          val commandMeta: Option[AnyRef] = Some(unpersistEntity(commandMetaJson))
+          toSendMailEvent(metaJson, uid, mailJson, commandMeta)
+        case x => throw new DeserializationException(s"SendMailEvent data expected, received:$x")
+      }
+    }
+  }
+
+  class MailSentEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
+      extends PersistedEventPersister[MailSentEvent, V]("mail-sent-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol with MailJsonProtocol {
+
+    def toBytes(t: MailSentEvent): ByteString = {
+      //build custom json
+      val meta = metadataFormat.write(t.meta)
+      val commandMeta = t.commandMeta map (persistEntity) getOrElse JsNull
+
+      fromJson(JsObject(
+        "meta" -> meta,
+        "uid" -> JsString(t.uid),
+        "commandMeta" -> commandMeta
+      ))
+    }
+
+    def fromBytes(bytes: ByteString): MailSentEvent = {
+      def toMailSentEvent(metaJson: JsValue, uid: String, commandMeta: Option[AnyRef]) = {
+        val meta = metadataFormat.read(metaJson)
+
+        MailSentEvent(meta, uid, commandMeta)
+      }
+
+      toJson(bytes).asJsObject.getFields("meta", "uid", "commandMeta") match {
+        case Seq(metaJson, JsString(uid), JsNull) =>
+          toMailSentEvent(metaJson, uid, None)
+        case Seq(metaJson, JsString(uid), commandMetaJson) =>
+          val commandMeta: Option[AnyRef] = Some(unpersistEntity(commandMetaJson))
+          toMailSentEvent(metaJson, uid, commandMeta)
+        case x => throw new DeserializationException(s"MailSentEvent data expected, received:$x")
       }
     }
   }

@@ -164,7 +164,6 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val eventStore = Await.result(system ? SystemActor.Child(SystemEventStore.props, "event-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> eventStore:$eventStore")
-      eventStore ! "Nop"
 
       val mailService = Await.result(system ? SystemActor.Child(MailService.props, "mail-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> eventStore:$mailService")
