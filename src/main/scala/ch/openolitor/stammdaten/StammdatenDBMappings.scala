@@ -795,6 +795,23 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
+  implicit val tourlieferungMapping = new BaseEntitySQLSyntaxSupport[Tourlieferung] {
+    override val tableName = "Tourlieferung"
+
+    override lazy val columns = autoColumns[Tourlieferung]()
+
+    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Tourlieferung): Seq[Any] = parameters(Tourlieferung.unapply(entity).get)
+
+    override def updateParameters(entity: Tourlieferung) = {
+      super.updateParameters(entity) ++ Seq(
+        column.sort -> parameter(entity.sort)
+      )
+    }
+  }
+
   implicit val korbMapping = new BaseEntitySQLSyntaxSupport[Korb] {
     override val tableName = "Korb"
 
