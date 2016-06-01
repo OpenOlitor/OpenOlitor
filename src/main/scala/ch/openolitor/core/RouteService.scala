@@ -263,10 +263,10 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     streamThenClose(streamResponse, None)
   }
 
-  def uploadOpt(onUpload: MultipartFormData => Option[(InputStream, String)] => RequestContext => Unit): RequestContext => Unit = {
+  def uploadOpt(fileProperty: String = "file")(onUpload: MultipartFormData => Option[(InputStream, String)] => RequestContext => Unit): RequestContext => Unit = {
     entity(as[MultipartFormData]) { formData =>
       val details = formData.fields.collectFirst {
-        case BodyPart(entity, headers) =>
+        case b @ BodyPart(entity, headers) if b.name == Some(fileProperty) =>
           val content = new ByteArrayInputStream(entity.data.toByteArray)
           val fileName = headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
           (content, fileName)
@@ -276,7 +276,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   def upload(onUpload: (MultipartFormData, InputStream, String) => RequestContext => Unit): RequestContext => Unit = {
-    uploadOpt { formData => details =>
+    uploadOpt() { formData => details =>
       details.map {
         case (content, fileName) =>
           onUpload(formData, content, fileName)

@@ -196,7 +196,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def rechnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
-    (uploadOpt { formData => file =>
+    (uploadOpt("vorlage") { formData => file =>
       //use custom or default template whether content was delivered or not
       val vorlage = file map {
         case (is, name) =>
@@ -204,15 +204,15 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } getOrElse (StandardBerichtsVorlage)
 
       val pdfGenerieren = formData.fields.collectFirst {
-        case b @ BodyPart(entity, headers) if b.name == Some("pdf") =>
+        case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
           entity.asString.toBoolean
       }.getOrElse(false)
       val pdfAblegen = pdfGenerieren && formData.fields.collectFirst {
-        case b @ BodyPart(entity, headers) if b.name == Some("ablage") =>
+        case b @ BodyPart(entity, headers) if b.name == Some("pdfAblegen") =>
           entity.asString.toBoolean
       }.getOrElse(false)
       val downloadFile = !pdfAblegen || formData.fields.collectFirst {
-        case b @ BodyPart(entity, headers) if b.name == Some("download") =>
+        case b @ BodyPart(entity, headers) if b.name == Some("pdfDownloaden") =>
           entity.asString.toBoolean
       }.getOrElse(true)
 
