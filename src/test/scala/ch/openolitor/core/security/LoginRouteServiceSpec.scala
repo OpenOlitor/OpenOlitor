@@ -64,10 +64,10 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
   val projekt = Projekt(ProjektId(1), "Test", None, None, None, None, None, true, true, true, CHF, 1, 1, Map(AdministratorZugang -> true, KundenZugang -> false), DateTime.now, PersonId(1), DateTime.now, PersonId(1))
 
   implicit val ctx = MultipleAsyncConnectionPoolContext()
+  val timeout = 5 seconds
+  val retries = 3
 
   "Direct login" should {
-    implicit val timeout: Timeout = 5 seconds
-    implicit val timeoutAsDuration: Duration = timeout.duration
 
     "Succeed" in {
       val service = new MockLoginRouteService(false)
@@ -81,7 +81,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
         x.toEither.right.map(_.status) must beRight(LoginOk)
         val token = x.toEither.right.map(_.token).right.get
         service.loginTokenCache.get(token) must beSome
-      }.await
+      }.await(3, timeout)
     }
 
     "Fail when login not active" in {
@@ -92,7 +92,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateLogin(LoginForm(email, pwd)).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Login wurde deaktiviert")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Login wurde deaktiviert")) }.await(3, timeout)
     }
 
     "Fail on password mismatch" in {
@@ -103,7 +103,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateLogin(LoginForm(email, "wrongPwd")).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Benutzername oder Passwort stimmen nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Benutzername oder Passwort stimmen nicht überein")) }.await(3, timeout)
     }
 
     "Fail when no person was found" in {
@@ -114,7 +114,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateLogin(LoginForm("anyEmail", pwd)).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Benutzername oder Passwort stimmen nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Benutzername oder Passwort stimmen nicht überein")) }.await(3, timeout)
     }
   }
 
@@ -127,7 +127,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateLogin(LoginForm(email, pwd)).run
 
-      result.map { _.toEither.right.map(_.status) must beRight(LoginOk) }.await
+      result.map { _.toEither.right.map(_.status) must beRight(LoginOk) }.await(3, timeout)
     }
 
     "be enabled by project settings" in {
@@ -138,7 +138,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateLogin(LoginForm(email, pwd)).run
 
-      result.map { _.toEither.right.map(_.status) must beRight(LoginSecondFactorRequired) }.await
+      result.map { _.toEither.right.map(_.status) must beRight(LoginSecondFactorRequired) }.await(3, timeout)
     }
   }
 
@@ -156,7 +156,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
 
-      result.map { _.toEither.right.map(_.status) must beRight(LoginOk) }.await
+      result.map { _.toEither.right.map(_.status) must beRight(LoginOk) }.await(3, timeout)
     }
 
     "Fail when login not active" in {
@@ -172,7 +172,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Login wurde deaktiviert")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Login wurde deaktiviert")) }.await(3, timeout)
     }
 
     "Fail when code does not match" in {
@@ -188,7 +188,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm(token, "anyCode")).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await(3, timeout)
     }
 
     "Fail when token does not match" in {
@@ -204,7 +204,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm("anyToken", code)).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await(3, timeout)
     }
 
     "Fail when person not found" in {
@@ -220,7 +220,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Person konnte nicht gefunden werden")) }.await
+      result.map { _.toEither must beLeft(RequestFailed("Person konnte nicht gefunden werden")) }.await(3, timeout)
     }
 
     "Ensure token gets deleted after successful login" in {
@@ -234,13 +234,13 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       service.stammdatenReadRepository.getPerson(isEq(personId))(any[MultipleAsyncConnectionPoolContext]) returns Future.successful(Some(personAdminActive))
       val result1 = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
-      result1.map { _.toEither.right.map(_.status) must beRight(LoginOk) }.await
+      result1.map { _.toEither.right.map(_.status) must beRight(LoginOk) }.await(3, timeout)
 
       service.secondFactorTokenCache.get(token) must beNone
 
       //second try
       val result2 = service.validateSecondFactorLogin(SecondFactorLoginForm(token, code)).run
-      result2.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await
+      result2.map { _.toEither must beLeft(RequestFailed("Code stimmt nicht überein")) }.await(3, timeout)
     }
   }
 }
