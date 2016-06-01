@@ -324,7 +324,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
-        .where.eq(depotlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.goe(depotlieferungAbo.ende, parameter(lieferdatum)) }
+        .where.eq(depotlieferungAbo.vertriebId, parameter(vertriebId))
+        .and.le(depotlieferungAbo.start, parameter(lieferdatum))
+        .and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.ge(depotlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
@@ -332,7 +334,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
-        .where.eq(heimlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.goe(heimlieferungAbo.ende, parameter(lieferdatum)) }
+        .where.eq(heimlieferungAbo.vertriebId, parameter(vertriebId))
+        .and.le(heimlieferungAbo.start, parameter(lieferdatum))
+        .and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.ge(heimlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
@@ -340,7 +344,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
-        .where.eq(postlieferungAbo.vertriebId, parameter(vertriebId)).and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.goe(postlieferungAbo.ende, parameter(lieferdatum)) }
+        .where.eq(postlieferungAbo.vertriebId, parameter(vertriebId))
+        .and.le(postlieferungAbo.start, parameter(lieferdatum))
+        .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, parameter(lieferdatum)) }
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 
