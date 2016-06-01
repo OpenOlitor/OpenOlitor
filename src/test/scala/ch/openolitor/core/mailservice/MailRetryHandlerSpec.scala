@@ -22,46 +22,50 @@
 \*                                                                           */
 package ch.openolitor.core.mailservice
 
+import org.specs2.mutable.Specification
+import ch.openolitor.core.db.TestDB
+import akka.testkit.TestKit
+import akka.actor.ActorSystem
+import org.specs2.specification.Scope
+import akka.testkit.TestProbe
+import ch.openolitor.core.ConfigLoader
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.MandantConfiguration
+import ch.openolitor.core.domain.AggregateRoot._
 import org.joda.time.DateTime
-import scala.math._
-import scala.concurrent.duration.Duration
 
-case class RetryFailed(expired: Boolean)
+class MailRetryHandlerSpec extends Specification {
 
-trait MailRetryHandler {
+  "MailRetryHandler" should {
 
-  val maxNumberOfRetries: Int
-  def calculateRetryEnqueued(enqueued: MailEnqueued): Either[RetryFailed, Option[MailEnqueued]]
-  def calculateExpires(duration: Option[Duration]): DateTime
+    val handler = new MailRetryHandlerMock
+
+    "return None when nextTry is not yet reached" in {
+      val enqueued = MailEnqueued(null, "uid", null, None, DateTime.now().plusSeconds(3), DateTime.now().plusSeconds(50), 1)
+
+      handler.calculateRetryEnqueued(enqueued) must beRight(None)
+    }
+
+    "return new MailEnqueued when nextTry is in the past" in {
+      val enqueued = MailEnqueued(null, "uid", null, None, DateTime.now().minusSeconds(10), DateTime.now().plusSeconds(50), 1)
+
+      handler.calculateRetryEnqueued(enqueued) must beRight((x: Option[MailEnqueued]) => x must beSome)
+    }
+
+    "return RetryFailed when expired" in {
+      val enqueued = MailEnqueued(null, "uid", null, None, DateTime.now().plusSeconds(3), DateTime.now().minusSeconds(10), 1)
+
+      handler.calculateRetryEnqueued(enqueued) must beLeft
+    }
+
+    "return RetryFailed when max retries reached" in {
+      val enqueued = MailEnqueued(null, "uid", null, None, DateTime.now().plusSeconds(3), DateTime.now().plusSeconds(3600), 5)
+
+      handler.calculateRetryEnqueued(enqueued) must beLeft
+    }
+  }
 }
 
-trait DefaultMailRetryHandler extends MailRetryHandler {
-  val RetryTime = List(10, 60, 300, 900, 3600)
-
-  override def calculateRetryEnqueued(enqueued: MailEnqueued): Either[RetryFailed, Option[MailEnqueued]] = {
-    val now = DateTime.now()
-    val expired = enqueued.expires.isBefore(now)
-    if (enqueued.retries < maxNumberOfRetries && !expired) {
-      if (enqueued.nextTry.isBefore(now)) {
-        Right(Some(enqueued.copy(
-          retries = enqueued.retries + 1,
-          nextTry = enqueued.nextTry.plusSeconds(
-            if (enqueued.retries < RetryTime.size) RetryTime(enqueued.retries) else RetryTime.last
-          )
-        )))
-      } else {
-        Right(None)
-      }
-    } else {
-      Left(RetryFailed(expired))
-    }
-  }
-
-  def calculateExpires(maybeDuration: Option[Duration]): DateTime = {
-    maybeDuration map { duration =>
-      DateTime.now().plusSeconds(duration.toSeconds.toInt)
-    } getOrElse {
-      DateTime.now().plusSeconds(RetryTime.sum)
-    }
-  }
+class MailRetryHandlerMock extends DefaultMailRetryHandler {
+  val maxNumberOfRetries = 5
 }

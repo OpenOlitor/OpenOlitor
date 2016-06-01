@@ -28,10 +28,11 @@ import akka.testkit.TestKit
 import akka.actor._
 import MailService.SendMailEvent
 import MailService.SendMailCommand
+import org.joda.time.DateTime
 
 class MailServiceMock extends Actor {
   def receive = {
-    case SendMailCommand(personId, mail) =>
-      sender ! SendMailEvent(null, "uid", mail, None)
+    case SendMailCommand(personId, mail, duration) =>
+      sender ! SendMailEvent(null, "uid", mail, DateTime.now(), None)
   }
 }

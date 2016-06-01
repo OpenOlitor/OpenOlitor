@@ -60,6 +60,7 @@ import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import akka.pattern.ask
 import ch.openolitor.core.mailservice.MailService._
 import ch.openolitor.core.mailservice.Mail
+import scala.concurrent.duration._
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -305,7 +306,7 @@ trait LoginRouteService extends HttpService with ActorReferences
   private def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
     val mail = Mail(1, person.email.get, None, None, "OpenOlitor Second Factor",
       s"""Code: ${secondFactor.code}""")
-    mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail) map {
+    mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
       case _: SendMailEvent =>
         true.right
       case other =>

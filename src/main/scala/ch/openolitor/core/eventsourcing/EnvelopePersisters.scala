@@ -213,28 +213,31 @@ package events {
       val meta = metadataFormat.write(t.meta)
       val mail = mailFormat.write(t.mail)
       val commandMeta = t.commandMeta map (persistEntity) getOrElse JsNull
+      val expires = dateTimeFormat.write(t.expires)
 
       fromJson(JsObject(
         "meta" -> meta,
         "uid" -> JsString(t.uid),
         "mail" -> mail,
+        "expires" -> expires,
         "commandMeta" -> commandMeta
       ))
     }
 
     def fromBytes(bytes: ByteString): SendMailEvent = {
-      def toSendMailEvent(metaJson: JsValue, uid: String, mailJson: JsValue, commandMeta: Option[AnyRef]) = {
+      def toSendMailEvent(metaJson: JsValue, uid: String, mailJson: JsValue, expiresJson: JsValue, commandMeta: Option[AnyRef]) = {
         val meta = metadataFormat.read(metaJson)
         val mail: Mail = mailFormat.read(mailJson)
-        SendMailEvent(meta, uid, mail, commandMeta)
+        val expires = dateTimeFormat.read(expiresJson)
+        SendMailEvent(meta, uid, mail, expires, commandMeta)
       }
 
-      toJson(bytes).asJsObject.getFields("meta", "uid", "mail", "commandMeta") match {
-        case Seq(metaJson, JsString(uid), mailJson, JsNull) =>
-          toSendMailEvent(metaJson, uid, mailJson, None)
-        case Seq(metaJson, JsString(uid), mailJson, commandMetaJson) =>
+      toJson(bytes).asJsObject.getFields("meta", "uid", "mail", "expires", "commandMeta") match {
+        case Seq(metaJson, JsString(uid), mailJson, expiresJson, JsNull) =>
+          toSendMailEvent(metaJson, uid, mailJson, expiresJson, None)
+        case Seq(metaJson, JsString(uid), mailJson, expiresJson, commandMetaJson) =>
           val commandMeta: Option[AnyRef] = Some(unpersistEntity(commandMetaJson))
-          toSendMailEvent(metaJson, uid, mailJson, commandMeta)
+          toSendMailEvent(metaJson, uid, mailJson, expiresJson, commandMeta)
         case x => throw new DeserializationException(s"SendMailEvent data expected, received:$x")
       }
     }
@@ -283,7 +286,7 @@ package events {
       fromJson(JsObject(
         "meta" -> meta,
         "uid" -> JsString(t.uid),
-        "afterNumberOfRetries" -> JsNumber(t.afterNumberOfRetries),
+        "numberOfRetries" -> JsNumber(t.numberOfRetries),
         "commandMeta" -> commandMeta
       ))
     }
@@ -294,7 +297,7 @@ package events {
         SendMailFailedEvent(meta, uid, afterNumberOfRetries, commandMeta)
       }
 
-      toJson(bytes).asJsObject.getFields("meta", "uid", "afterNumberOfRetries", "commandMeta") match {
+      toJson(bytes).asJsObject.getFields("meta", "uid", "numberOfRetries", "commandMeta") match {
         case Seq(metaJson, JsString(uid), JsNumber(afterNumberOfRetries), JsNull) =>
           toSendMailFailedEvent(metaJson, uid, afterNumberOfRetries.toInt, None)
         case Seq(metaJson, JsString(uid), JsNumber(afterNumberOfRetries), commandMetaJson) =>
