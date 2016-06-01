@@ -138,11 +138,12 @@ trait ReportService {
 
   def resolveBerichtsVorlageFromResources(fileType: FileType, id: Option[String]): ServiceResult[ByteString] = EitherT {
     Future {
-      val bucketString = fileType.bucket match {
-        case VorlagenBucket => "vorlagen"
-        case GeneriertBucket => "generiert"
-        case StammdatenBucket => "stammdaten"
-        case ZahlungsImportBucket => "import"
+      val bucketString = fileType match {
+        case VorlageRechnung => "vorlagen/Rechnung.odt"
+        case VorlageEtikette => "vorlagen/Etiketten.odt"
+        case VorlageMahnung => "vorlagen/Mahnung.odt"
+        case VorlageBestellung => "vorlagen/Bestellung.odt"
+        case _ => "undefined.odt"
       }
       val idString = id.map(i => s"/$i").getOrElse("")
       val resource = s"/$bucketString$idString"
