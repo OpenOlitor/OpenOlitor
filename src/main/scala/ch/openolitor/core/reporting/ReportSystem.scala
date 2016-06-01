@@ -25,29 +25,39 @@ package ch.openolitor.core.reporting
 import akka.actor._
 import akka.util.ByteString
 import spray.json._
+import ch.openolitor.core.filestore._
 
 object ReportSystem {
-  def props(): Props = Props(classOf[ReportSystem])
+  def props(fileStore: FileStore): Props = Props(classOf[ReportSystem], fileStore)
 
   case class JobId(id: Long = System.currentTimeMillis)
   case class ReportData[E: JsonFormat](jobId: JobId, rows: Seq[E]) {
     val rowsAsJson = rows.map(_.toJson.asJsObject)
   }
 
-  case class GenerateReports(file: ByteString, data: ReportData[_])
-  case class SingleReportResult(stats: GenerateReportsStats, result: Either[SingleDocumentReportProcessorActor.ReportError, SingleDocumentReportProcessorActor.ReportResult])
-  case class GenerateReportsStats(jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int)
+  trait ReportResult
+  trait ReportSuccess extends ReportResult
+  case class DocumentReportResult(document: ByteString) extends ReportSuccess
+  case class PdfReportResult(document: ByteString) extends ReportSuccess
+  case class StoredPdfReportResult(id: FileStoreFileId) extends ReportSuccess
+  case class ReportError(error: String) extends ReportResult
+
+  case class FileStoreParameters[E](fileType: FileType, idFactory: E => Option[String], nameFactory: E => String)
+  case class GenerateReports[E](file: ByteString, data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
+  case class GenerateReport(file: ByteString, data: JsObject)
+  case class SingleReportResult(stats: GenerateReportsStats, result: Either[ReportError, ReportResult])
+  case class GenerateReportsStats(jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult
 }
 
 /**
  * The reportsystem is responsible to dispatch report generating request to processor actors
  */
-class ReportSystem extends Actor with ActorLogging {
+class ReportSystem(fileStore: FileStore) extends Actor with ActorLogging {
   import ReportSystem._
 
   val receive: Receive = {
-    case request: GenerateReports =>
-      val processor = context.actorOf(ReportProcessorActor.props)
+    case request: GenerateReports[_] =>
+      val processor = context.actorOf(ReportProcessorActor.props(fileStore))
       //forward request to new processor-actor
       processor forward request
   }

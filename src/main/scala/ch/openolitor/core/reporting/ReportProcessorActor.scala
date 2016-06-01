@@ -25,9 +25,10 @@ package ch.openolitor.core.reporting
 import akka.actor._
 import akka.util.ByteString
 import scala.util._
+import ch.openolitor.core.filestore.FileStore
 
 object ReportProcessorActor {
-  def props(): Props = Props(classOf[ReportProcessorActor])
+  def props(fileStore: FileStore): Props = Props(classOf[ReportProcessorActor], fileStore)
 }
 
 /**
@@ -35,7 +36,7 @@ object ReportProcessorActor {
  * object. The same report template object should be shared across all reports. As a result the actor returns a list of successful
  * and unsuccessful sources which might then get processed further
  */
-class ReportProcessorActor extends Actor with ActorLogging {
+class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging {
   import ReportProcessorActor._
   import ReportSystem._
 
@@ -43,15 +44,19 @@ class ReportProcessorActor extends Actor with ActorLogging {
   var origSender: Option[ActorRef] = None
 
   val receive: Receive = {
-    case GenerateReports(file, data) =>
-      processReports(file, data)
+    case GenerateReports(file, data, false, None) =>
+      processReports(file, data, _ => SingleDocumentReportProcessorActor.props)
+    case GenerateReports(file, data, true, None) =>
+      processReports(file, data, _ => SingleDocumentReportPDFProcessorActor.props)
+    case GenerateReports(file, data, true, Some(option)) =>
+      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, option.fileType, option.idFactory(row), option.nameFactory(row)))
   }
 
   val collectingResults: Receive = {
-    case result: SingleDocumentReportProcessorActor.ReportResult =>
+    case result: ReportSuccess =>
       stats = stats.copy(numberOfSuccess = stats.numberOfSuccess + 1)
       origSender.map(_ ! SingleReportResult(stats, Right(result)))
-    case error: SingleDocumentReportProcessorActor.ReportError =>
+    case error: ReportError =>
       stats = stats.copy(numberOfFailures = stats.numberOfFailures + 1)
       origSender.map(_ ! SingleReportResult(stats, Left(error)))
   }
@@ -73,13 +78,13 @@ class ReportProcessorActor extends Actor with ActorLogging {
     }
   }
 
-  def processReports(file: ByteString, data: ReportData[_]) = {
+  def processReports(file: ByteString, data: ReportData[_], f: Any => Props) = {
     origSender = Some(sender)
     stats = stats.copy(jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
     for {
       row <- data.rowsAsJson
     } yield {
-      context.actorOf(SingleDocumentReportProcessorActor.props) ! SingleDocumentReportProcessorActor.GenerateReport(file, row)
+      context.actorOf(f(row)) ! GenerateReport(file, row)
     }
     context become collectingResults
   }

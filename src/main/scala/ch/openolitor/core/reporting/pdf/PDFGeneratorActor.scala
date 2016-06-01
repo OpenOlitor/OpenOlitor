@@ -20,26 +20,38 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.core.reporting.pdf
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.LazyLogging
+import akka.actor._
+import akka.util.ByteString
+import scala.concurrent.blocking
+import scala.util._
 
-trait FileStoreComponent {
-  val fileStore: FileStore
+object PDFGeneratorActor {
+  def props(): Props = Props(classOf[PDFGeneratorActor])
+
+  case class GeneratePDF(document: ByteString)
+  case class PDFResult(pdf: ByteString)
+  case class PDFError(error: String)
 }
 
-class DefaultFileStoreComponent(mandant: String, sysConfig: SystemConfig, system: ActorSystem) extends FileStoreComponent with LazyLogging {
+class PDFGeneratorActor extends Actor with ActorLogging with PDFGeneratorService {
+  import PDFGeneratorActor._
 
-  override lazy val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration, system)
+  val receive: Receive = {
+    case GeneratePDF(document) =>
+      val rec = sender
+      blocking {
+        //run pdf service in blocking mode, only one pdf can get generated once
+        generatePDF(document) match {
+          case Success(result) => rec ! PDFResult(result)
+          case Failure(error) =>
+            log.warning(s"Failed converting pdf {}", error)
+            rec ! PDFError(error.getMessage)
+        }
 
-  fileStore.createBuckets map {
-    _.fold(
-      error => logger.error(s"Error creating buckets for $mandant: ${error.message}"),
-      success => logger.debug(s"Created file store buckets for $mandant")
-    )
+        //kill outself
+        self ! PoisonPill
+      }
   }
 }

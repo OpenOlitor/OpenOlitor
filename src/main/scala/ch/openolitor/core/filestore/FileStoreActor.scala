@@ -20,27 +20,37 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.reporting
+package ch.openolitor.core.filestore
 
-import java.io._
-import java.nio._
+import akka.actor._
+import akka.util.ByteString
+import java.util.UUID
+import ch.openolitor.util.ByteBufferBackedInputStream
+import scala.concurrent.ExecutionContext
 
-class ByteBufferBackedInputStream(buf: ByteBuffer) extends InputStream {
+object FileStoreActor {
+  def props(fileStore: FileStore): Props = Props(classOf[FileStoreActor], fileStore)
 
-  override def read(): Int = {
-    if (!buf.hasRemaining()) {
-      return -1;
-    }
-    return buf.get() & 0xFF;
+  case class StoreFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: ByteString)
+}
+
+class FileStoreActor(fileStore: FileStore) extends Actor with ActorLogging {
+  import FileStoreActor._
+
+  implicit val ctx: ExecutionContext = context.system.dispatcher
+
+  val receive: Receive = {
+    case StoreFile(bucket, id, metadata, file) =>
+      val rec = sender
+      storeFile(bucket, id, metadata, file) map {
+        case Left(e) => rec ! e
+        case Right(result) => rec ! result
+      }
   }
 
-  override def read(bytes: Array[Byte], off: Int, len: Int): Int = {
-    if (!buf.hasRemaining()) {
-      -1;
-    } else {
-      val minLen = Math.min(len, buf.remaining());
-      buf.get(bytes, off, minLen);
-      minLen;
-    }
+  def storeFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: ByteString) = {
+    val name = id.getOrElse(UUID.randomUUID.toString)
+    val is = new ByteBufferBackedInputStream(file.asByteBuffer)
+    fileStore.putFile(bucket, Some(name), metadata, is)
   }
 }

@@ -32,39 +32,36 @@ import scala.util._
 import spray.json._
 import java.io._
 import java.nio._
+import ch.openolitor.util.ByteBufferBackedInputStream
 
 object SingleDocumentReportProcessorActor {
   def props(): Props = Props(classOf[SingleDocumentReportProcessorActor])
-
-  case class GenerateReport(file: ByteString, data: JsObject)
-  case class ReportResult(data: JsObject, document: ByteString)
-  case class ReportError(data: JsObject, error: Throwable)
 }
 
 /**
  * This generates a single report documet from a given json data object
  */
 class SingleDocumentReportProcessorActor extends Actor with ActorLogging with DocumentProcessor {
-  import SingleDocumentReportProcessorActor._
+  import ReportSystem._
 
   val receive: Receive = {
     case GenerateReport(file, data) =>
       generateReport(file, data) match {
         case Success(result) => {
-          sender ! ReportResult(data, result)
-          self ! PoisonPill
+          sender ! DocumentReportResult(result)
         }
         case Failure(error) => {
-          sender ! ReportError(data, error)
-          self ! PoisonPill
+          log.warning(s"Couldn't generate report document {}", error)
+          sender ! ReportError(error.getMessage)
         }
       }
+      self ! PoisonPill
   }
 
   private def generateReport(file: ByteString, data: JsObject): Try[ByteString] = {
     for {
       doc <- Try(TextDocument.loadDocument(new ByteBufferBackedInputStream(file.asByteBuffer)))
-      result <- processDocument(doc, data)
+      result <- Try(processDocument(doc, data))
     } yield {
       val baos = new ByteArrayOutputStream()
       doc.save(baos)
