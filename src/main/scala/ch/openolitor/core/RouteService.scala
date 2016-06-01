@@ -87,10 +87,10 @@ trait RouteServiceComponent extends ActorReferences {
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
-  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, reportSystem, sysConfig, fileStore, actorRefFactory)
-  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, reportSystem, sysConfig, fileStore, actorRefFactory)
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, reportSystem, sysConfig, fileStore, actorRefFactory, loginTokenCache)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -249,14 +249,21 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   def download(fileType: FileType, id: String) = {
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
       case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found.")
-      case Right(file) => {
-        val streamResponse: Stream[ByteString] = Stream.continually(file.file.read).takeWhile(_ != -1).map(ByteString(_))
-        streamThenClose(streamResponse, file.file)
-      }
+      case Right(file) => stream(file.file)
     }
   }
 
-  def upload(fileType: FileType, name: Option[String] = None)(onUpload: (InputStream, String) => RequestContext => Unit): RequestContext => Unit = {
+  def stream(input: InputStream) = {
+    val streamResponse: Stream[ByteString] = Stream.continually(input.read).takeWhile(_ != -1).map(ByteString(_))
+    streamThenClose(streamResponse, Some(input))
+  }
+
+  def stream(input: ByteString) = {
+    val streamResponse: Stream[ByteString] = Stream.continually(input)
+    streamThenClose(streamResponse, None)
+  }
+
+  def uploadOpt(onUpload: MultipartFormData => Option[(InputStream, String)] => RequestContext => Unit): RequestContext => Unit = {
     entity(as[MultipartFormData]) { formData =>
       val details = formData.fields.collectFirst {
         case BodyPart(entity, headers) =>
@@ -264,11 +271,15 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
           val fileName = headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
           (content, fileName)
       }
+      onUpload(formData)(details)
+    }
+  }
 
-      val id = name.getOrElse(UUID.randomUUID.toString)
+  def upload(onUpload: (MultipartFormData, InputStream, String) => RequestContext => Unit): RequestContext => Unit = {
+    uploadOpt { formData => details =>
       details.map {
         case (content, fileName) =>
-          onUpload(content, fileName)
+          onUpload(formData, content, fileName)
       } getOrElse {
         complete(StatusCodes.BadRequest, "File has to be submitted using multipart formdata")
       }
@@ -284,7 +295,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   def uploadStored(fileType: FileType, name: Option[String] = None)(onUpload: (String, FileStoreFileMetadata) => RequestContext => Unit, onError: Option[FileStoreError => RequestContext => Unit] = None) = {
-    upload(fileType, name) { (content, fileName) =>
+    upload { (formData, content, fileName) =>
       storeToFileStore(fileType, name, content, fileName)(onUpload, onError)
     }
   }

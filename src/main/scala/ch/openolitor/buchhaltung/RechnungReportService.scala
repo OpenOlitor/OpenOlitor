@@ -17,7 +17,7 @@ import akka.stream.scaladsl.Source
 trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol {
   self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent =>
 
-  def generateRechnungReports(config: ReportConfig[RechnungId]): Future[ReportServiceResult[RechnungId]] = {
+  def generateRechnungReports(config: ReportConfig[RechnungId]): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
     generateReports[RechnungId, RechnungDetail](config, rechungenById, VorlageRechnung, None, GeneriertRechnung, x => Some(x.id.id.toString), pdfName)
   }
 

@@ -400,6 +400,7 @@ class DefaultStammdatenRoutes(
   override val eventStore: ActorRef,
   override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )

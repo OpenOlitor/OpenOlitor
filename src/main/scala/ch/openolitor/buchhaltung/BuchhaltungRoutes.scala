@@ -56,16 +56,28 @@ import scala.io.Source
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.core.security.Subject
+import ch.openolitor.core.reporting._
+import akka.util.ByteString
+import akka.stream.ActorMaterializer
+import ch.openolitor.core.reporting.ReportSystem._
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with BuchhaltungJsonProtocol
-    with BuchhaltungEventStoreSerializer {
+    with BuchhaltungEventStoreSerializer
+    with RechnungReportService
+    with ReportJsonProtocol {
   self: BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
   implicit val zahlungsEingangIdPath = long2BaseIdPathMatcher(ZahlungsEingangId.apply)
+
+  type RechnungReportForm = ReportForm[RechnungId] with JSONSerializable
+  implicit val formFormat = autoProductFormat[ReportForm[RechnungId]]
+
+  implicit val actorSystem = system
+  implicit val materializer = ActorMaterializer()
 
   import EntityStore._
 
@@ -91,12 +103,15 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "stornieren") { id =>
         (post)(stornieren(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "berichte" / "rechnung") { id =>
+        (post)(rechnungBericht(id))
       }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
     path("zahlungsimports") {
       get(list(buchhaltungReadRepository.getZahlungsImports)) ~
-        (put | post)(upload(ZahlungsImportDaten) { (content, fileName) =>
+        (put | post)(upload { (form, content, fileName) =>
           // parse
           ZahlungsImportParser.parse(Source.fromInputStream(content).getLines) match {
             case Success(importResult) =>
@@ -179,6 +194,43 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
         complete("")
     }
   }
+
+  def rechnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    (uploadOpt { formData => file =>
+      //use custom or default template whether content was delivered or not
+      val vorlage = file map {
+        case (is, name) =>
+          EinzelBerichtsVorlage(ByteString(scala.io.Source.fromInputStream(is).mkString))
+      } getOrElse (StandardBerichtsVorlage)
+
+      val pdfGenerieren = formData.fields.collectFirst {
+        case b @ BodyPart(entity, headers) if b.name == Some("pdf") =>
+          entity.asString.toBoolean
+      }.getOrElse(false)
+      val pdfAblegen = pdfGenerieren && formData.fields.collectFirst {
+        case b @ BodyPart(entity, headers) if b.name == Some("ablage") =>
+          entity.asString.toBoolean
+      }.getOrElse(false)
+      val downloadFile = !pdfAblegen || formData.fields.collectFirst {
+        case b @ BodyPart(entity, headers) if b.name == Some("download") =>
+          entity.asString.toBoolean
+      }.getOrElse(true)
+
+      val config = ReportConfig[RechnungId](Seq(id), vorlage, pdfGenerieren, pdfAblegen)
+
+      onSuccess(generateRechnungReports(config)) {
+        case Left(serviceError) =>
+          complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$serviceError")
+        case Right(result) =>
+          onSuccess(result.single) {
+            case DocumentReportResult(result) => stream(result)
+            case PdfReportResult(result) => stream(result)
+            case StoredPdfReportResult(fileType, id) if downloadFile => download(fileType, id.id)
+            case StoredPdfReportResult(fileType, id) => complete(id.id)
+          }
+      }
+    })
+  }
 }
 
 class DefaultBuchhaltungRoutes(
@@ -186,6 +238,7 @@ class DefaultBuchhaltungRoutes(
   override val eventStore: ActorRef,
   override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )

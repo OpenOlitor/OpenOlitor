@@ -29,4 +29,5 @@ trait ActorReferences {
   val entityStore: ActorRef
   val eventStore: ActorRef
   val reportSystem: ActorRef
+  val system: ActorSystem
 }

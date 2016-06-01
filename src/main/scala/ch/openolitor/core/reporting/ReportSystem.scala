@@ -39,7 +39,7 @@ object ReportSystem {
   trait ReportSuccess extends ReportResult
   case class DocumentReportResult(document: ByteString) extends ReportSuccess
   case class PdfReportResult(document: ByteString) extends ReportSuccess
-  case class StoredPdfReportResult(id: FileStoreFileId) extends ReportSuccess
+  case class StoredPdfReportResult(fileType: FileType, id: FileStoreFileId) extends ReportSuccess
   case class ReportError(error: String) extends ReportResult
 
   case class FileStoreParameters[E](fileType: FileType, idFactory: E => Option[String], nameFactory: E => String)

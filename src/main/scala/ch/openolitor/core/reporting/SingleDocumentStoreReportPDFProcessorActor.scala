@@ -43,7 +43,7 @@ class SingleDocumentStoreReportPDFProcessorActor(fileStore: FileStore, fileType:
       origSender.map(_ ! ReportError(message))
       self ! PoisonPill
     case FileStoreFileMetadata =>
-      origSender.map(_ ! StoredPdfReportResult(FileStoreFileId(id)))
+      origSender.map(_ ! StoredPdfReportResult(fileType, FileStoreFileId(id)))
       self ! PoisonPill
 
   }

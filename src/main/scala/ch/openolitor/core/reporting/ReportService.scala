@@ -36,17 +36,31 @@ import org.reactivestreams.Publisher
 import akka.stream.scaladsl.Source
 import akka.NotUsed
 import spray.json.JsonFormat
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
+import akka.stream.scaladsl.Sink
+import akka.stream.ActorMaterializer
 
-sealed trait BerichtsVorlage
+sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
 //case class Berichtsvorlage(id: BerichtsVorlageId) extends BerichtsVorlage
-case class EinzelBerichtsvorlage(file: ByteString) extends BerichtsVorlage
+case class EinzelBerichtsVorlage(file: ByteString) extends BerichtsVorlage
 case class ServiceFailed(msg: String, e: Throwable) extends Exception(msg, e)
 
+case class ReportForm[I](ids: Seq[I], pdfGenerieren: Boolean, pdfAblegen: Boolean) extends JSONSerializable {
+  def toConfig(vorlage: BerichtsVorlage): ReportConfig[I] = {
+    ReportConfig[I](ids, vorlage, pdfGenerieren, pdfAblegen)
+  }
+}
 case class ReportConfig[I](ids: Seq[I], vorlage: BerichtsVorlage, pdfGenerieren: Boolean, pdfAblegen: Boolean)
 case class ValidationError[I](id: I, message: String)
-case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[ValidationError[I]], results: Either[ServiceFailed, Source[ReportResult, _]]) {
+case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[ValidationError[I]], results: Source[ReportResult, _]) {
   val hasErrors = !validationErrors.isEmpty
+  val singleReportResultSink: Sink[ReportResult, Future[ReportResult]] = Sink.head
+
+  def single(implicit materializer: ActorMaterializer): Future[ReportResult] = {
+    results.take(1).runWith(singleReportResultSink)
+  }
 }
 
 object ServiceFailed {
@@ -71,7 +85,7 @@ trait ReportService {
     ablageIdFactory: E => Option[String],
     ablageNameFactory: E => String,
     jobId: JobId = JobId()
-  ): Future[ReportServiceResult[I]] = {
+  ): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
     validationFunction(config.ids) flatMap {
       case (errors, result) =>
         val ablageParams = config.pdfAblegen match {
@@ -79,8 +93,8 @@ trait ReportService {
           case true => Some(FileStoreParameters[E](ablageType, ablageIdFactory, ablageNameFactory))
         }
         generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result), config.pdfGenerieren, ablageParams).run map {
-          case -\/(e) => ReportServiceResult(jobId, errors, Left(e))
-          case \/-(result) => ReportServiceResult(jobId, errors, Right(result))
+          case -\/(e) => Left(e)
+          case \/-(result) => Right(ReportServiceResult(jobId, errors, result))
         }
     }
   }
@@ -103,7 +117,7 @@ trait ReportService {
 
   def loadBerichtsvorlage(vorlage: BerichtsVorlage, fileType: FileType, id: Option[String]): ServiceResult[ByteString] = {
     vorlage match {
-      case EinzelBerichtsvorlage(file) => EitherT { Future { file.right } }
+      case EinzelBerichtsVorlage(file) => EitherT { Future { file.right } }
       case StandardBerichtsVorlage => resolveBerichtsVorlageFromFileStore(fileType, id)
     }
   }

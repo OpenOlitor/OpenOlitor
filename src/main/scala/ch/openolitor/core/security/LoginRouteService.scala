@@ -58,6 +58,7 @@ import ch.openolitor.core.domain.SystemEvents
 import spray.routing.authentication.UserPass
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import akka.pattern.ask
+import akka.actor.ActorSystem
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -382,6 +383,7 @@ class DefaultLoginRouteService(
   override val eventStore: ActorRef,
   override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory,
   override val loginTokenCache: Cache[Subject]
