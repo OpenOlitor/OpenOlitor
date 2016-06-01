@@ -128,7 +128,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
         .where.eq(depotlieferung.vertriebId, parameter(vertriebId))
     }.one(depotlieferungMapping(depotlieferung)).toOne(depotMapping.opt(depot)).map { (vertriebsart, depot) =>
-      val depotSummary = DepotSummary(depot.head.id, depot.head.name)
+      val depotSummary = DepotSummary(depot.head.id, depot.head.name, depot.head.kurzzeichen)
       copyTo[Depotlieferung, DepotlieferungDetail](vertriebsart, "depot" -> depotSummary)
     }.list
   }
@@ -162,7 +162,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
         .where.eq(depotlieferung.id, parameter(vertriebsartId))
     }.one(depotlieferungMapping(depotlieferung)).toOne(depotMapping.opt(depot)).map { (vertriebsart, depot) =>
-      val depotSummary = DepotSummary(depot.head.id, depot.head.name)
+      val depotSummary = DepotSummary(depot.head.id, depot.head.name, depot.head.kurzzeichen)
       copyTo[Depotlieferung, DepotlieferungDetail](vertriebsart, "depot" -> depotSummary)
     }.single
   }
@@ -246,6 +246,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(postlieferungAboMapping as postlieferungAbo)
         .where(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
     }.map(postlieferungAboMapping(postlieferungAbo)).list
+  }
+
+  protected def getDepotlieferungAbosByDepotQuery(id: DepotId) = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.eq(depotlieferungAbo.depotId, parameter(id))
+    }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
   protected def getDepotlieferungAboAusstehendQuery(id: AboId) = {

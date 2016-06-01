@@ -134,7 +134,8 @@ case class DepotModify(
 
 case class DepotSummary(
   id: DepotId,
-  name: String
+  name: String,
+  kurzzeichen: String
 ) extends JSONSerializable
 
 case class TourId(id: Long) extends BaseId
