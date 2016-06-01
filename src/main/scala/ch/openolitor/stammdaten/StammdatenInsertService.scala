@@ -207,7 +207,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 "preisTotal" -> ZERO,
                 "status" -> Ungeplant,
                 "lieferplanungId" -> None,
-                "lieferplanungNr" -> None,
                 "erstelldat" -> meta.timestamp,
                 "ersteller" -> meta.originator,
                 "modifidat" -> meta.timestamp,
@@ -506,39 +505,18 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit personId: PersonId = meta.originator) = {
     DB localTx { implicit session =>
       val defaultAbotypDepotTour = ""
-      val insert = stammdatenWriteRepository.getLatestLieferplanung match {
-        case Some(latestLP) => {
-          val newNr = latestLP.nr + 1
-          val lp = copyTo[LieferplanungCreate, Lieferplanung](
-            lieferplanung,
-            "id" -> lieferplanungId,
-            "nr" -> newNr,
-            "status" -> Offen,
-            "abotypDepotTour" -> defaultAbotypDepotTour,
-            "erstelldat" -> meta.timestamp,
-            "ersteller" -> meta.originator,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> meta.originator
-          )
-          (lp, newNr)
-        }
-        case None => {
-          val firstNr = 1
-          val lp = copyTo[LieferplanungCreate, Lieferplanung](
-            lieferplanung,
-            "id" -> lieferplanungId,
-            "nr" -> firstNr,
-            "abotypDepotTour" -> defaultAbotypDepotTour,
-            "erstelldat" -> meta.timestamp,
-            "ersteller" -> meta.originator,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> meta.originator
-          )
-          (lp, firstNr)
-        }
-      }
+      val insert = copyTo[LieferplanungCreate, Lieferplanung](
+        lieferplanung,
+        "id" -> lieferplanungId,
+        "status" -> Offen,
+        "abotypDepotTour" -> defaultAbotypDepotTour,
+        "erstelldat" -> meta.timestamp,
+        "ersteller" -> meta.originator,
+        "modifidat" -> meta.timestamp,
+        "modifikator" -> meta.originator
+      )
       insert match {
-        case (obj, nr) =>
+        case obj =>
           //create lieferplanung
           stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](obj)
           //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
@@ -552,12 +530,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
 
               val lpId = Some(lieferplanungId)
-              val lpNr = Some(obj.nr)
 
               val lObj = copyTo[Lieferung, Lieferung](
                 lieferung,
                 "lieferplanungId" -> lpId,
-                "lieferplanungNr" -> lpNr,
                 "status" -> Offen,
                 "anzahlLieferungen" -> anzahlLieferungen,
                 "modifidat" -> meta.timestamp,
@@ -601,7 +577,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                       BestellungId(Random.nextLong),
                       lieferposition.produzentId,
                       lieferposition.produzentKurzzeichen,
-                      lieferplanung.id, lieferplanung.nr,
+                      lieferplanung.id,
                       Offen,
                       lieferung.datum,
                       None,

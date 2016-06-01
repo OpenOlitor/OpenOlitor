@@ -392,7 +392,6 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           //map lieferplanungId und Nr
           val copy = copyFrom(lieferung, update,
             "lieferplanungId" -> lpId,
-            "lieferplanungnr" -> lieferplanung.nr,
             "status" -> Offen,
             "anzahlLieferungen" -> anzahlLieferungen,
             "modifidat" -> meta.timestamp,
@@ -410,7 +409,6 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(lieferung, update,
           "lieferplanungId" -> None,
-          "lieferplanungNr" -> None,
           "status" -> Ungeplant,
           "modifidat" -> meta.timestamp,
           "modifikator" -> personId)
