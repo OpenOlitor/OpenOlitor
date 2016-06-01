@@ -130,23 +130,27 @@ trait ReportService {
   }
 
   def resolveBerichtsVorlageFromFileStore(fileType: FileType, id: Option[String]): ServiceResult[ByteString] = EitherT {
-    fileStore.getFile(fileType.bucket, id.getOrElse("")) map {
+    fileStore.getFile(fileType.bucket, id.getOrElse(defaultFileTypeId(fileType))) map {
       case Left(e) => ServiceFailed(s"Vorlage konnte im FileStore nicht gefunden werden: $fileType, $id").left
       case Right(file) => ByteString(scala.io.Source.fromInputStream(file.file).mkString).right
     }
   }
 
+  def defaultFileTypeId(fileType: FileType) = {
+    fileType match {
+      case VorlageRechnung => "Rechnung.odt"
+      case VorlageEtikette => "Etiketten.odt"
+      case VorlageMahnung => "Mahnung.odt"
+      case VorlageBestellung => "Bestellung.odt"
+      case _ => "undefined.odt"
+    }
+  }
+
   def resolveBerichtsVorlageFromResources(fileType: FileType, id: Option[String]): ServiceResult[ByteString] = EitherT {
     Future {
-      val bucketString = fileType match {
-        case VorlageRechnung => "vorlagen/Rechnung.odt"
-        case VorlageEtikette => "vorlagen/Etiketten.odt"
-        case VorlageMahnung => "vorlagen/Mahnung.odt"
-        case VorlageBestellung => "vorlagen/Bestellung.odt"
-        case _ => "undefined.odt"
-      }
+      val resourcePath = "vorlagen" + defaultFileTypeId(fileType)
       val idString = id.map(i => s"/$i").getOrElse("")
-      val resource = s"/$bucketString$idString"
+      val resource = s"/$resourcePath$idString"
       val is = getClass.getResourceAsStream(resource)
       is match {
         case null => ServiceFailed(s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource").left
