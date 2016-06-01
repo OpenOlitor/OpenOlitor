@@ -462,7 +462,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(lieferplanungMapping as lieferplanung)
-        .orderBy(lieferplanung.nr).desc
+        .orderBy(lieferplanung.id).desc
         .limit(1)
     }.map(lieferplanungMapping(lieferplanung)).single
   }
