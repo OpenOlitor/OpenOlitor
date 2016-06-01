@@ -48,6 +48,7 @@ import akka.actor.ActorSystem
 import spray.caching.Cache
 import spray.caching.LruCache
 import akka.util.Timeout
+import ch.openolitor.core.mailservice.MailServiceMock
 
 class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConversions {
   val email = "info@test.com"
@@ -251,9 +252,9 @@ class MockLoginRouteService(
     with MockStammdatenReadRepositoryComponent {
   override val entityStore: ActorRef = null
   implicit val system = ActorSystem("test")
-  override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(null))
-  override val mailService: ActorRef = TestActorRef(new DefaultMailService(null))
   override val sysConfig: SystemConfig = SystemConfig(null, null, MultipleAsyncConnectionPoolContext())
+  override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(null))
+  override val mailService: ActorRef = TestActorRef(new MailServiceMock)
   override val fileStore: FileStore = null
   override val actorRefFactory: ActorRefFactory = null
   override val loginTokenCache: Cache[Subject] = LruCache()
