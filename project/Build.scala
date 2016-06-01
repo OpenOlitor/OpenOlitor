@@ -43,7 +43,7 @@ object BuildSettings {
 	    "org.specs2"                   %%  "specs2-mock"                          % specs2V     % "test",
 	    "org.specs2"                   %%  "specs2-junit"                         % specs2V     % "test",
 	    "org.mockito"                  %   "mockito-core"                         % "1.10.19"   % "test",
-	    "org.scalaz" 		               %%  "scalaz-core"						              % "7.2.3",
+	    "org.scalaz" 		               %%  "scalaz-core"						              % "7.1.8",
 	    //use scala logging to log outside of the actor system
 	    "com.typesafe.scala-logging"   %%  "scala-logging"				                % "3.1.0",
 	    //akka persistence journal driver

@@ -23,6 +23,7 @@
 package ch.openolitor.core.security
 
 import org.specs2.mutable._
+
 import org.specs2.mock.Mockito
 import org.specs2.time.NoTimeConversions
 import org.mockito.Matchers.{ eq => isEq, _ }
@@ -47,6 +48,7 @@ import akka.actor.ActorSystem
 import spray.caching.Cache
 import spray.caching.LruCache
 import akka.util.Timeout
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConversions {
   val email = "info@test.com"
@@ -250,6 +252,7 @@ class MockLoginRouteService(
     extends LoginRouteService
     with MockStammdatenReadRepositoryComponent {
   override val entityStore: ActorRef = null
+  override val reportSystem: ActorRef = null
   implicit val system = ActorSystem("test")
   override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(null))
   override val sysConfig: SystemConfig = SystemConfig(null, null, MultipleAsyncConnectionPoolContext())
