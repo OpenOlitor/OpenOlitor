@@ -331,8 +331,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.anzahlSaldoZuTief -> parameter(lieferung.anzahlSaldoZuTief),
         column.zielpreis -> parameter(lieferung.zielpreis),
         column.preisTotal -> parameter(lieferung.preisTotal),
-        column.lieferplanungId -> parameter(lieferung.lieferplanungId),
-        column.lieferplanungNr -> parameter(lieferung.lieferplanungNr)
+        column.lieferplanungId -> parameter(lieferung.lieferplanungId)
       )
     }
   }
@@ -349,7 +348,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(lieferplanung: Lieferplanung) = {
       super.updateParameters(lieferplanung) ++ Seq(
-        column.nr -> parameter(lieferplanung.nr),
         column.bemerkungen -> parameter(lieferplanung.bemerkungen),
         column.abotypDepotTour -> parameter(lieferplanung.abotypDepotTour),
         column.status -> parameter(lieferplanung.status)
@@ -397,7 +395,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.produzentId -> parameter(bestellung.produzentId),
         column.produzentKurzzeichen -> parameter(bestellung.produzentKurzzeichen),
         column.lieferplanungId -> parameter(bestellung.lieferplanungId),
-        column.lieferplanungNr -> parameter(bestellung.lieferplanungNr),
         column.status -> parameter(bestellung.status),
         column.datum -> parameter(bestellung.datum),
         column.datumAbrechnung -> parameter(bestellung.datumAbrechnung),

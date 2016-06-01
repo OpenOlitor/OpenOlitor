@@ -58,7 +58,6 @@ case class LieferplanungId(id: Long) extends BaseId
 
 case class Lieferplanung(
   id: LieferplanungId,
-  nr: Int,
   bemerkungen: Option[String],
   abotypDepotTour: String,
   status: LieferungStatus,
@@ -70,7 +69,6 @@ case class Lieferplanung(
 ) extends BaseEntity[LieferplanungId]
 
 case class LieferplanungModify(
-  nr: Int,
   bemerkungen: Option[String],
   status: LieferungStatus
 ) extends JSONSerializable
@@ -98,7 +96,6 @@ case class Lieferung(
   zielpreis: Option[BigDecimal],
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
-  lieferplanungNr: Option[Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -122,7 +119,6 @@ case class LieferungDetail(
   zielpreis: Option[BigDecimal],
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
-  lieferplanungNr: Option[Int],
   abotyp: Option[Abotyp],
   lieferpositionen: Seq[Lieferposition],
   //modification flags
@@ -142,8 +138,7 @@ case class LieferungModify(
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
   preisTotal: BigDecimal,
-  lieferplanungId: Option[LieferplanungId],
-  lieferplanungNr: Option[Int]
+  lieferplanungId: Option[LieferplanungId]
 ) extends JSONSerializable
 
 case class LieferungPlanungAdd(
@@ -206,7 +201,6 @@ case class Bestellung(
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
   lieferplanungId: LieferplanungId,
-  lieferplanungNr: Int,
   status: LieferungStatus,
   datum: DateTime,
   datumAbrechnung: Option[DateTime],
@@ -222,7 +216,6 @@ case class BestellungModify(
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
   lieferplanungId: LieferplanungId,
-  lieferplanungNr: Int,
   datum: DateTime,
   datumAbrechnung: Option[DateTime],
   preisTotal: BigDecimal

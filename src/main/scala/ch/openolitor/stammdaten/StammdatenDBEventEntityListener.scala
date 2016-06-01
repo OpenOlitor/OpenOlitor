@@ -453,11 +453,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleLieferungModified(lieferung: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
     logger.debug(s"handleLieferungModified: lieferung:\n$lieferung\norig:$orig")
-    if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) {
+    if (lieferung.lieferplanungId.isDefined && !orig.lieferplanungId.isDefined) {
       //Lieferung was planed in a Lieferplanung
       createKoerbe(lieferung.id)
     }
-    if (lieferung.lieferplanungId.isDefined && !orig.lieferplanungId.isDefined) {
+    if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) {
       //Lieferung was removed in a Lieferplanung
       removeKoerbe(lieferung.id)
     }
