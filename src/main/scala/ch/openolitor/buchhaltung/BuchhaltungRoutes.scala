@@ -60,6 +60,8 @@ import ch.openolitor.core.reporting._
 import akka.util.ByteString
 import akka.stream.ActorMaterializer
 import ch.openolitor.core.reporting.ReportSystem._
+import ch.openolitor.util.ByteStringUtil
+import java.io.InputStream
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -198,38 +200,54 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   def rechnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
     (uploadOpt("vorlage") { formData => file =>
       //use custom or default template whether content was delivered or not
-      val vorlage = file map {
-        case (is, name) =>
-          EinzelBerichtsVorlage(ByteString(scala.io.Source.fromInputStream(is).mkString))
-      } getOrElse (StandardBerichtsVorlage)
+      for {
+        vorlage <- loadVorlage(file).right
+        pdfGenerieren <- Try(formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
+            entity.asString.toBoolean
+        }.getOrElse(false))
+        pdfAblegen <- Try(pdfGenerieren && formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("pdfAblegen") =>
+            entity.asString.toBoolean
+        }.getOrElse(false))
+        downloadFile <- Try(!pdfAblegen || formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("pdfDownloaden") =>
+            entity.asString.toBoolean
+        }.getOrElse(true))
+      } yield {
 
-      val pdfGenerieren = formData.fields.collectFirst {
-        case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
-          entity.asString.toBoolean
-      }.getOrElse(false)
-      val pdfAblegen = pdfGenerieren && formData.fields.collectFirst {
-        case b @ BodyPart(entity, headers) if b.name == Some("pdfAblegen") =>
-          entity.asString.toBoolean
-      }.getOrElse(false)
-      val downloadFile = !pdfAblegen || formData.fields.collectFirst {
-        case b @ BodyPart(entity, headers) if b.name == Some("pdfDownloaden") =>
-          entity.asString.toBoolean
-      }.getOrElse(true)
+        logger.debug(s"===== generate report:$file\n$vorlage\n$pdfGenerieren\n$pdfAblegen\n$downloadFile")
 
-      val config = ReportConfig[RechnungId](Seq(id), vorlage, pdfGenerieren, pdfAblegen)
+        val config = ReportConfig[RechnungId](Seq(id), vorlage, pdfGenerieren, pdfAblegen)
 
-      onSuccess(generateRechnungReports(config)) {
-        case Left(serviceError) =>
-          complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$serviceError")
-        case Right(result) =>
-          onSuccess(result.single) {
-            case DocumentReportResult(result) => stream(result)
-            case PdfReportResult(result) => stream(result)
-            case StoredPdfReportResult(fileType, id) if downloadFile => download(fileType, id.id)
-            case StoredPdfReportResult(fileType, id) => complete(id.id)
-          }
+        onSuccess(generateRechnungReports(config)) {
+          case Left(serviceError) =>
+            complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$serviceError")
+          case Right(result) if result.hasErrors =>
+            val errorString = result.validationErrors.map(_.message).mkString(",")
+            complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
+          case Right(result) =>
+            onSuccess(result.single) {
+              case SingleReportResult(_, Left(ReportError(error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
+              case SingleReportResult(_, Right(DocumentReportResult(result))) => stream(result)
+              case SingleReportResult(_, Right(PdfReportResult(result))) => stream(result)
+              case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) if downloadFile => download(fileType, id.id)
+              case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) => complete(id.id)
+            }
+        }
       }
     })
+  }
+
+  def loadVorlage(file: Option[(InputStream, String)]): Either[String, BerichtsVorlage] = {
+    file map {
+      case (is, name) =>
+        ByteStringUtil.readFromInputStream(is) match {
+          case Success(result) => Right(EinzelBerichtsVorlage(result))
+          case Failure(error) => Left(s"Der Berichtsvorlage konnte nicht geladen werden:$error")
+        }
+
+    } getOrElse (Right(StandardBerichtsVorlage))
   }
 }
 

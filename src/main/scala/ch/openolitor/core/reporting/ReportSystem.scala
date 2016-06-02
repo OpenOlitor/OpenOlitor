@@ -45,7 +45,7 @@ object ReportSystem {
   case class FileStoreParameters[E](fileType: FileType, idFactory: E => Option[String], nameFactory: E => String)
   case class GenerateReports[E](file: ByteString, data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
   case class GenerateReport(file: ByteString, data: JsObject)
-  case class SingleReportResult(stats: GenerateReportsStats, result: Either[ReportError, ReportResult])
+  case class SingleReportResult(stats: GenerateReportsStats, result: Either[ReportError, ReportResult]) extends ReportResult
   case class GenerateReportsStats(jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult
 }
 

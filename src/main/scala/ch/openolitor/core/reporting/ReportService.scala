@@ -40,6 +40,11 @@ import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 import akka.stream.scaladsl.Sink
 import akka.stream.ActorMaterializer
+import com.typesafe.scalalogging.LazyLogging
+import scala.util.{ Try, Success => TrySuccess, Failure => TryFailure }
+import scala.io.Codec
+import java.nio.charset.CodingErrorAction
+import ch.openolitor.util.ByteStringUtil
 
 sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
@@ -56,10 +61,10 @@ case class ReportConfig[I](ids: Seq[I], vorlage: BerichtsVorlage, pdfGenerieren:
 case class ValidationError[I](id: I, message: String)
 case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[ValidationError[I]], results: Source[ReportResult, _]) {
   val hasErrors = !validationErrors.isEmpty
-  val singleReportResultSink: Sink[ReportResult, Future[ReportResult]] = Sink.head
+  val singleReportResultSink: Sink[SingleReportResult, Future[SingleReportResult]] = Sink.head
 
-  def single(implicit materializer: ActorMaterializer): Future[ReportResult] = {
-    results.take(1).runWith(singleReportResultSink)
+  def single(implicit materializer: ActorMaterializer): Future[SingleReportResult] = {
+    results.filter(_.isInstanceOf[SingleReportResult]).take(1).map(_.asInstanceOf[SingleReportResult]).runWith(singleReportResultSink)
   }
 }
 
@@ -67,7 +72,7 @@ object ServiceFailed {
   def apply(msg: String) = new ServiceFailed(msg, null)
 }
 
-trait ReportService {
+trait ReportService extends LazyLogging {
   self: ActorReferences with FileStoreComponent =>
 
   import ReportSystem._
@@ -88,12 +93,15 @@ trait ReportService {
   ): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
     validationFunction(config.ids) flatMap {
       case (errors, result) =>
+        logger.debug(s"Valdidation errors:$errors, process result records:${result.length}")
         val ablageParams = config.pdfAblegen match {
           case false => None
           case true => Some(FileStoreParameters[E](ablageType, ablageIdFactory, ablageNameFactory))
         }
         generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result), config.pdfGenerieren, ablageParams).run map {
-          case -\/(e) => Left(e)
+          case -\/(e) =>
+            logger.warn(s"Failed generating report {}", e.getMessage)
+            Left(e)
           case \/-(result) => Right(ReportServiceResult(jobId, errors, result))
         }
     }
@@ -118,15 +126,15 @@ trait ReportService {
   def loadBerichtsvorlage(vorlage: BerichtsVorlage, fileType: FileType, id: Option[String]): ServiceResult[ByteString] = {
     vorlage match {
       case EinzelBerichtsVorlage(file) => EitherT { Future { file.right } }
-      case StandardBerichtsVorlage => resolveBerichtsVorlageFromFileStore(fileType, id)
+      case StandardBerichtsVorlage => resolveStandardBerichtsVorlage(fileType, id)
     }
   }
 
   /**
    * Resolve from S3 or local as a local resource
    */
-  def resolveStandardBerichtsVorlageFromFileStore(fileType: FileType, id: Option[String] = None): ServiceResult[ByteString] = {
-    resolveBerichtsVorlageFromFileStore(fileType, id) orElse resolveBerichtsVorlageFromResources(fileType, id)
+  def resolveStandardBerichtsVorlage(fileType: FileType, id: Option[String] = None): ServiceResult[ByteString] = {
+    resolveBerichtsVorlageFromFileStore(fileType, id) ||| resolveBerichtsVorlageFromResources(fileType, id)
   }
 
   def resolveBerichtsVorlageFromFileStore(fileType: FileType, id: Option[String]): ServiceResult[ByteString] = EitherT {
@@ -147,14 +155,22 @@ trait ReportService {
   }
 
   def resolveBerichtsVorlageFromResources(fileType: FileType, id: Option[String]): ServiceResult[ByteString] = EitherT {
+    logger.debug(s"Resolve template from resources:$fileType:$id")
     Future {
-      val resourcePath = "vorlagen" + defaultFileTypeId(fileType)
+      val resourcePath = "/vorlagen/" + defaultFileTypeId(fileType)
       val idString = id.map(i => s"/$i").getOrElse("")
-      val resource = s"/$resourcePath$idString"
+      val resource = s"$resourcePath$idString"
+      logger.debug(s"Resolve template from resources:$resource")
       val is = getClass.getResourceAsStream(resource)
       is match {
         case null => ServiceFailed(s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource").left
-        case is => ByteString(scala.io.Source.fromInputStream(is).mkString).right
+        case is =>
+          ByteStringUtil.readFromInputStream(is) match {
+            case TrySuccess(result) => result.right
+            case TryFailure(error) =>
+              error.printStackTrace()
+              ServiceFailed(s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $error").left
+          }
       }
     }
   }

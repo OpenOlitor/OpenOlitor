@@ -20,53 +20,15 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.reporting
+package ch.openolitor.util
 
-import akka.actor._
-import akka.util._
-import scala.concurrent.duration._
 import java.io.InputStream
-import org.odftoolkit.simple._
-import org.odftoolkit.simple.common.field._
-import scala.util._
-import spray.json._
-import java.io._
-import java.nio._
-import ch.openolitor.util.ByteBufferBackedInputStream
+import scala.io._
+import scala.util.Try
+import akka.util.ByteString
 
-object SingleDocumentReportProcessorActor {
-  def props(): Props = Props(classOf[SingleDocumentReportProcessorActor])
-}
-
-/**
- * This generates a single report documet from a given json data object
- */
-class SingleDocumentReportProcessorActor extends Actor with ActorLogging with DocumentProcessor {
-  import ReportSystem._
-
-  val receive: Receive = {
-    case GenerateReport(file, data) =>
-      generateReport(file, data) match {
-        case Success(result) => {
-          sender ! DocumentReportResult(result)
-        }
-        case Failure(error) => {
-          error.printStackTrace()
-          log.warning(s"Couldn't generate report document {}", error)
-          sender ! ReportError(error.getMessage)
-        }
-      }
-      self ! PoisonPill
-  }
-
-  private def generateReport(file: ByteString, data: JsObject): Try[ByteString] = {
-    for {
-      doc <- Try(TextDocument.loadDocument(new ByteBufferBackedInputStream(file.asByteBuffer)))
-      result <- Try(processDocument(doc, data))
-    } yield {
-      val baos = new ByteArrayOutputStream()
-      doc.save(baos)
-      ByteString(ByteBuffer.wrap(baos.toByteArray))
-    }
+object ByteStringUtil {
+  def readFromInputStream(is: InputStream): Try[ByteString] = {
+    Try(ByteString(Stream.continually(is.read).takeWhile(_ != -1).map(_.toByte).toArray))
   }
 }
