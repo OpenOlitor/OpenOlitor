@@ -23,6 +23,7 @@
 package ch.openolitor.core.reporting
 
 import ch.openolitor.core.ActorReferences
+
 import akka.util.ByteString
 import scalaz._
 import Scalaz._
@@ -32,19 +33,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import java.util.UUID
 import ch.openolitor.util.ByteBufferBackedInputStream
-import org.reactivestreams.Publisher
-import akka.stream.scaladsl.Source
-import akka.NotUsed
+import akka.pattern.ask
 import spray.json.JsonFormat
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
-import akka.stream.scaladsl.Sink
-import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.LazyLogging
 import scala.util.{ Try, Success => TrySuccess, Failure => TryFailure }
-import scala.io.Codec
-import java.nio.charset.CodingErrorAction
 import ch.openolitor.util.ByteStringUtil
+import akka.actor.ActorRef
+import akka.util.Timeout
+import scala.concurrent.duration._
 
 sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
@@ -59,13 +56,8 @@ case class ReportForm[I](ids: Seq[I], pdfGenerieren: Boolean, pdfAblegen: Boolea
 }
 case class ReportConfig[I](ids: Seq[I], vorlage: BerichtsVorlage, pdfGenerieren: Boolean, pdfAblegen: Boolean)
 case class ValidationError[I](id: I, message: String)
-case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[ValidationError[I]], results: Source[ReportResult, _]) {
+case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[ValidationError[I]], result: ReportResult) {
   val hasErrors = !validationErrors.isEmpty
-  val singleReportResultSink: Sink[SingleReportResult, Future[SingleReportResult]] = Sink.head
-
-  def single(implicit materializer: ActorMaterializer): Future[SingleReportResult] = {
-    results.filter(_.isInstanceOf[SingleReportResult]).take(1).map(_.asInstanceOf[SingleReportResult]).runWith(singleReportResultSink)
-  }
 }
 
 object ServiceFailed {
@@ -74,6 +66,8 @@ object ServiceFailed {
 
 trait ReportService extends LazyLogging {
   self: ActorReferences with FileStoreComponent =>
+
+  implicit val actorSystem = system
 
   import ReportSystem._
   type ServiceResult[T] = EitherT[Future, ServiceFailed, T]
@@ -108,19 +102,18 @@ trait ReportService extends LazyLogging {
   }
 
   def generateDocument[E](vorlage: BerichtsVorlage, fileType: FileType, id: Option[String], data: ReportData[E],
-    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[Source[ReportResult, _]] = {
+    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = {
     for {
       temp <- loadBerichtsvorlage(vorlage, fileType, id)
       source <- generateReport(temp, data, pdfGenerieren, pdfAblage)
     } yield source
   }
 
-  def generateReport[E](vorlage: ByteString, data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[Source[ReportResult, _]] = EitherT {
-    Future {
-      val publisher = Source.actorPublisher[ReportResult](ReportResultPublisher.props(reportSystem))
-      reportSystem ! GenerateReports(vorlage, data, pdfGenerieren, pdfAblage)
-      publisher.right
-    }
+  def generateReport[E](vorlage: ByteString, data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = EitherT {
+    implicit val timeout = Timeout(60.seconds)
+    val collector = if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem) else ZipReportResultCollector.props(reportSystem)
+    val ref = actorSystem.actorOf(collector)
+    (ref ? GenerateReports(vorlage, data, pdfGenerieren, pdfAblage)).map(_.asInstanceOf[ReportResult].right)
   }
 
   def loadBerichtsvorlage(vorlage: BerichtsVorlage, fileType: FileType, id: Option[String]): ServiceResult[ByteString] = {

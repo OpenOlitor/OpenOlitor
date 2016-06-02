@@ -23,47 +23,36 @@
 package ch.openolitor.core.reporting
 
 import akka.actor._
-import ch.openolitor.core.reporting.pdf.PDFGeneratorActor
+import ch.openolitor.core.reporting.ReportSystem._
+import java.util.zip.ZipFile
 
-object SingleDocumentReportPDFProcessorActor {
-  def props(): Props = Props(classOf[SingleDocumentReportPDFProcessorActor])
+object ZipReportResultCollector {
+  def props(reportSystem: ActorRef): Props = Props(classOf[ZipReportResultCollector], reportSystem)
 }
 
 /**
- * This actor generates a report document and converts the result to a pdf afterwards
+ * Collect all results into a zip file. Send back the zip result when all reports got generated
  */
-class SingleDocumentReportPDFProcessorActor() extends Actor with ActorLogging {
-  import ReportSystem._
-  import PDFGeneratorActor._
-
-  val generateDocumentActor = context.actorOf(SingleDocumentReportProcessorActor.props, "generate-document-" + System.currentTimeMillis)
-  val generatePdfActor = context.actorOf(PDFGeneratorActor.props, "pdf-" + System.currentTimeMillis)
+class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
 
   var origSender: Option[ActorRef] = None
+  var zipFile: Option[ZipFile] = None
+  var errors: Seq[ReportError] = Seq()
 
   val receive: Receive = {
-    case cmd: GenerateReport =>
+    case request: GenerateReports[_] =>
       origSender = Some(sender)
-      generateDocumentActor ! cmd
-      context become waitingForDocumentResult
+      reportSystem ! request
+      context become waitingForResult
   }
 
-  val waitingForDocumentResult: Receive = {
-    case DocumentReportResult(document) =>
-      generatePdfActor ! GeneratePDF(document)
-      context become waitingForPdfResult
-    case e: ReportError =>
-      //stop on error
-      origSender.map(_ ! e)
-      self ! PoisonPill
-  }
+  val waitingForResult: Receive = {
+    case result: SingleReportResult =>
+    // TODO: append to zip
 
-  val waitingForPdfResult: Receive = {
-    case PDFResult(pdf) =>
-      origSender.map(_ ! PdfReportResult(pdf))
-      self ! PoisonPill
-    case PDFError(error) =>
-      origSender.map(_ ! ReportError(error))
+    case result: GenerateReportsStats =>
+      //finished, send back zip result
+      origSender.map(_ ! ZipReportResult(result, errors, zipFile))
       self ! PoisonPill
   }
 }

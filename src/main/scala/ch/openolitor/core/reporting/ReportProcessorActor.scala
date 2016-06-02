@@ -53,22 +53,21 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
   }
 
   val collectingResults: Receive = {
-    case result: ReportSuccess =>
-      stats = stats.copy(numberOfSuccess = stats.numberOfSuccess + 1)
-      origSender.map(_ ! SingleReportResult(stats, Right(result)))
-    case error: ReportError =>
-      stats = stats.copy(numberOfFailures = stats.numberOfFailures + 1)
-      origSender.map(_ ! SingleReportResult(stats, Left(error)))
+    case result: ReportResult =>
+      receivedResult(result)
   }
 
-  def receivedResult(result: Any) = {
+  def receivedResult(result: ReportResult) = {
     result match {
-      case Success(result) =>
+      case result: ReportSuccess =>
+        log.debug(s"Received result, send to:$origSender")
         stats = stats.copy(numberOfSuccess = stats.numberOfSuccess + 1)
+        origSender.map(_ ! SingleReportResult(stats, Right(result)))
       //send result direct to client
-      case Failure(error) =>
+      case error: ReportError =>
+        log.debug(s"Received error:$error")
         stats = stats.copy(numberOfFailures = stats.numberOfFailures + 1)
-
+        origSender.map(_ ! SingleReportResult(stats, Left(error)))
     }
     stats = stats.copy(numberOfReportsInProgress = stats.numberOfReportsInProgress - 1)
     if (stats.numberOfReportsInProgress <= 0) {
@@ -80,11 +79,12 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
 
   def processReports(file: ByteString, data: ReportData[_], f: Any => Props) = {
     origSender = Some(sender)
+    log.debug(s"Process request, send results to:$origSender")
     stats = stats.copy(jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
     for {
       row <- data.rowsAsJson
     } yield {
-      context.actorOf(f(row)) ! GenerateReport(file, row)
+      context.actorOf(f(row), "report-" + System.currentTimeMillis) ! GenerateReport(file, row)
     }
     context become collectingResults
   }

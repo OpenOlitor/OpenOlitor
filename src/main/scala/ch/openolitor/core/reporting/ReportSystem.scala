@@ -26,6 +26,7 @@ import akka.actor._
 import akka.util.ByteString
 import spray.json._
 import ch.openolitor.core.filestore._
+import java.util.zip.ZipFile
 
 object ReportSystem {
   def props(fileStore: FileStore): Props = Props(classOf[ReportSystem], fileStore)
@@ -46,6 +47,7 @@ object ReportSystem {
   case class GenerateReports[E](file: ByteString, data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
   case class GenerateReport(file: ByteString, data: JsObject)
   case class SingleReportResult(stats: GenerateReportsStats, result: Either[ReportError, ReportResult]) extends ReportResult
+  case class ZipReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Option[ZipFile]) extends ReportResult
   case class GenerateReportsStats(jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult
 }
 
@@ -57,8 +59,11 @@ class ReportSystem(fileStore: FileStore) extends Actor with ActorLogging {
 
   val receive: Receive = {
     case request: GenerateReports[_] =>
-      val processor = context.actorOf(ReportProcessorActor.props(fileStore))
+      log.debug(s"Generate report from:" + sender)
+      val processor = context.actorOf(ReportProcessorActor.props(fileStore), "report-processor-" + System.currentTimeMillis)
       //forward request to new processor-actor
       processor forward request
+    case x =>
+      log.debug(s"Received result:$x")
   }
 }

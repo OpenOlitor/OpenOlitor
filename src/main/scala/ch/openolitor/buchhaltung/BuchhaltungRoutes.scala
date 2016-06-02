@@ -58,10 +58,10 @@ import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.core.security.Subject
 import ch.openolitor.core.reporting._
 import akka.util.ByteString
-import akka.stream.ActorMaterializer
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.util.ByteStringUtil
 import java.io.InputStream
+import java.util.zip.ZipInputStream
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -74,12 +74,6 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
   implicit val zahlungsEingangIdPath = long2BaseIdPathMatcher(ZahlungsEingangId.apply)
-
-  type RechnungReportForm = ReportForm[RechnungId] with JSONSerializable
-  implicit val formFormat = autoProductFormat[ReportForm[RechnungId]]
-
-  implicit val actorSystem = system
-  implicit val materializer = ActorMaterializer()
 
   import EntityStore._
 
@@ -198,10 +192,10 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def rechnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
-    (uploadOpt("vorlage") { formData => file =>
+    uploadOpt("vorlage") { formData => file =>
       //use custom or default template whether content was delivered or not
-      for {
-        vorlage <- loadVorlage(file).right
+      (for {
+        vorlage <- loadVorlage(file)
         pdfGenerieren <- Try(formData.fields.collectFirst {
           case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
             entity.asString.toBoolean
@@ -215,9 +209,6 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
             entity.asString.toBoolean
         }.getOrElse(true))
       } yield {
-
-        logger.debug(s"===== generate report:$file\n$vorlage\n$pdfGenerieren\n$pdfAblegen\n$downloadFile")
-
         val config = ReportConfig[RechnungId](Seq(id), vorlage, pdfGenerieren, pdfAblegen)
 
         onSuccess(generateRechnungReports(config)) {
@@ -227,27 +218,35 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
             val errorString = result.validationErrors.map(_.message).mkString(",")
             complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
           case Right(result) =>
-            onSuccess(result.single) {
+            result.result match {
               case SingleReportResult(_, Left(ReportError(error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
               case SingleReportResult(_, Right(DocumentReportResult(result))) => stream(result)
               case SingleReportResult(_, Right(PdfReportResult(result))) => stream(result)
               case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) if downloadFile => download(fileType, id.id)
               case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) => complete(id.id)
+              case ZipReportResult(_, errors, zip) if !zip.isDefined =>
+                val errorString: String = errors.map(_.error).mkString("\n")
+                complete(StatusCodes.BadRequest, errorString)
+              case ZipReportResult(_, _, zip) if zip.isDefined =>
+                //TODO: stream zip
+                //stream(new ZipInputStream(zip.get))
+                ???
+              case x =>
+                logger.error(s"Received unexpected result:$x")
+                complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden")
             }
         }
+      }) match {
+        case Success(result) => result
+        case Failure(error) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${error}")
       }
-    })
+    }
   }
 
-  def loadVorlage(file: Option[(InputStream, String)]): Either[String, BerichtsVorlage] = {
+  def loadVorlage(file: Option[(InputStream, String)]): Try[BerichtsVorlage] = {
     file map {
-      case (is, name) =>
-        ByteStringUtil.readFromInputStream(is) match {
-          case Success(result) => Right(EinzelBerichtsVorlage(result))
-          case Failure(error) => Left(s"Der Berichtsvorlage konnte nicht geladen werden:$error")
-        }
-
-    } getOrElse (Right(StandardBerichtsVorlage))
+      case (is, name) => ByteStringUtil.readFromInputStream(is).map(result => EinzelBerichtsVorlage(result))
+    } getOrElse Success(StandardBerichtsVorlage)
   }
 }
 

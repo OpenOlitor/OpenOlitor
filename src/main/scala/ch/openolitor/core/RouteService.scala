@@ -259,7 +259,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   def stream(input: ByteString) = {
-    val streamResponse: Stream[ByteString] = Stream.continually(input)
+    logger.debug(s"Stream result. Length:${input.size}")
+    val streamResponse: Stream[ByteString] = Stream(input)
     streamThenClose(streamResponse, None)
   }
 

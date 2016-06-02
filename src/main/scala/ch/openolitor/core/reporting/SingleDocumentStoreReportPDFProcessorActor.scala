@@ -15,8 +15,8 @@ object SingleDocumentStoreReportPDFProcessorActor {
 class SingleDocumentStoreReportPDFProcessorActor(fileStore: FileStore, fileType: FileType, idOpt: Option[String], name: String) extends Actor with ActorLogging {
   import ReportSystem._
 
-  val generatePdfActor = context.actorOf(SingleDocumentReportPDFProcessorActor.props)
-  val fileStoreActor = context.actorOf(FileStoreActor.props(fileStore))
+  val generatePdfActor = context.actorOf(SingleDocumentReportPDFProcessorActor.props, "generate-pdf-" + System.currentTimeMillis)
+  val fileStoreActor = context.actorOf(FileStoreActor.props(fileStore), "file-store-" + System.currentTimeMillis)
 
   var origSender: Option[ActorRef] = None
   var id: String = ""

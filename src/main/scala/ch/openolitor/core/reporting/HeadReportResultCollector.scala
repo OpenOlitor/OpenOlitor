@@ -23,47 +23,30 @@
 package ch.openolitor.core.reporting
 
 import akka.actor._
-import ch.openolitor.core.reporting.pdf.PDFGeneratorActor
+import ch.openolitor.core.reporting.ReportSystem._
 
-object SingleDocumentReportPDFProcessorActor {
-  def props(): Props = Props(classOf[SingleDocumentReportPDFProcessorActor])
+object HeadReportResultCollector {
+  def props(reportSystem: ActorRef): Props = Props(classOf[HeadReportResultCollector], reportSystem)
 }
 
 /**
- * This actor generates a report document and converts the result to a pdf afterwards
+ * after sending report request to reportsystem wait for only for first reportresult and send that back to the sender
  */
-class SingleDocumentReportPDFProcessorActor() extends Actor with ActorLogging {
-  import ReportSystem._
-  import PDFGeneratorActor._
-
-  val generateDocumentActor = context.actorOf(SingleDocumentReportProcessorActor.props, "generate-document-" + System.currentTimeMillis)
-  val generatePdfActor = context.actorOf(PDFGeneratorActor.props, "pdf-" + System.currentTimeMillis)
+class HeadReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
 
   var origSender: Option[ActorRef] = None
 
   val receive: Receive = {
-    case cmd: GenerateReport =>
+    case request: GenerateReports[_] =>
       origSender = Some(sender)
-      generateDocumentActor ! cmd
-      context become waitingForDocumentResult
+      reportSystem ! request
+      context become waitingForResult
   }
 
-  val waitingForDocumentResult: Receive = {
-    case DocumentReportResult(document) =>
-      generatePdfActor ! GeneratePDF(document)
-      context become waitingForPdfResult
-    case e: ReportError =>
-      //stop on error
-      origSender.map(_ ! e)
+  val waitingForResult: Receive = {
+    case result: SingleReportResult =>
+      origSender.map(_ ! result)
       self ! PoisonPill
   }
 
-  val waitingForPdfResult: Receive = {
-    case PDFResult(pdf) =>
-      origSender.map(_ ! PdfReportResult(pdf))
-      self ! PoisonPill
-    case PDFError(error) =>
-      origSender.map(_ ! ReportError(error))
-      self ! PoisonPill
-  }
 }
