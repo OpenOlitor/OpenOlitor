@@ -20,37 +20,14 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.util
 
-import akka.actor._
-import java.util.UUID
-import ch.openolitor.util.ByteBufferBackedInputStream
-import scala.concurrent.ExecutionContext
-import java.io.ByteArrayInputStream
+import java.io.InputStream
+import scala.util.Try
 
-object FileStoreActor {
-  def props(fileStore: FileStore): Props = Props(classOf[FileStoreActor], fileStore)
-
-  case class StoreFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: Array[Byte])
-}
-
-class FileStoreActor(fileStore: FileStore) extends Actor with ActorLogging {
-  import FileStoreActor._
-
-  implicit val ctx: ExecutionContext = context.system.dispatcher
-
-  val receive: Receive = {
-    case StoreFile(bucket, id, metadata, file) =>
-      val rec = sender
-      storeFile(bucket, id, metadata, file) map {
-        case Left(e) => rec ! e
-        case Right(result) => rec ! result
-      }
-  }
-
-  def storeFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: Array[Byte]) = {
-    val name = id.getOrElse(UUID.randomUUID.toString)
-    val is = new ByteArrayInputStream(file)
-    fileStore.putFile(bucket, Some(name), metadata, is)
+object InputStreamUtil {
+  implicit class ExtInputStream(self: InputStream) {
+    def toByteArray: Try[Array[Byte]] =
+      Try(Stream.continually(self.read).takeWhile(_ != -1).map(_.toByte).toArray)
   }
 }

@@ -23,7 +23,6 @@
 package ch.openolitor.core.reporting
 
 import akka.actor._
-import akka.util.ByteString
 import spray.json._
 import ch.openolitor.core.filestore._
 import java.util.zip.ZipFile
@@ -38,14 +37,14 @@ object ReportSystem {
 
   trait ReportResult
   trait ReportSuccess extends ReportResult
-  case class DocumentReportResult(document: ByteString) extends ReportSuccess
-  case class PdfReportResult(document: ByteString) extends ReportSuccess
+  case class DocumentReportResult(document: Array[Byte]) extends ReportSuccess
+  case class PdfReportResult(document: Array[Byte]) extends ReportSuccess
   case class StoredPdfReportResult(fileType: FileType, id: FileStoreFileId) extends ReportSuccess
   case class ReportError(error: String) extends ReportResult
 
   case class FileStoreParameters[E](fileType: FileType, idFactory: E => Option[String], nameFactory: E => String)
-  case class GenerateReports[E](file: ByteString, data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
-  case class GenerateReport(file: ByteString, data: JsObject)
+  case class GenerateReports[E](file: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
+  case class GenerateReport(file: Array[Byte], data: JsObject)
   case class SingleReportResult(stats: GenerateReportsStats, result: Either[ReportError, ReportResult]) extends ReportResult
   case class ZipReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Option[ZipFile]) extends ReportResult
   case class GenerateReportsStats(jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult

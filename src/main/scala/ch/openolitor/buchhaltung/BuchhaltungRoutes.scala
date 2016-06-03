@@ -57,9 +57,8 @@ import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.core.security.Subject
 import ch.openolitor.core.reporting._
-import akka.util.ByteString
 import ch.openolitor.core.reporting.ReportSystem._
-import ch.openolitor.util.ByteStringUtil
+import ch.openolitor.util.InputStreamUtil._
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 
@@ -245,7 +244,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 
   def loadVorlage(file: Option[(InputStream, String)]): Try[BerichtsVorlage] = {
     file map {
-      case (is, name) => ByteStringUtil.readFromInputStream(is).map(result => EinzelBerichtsVorlage(result))
+      case (is, name) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
     } getOrElse Success(StandardBerichtsVorlage)
   }
 }

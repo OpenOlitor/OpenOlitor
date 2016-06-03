@@ -7,7 +7,6 @@ import scala.concurrent.Future
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.util.ByteString
 import ch.openolitor.core.filestore._
 import ch.openolitor.core.ActorReferences
 import ch.openolitor.core.reporting._

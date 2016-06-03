@@ -59,14 +59,14 @@ class SingleDocumentReportProcessorActor extends Actor with ActorLogging with Do
       self ! PoisonPill
   }
 
-  private def generateReport(file: ByteString, data: JsObject): Try[ByteString] = {
+  private def generateReport(file: Array[Byte], data: JsObject): Try[Array[Byte]] = {
     for {
-      doc <- Try(TextDocument.loadDocument(new ByteBufferBackedInputStream(file.asByteBuffer)))
+      doc <- Try(TextDocument.loadDocument(new ByteArrayInputStream(file)))
       result <- Try(processDocument(doc, data))
     } yield {
       val baos = new ByteArrayOutputStream()
       doc.save(baos)
-      ByteString(ByteBuffer.wrap(baos.toByteArray))
+      baos.toByteArray
     }
   }
 }

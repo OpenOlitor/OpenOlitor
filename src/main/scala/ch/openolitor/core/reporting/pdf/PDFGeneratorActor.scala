@@ -23,15 +23,14 @@
 package ch.openolitor.core.reporting.pdf
 
 import akka.actor._
-import akka.util.ByteString
 import scala.concurrent.blocking
 import scala.util._
 
 object PDFGeneratorActor {
   def props(): Props = Props(classOf[PDFGeneratorActor])
 
-  case class GeneratePDF(document: ByteString)
-  case class PDFResult(pdf: ByteString)
+  case class GeneratePDF(document: Array[Byte])
+  case class PDFResult(pdf: Array[Byte])
   case class PDFError(error: String)
 }
 

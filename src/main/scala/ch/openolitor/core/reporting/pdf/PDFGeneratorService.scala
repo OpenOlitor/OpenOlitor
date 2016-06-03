@@ -22,14 +22,13 @@
 \*                                                                           */
 package ch.openolitor.core.reporting.pdf
 
-import akka.util.ByteString
 import scala.util.Try
 
 trait PDFGeneratorService {
-  def generatePDF(input: ByteString): Try[ByteString] = synchronized {
+  def generatePDF(input: Array[Byte]): Try[Array[Byte]] = synchronized {
     Try {
       //TODO: access rest webservice to generate pdf
-      ByteString("")
+      Array[Byte]()
     }
   }
 }

@@ -23,7 +23,6 @@
 package ch.openolitor.core.reporting
 
 import akka.actor._
-import akka.util.ByteString
 import scala.util._
 import ch.openolitor.core.filestore.FileStore
 
@@ -77,7 +76,7 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
     }
   }
 
-  def processReports(file: ByteString, data: ReportData[_], f: Any => Props) = {
+  def processReports(file: Array[Byte], data: ReportData[_], f: Any => Props) = {
     origSender = Some(sender)
     log.debug(s"Process request, send results to:$origSender")
     stats = stats.copy(jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)

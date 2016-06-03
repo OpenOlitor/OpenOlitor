@@ -24,7 +24,6 @@ package ch.openolitor.core.reporting
 
 import ch.openolitor.core.ActorReferences
 
-import akka.util.ByteString
 import scalaz._
 import Scalaz._
 import ch.openolitor.core.filestore._
@@ -42,11 +41,12 @@ import ch.openolitor.util.ByteStringUtil
 import akka.actor.ActorRef
 import akka.util.Timeout
 import scala.concurrent.duration._
+import ch.openolitor.util.InputStreamUtil._
 
 sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
 //case class Berichtsvorlage(id: BerichtsVorlageId) extends BerichtsVorlage
-case class EinzelBerichtsVorlage(file: ByteString) extends BerichtsVorlage
+case class EinzelBerichtsVorlage(file: Array[Byte]) extends BerichtsVorlage
 case class ServiceFailed(msg: String, e: Throwable) extends Exception(msg, e)
 
 case class ReportForm[I](ids: Seq[I], pdfGenerieren: Boolean, pdfAblegen: Boolean) extends JSONSerializable {
@@ -109,14 +109,14 @@ trait ReportService extends LazyLogging {
     } yield source
   }
 
-  def generateReport[E](vorlage: ByteString, data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = EitherT {
+  def generateReport[E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = EitherT {
     implicit val timeout = Timeout(60.seconds)
     val collector = if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem) else ZipReportResultCollector.props(reportSystem)
     val ref = actorSystem.actorOf(collector)
     (ref ? GenerateReports(vorlage, data, pdfGenerieren, pdfAblage)).map(_.asInstanceOf[ReportResult].right)
   }
 
-  def loadBerichtsvorlage(vorlage: BerichtsVorlage, fileType: FileType, id: Option[String]): ServiceResult[ByteString] = {
+  def loadBerichtsvorlage(vorlage: BerichtsVorlage, fileType: FileType, id: Option[String]): ServiceResult[Array[Byte]] = {
     vorlage match {
       case EinzelBerichtsVorlage(file) => EitherT { Future { file.right } }
       case StandardBerichtsVorlage => resolveStandardBerichtsVorlage(fileType, id)
@@ -126,14 +126,17 @@ trait ReportService extends LazyLogging {
   /**
    * Resolve from S3 or local as a local resource
    */
-  def resolveStandardBerichtsVorlage(fileType: FileType, id: Option[String] = None): ServiceResult[ByteString] = {
+  def resolveStandardBerichtsVorlage(fileType: FileType, id: Option[String] = None): ServiceResult[Array[Byte]] = {
     resolveBerichtsVorlageFromFileStore(fileType, id) ||| resolveBerichtsVorlageFromResources(fileType, id)
   }
 
-  def resolveBerichtsVorlageFromFileStore(fileType: FileType, id: Option[String]): ServiceResult[ByteString] = EitherT {
+  def resolveBerichtsVorlageFromFileStore(fileType: FileType, id: Option[String]): ServiceResult[Array[Byte]] = EitherT {
     fileStore.getFile(fileType.bucket, id.getOrElse(defaultFileTypeId(fileType))) map {
       case Left(e) => ServiceFailed(s"Vorlage konnte im FileStore nicht gefunden werden: $fileType, $id").left
-      case Right(file) => ByteString(scala.io.Source.fromInputStream(file.file).mkString).right
+      case Right(file) => file.file.toByteArray match {
+        case TrySuccess(result) => result.right
+        case TryFailure(error) => ServiceFailed(s"Vorlage konnte im FileStore nicht geladen: $error").left
+      }
     }
   }
 
@@ -147,7 +150,7 @@ trait ReportService extends LazyLogging {
     }
   }
 
-  def resolveBerichtsVorlageFromResources(fileType: FileType, id: Option[String]): ServiceResult[ByteString] = EitherT {
+  def resolveBerichtsVorlageFromResources(fileType: FileType, id: Option[String]): ServiceResult[Array[Byte]] = EitherT {
     logger.debug(s"Resolve template from resources:$fileType:$id")
     Future {
       val resourcePath = "/vorlagen/" + defaultFileTypeId(fileType)
@@ -158,7 +161,7 @@ trait ReportService extends LazyLogging {
       is match {
         case null => ServiceFailed(s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource").left
         case is =>
-          ByteStringUtil.readFromInputStream(is) match {
+          is.toByteArray match {
             case TrySuccess(result) => result.right
             case TryFailure(error) =>
               error.printStackTrace()
