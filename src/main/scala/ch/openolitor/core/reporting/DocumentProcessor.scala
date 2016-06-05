@@ -333,30 +333,30 @@ trait DocumentProcessor extends LazyLogging {
       case dateFormatPattern(pattern) =>
         // parse date
         val formattedDate = libreOfficeDateFormat.parseDateTime(value).toString(pattern, locale)
-        textbox.setTextContent(formattedDate)
+        textbox.setTextContentStyleAware(formattedDate)
       case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
         // lookup color value        
         val number = value.toDouble
         if (number < 0 && negativeFormat != null) {
           val formattedValue = new DecimalFormat(negativeFormat).format(value.toDouble)
-          textbox.setTextContent(formattedValue)
           if (negativeColor != null) {
             val color = if (Color.isValid(negativeColor)) Color.valueOf(negativeColor) else colorMap.get(negativeColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:$negativeColor"))
             textbox.setFontColor(color)
           }
+          textbox.setTextContentStyleAware(formattedValue)
         } else {
           val formattedValue = new DecimalFormat(positivePattern).format(value.toDouble)
-          textbox.setTextContent(formattedValue)
           if (positiveColor != null) {
             val color = if (Color.isValid(positiveColor)) Color.valueOf(positiveColor) else colorMap.get(positiveColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:positiveColor"))
             textbox.setFontColor(color)
           }
+          textbox.setTextContentStyleAware(formattedValue)
         }
       case x if format.length > 0 =>
         logger.warn(s"Unsupported format:$format")
-        textbox.setTextContent(value)
+        textbox.setTextContentStyleAware(value)
       case _ =>
-        textbox.setTextContent(value)
+        textbox.setTextContentStyleAware(value)
     }
   }
 
@@ -403,6 +403,19 @@ object OdfToolkitUtils {
      */
     def removeCommonStyle() = {
       self.getDrawFrameElement().setDrawTextStyleNameAttribute(null)
+    }
+
+    def setTextContentStyleAware(content: String) = {
+      val p = self.getParagraphIterator.next()
+      val lastNode = p.getOdfElement.getLastChild()
+      if (lastNode != null && lastNode.getNodeName() != null
+        && (lastNode.getNodeName().equals("text:span"))) {
+        //set text content on span element
+        val span = lastNode.asInstanceOf[TextSpanElement]
+        span.setTextContent(content)
+      } else {
+        self.setTextContent(content)
+      }
     }
 
     def setFontColor(color: Color) = {
