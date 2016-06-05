@@ -102,8 +102,21 @@ trait DocumentProcessor extends LazyLogging {
     doc.setLocale(locale)
     for {
       props <- Try(extractProperties(data))
+      // process header
       _ <- Try(processVariables(doc.getHeader, props))
+      _ <- Try(processTables(doc.getHeader, props, locale, ""))
+      //_ <- Try(processLists(doc.getHeader, props, locale, ""))
+      val headerContainer = new GenericParagraphContainerImpl(doc.getHeader.getOdfElement)
+      _ <- Try(processTextboxes(headerContainer, props, locale))
+
+      // process footer
       _ <- Try(processVariables(doc.getFooter, props))
+      _ <- Try(processTables(doc.getFooter, props, locale, ""))
+      //_ <- Try(processLists(doc.getFooter, props, locale, ""))
+      val footerContainer = new GenericParagraphContainerImpl(doc.getFooter.getOdfElement)
+      _ <- Try(processTextboxes(footerContainer, props, locale))
+
+      // process content
       _ <- Try(processVariables(doc, props))
       _ <- Try(processTables(doc, props, locale, ""))
       _ <- Try(processLists(doc, props, locale, ""))
@@ -348,6 +361,9 @@ trait DocumentProcessor extends LazyLogging {
   }
 
   private def parseFormat(name: String): (String, Option[String]) = {
+    if (name == null || name.trim.isEmpty) {
+      return (name, None)
+    }
     name.split('|') match {
       case Array(name, format) => (name.trim, Some(format.trim))
       case Array(name) => (name.trim, None)
