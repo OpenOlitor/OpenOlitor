@@ -35,20 +35,20 @@ import java.nio._
 import ch.openolitor.util.ByteBufferBackedInputStream
 
 object SingleDocumentReportProcessorActor {
-  def props(): Props = Props(classOf[SingleDocumentReportProcessorActor])
+  def props(name: String): Props = Props(classOf[SingleDocumentReportProcessorActor], name)
 }
 
 /**
  * This generates a single report documet from a given json data object
  */
-class SingleDocumentReportProcessorActor extends Actor with ActorLogging with DocumentProcessor {
+class SingleDocumentReportProcessorActor(name: String) extends Actor with ActorLogging with DocumentProcessor {
   import ReportSystem._
 
   val receive: Receive = {
     case GenerateReport(file, data) =>
       generateReport(file, data) match {
         case Success(result) => {
-          sender ! DocumentReportResult(result)
+          sender ! DocumentReportResult(result, name + ".odt")
         }
         case Failure(error) => {
           error.printStackTrace()

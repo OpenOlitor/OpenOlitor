@@ -219,8 +219,18 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
           case Right(result) =>
             result.result match {
               case SingleReportResult(_, Left(ReportError(error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
-              case SingleReportResult(_, Right(DocumentReportResult(result))) => stream(result)
-              case SingleReportResult(_, Right(PdfReportResult(result))) => stream(result)
+              case SingleReportResult(_, Right(DocumentReportResult(result, name))) =>
+                respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
+                  respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.text`) {
+                    stream(result)
+                  }
+                }
+              case SingleReportResult(_, Right(PdfReportResult(result, name))) =>
+                respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
+                  respondWithMediaType(MediaTypes.`application/pdf`) {
+                    stream(result)
+                  }
+                }
               case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) if downloadFile => download(fileType, id.id)
               case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) => complete(id.id)
               case ZipReportResult(_, errors, zip) if !zip.isDefined =>

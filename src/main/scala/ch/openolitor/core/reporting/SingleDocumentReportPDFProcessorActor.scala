@@ -26,17 +26,17 @@ import akka.actor._
 import ch.openolitor.core.reporting.pdf.PDFGeneratorActor
 
 object SingleDocumentReportPDFProcessorActor {
-  def props(): Props = Props(classOf[SingleDocumentReportPDFProcessorActor])
+  def props(name: String): Props = Props(classOf[SingleDocumentReportPDFProcessorActor], name)
 }
 
 /**
  * This actor generates a report document and converts the result to a pdf afterwards
  */
-class SingleDocumentReportPDFProcessorActor() extends Actor with ActorLogging {
+class SingleDocumentReportPDFProcessorActor(name: String) extends Actor with ActorLogging {
   import ReportSystem._
   import PDFGeneratorActor._
 
-  val generateDocumentActor = context.actorOf(SingleDocumentReportProcessorActor.props, "generate-document-" + System.currentTimeMillis)
+  val generateDocumentActor = context.actorOf(SingleDocumentReportProcessorActor.props(name), "generate-document-" + System.currentTimeMillis)
   val generatePdfActor = context.actorOf(PDFGeneratorActor.props, "pdf-" + System.currentTimeMillis)
 
   var origSender: Option[ActorRef] = None
@@ -49,7 +49,7 @@ class SingleDocumentReportPDFProcessorActor() extends Actor with ActorLogging {
   }
 
   val waitingForDocumentResult: Receive = {
-    case DocumentReportResult(document) =>
+    case DocumentReportResult(document, _) =>
       generatePdfActor ! GeneratePDF(document)
       context become waitingForPdfResult
     case e: ReportError =>
@@ -60,7 +60,7 @@ class SingleDocumentReportPDFProcessorActor() extends Actor with ActorLogging {
 
   val waitingForPdfResult: Receive = {
     case PDFResult(pdf) =>
-      origSender.map(_ ! PdfReportResult(pdf))
+      origSender.map(_ ! PdfReportResult(pdf, name + ".pdf"))
       self ! PoisonPill
     case PDFError(error) =>
       origSender.map(_ ! ReportError(error))

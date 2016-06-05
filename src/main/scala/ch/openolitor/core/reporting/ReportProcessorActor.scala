@@ -44,11 +44,11 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
 
   val receive: Receive = {
     case GenerateReports(file, data, false, None) =>
-      processReports(file, data, _ => SingleDocumentReportProcessorActor.props)
+      processReports(file, data, row => SingleDocumentReportProcessorActor.props(row.name))
     case GenerateReports(file, data, true, None) =>
-      processReports(file, data, _ => SingleDocumentReportPDFProcessorActor.props)
+      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(row.name))
     case GenerateReports(file, data, true, Some(option)) =>
-      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, option.fileType, option.idFactory(row), option.nameFactory(row)))
+      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, option.fileType, row.id, row.name))
   }
 
   val collectingResults: Receive = {
@@ -76,14 +76,14 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
     }
   }
 
-  def processReports(file: Array[Byte], data: ReportData[_], f: Any => Props) = {
+  def processReports(file: Array[Byte], data: ReportData[_], f: ReportDataRow => Props) = {
     origSender = Some(sender)
     log.debug(s"Process request, send results to:$origSender")
     stats = stats.copy(jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
     for {
-      row <- data.rowsAsJson
+      row <- data.rows
     } yield {
-      context.actorOf(f(row), "report-" + System.currentTimeMillis) ! GenerateReport(file, row)
+      context.actorOf(f(row), "report-" + System.currentTimeMillis) ! GenerateReport(file, row.value)
     }
     context become collectingResults
   }

@@ -15,7 +15,7 @@ object SingleDocumentStoreReportPDFProcessorActor {
 class SingleDocumentStoreReportPDFProcessorActor(fileStore: FileStore, fileType: FileType, idOpt: Option[String], name: String) extends Actor with ActorLogging {
   import ReportSystem._
 
-  val generatePdfActor = context.actorOf(SingleDocumentReportPDFProcessorActor.props, "generate-pdf-" + System.currentTimeMillis)
+  val generatePdfActor = context.actorOf(SingleDocumentReportPDFProcessorActor.props(name), "generate-pdf-" + System.currentTimeMillis)
   val fileStoreActor = context.actorOf(FileStoreActor.props(fileStore), "file-store-" + System.currentTimeMillis)
 
   var origSender: Option[ActorRef] = None
@@ -29,7 +29,7 @@ class SingleDocumentStoreReportPDFProcessorActor(fileStore: FileStore, fileType:
   }
 
   val waitingForDocumentResult: Receive = {
-    case PdfReportResult(result) =>
+    case PdfReportResult(result, name) =>
       id = idOpt.getOrElse(UUID.randomUUID.toString)
       fileStoreActor ! StoreFile(fileType.bucket, Some(id), FileStoreFileMetadata(name, fileType), result)
       context become waitigForStoreCompleted

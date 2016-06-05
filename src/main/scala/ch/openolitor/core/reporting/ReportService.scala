@@ -82,7 +82,7 @@ trait ReportService extends LazyLogging {
     vorlageId: Option[String],
     ablageType: FileType,
     ablageIdFactory: E => Option[String],
-    ablageNameFactory: E => String,
+    nameFactory: E => String,
     jobId: JobId = JobId()
   ): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
     validationFunction(config.ids) flatMap {
@@ -90,9 +90,9 @@ trait ReportService extends LazyLogging {
         logger.debug(s"Valdidation errors:$errors, process result records:${result.length}")
         val ablageParams = config.pdfAblegen match {
           case false => None
-          case true => Some(FileStoreParameters[E](ablageType, ablageIdFactory, ablageNameFactory))
+          case true => Some(FileStoreParameters[E](ablageType))
         }
-        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result), config.pdfGenerieren, ablageParams).run map {
+        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, ablageIdFactory, nameFactory), config.pdfGenerieren, ablageParams).run map {
           case -\/(e) =>
             logger.warn(s"Failed generating report {}", e.getMessage)
             Left(e)

@@ -31,18 +31,19 @@ object ReportSystem {
   def props(fileStore: FileStore): Props = Props(classOf[ReportSystem], fileStore)
 
   case class JobId(id: Long = System.currentTimeMillis)
-  case class ReportData[E: JsonFormat](jobId: JobId, rows: Seq[E]) {
-    val rowsAsJson = rows.map(_.toJson.asJsObject)
+  case class ReportDataRow(value: JsObject, id: Option[String], name: String)
+  case class ReportData[E: JsonFormat](jobId: JobId, rowsRaw: Seq[E], idFactory: E => Option[String], nameFactory: E => String) {
+    val rows = rowsRaw.map(row => ReportDataRow(row.toJson.asJsObject, idFactory(row), nameFactory(row)))
   }
 
   trait ReportResult
   trait ReportSuccess extends ReportResult
-  case class DocumentReportResult(document: Array[Byte]) extends ReportSuccess
-  case class PdfReportResult(document: Array[Byte]) extends ReportSuccess
+  case class DocumentReportResult(document: Array[Byte], name: String) extends ReportSuccess
+  case class PdfReportResult(document: Array[Byte], name: String) extends ReportSuccess
   case class StoredPdfReportResult(fileType: FileType, id: FileStoreFileId) extends ReportSuccess
   case class ReportError(error: String) extends ReportResult
 
-  case class FileStoreParameters[E](fileType: FileType, idFactory: E => Option[String], nameFactory: E => String)
+  case class FileStoreParameters[E](fileType: FileType)
   case class GenerateReports[E](file: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
   case class GenerateReport(file: Array[Byte], data: JsObject)
   case class SingleReportResult(stats: GenerateReportsStats, result: Either[ReportError, ReportResult]) extends ReportResult
