@@ -869,7 +869,7 @@ class DataImportParser extends Actor with ActorLogging {
       val abo = abos collect { case a: HeimlieferungAbo => a } find (_.id == aboId) getOrElse (throw ParseException(s"No abo found with id $aboId"))
       val kunde = kunden find (_.id == abo.kundeId) getOrElse (throw ParseException(s"No abo found with id $aboId"))
 
-      val sort = Some(row.value[Int](indexSort))
+      val sort = row.value[Option[Int]](indexSort)
 
       Tourlieferung(
         aboId,
