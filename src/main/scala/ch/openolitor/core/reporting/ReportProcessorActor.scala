@@ -44,11 +44,11 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
 
   val receive: Receive = {
     case GenerateReports(file, data, false, None) =>
-      processReports(file, data, row => SingleDocumentReportProcessorActor.props(row.name))
+      processReports(file, data, row => SingleDocumentReportProcessorActor.props(row.name, row.locale))
     case GenerateReports(file, data, true, None) =>
-      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(row.name))
+      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(row.name, row.locale))
     case GenerateReports(file, data, true, Some(option)) =>
-      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, option.fileType, row.id, row.name))
+      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, option.fileType, row.id, row.name, row.locale))
   }
 
   val collectingResults: Receive = {

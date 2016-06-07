@@ -33,15 +33,16 @@ import spray.json._
 import java.io._
 import java.nio._
 import ch.openolitor.util.ByteBufferBackedInputStream
+import java.util.Locale
 
 object SingleDocumentReportProcessorActor {
-  def props(name: String): Props = Props(classOf[SingleDocumentReportProcessorActor], name)
+  def props(name: String, locale: Locale): Props = Props(classOf[SingleDocumentReportProcessorActor], name, locale)
 }
 
 /**
  * This generates a single report documet from a given json data object
  */
-class SingleDocumentReportProcessorActor(name: String) extends Actor with ActorLogging with DocumentProcessor {
+class SingleDocumentReportProcessorActor(name: String, locale: Locale) extends Actor with ActorLogging with DocumentProcessor {
   import ReportSystem._
 
   val receive: Receive = {
@@ -62,7 +63,7 @@ class SingleDocumentReportProcessorActor(name: String) extends Actor with ActorL
   private def generateReport(file: Array[Byte], data: JsObject): Try[Array[Byte]] = {
     for {
       doc <- Try(TextDocument.loadDocument(new ByteArrayInputStream(file)))
-      result <- Try(processDocument(doc, data))
+      result <- processDocument(doc, data, locale)
     } yield {
       val baos = new ByteArrayOutputStream()
       doc.save(baos)

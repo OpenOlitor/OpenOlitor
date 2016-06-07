@@ -734,7 +734,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.waehrung -> parameter(projekt.waehrung),
         column.geschaeftsjahrMonat -> parameter(projekt.geschaeftsjahrMonat),
         column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag),
-        column.twoFactorAuthentication -> parameter(projekt.twoFactorAuthentication)
+        column.twoFactorAuthentication -> parameter(projekt.twoFactorAuthentication),
+        column.sprache -> parameter(projekt.sprache)
       )
     }
   }

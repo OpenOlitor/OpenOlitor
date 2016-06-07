@@ -26,14 +26,15 @@ import akka.actor._
 import spray.json._
 import ch.openolitor.core.filestore._
 import java.util.zip.ZipFile
+import java.util.Locale
 
 object ReportSystem {
   def props(fileStore: FileStore): Props = Props(classOf[ReportSystem], fileStore)
 
   case class JobId(id: Long = System.currentTimeMillis)
-  case class ReportDataRow(value: JsObject, id: Option[String], name: String)
-  case class ReportData[E: JsonFormat](jobId: JobId, rowsRaw: Seq[E], idFactory: E => Option[String], nameFactory: E => String) {
-    val rows = rowsRaw.map(row => ReportDataRow(row.toJson.asJsObject, idFactory(row), nameFactory(row)))
+  case class ReportDataRow(value: JsObject, id: Option[String], name: String, locale: Locale)
+  case class ReportData[E: JsonFormat](jobId: JobId, rowsRaw: Seq[E], idFactory: E => Option[String], nameFactory: E => String, localeFactory: E => Locale) {
+    val rows = rowsRaw.map(row => ReportDataRow(row.toJson.asJsObject, idFactory(row), nameFactory(row), localeFactory(row)))
   }
 
   trait ReportResult

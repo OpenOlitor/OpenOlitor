@@ -45,7 +45,16 @@ trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportS
   self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   def generateRechnungReports(config: ReportConfig[RechnungId]): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
-    generateReports[RechnungId, RechnungDetailReport](config, rechungenById, VorlageRechnung, None, GeneriertRechnung, x => Some(x.id.id.toString), name)
+    generateReports[RechnungId, RechnungDetailReport](
+      config,
+      rechungenById,
+      VorlageRechnung,
+      None,
+      GeneriertRechnung,
+      x => Some(x.id.id.toString),
+      name,
+      _.projekt.sprache
+    )
   }
 
   def name(rechnung: RechnungDetailReport) = {

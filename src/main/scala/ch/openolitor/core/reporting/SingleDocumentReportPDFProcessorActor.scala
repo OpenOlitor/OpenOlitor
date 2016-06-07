@@ -24,19 +24,20 @@ package ch.openolitor.core.reporting
 
 import akka.actor._
 import ch.openolitor.core.reporting.pdf.PDFGeneratorActor
+import java.util.Locale
 
 object SingleDocumentReportPDFProcessorActor {
-  def props(name: String): Props = Props(classOf[SingleDocumentReportPDFProcessorActor], name)
+  def props(name: String, locale: Locale): Props = Props(classOf[SingleDocumentReportPDFProcessorActor], name, locale)
 }
 
 /**
  * This actor generates a report document and converts the result to a pdf afterwards
  */
-class SingleDocumentReportPDFProcessorActor(name: String) extends Actor with ActorLogging {
+class SingleDocumentReportPDFProcessorActor(name: String, locale: Locale) extends Actor with ActorLogging {
   import ReportSystem._
   import PDFGeneratorActor._
 
-  val generateDocumentActor = context.actorOf(SingleDocumentReportProcessorActor.props(name), "generate-document-" + System.currentTimeMillis)
+  val generateDocumentActor = context.actorOf(SingleDocumentReportProcessorActor.props(name, locale), "generate-document-" + System.currentTimeMillis)
   val generatePdfActor = context.actorOf(PDFGeneratorActor.props, "pdf-" + System.currentTimeMillis)
 
   var origSender: Option[ActorRef] = None

@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
+import java.util.Locale
 
 case class ProjektId(id: Long) extends BaseId
 
@@ -77,6 +78,7 @@ case class Projekt(
     geschaeftsjahrMonat: Int,
     geschaeftsjahrTag: Int,
     twoFactorAuthentication: Map[Rolle, Boolean],
+    sprache: Locale,
     //modification flags
     erstelldat: DateTime,
     ersteller: PersonId,
@@ -101,6 +103,7 @@ case class ProjektReport(
     geschaeftsjahrMonat: Int,
     geschaeftsjahrTag: Int,
     twoFactorAuthentication: Map[Rolle, Boolean],
+    sprache: Locale,
     //modification flags
     erstelldat: DateTime,
     ersteller: PersonId,
@@ -125,7 +128,8 @@ case class ProjektModify(
   waehrung: Waehrung,
   geschaeftsjahrMonat: Int,
   geschaeftsjahrTag: Int,
-  twoFactorAuthentication: Map[Rolle, Boolean]
+  twoFactorAuthentication: Map[Rolle, Boolean],
+  sprache: Locale
 ) extends JSONSerializable
 
 case class KundentypId(id: String)

@@ -391,10 +391,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       JsObject(defaultFormat.write(obj)
         .asJsObject.fields +
         (
-            "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
-            "plzOrt" -> JsString(obj.plzOrt.getOrElse(""))
-         )
-      )
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
+          "plzOrt" -> JsString(obj.plzOrt.getOrElse(""))
+        ))
     }
 
     def read(json: JsValue): ProjektReport = defaultFormat.read(json)

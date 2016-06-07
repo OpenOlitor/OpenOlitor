@@ -23,7 +23,6 @@
 package ch.openolitor.core.reporting
 
 import ch.openolitor.core.ActorReferences
-
 import scalaz._
 import Scalaz._
 import ch.openolitor.core.filestore._
@@ -42,6 +41,7 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import scala.concurrent.duration._
 import ch.openolitor.util.InputStreamUtil._
+import java.util.Locale
 
 sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
@@ -83,6 +83,7 @@ trait ReportService extends LazyLogging {
     ablageType: FileType,
     ablageIdFactory: E => Option[String],
     nameFactory: E => String,
+    localeFactory: E => Locale,
     jobId: JobId = JobId()
   ): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
     validationFunction(config.ids) flatMap {
@@ -92,7 +93,7 @@ trait ReportService extends LazyLogging {
           case false => None
           case true => Some(FileStoreParameters[E](ablageType))
         }
-        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, ablageIdFactory, nameFactory), config.pdfGenerieren, ablageParams).run map {
+        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams).run map {
           case -\/(e) =>
             logger.warn(s"Failed generating report {}", e.getMessage)
             Left(e)
