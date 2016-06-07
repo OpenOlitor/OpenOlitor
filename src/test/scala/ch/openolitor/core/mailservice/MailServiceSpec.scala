@@ -20,65 +20,35 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.mailservice
 
-import akka.persistence._
-import akka.actor._
-import java.util.UUID
-import ch.openolitor.core.models.PersonId
-import ch.openolitor.core.JSONSerializable
+import org.specs2.mutable.Specification
+import ch.openolitor.core.db.TestDB
+import akka.testkit.TestKit
+import akka.actor.ActorSystem
+import org.specs2.specification.Scope
+import akka.testkit.TestProbe
+import ch.openolitor.core.ConfigLoader
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.MandantConfiguration
+import ch.openolitor.core.domain.AggregateRoot._
 
-trait State
+abstract class ActorTestScope extends TestKit(ActorSystem("test")) with Scope
 
-trait Command
+class MailServiceSpec extends Specification {
 
-trait UserCommand extends Command {
-  val originator: PersonId
-}
+  val config = ConfigLoader.loadConfig
 
-object AggregateRoot {
-  case object KillAggregate extends Command
+  implicit val sysConfig = SystemConfig(MandantConfiguration(
+    "", "", "", 0, 0, Map(), null
+  ), null, null)
 
-  case object GetState extends Command
+  "MailService" should {
+    "react to SendMailCommand" in new ActorTestScope {
+      val probe = TestProbe()
+      val mailService = system.actorOf(MailService.props)
 
-  case object Removed extends State
-  case object Created extends State
-  case object Uninitialized extends State
-}
-
-trait AggregateRoot extends PersistentActor with ActorLogging {
-  import AggregateRoot._
-
-  type S <: State
-  var state: S
-
-  case class Initialize(state: S) extends Command
-
-  def updateState(evt: PersistentEvent): Unit
-  def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
-
-  def afterRecoveryCompleted(): Unit = {}
-
-  def now = System.currentTimeMillis
-
-  protected def afterEventPersisted(evt: PersistentEvent): Unit = {
-    updateState(evt)
-    publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
-  }
-
-  protected def publish(event: Object) =
-    context.system.eventStream.publish(event)
-
-  override val receiveRecover: Receive = {
-    case evt: PersistentEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
-    case SnapshotOffer(metadata, state: State) =>
-      restoreFromSnapshot(metadata, state)
-      log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted =>
-      afterRecoveryCompleted()
+      1 === 1
+    }
   }
 }
