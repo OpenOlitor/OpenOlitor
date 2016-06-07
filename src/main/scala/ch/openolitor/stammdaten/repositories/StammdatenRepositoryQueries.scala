@@ -409,8 +409,16 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(tourMapping as tour)
+        .leftJoin(tourlieferungMapping as tourlieferung).on(tour.id, tourlieferung.tourId)
         .where.eq(tour.id, parameter(id))
-    }.map(tourMapping(tour)).single
+        .orderBy(tourlieferung.sort)
+    }.one(tourMapping(tour))
+      .toMany(
+        rs => tourlieferungMapping.opt(tourlieferung)(rs)
+      )
+      .map({ (tour, tourlieferungen) =>
+        copyTo[Tour, TourDetail](tour, "tourlieferungen" -> tourlieferungen)
+      }).single
   }
 
   protected def getTourlieferungenQuery(tourId: TourId) = {
@@ -426,6 +434,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(tourlieferungMapping as tourlieferung)
         .where.eq(tourlieferung.kundeId, parameter(kundeId))
+    }.map(tourlieferungMapping(tourlieferung)).list
+  }
+
+  protected def getTourlieferungenByTourQuery(tourId: TourId) = {
+    withSQL {
+      select
+        .from(tourlieferungMapping as tourlieferung)
+        .where.eq(tourlieferung.tourId, parameter(tourId))
     }.map(tourlieferungMapping(tourlieferung)).list
   }
 

@@ -91,7 +91,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   def stammdatenRoute(implicit subject: Subject) = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
     kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-    produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ tourlieferungenRoute
+    produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute
 
   def kundenRoute(implicit subject: Subject) =
     path("kunden") {
@@ -308,12 +308,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           (put | post)(update[TourModify, TourId](id)) ~
           delete(remove(id))
       }
-
-  def tourlieferungenRoute(implicit subject: Subject) = {
-    path("tourlieferungen" / tourIdPath) { tourId =>
-      get(list(stammdatenReadRepository.getTourlieferungen(tourId)))
-    }
-  }
 
   def projektRoute(implicit subject: Subject) =
     path("projekt") {

@@ -340,12 +340,21 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  private def updateTourlieferungen(meta: EventMetadata, tourId: TourId, update: TourModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
+    update.tourlieferungen.map { tourLieferung =>
+      val copy = tourLieferung.copy(modifidat = meta.timestamp, modifikator = meta.originator)
+      stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](copy)
+    }
+  }
+
   def updateTour(meta: EventMetadata, id: TourId, update: TourModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(tourMapping, id) map { tour =>
         //map all updatable fields
         val copy = copyFrom(tour, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
         stammdatenWriteRepository.updateEntity[Tour, TourId](copy)
+
+        updateTourlieferungen(meta, id, update)
       }
     }
   }
