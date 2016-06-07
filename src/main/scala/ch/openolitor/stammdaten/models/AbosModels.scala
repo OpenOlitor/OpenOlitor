@@ -294,3 +294,25 @@ case class AbwesenheitCreate(
   datum: DateTime,
   bemerkung: Option[String]
 ) extends JSONSerializable
+
+case class Tourlieferung(
+  id: AboId,
+  tourId: TourId,
+  abotypId: AbotypId,
+  kundeId: KundeId,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  kundeBezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  abotypName: String,
+  sort: Option[Int],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[AboId]
