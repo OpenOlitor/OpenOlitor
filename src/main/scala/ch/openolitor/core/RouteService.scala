@@ -68,6 +68,11 @@ import spray.routing.RejectionHandler
 import spray.routing.authentication.BasicAuth
 import spray.caching.Cache
 import ch.openolitor.stammdaten.models.AdministratorZugang
+import ch.openolitor.core.reporting._
+import ch.openolitor.core.reporting.ReportSystem._
+import ch.openolitor.util.InputStreamUtil._
+import java.io.InputStream
+import java.util.zip.ZipInputStream
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -304,6 +309,74 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     upload { (formData, content, fileName) =>
       storeToFileStore(fileType, name, content, fileName)(onUpload, onError)
     }
+  }
+
+  def generateReport[I](ids: Seq[I], reportFunction: ReportConfig[I] => Future[Either[ServiceFailed, ReportServiceResult[I]]])(implicit subject: Subject) = {
+    uploadOpt("vorlage") { formData => file =>
+      //use custom or default template whether content was delivered or not
+      (for {
+        vorlage <- loadVorlage(file)
+        pdfGenerieren <- Try(formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
+            entity.asString.toBoolean
+        }.getOrElse(false))
+        pdfAblegen <- Try(pdfGenerieren && formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("pdfAblegen") =>
+            entity.asString.toBoolean
+        }.getOrElse(false))
+        downloadFile <- Try(!pdfAblegen || formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("pdfDownloaden") =>
+            entity.asString.toBoolean
+        }.getOrElse(true))
+      } yield {
+        val config = ReportConfig[I](ids, vorlage, pdfGenerieren, pdfAblegen)
+
+        onSuccess(reportFunction(config)) {
+          case Left(serviceError) =>
+            complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$serviceError")
+          case Right(result) if result.hasErrors =>
+            val errorString = result.validationErrors.map(_.message).mkString(",")
+            complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
+          case Right(result) =>
+            result.result match {
+              case SingleReportResult(_, Left(ReportError(error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
+              case SingleReportResult(_, Right(DocumentReportResult(result, name))) =>
+                respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
+                  respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.text`) {
+                    stream(result)
+                  }
+                }
+              case SingleReportResult(_, Right(PdfReportResult(result, name))) =>
+                respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
+                  respondWithMediaType(MediaTypes.`application/pdf`) {
+                    stream(result)
+                  }
+                }
+              case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) if downloadFile => download(fileType, id.id)
+              case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) => complete(id.id)
+              case ZipReportResult(_, errors, zip) if !zip.isDefined =>
+                val errorString: String = errors.map(_.error).mkString("\n")
+                complete(StatusCodes.BadRequest, errorString)
+              case ZipReportResult(_, _, zip) if zip.isDefined =>
+                //TODO: stream zip
+                //stream(new ZipInputStream(zip.get))
+                ???
+              case x =>
+                logger.error(s"Received unexpected result:$x")
+                complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden")
+            }
+        }
+      }) match {
+        case Success(result) => result
+        case Failure(error) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${error}")
+      }
+    }
+  }
+
+  def loadVorlage(file: Option[(InputStream, String)]): Try[BerichtsVorlage] = {
+    file map {
+      case (is, name) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
+    } getOrElse Success(StandardBerichtsVorlage)
   }
 }
 
