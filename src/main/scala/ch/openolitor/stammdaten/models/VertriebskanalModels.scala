@@ -28,6 +28,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.scalax.Product27
 import ch.openolitor.core.scalax.Tuple27
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 sealed trait Vertriebskanal {
   val name: String
@@ -43,14 +44,14 @@ case class Depot(
   id: DepotId,
   name: String,
   kurzzeichen: String,
-  apName: String,
-  apVorname: String,
+  apName: Option[String],
+  apVorname: Option[String],
   apTelefon: Option[String],
-  apEmail: String,
-  vName: String,
-  vVorname: String,
+  apEmail: Option[String],
+  vName: Option[String],
+  vVorname: Option[String],
   vTelefon: Option[String],
-  vEmail: String,
+  vEmail: Option[String],
   strasse: Option[String],
   hausNummer: Option[String],
   plz: String,
@@ -77,14 +78,14 @@ object Depot {
       d.id: DepotId,
       d.name: String,
       d.kurzzeichen: String,
-      d.apName: String,
-      d.apVorname: String,
+      d.apName: Option[String],
+      d.apVorname: Option[String],
       d.apTelefon: Option[String],
-      d.apEmail: String,
-      d.vName: String,
-      d.vVorname: String,
+      d.apEmail: Option[String],
+      d.vName: Option[String],
+      d.vVorname: Option[String],
       d.vTelefon: Option[String],
-      d.vEmail: String,
+      d.vEmail: Option[String],
       d.strasse: Option[String],
       d.hausNummer: Option[String],
       d.plz: String,
@@ -110,14 +111,14 @@ object Depot {
 case class DepotModify(
   name: String,
   kurzzeichen: String,
-  apName: String,
-  apVorname: String,
+  apName: Option[String],
+  apVorname: Option[String],
   apTelefon: Option[String],
-  apEmail: String,
-  vName: String,
-  vVorname: String,
+  apEmail: Option[String],
+  vName: Option[String],
+  vVorname: Option[String],
   vTelefon: Option[String],
-  vEmail: String,
+  vEmail: Option[String],
   strasse: Option[String],
   hausNummer: Option[String],
   plz: String,
@@ -149,7 +150,20 @@ case class Tour(
   modifikator: PersonId
 ) extends BaseEntity[TourId] with Vertriebskanal
 
+case class TourDetail(
+  id: TourId,
+  name: String,
+  beschreibung: Option[String],
+  tourlieferungen: Seq[Tourlieferung],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class TourModify(
   name: String,
-  beschreibung: Option[String]
+  beschreibung: Option[String],
+  tourlieferungen: Seq[Tourlieferung]
 ) extends JSONSerializable

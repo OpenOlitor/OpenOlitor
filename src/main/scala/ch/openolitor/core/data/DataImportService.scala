@@ -94,7 +94,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
       originator.map(_ ! e)
     case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, vertriebe, lieferungen,
       lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
-      produzenten, produktProduzenten, bestellungen, bestellpositionen) =>
+      produzenten, produktProduzenten, bestellungen, bestellpositionen, tourlieferungen) =>
       log.debug(s"Received parse result, start importing...")
       try {
         DB localTx { implicit session =>
@@ -155,6 +155,8 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
           result = importEntityList[ProduktProduzent, ProduktProduzentId]("ProduktProduzenten", produktProduzenten, result)
           result = importEntityList[Bestellung, BestellungId]("Bestellungen", bestellungen, result)
           result = importEntityList[Bestellposition, BestellpositionId]("Bestellpositionen", bestellpositionen, result)
+
+          result = importEntityList[Tourlieferung, AboId]("Tourlieferungen", tourlieferungen, result)
 
           //save snapshot in entitystore actor
           log.debug(s"Save Snapshot in entitystore")

@@ -30,4 +30,5 @@ trait ActorReferences {
   val eventStore: ActorRef
   val reportSystem: ActorRef
   val system: ActorSystem
+  val mailService: ActorRef
 }

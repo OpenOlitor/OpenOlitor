@@ -331,8 +331,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.anzahlSaldoZuTief -> parameter(lieferung.anzahlSaldoZuTief),
         column.zielpreis -> parameter(lieferung.zielpreis),
         column.preisTotal -> parameter(lieferung.preisTotal),
-        column.lieferplanungId -> parameter(lieferung.lieferplanungId),
-        column.lieferplanungNr -> parameter(lieferung.lieferplanungNr)
+        column.lieferplanungId -> parameter(lieferung.lieferplanungId)
       )
     }
   }
@@ -349,7 +348,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(lieferplanung: Lieferplanung) = {
       super.updateParameters(lieferplanung) ++ Seq(
-        column.nr -> parameter(lieferplanung.nr),
         column.bemerkungen -> parameter(lieferplanung.bemerkungen),
         column.abotypDepotTour -> parameter(lieferplanung.abotypDepotTour),
         column.status -> parameter(lieferplanung.status)
@@ -397,7 +395,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.produzentId -> parameter(bestellung.produzentId),
         column.produzentKurzzeichen -> parameter(bestellung.produzentKurzzeichen),
         column.lieferplanungId -> parameter(bestellung.lieferplanungId),
-        column.lieferplanungNr -> parameter(bestellung.lieferplanungNr),
         column.status -> parameter(bestellung.status),
         column.datum -> parameter(bestellung.datum),
         column.datumAbrechnung -> parameter(bestellung.datumAbrechnung),
@@ -792,6 +789,23 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferungId -> parameter(entity.lieferungId),
         column.datum -> parameter(entity.datum),
         column.bemerkung -> parameter(entity.bemerkung)
+      )
+    }
+  }
+
+  implicit val tourlieferungMapping = new BaseEntitySQLSyntaxSupport[Tourlieferung] {
+    override val tableName = "Tourlieferung"
+
+    override lazy val columns = autoColumns[Tourlieferung]()
+
+    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Tourlieferung): Seq[Any] = parameters(Tourlieferung.unapply(entity).get)
+
+    override def updateParameters(entity: Tourlieferung) = {
+      super.updateParameters(entity) ++ Seq(
+        column.sort -> parameter(entity.sort)
       )
     }
   }

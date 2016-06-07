@@ -59,6 +59,9 @@ import spray.routing.authentication.UserPass
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import akka.pattern.ask
 import akka.actor.ActorSystem
+import ch.openolitor.core.mailservice.MailService._
+import ch.openolitor.core.mailservice.Mail
+import scala.concurrent.duration._
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -80,7 +83,6 @@ trait LoginRouteService extends HttpService with ActorReferences
 
   lazy val config = sysConfig.mandantConfiguration.config
   lazy val requireSecondFactorAuthentication = config.getBooleanOption(s"security.second-factor-auth.require").getOrElse(true)
-  lazy val sendSecondFactorEmail = config.getBooleanOption(s"security.second-factor-auth.send-email").getOrElse(true)
   override lazy val maxRequestDelay: Option[Duration] = config.getLongOption(s"security.max-request-delay").map(_ millis)
 
   //pasword validation options
@@ -303,17 +305,14 @@ trait LoginRouteService extends HttpService with ActorReferences
   }
 
   private def sendEmail(secondFactor: SecondFactor, person: Person): EitherFuture[Boolean] = EitherT {
-    Future {
-      logger.debug(s"=====================================================================")
-      logger.debug(s"| Send Email to: ${person.email}")
-      logger.debug(s"---------------------------------------------------------------------")
-      logger.debug(s"| Token: ${secondFactor.token}")
-      logger.debug(s"| Code: ${secondFactor.code}")
-      logger.debug(s"=====================================================================")
-
-      //TODO: bind to email service
-
-      true.right
+    val mail = Mail(1, person.email.get, None, None, "OpenOlitor Second Factor",
+      s"""Code: ${secondFactor.code}""")
+    mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
+      case _: SendMailEvent =>
+        true.right
+      case other =>
+        logger.debug(s"Sending Mail failed resulting in $other")
+        RequestFailed(s"Mail konnte nicht zugestellt werden").left
     }
   }
 
@@ -381,6 +380,7 @@ trait LoginRouteService extends HttpService with ActorReferences
 class DefaultLoginRouteService(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
+  override val mailService: ActorRef,
   override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,

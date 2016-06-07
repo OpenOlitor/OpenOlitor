@@ -75,11 +75,14 @@ import java.io.InputStream
 import java.util.zip.ZipInputStream
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef, eventStore: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, reportSystem, fileStore, sysConfig, system, loginTokenCache)
+  def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, mailService, reportSystem, fileStore, sysConfig, system, loginTokenCache)
 }
 
 trait RouteServiceComponent extends ActorReferences {
+  val entityStore: ActorRef
+  val eventStore: ActorRef
+  val mailService: ActorRef
   val sysConfig: SystemConfig
   val system: ActorSystem
   val fileStore: FileStore
@@ -92,10 +95,10 @@ trait RouteServiceComponent extends ActorReferences {
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
-  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -383,6 +386,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 class DefaultRouteServiceActor(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
+  override val mailService: ActorRef,
   override val reportSystem: ActorRef,
   override val fileStore: FileStore,
   override val sysConfig: SystemConfig,

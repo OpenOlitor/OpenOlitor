@@ -32,6 +32,9 @@ import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.models.BaseId
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.mailservice._
+import ch.openolitor.core.mailservice.MailService._
+import zangelo.spray.json.AutoProductFormats
 
 package events {
 
@@ -198,6 +201,109 @@ package events {
 
           PersistentSystemEvent(meta, event)
         case x => throw new DeserializationException(s"PersistentSystemEvent data expected, received:$x")
+      }
+    }
+  }
+
+  class SendMailEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
+      extends PersistedEventPersister[SendMailEvent, V]("send-mail-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol with MailJsonProtocol {
+
+    def toBytes(t: SendMailEvent): ByteString = {
+      //build custom json
+      val meta = metadataFormat.write(t.meta)
+      val mail = mailFormat.write(t.mail)
+      val commandMeta = t.commandMeta map (persistEntity) getOrElse JsNull
+      val expires = dateTimeFormat.write(t.expires)
+
+      fromJson(JsObject(
+        "meta" -> meta,
+        "uid" -> JsString(t.uid),
+        "mail" -> mail,
+        "expires" -> expires,
+        "commandMeta" -> commandMeta
+      ))
+    }
+
+    def fromBytes(bytes: ByteString): SendMailEvent = {
+      def toSendMailEvent(metaJson: JsValue, uid: String, mailJson: JsValue, expiresJson: JsValue, commandMeta: Option[AnyRef]) = {
+        val meta = metadataFormat.read(metaJson)
+        val mail: Mail = mailFormat.read(mailJson)
+        val expires = dateTimeFormat.read(expiresJson)
+        SendMailEvent(meta, uid, mail, expires, commandMeta)
+      }
+
+      toJson(bytes).asJsObject.getFields("meta", "uid", "mail", "expires", "commandMeta") match {
+        case Seq(metaJson, JsString(uid), mailJson, expiresJson, JsNull) =>
+          toSendMailEvent(metaJson, uid, mailJson, expiresJson, None)
+        case Seq(metaJson, JsString(uid), mailJson, expiresJson, commandMetaJson) =>
+          val commandMeta: Option[AnyRef] = Some(unpersistEntity(commandMetaJson))
+          toSendMailEvent(metaJson, uid, mailJson, expiresJson, commandMeta)
+        case x => throw new DeserializationException(s"SendMailEvent data expected, received:$x")
+      }
+    }
+  }
+
+  class MailSentEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
+      extends PersistedEventPersister[MailSentEvent, V]("mail-sent-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+
+    def toBytes(t: MailSentEvent): ByteString = {
+      //build custom json
+      val meta = metadataFormat.write(t.meta)
+      val commandMeta = t.commandMeta map (persistEntity) getOrElse JsNull
+
+      fromJson(JsObject(
+        "meta" -> meta,
+        "uid" -> JsString(t.uid),
+        "commandMeta" -> commandMeta
+      ))
+    }
+
+    def fromBytes(bytes: ByteString): MailSentEvent = {
+      def toMailSentEvent(metaJson: JsValue, uid: String, commandMeta: Option[AnyRef]) = {
+        val meta = metadataFormat.read(metaJson)
+        MailSentEvent(meta, uid, commandMeta)
+      }
+
+      toJson(bytes).asJsObject.getFields("meta", "uid", "commandMeta") match {
+        case Seq(metaJson, JsString(uid), JsNull) =>
+          toMailSentEvent(metaJson, uid, None)
+        case Seq(metaJson, JsString(uid), commandMetaJson) =>
+          val commandMeta: Option[AnyRef] = Some(unpersistEntity(commandMetaJson))
+          toMailSentEvent(metaJson, uid, commandMeta)
+        case x => throw new DeserializationException(s"MailSentEvent data expected, received:$x")
+      }
+    }
+  }
+
+  class SendMailFailedEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
+      extends PersistedEventPersister[SendMailFailedEvent, V]("send-mail-failed-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+
+    def toBytes(t: SendMailFailedEvent): ByteString = {
+      //build custom json
+      val meta = metadataFormat.write(t.meta)
+      val commandMeta = t.commandMeta map (persistEntity) getOrElse JsNull
+
+      fromJson(JsObject(
+        "meta" -> meta,
+        "uid" -> JsString(t.uid),
+        "numberOfRetries" -> JsNumber(t.numberOfRetries),
+        "commandMeta" -> commandMeta
+      ))
+    }
+
+    def fromBytes(bytes: ByteString): SendMailFailedEvent = {
+      def toSendMailFailedEvent(metaJson: JsValue, uid: String, afterNumberOfRetries: Int, commandMeta: Option[AnyRef]) = {
+        val meta = metadataFormat.read(metaJson)
+        SendMailFailedEvent(meta, uid, afterNumberOfRetries, commandMeta)
+      }
+
+      toJson(bytes).asJsObject.getFields("meta", "uid", "numberOfRetries", "commandMeta") match {
+        case Seq(metaJson, JsString(uid), JsNumber(afterNumberOfRetries), JsNull) =>
+          toSendMailFailedEvent(metaJson, uid, afterNumberOfRetries.toInt, None)
+        case Seq(metaJson, JsString(uid), JsNumber(afterNumberOfRetries), commandMetaJson) =>
+          val commandMeta: Option[AnyRef] = Some(unpersistEntity(commandMetaJson))
+          toSendMailFailedEvent(metaJson, uid, afterNumberOfRetries.toInt, commandMeta)
+        case x => throw new DeserializationException(s"SendMailFailedEvent data expected, received:$x")
       }
     }
   }
