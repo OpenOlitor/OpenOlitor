@@ -49,11 +49,8 @@ import akka.actor.ActorSystem
 import spray.caching.Cache
 import spray.caching.LruCache
 import akka.util.Timeout
-<<<<<<< HEAD
 import scala.concurrent.ExecutionContext.Implicits.global
-=======
 import ch.openolitor.core.mailservice.MailServiceMock
->>>>>>> FETCH_HEAD
 
 class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConversions {
   val email = "info@test.com"
