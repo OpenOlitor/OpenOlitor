@@ -56,13 +56,15 @@ import scala.io.Source
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.core.security.Subject
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with BuchhaltungJsonProtocol
     with BuchhaltungEventStoreSerializer
     with RechnungReportService {
-  self: BuchhaltungReadRepositoryComponent with FileStoreComponent =>
+  self: BuchhaltungReadRepositoryComponent with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
@@ -200,3 +202,4 @@ class DefaultBuchhaltungRoutes(
 )
     extends BuchhaltungRoutes
     with DefaultBuchhaltungReadRepositoryComponent
+    with DefaultStammdatenReadRepositoryComponent

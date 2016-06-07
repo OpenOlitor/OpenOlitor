@@ -33,35 +33,46 @@ import ch.openolitor.core.filestore._
 import ch.openolitor.core.ActorReferences
 import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.ReportSystem._
+import ch.openolitor.core.Macros._
 import akka.stream.scaladsl.Source
+import ch.openolitor.stammdaten.models.Projekt
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.models.ProjektId
+import ch.openolitor.stammdaten.models.ProjektReport
 
 trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol {
-  self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent =>
+  self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   def generateRechnungReports(config: ReportConfig[RechnungId]): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
-    generateReports[RechnungId, RechnungDetail](config, rechungenById, VorlageRechnung, None, GeneriertRechnung, x => Some(x.id.id.toString), name)
+    generateReports[RechnungId, RechnungDetailReport](config, rechungenById, VorlageRechnung, None, GeneriertRechnung, x => Some(x.id.id.toString), name)
   }
 
-  def name(rechnung: RechnungDetail) = {
+  def name(rechnung: RechnungDetailReport) = {
     s"Rechnung Nr. ${rechnung.id.id}";
   }
 
-  def rechungenById(rechnungIds: Seq[RechnungId]): Future[(Seq[ValidationError[RechnungId]], Seq[RechnungDetail])] = {
-    val results = Future.sequence(rechnungIds.map { rechnungId =>
-      buchhaltungReadRepository.getRechnungDetail(rechnungId).map(_.map { rechnung =>
-        rechnung.status match {
-          case Storniert =>
-            Left(ValidationError[RechnungId](rechnungId, s"Für stornierte Rechnungen können keine Berichte mehr erzeugt werden"))
-          case Bezahlt =>
-            Left(ValidationError[RechnungId](rechnungId, s"Für bezahlte Rechnungen können keine Berichte mehr erzeugt werden"))
-          case _ =>
-            Right(rechnung)
-        }
+  def rechungenById(rechnungIds: Seq[RechnungId]): Future[(Seq[ValidationError[RechnungId]], Seq[RechnungDetailReport])] = {
+    stammdatenReadRepository.getProjekt flatMap {
+      _ map { projekt =>
+        val results = Future.sequence(rechnungIds.map { rechnungId =>
+          buchhaltungReadRepository.getRechnungDetail(rechnungId).map(_.map { rechnung =>
+            rechnung.status match {
+              case Storniert =>
+                Left(ValidationError[RechnungId](rechnungId, s"Für stornierte Rechnungen können keine Berichte mehr erzeugt werden"))
+              case Bezahlt =>
+                Left(ValidationError[RechnungId](rechnungId, s"Für bezahlte Rechnungen können keine Berichte mehr erzeugt werden"))
+              case _ =>
+                val projektReport = copyTo[Projekt, ProjektReport](projekt)
+                Right(copyTo[RechnungDetail, RechnungDetailReport](rechnung, "projekt" -> projektReport))
+            }
 
-      }.getOrElse(Left(ValidationError[RechnungId](rechnungId, s"Rechnung konnte nicht gefunden werden"))))
-    })
-    results.map(_.partition(_.isLeft) match {
-      case (a, b) => (a.map(_.left.get), b.map(_.right.get))
-    })
+          }.getOrElse(Left(ValidationError[RechnungId](rechnungId, s"Rechnung konnte nicht gefunden werden"))))
+        })
+        results.map(_.partition(_.isLeft) match {
+          case (a, b) => (a.map(_.left.get), b.map(_.right.get))
+        })
+      } getOrElse Future { (Seq(ValidationError[RechnungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
+    }
   }
 }
