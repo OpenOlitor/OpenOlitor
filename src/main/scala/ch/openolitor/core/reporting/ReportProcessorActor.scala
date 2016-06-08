@@ -80,10 +80,12 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
     origSender = Some(sender)
     log.debug(s"Process request, send results to:$origSender")
     stats = stats.copy(jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
+    var i = 1
     for {
       row <- data.rows
     } yield {
-      context.actorOf(f(row), "report-" + System.currentTimeMillis) ! GenerateReport(file, row.value)
+      context.actorOf(f(row), s"report-$i-${System.currentTimeMillis}") ! GenerateReport(file, row.value)
+      i = i + 1
     }
     context become collectingResults
   }

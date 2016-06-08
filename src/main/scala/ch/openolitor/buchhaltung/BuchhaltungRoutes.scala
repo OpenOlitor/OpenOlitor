@@ -79,6 +79,9 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungen)) ~
         post(create[RechnungModify, RechnungId](RechnungId.apply _))
     } ~
+      path("rechnungen" / "berichte" / "rechnungen") {
+        (post)(rechnungBerichte())
+      } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
           delete(remove(id))
@@ -187,7 +190,11 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def rechnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
-    generateReport[RechnungId](Seq(id), generateRechnungReports _)
+    generateReport[RechnungId](Some(id), generateRechnungReports _)(RechnungId.apply)
+  }
+
+  def rechnungBerichte()(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    generateReport[RechnungId](None, generateRechnungReports _)(RechnungId.apply)
   }
 }
 

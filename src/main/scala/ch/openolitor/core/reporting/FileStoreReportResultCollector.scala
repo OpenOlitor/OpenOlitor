@@ -20,39 +20,43 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.core.reporting
 
-sealed trait FileType extends Product {
-  val bucket: FileStoreBucket
+import akka.actor._
+import ch.openolitor.core.reporting.ReportSystem._
+import java.io.ByteArrayOutputStream
+import scala.util._
+import ch.openolitor.util.ZipBuilder
+import ch.openolitor.core.filestore.FileStoreFileReference
+
+object FileStoreReportResultCollector {
+  def props(reportSystem: ActorRef): Props = Props(classOf[FileStoreReportResultCollector], reportSystem)
 }
 
-case object VorlageRechnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageEtikette extends FileType { val bucket = VorlagenBucket }
-case object VorlageMahnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageBestellung extends FileType { val bucket = VorlagenBucket }
-case object GeneriertRechnung extends FileType { val bucket = GeneriertBucket }
-case object GeneriertEtikette extends FileType { val bucket = GeneriertBucket }
-case object GeneriertMahnung extends FileType { val bucket = GeneriertBucket }
-case object GeneriertBestellung extends FileType { val bucket = GeneriertBucket }
-case object ProjektStammdaten extends FileType { val bucket = StammdatenBucket }
-case object ZahlungsImportDaten extends FileType { val bucket = ZahlungsImportBucket }
-case object UnknownFileType extends FileType { lazy val bucket = sys.error("This FileType has no bucket") }
+/**
+ * Collect all results filestore id results
+ */
+class FileStoreReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
 
-object FileType {
-  val AllFileTypes = List(
-    VorlageRechnung,
-    VorlageEtikette,
-    VorlageMahnung,
-    VorlageBestellung,
-    GeneriertRechnung,
-    GeneriertEtikette,
-    GeneriertMahnung,
-    GeneriertBestellung,
-    ProjektStammdaten,
-    ZahlungsImportDaten
-  )
+  var origSender: Option[ActorRef] = None
+  var storeResults: Seq[FileStoreFileReference] = Seq()
+  var errors: Seq[ReportError] = Seq()
 
-  def apply(value: String): FileType = {
-    AllFileTypes.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
+  val receive: Receive = {
+    case request: GenerateReports[_] =>
+      origSender = Some(sender)
+      reportSystem ! request
+      context become waitingForResult
+  }
+
+  val waitingForResult: Receive = {
+    case SingleReportResult(_, Left(error)) =>
+      errors = errors :+ error
+    case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) =>
+      storeResults = storeResults :+ FileStoreFileReference(fileType, id)
+    case result: GenerateReportsStats =>
+      //finished, send back collected result
+      origSender.map(_ ! BatchStoredPdfReportResult(result, errors, storeResults))
+      self ! PoisonPill
   }
 }

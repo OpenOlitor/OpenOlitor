@@ -22,37 +22,8 @@
 \*                                                                           */
 package ch.openolitor.core.filestore
 
-sealed trait FileType extends Product {
-  val bucket: FileStoreBucket
-}
+import ch.openolitor.core.BaseJsonProtocol
 
-case object VorlageRechnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageEtikette extends FileType { val bucket = VorlagenBucket }
-case object VorlageMahnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageBestellung extends FileType { val bucket = VorlagenBucket }
-case object GeneriertRechnung extends FileType { val bucket = GeneriertBucket }
-case object GeneriertEtikette extends FileType { val bucket = GeneriertBucket }
-case object GeneriertMahnung extends FileType { val bucket = GeneriertBucket }
-case object GeneriertBestellung extends FileType { val bucket = GeneriertBucket }
-case object ProjektStammdaten extends FileType { val bucket = StammdatenBucket }
-case object ZahlungsImportDaten extends FileType { val bucket = ZahlungsImportBucket }
-case object UnknownFileType extends FileType { lazy val bucket = sys.error("This FileType has no bucket") }
-
-object FileType {
-  val AllFileTypes = List(
-    VorlageRechnung,
-    VorlageEtikette,
-    VorlageMahnung,
-    VorlageBestellung,
-    GeneriertRechnung,
-    GeneriertEtikette,
-    GeneriertMahnung,
-    GeneriertBestellung,
-    ProjektStammdaten,
-    ZahlungsImportDaten
-  )
-
-  def apply(value: String): FileType = {
-    AllFileTypes.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
-  }
+trait FileStoreJsonProtocol extends BaseJsonProtocol {
+  implicit val fileTypeFormat = enumFormat(FileType.apply)
 }

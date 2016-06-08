@@ -24,7 +24,9 @@ package ch.openolitor.core.reporting
 
 import akka.actor._
 import ch.openolitor.core.reporting.ReportSystem._
-import java.util.zip.ZipFile
+import java.io.ByteArrayOutputStream
+import scala.util._
+import ch.openolitor.util.ZipBuilder
 
 object ZipReportResultCollector {
   def props(reportSystem: ActorRef): Props = Props(classOf[ZipReportResultCollector], reportSystem)
@@ -36,7 +38,7 @@ object ZipReportResultCollector {
 class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
 
   var origSender: Option[ActorRef] = None
-  var zipFile: Option[ZipFile] = None
+  val zipBuilder: ZipBuilder = new ZipBuilder
   var errors: Seq[ReportError] = Seq()
 
   val receive: Receive = {
@@ -47,12 +49,20 @@ class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorL
   }
 
   val waitingForResult: Receive = {
-    case result: SingleReportResult =>
-    // TODO: append to zip
-
+    case SingleReportResult(_, Left(error)) =>
+      errors = errors :+ error
+    case SingleReportResult(_, Right(result: ReportResultWithDocument)) =>
+      log.debug(s"Add Zip Entry:${result.name}")
+      zipBuilder.addZipEntry(result.name, result.document) match {
+        case Success(r) =>
+        case Failure(error) =>
+          log.warning(s"Coulnd't att document to  zip file:$error")
+          errors = errors :+ ReportError(s"Dokument konnte nicht zum Zip hinzugefügt werde:$error")
+      }
     case result: GenerateReportsStats =>
       //finished, send back zip result
-      origSender.map(_ ! ZipReportResult(result, errors, zipFile))
+      val zip = zipBuilder.close()
+      origSender.map(_ ! ZipReportResult(result, errors, zip))
       self ! PoisonPill
   }
 }

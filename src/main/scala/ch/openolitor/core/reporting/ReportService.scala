@@ -86,7 +86,10 @@ trait ReportService extends LazyLogging {
     localeFactory: E => Locale,
     jobId: JobId = JobId()
   ): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
+    logger.debug(s"Validate ids:${config.ids}")
     validationFunction(config.ids) flatMap {
+      case (errors, Seq()) =>
+        Future { Right(ReportServiceResult(jobId, errors, ReportError(errors.mkString(",")))) }
       case (errors, result) =>
         logger.debug(s"Valdidation errors:$errors, process result records:${result.length}")
         val ablageParams = config.pdfAblegen match {
@@ -112,7 +115,11 @@ trait ReportService extends LazyLogging {
 
   def generateReport[E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = EitherT {
     implicit val timeout = Timeout(60.seconds)
-    val collector = if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem) else ZipReportResultCollector.props(reportSystem)
+    val collector =
+      if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem)
+      else if (pdfGenerieren) FileStoreReportResultCollector.props(reportSystem)
+      else ZipReportResultCollector.props(reportSystem)
+
     val ref = actorSystem.actorOf(collector)
     (ref ? GenerateReports(vorlage, data, pdfGenerieren, pdfAblage)).map(_.asInstanceOf[ReportResult].right)
   }

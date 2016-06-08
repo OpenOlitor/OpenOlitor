@@ -20,39 +20,52 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.util
 
-sealed trait FileType extends Product {
-  val bucket: FileStoreBucket
-}
+import java.util.zip._
+import java.io.ByteArrayOutputStream
+import scala.util.Try
+import java.io.InputStream
 
-case object VorlageRechnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageEtikette extends FileType { val bucket = VorlagenBucket }
-case object VorlageMahnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageBestellung extends FileType { val bucket = VorlagenBucket }
-case object GeneriertRechnung extends FileType { val bucket = GeneriertBucket }
-case object GeneriertEtikette extends FileType { val bucket = GeneriertBucket }
-case object GeneriertMahnung extends FileType { val bucket = GeneriertBucket }
-case object GeneriertBestellung extends FileType { val bucket = GeneriertBucket }
-case object ProjektStammdaten extends FileType { val bucket = StammdatenBucket }
-case object ZahlungsImportDaten extends FileType { val bucket = ZahlungsImportBucket }
-case object UnknownFileType extends FileType { lazy val bucket = sys.error("This FileType has no bucket") }
+class ZipBuilder {
 
-object FileType {
-  val AllFileTypes = List(
-    VorlageRechnung,
-    VorlageEtikette,
-    VorlageMahnung,
-    VorlageBestellung,
-    GeneriertRechnung,
-    GeneriertEtikette,
-    GeneriertMahnung,
-    GeneriertBestellung,
-    ProjektStammdaten,
-    ZahlungsImportDaten
-  )
+  val byteArrayOutputStream: ByteArrayOutputStream = new ByteArrayOutputStream
+  val zipOutputStream: ZipOutputStream = new ZipOutputStream(byteArrayOutputStream)
 
-  def apply(value: String): FileType = {
-    AllFileTypes.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
+  def addZipEntry(fileName: String, document: Array[Byte]): Try[Boolean] = {
+    Try {
+      val zipEntry = new ZipEntry(fileName)
+      zipOutputStream.putNextEntry(zipEntry)
+      zipOutputStream.write(document)
+      zipOutputStream.closeEntry()
+      true
+    }
+  }
+
+  def addZipEntry(fileName: String, is: InputStream): Try[Boolean] = {
+    Try {
+      val zipEntry = new ZipEntry(fileName)
+      zipOutputStream.putNextEntry(zipEntry)
+      val baos = new ByteArrayOutputStream()
+      val bytes = new Array[Byte](1024);
+      var length = is.read(bytes)
+      while (length >= 0) {
+        zipOutputStream.write(bytes, 0, length);
+        length = is.read(bytes)
+      }
+
+      zipOutputStream.closeEntry()
+      true
+    }
+  }
+
+  def close(): Option[Array[Byte]] = {
+    try {
+      Try(zipOutputStream.close)
+      Try(byteArrayOutputStream.toByteArray).toOption
+    } finally {
+      //close streams
+      Try(byteArrayOutputStream.close)
+    }
   }
 }
