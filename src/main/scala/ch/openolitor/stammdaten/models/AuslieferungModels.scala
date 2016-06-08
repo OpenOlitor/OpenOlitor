@@ -22,14 +22,78 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-sealed trait Waehrung
-case object CHF extends Waehrung
-case object EUR extends Waehrung
-case object USD extends Waehrung
+import ch.openolitor.core.models._
+import org.joda.time.DateTime
 
-object Waehrung {
-  def apply(value: String): Waehrung = {
-    Vector(CHF, EUR, USD) find (_.toString == value) getOrElse (CHF)
+case class AuslieferungId(id: Long) extends BaseId
+
+sealed trait AuslieferungStatus
+
+case object Erfasst extends AuslieferungStatus
+case object Ausgeliefert extends AuslieferungStatus
+
+object AuslieferungStatus {
+  def apply(value: String): AuslieferungStatus = {
+    Vector(Erfasst, Ausgeliefert) find (_.toString == value) getOrElse (Erfasst)
   }
 }
 
+/**
+ * Die Auslieferung repräsentiert eine Sammlung von Körben zu einem Bestimmten Lieferzeitpunkt mit einem Ziel.
+ */
+trait Auslieferung extends BaseEntity[AuslieferungId] {
+  val lieferungId: LieferungId
+  val status: AuslieferungStatus
+  val datum: DateTime
+  val anzahlKoerbe: Int
+}
+
+/**
+ * Auslieferung pro Depot
+ */
+case class DepotAuslieferung(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  depotName: String,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends Auslieferung
+
+/**
+ * Auslieferung pro Tour
+ */
+case class TourAuslieferung(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  tourName: String,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends Auslieferung
+
+/**
+ * Auslieferung zur Post
+ */
+case class PostAuslieferung(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends Auslieferung

@@ -134,11 +134,10 @@ sealed trait SystemKundentyp extends Kundentyp with Product {
 }
 
 object SystemKundentyp {
-
   val ALL = Vector(Vereinsmitglied, Goenner, Genossenschafterin)
 
   def parse(value: String): Option[SystemKundentyp] = {
-    ALL.find(_.toString == value)
+    ALL find (_.toString == value)
   }
 }
 

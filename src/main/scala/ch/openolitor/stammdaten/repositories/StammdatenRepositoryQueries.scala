@@ -683,6 +683,28 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(korbMapping(korb)).single
   }
 
+  protected def getKoerbeQuery(lieferungId: LieferungId, vertriebsartId: VertriebsartId, status: KorbStatus) = {
+    withSQL {
+      select
+        .from(korbMapping as korb)
+        .innerJoin(lieferungMapping as lieferung).on(lieferung.id, korb.lieferungId)
+        .innerJoin(vertriebMapping as vertrieb).on(vertrieb.id, lieferung.vertriebId)
+        .leftJoin(depotlieferungMapping as depotlieferung).on(depotlieferung.vertriebId, vertrieb.id)
+        .leftJoin(heimlieferungMapping as heimlieferung).on(heimlieferung.vertriebId, vertrieb.id)
+        .leftJoin(postlieferungMapping as postlieferung).on(postlieferung.vertriebId, vertrieb.id)
+        .where.eq(korb.lieferungId, parameter(lieferungId)).and.eq(korb.status, parameter(status))
+    }.one(korbMapping(korb))
+      .toManies(
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => vertriebMapping.opt(vertrieb)(rs),
+        rs => depotlieferungMapping.opt(depotlieferung)(rs),
+        rs => heimlieferungMapping.opt(heimlieferung)(rs),
+        rs => postlieferungMapping.opt(postlieferung)(rs)
+      )
+      .map { (korb, _, _, _, _, _) => korb }
+      .list
+  }
+
   protected def getVertriebQuery(vertriebId: VertriebId) = {
     withSQL {
       select

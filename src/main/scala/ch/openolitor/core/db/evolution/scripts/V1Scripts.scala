@@ -72,6 +72,12 @@ object V1Scripts {
       sql"drop table if exists ${produktProduktekategorieMapping.table}".execute.apply()
       sql"drop table if exists ${abwesenheitMapping.table}".execute.apply()
 
+      sql"drop table if exists ${tourlieferungMapping.table}".execute.apply()
+
+      sql"drop table if exists ${depotAuslieferungMapping.table}".execute.apply()
+      sql"drop table if exists ${tourAuslieferungMapping.table}".execute.apply()
+      sql"drop table if exists ${postAuslieferungMapping.table}".execute.apply()
+
       logger.debug(s"oo-system: cleanupDatabase - create tables - stammdaten")
       //create tables
 
@@ -520,6 +526,43 @@ object V1Scripts {
         ersteller BIGINT not null,
         modifidat datetime not null,
         modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${depotAuslieferungMapping.table}  (
+        id BIGINT not null,
+        lieferung_id BIGINT not null,
+        status varchar(50) not null,
+        depot_name varchar(50) not null,
+        datum datetime not null,
+        anzahl_koerbe INT not null, 
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${tourAuslieferungMapping.table}  (
+        id BIGINT not null,
+        lieferung_id BIGINT not null,
+        status varchar(50) not null,
+        tour_name varchar(50) not null,
+        datum datetime not null,
+        anzahl_koerbe INT not null, 
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${postAuslieferungMapping.table}  (
+        id BIGINT not null,
+        lieferung_id BIGINT not null,
+        status varchar(50) not null,
+        datum datetime not null,
+        anzahl_koerbe INT not null, 
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"ALTER TABLE ${korbMapping.table} ADD COLUMN IF NOT EXISTS auslieferung_id BIGINT AFTER guthaben_vor_lieferung".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end - stammdaten")
       Success(true)
