@@ -23,7 +23,6 @@
 package ch.openolitor.core.security
 
 import org.specs2.mutable._
-
 import org.specs2.mock.Mockito
 import org.specs2.time.NoTimeConversions
 import org.mockito.Matchers.{ eq => isEq, _ }
@@ -51,6 +50,7 @@ import spray.caching.LruCache
 import akka.util.Timeout
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.mailservice.MailServiceMock
+import java.util.Locale
 
 class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConversions {
   val email = "info@test.com"
@@ -63,7 +63,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
     false, Some(AdministratorZugang), DateTime.now, PersonId(1), DateTime.now, PersonId(1))
   val personAdminInactive = Person(personId, KundeId(1), None, "Test", "Test", Some(email), None, None, None, None, 1, false, Some(pwdHashed.toCharArray), None,
     false, Some(AdministratorZugang), DateTime.now, PersonId(1), DateTime.now, PersonId(1))
-  val projekt = Projekt(ProjektId(1), "Test", None, None, None, None, None, true, true, true, CHF, 1, 1, Map(AdministratorZugang -> true, KundenZugang -> false), DateTime.now, PersonId(1), DateTime.now, PersonId(1))
+  val projekt = Projekt(ProjektId(1), "Test", None, None, None, None, None, true, true, true, CHF, 1, 1, Map(AdministratorZugang -> true, KundenZugang -> false), Locale.GERMAN, DateTime.now, PersonId(1), DateTime.now, PersonId(1))
 
   implicit val ctx = MultipleAsyncConnectionPoolContext()
   val timeout = 5 seconds
