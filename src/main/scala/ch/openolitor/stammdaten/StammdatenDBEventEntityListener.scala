@@ -24,21 +24,21 @@ package ch.openolitor.stammdaten
 
 import akka.actor._
 
+import spray.json._
+import scalikejdbc._
 import ch.openolitor.core.models._
 import ch.openolitor.core.domain._
 import ch.openolitor.core.ws._
-import spray.json._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.db._
-import scalikejdbc._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
-import scala.concurrent.ExecutionContext.Implicits.global;
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models._
+import ch.openolitor.util.IdUtil
+import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
-import scala.util.Random
 import scala.concurrent.Future
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
@@ -486,7 +486,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
               case _ => 0
             }
             val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
-            val kId = KorbId(Random.nextLong)
+            val kId = KorbId(IdUtil.positiveRandomId)
             val korb = Korb(
               kId,
               lieferungId,

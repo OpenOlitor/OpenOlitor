@@ -20,26 +20,10 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.util
 
-import java.util.UUID
-import org.joda.time.DateTime
-import ch.openolitor.util.IdUtil
+import scala.util.Random
 
-sealed trait EvolutionStatus
-case object Applying extends EvolutionStatus
-case object Done extends EvolutionStatus
-
-object EvolutionStatus {
-  val AllStatus = Vector(Applying, Done)
-
-  def apply(value: String): EvolutionStatus = AllStatus.find(_.toString == value).getOrElse(Applying)
+object IdUtil {
+  def positiveRandomId: Long = Random.nextLong >>> 1
 }
-
-case class DBSchemaId(id: Long = IdUtil.positiveRandomId) extends BaseId
-case class DBSchema(id: DBSchemaId, revision: Int, status: EvolutionStatus,
-  //modification flags
-  erstelldat: DateTime,
-  ersteller: PersonId,
-  modifidat: DateTime,
-  modifikator: PersonId) extends BaseEntity[DBSchemaId]
