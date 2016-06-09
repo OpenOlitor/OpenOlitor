@@ -459,24 +459,35 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
     DB localTx { implicit session =>
       stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
-        log.debug(s"got lieferung $lieferung")
         stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
-          log.debug(s"got vertriebsart $vertriebsart")
-          val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.id, vertriebsart.id, WirdGeliefert)
-          log.debug(s"got koerbe $koerbe")
 
-          if (!koerbe.isEmpty) {
-            val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+          if (!isAuslieferungExisting(lieferung.id, vertriebsart)) {
+            val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.id, vertriebsart.id, WirdGeliefert)
 
-            val auslieferung = createAuslieferung(lieferung, vertriebsart, koerbe.size)
+            if (!koerbe.isEmpty) {
+              val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
 
-            koerbe map { korb =>
-              val copy = korb.copy(auslieferungId = Some(auslieferung.id))
-              stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+              val auslieferung = createAuslieferung(lieferung, vertriebsart, koerbe.size)
+
+              koerbe map { korb =>
+                val copy = korb.copy(auslieferungId = Some(auslieferung.id))
+                stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+              }
             }
           }
         }
       }
+    }
+  }
+
+  private def isAuslieferungExisting(lieferungId: LieferungId, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Boolean = {
+    vertriebsart match {
+      case _: DepotlieferungDetail =>
+        stammdatenWriteRepository.getDepotAuslieferung(lieferungId).isDefined
+      case _: HeimlieferungDetail =>
+        stammdatenWriteRepository.getTourAuslieferung(lieferungId).isDefined
+      case _: PostlieferungDetail =>
+        stammdatenWriteRepository.getPostAuslieferung(lieferungId).isDefined
     }
   }
 

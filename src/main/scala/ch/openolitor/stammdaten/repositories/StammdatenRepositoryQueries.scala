@@ -44,6 +44,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val korb = korbMapping.syntax("korb")
   lazy val vertrieb = vertriebMapping.syntax("vertrieb")
   lazy val tourlieferung = tourlieferungMapping.syntax("tourlieferung")
+  lazy val depotAuslieferung = depotAuslieferungMapping.syntax("depotAuslieferung")
+  lazy val tourAuslieferung = tourAuslieferungMapping.syntax("tourAuslieferung")
+  lazy val postAuslieferung = postAuslieferungMapping.syntax("postAuslieferung")
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
@@ -703,6 +706,51 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       )
       .map { (korb, _, _, _, _, _) => korb }
       .list
+  }
+
+  protected def getDepotAuslieferungenQuery = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+    }.map(depotAuslieferungMapping(depotAuslieferung)).list
+  }
+
+  protected def getTourAuslieferungenQuery = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+    }.map(tourAuslieferungMapping(tourAuslieferung)).list
+  }
+
+  protected def getPostAuslieferungenQuery = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+    }.map(postAuslieferungMapping(postAuslieferung)).list
+  }
+
+  protected def getDepotAuslieferungQuery(lieferungId: LieferungId) = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+        .where.eq(depotAuslieferung.lieferungId, parameter(lieferungId))
+    }.map(depotAuslieferungMapping(depotAuslieferung)).single
+  }
+
+  protected def getTourAuslieferungQuery(lieferungId: LieferungId) = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+        .where.eq(tourAuslieferung.lieferungId, parameter(lieferungId))
+    }.map(tourAuslieferungMapping(tourAuslieferung)).single
+  }
+
+  protected def getPostAuslieferungQuery(lieferungId: LieferungId) = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+        .where.eq(postAuslieferung.lieferungId, parameter(lieferungId))
+    }.map(postAuslieferungMapping(postAuslieferung)).single
   }
 
   protected def getVertriebQuery(vertriebId: VertriebId) = {
