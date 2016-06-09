@@ -156,7 +156,6 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
         val result = FileStoreBucket.AllFileStoreBuckets map { b =>
           client.createBucket(new CreateBucketRequest(bucketName(b)))
         }
-        logger.debug(s"#######################################################Created buckets $result")
         Right(FileStoreSuccess())
       } catch {
         case e: AmazonClientException =>

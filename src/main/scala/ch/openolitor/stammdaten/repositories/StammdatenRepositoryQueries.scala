@@ -43,6 +43,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val abwesenheit = abwesenheitMapping.syntax("abwesenheit")
   lazy val korb = korbMapping.syntax("korb")
   lazy val vertrieb = vertriebMapping.syntax("vertrieb")
+  lazy val tourlieferung = tourlieferungMapping.syntax("tourlieferung")
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
@@ -408,6 +409,46 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(tourMapping as tour)
     }.map(tourMapping(tour)).list
+  }
+
+  protected def getTourDetailQuery(id: TourId) = {
+    withSQL {
+      select
+        .from(tourMapping as tour)
+        .leftJoin(tourlieferungMapping as tourlieferung).on(tour.id, tourlieferung.tourId)
+        .where.eq(tour.id, parameter(id))
+        .orderBy(tourlieferung.sort)
+    }.one(tourMapping(tour))
+      .toMany(
+        rs => tourlieferungMapping.opt(tourlieferung)(rs)
+      )
+      .map({ (tour, tourlieferungen) =>
+        copyTo[Tour, TourDetail](tour, "tourlieferungen" -> tourlieferungen)
+      }).single
+  }
+
+  protected def getTourlieferungenQuery(tourId: TourId) = {
+    withSQL {
+      select
+        .from(tourlieferungMapping as tourlieferung)
+        .where.eq(tourlieferung.tourId, parameter(tourId))
+    }.map(tourlieferungMapping(tourlieferung)).list
+  }
+
+  protected def getTourlieferungenByKundeQuery(kundeId: KundeId) = {
+    withSQL {
+      select
+        .from(tourlieferungMapping as tourlieferung)
+        .where.eq(tourlieferung.kundeId, parameter(kundeId))
+    }.map(tourlieferungMapping(tourlieferung)).list
+  }
+
+  protected def getTourlieferungenByTourQuery(tourId: TourId) = {
+    withSQL {
+      select
+        .from(tourlieferungMapping as tourlieferung)
+        .where.eq(tourlieferung.tourId, parameter(tourId))
+    }.map(tourlieferungMapping(tourlieferung)).list
   }
 
   protected def getProjektQuery = {

@@ -20,65 +20,45 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.reporting
 
-import akka.persistence._
 import akka.actor._
-import java.util.UUID
-import ch.openolitor.core.models.PersonId
-import ch.openolitor.core.JSONSerializable
+import akka.stream._
+import akka.stream.scaladsl._
+import akka.util._
+import scala.concurrent.duration._
+import java.io.InputStream
+import org.odftoolkit.simple._
+import org.odftoolkit.simple.common.field._
+import scala.util._
+import spray.json._
+import java.io._
+import java.nio._
 
-trait State
+object SingleDocumentReportProcessorActor {
+  def props(): Props = Props(classOf[SingleDocumentReportProcessorActor])
 
-trait Command
-
-trait UserCommand extends Command {
-  val originator: PersonId
+  case class GenerateReport(file: Source[ByteString, Unit], data: JsObject)
 }
 
-object AggregateRoot {
-  case object KillAggregate extends Command
+class SingleDocumentReportProcessorActor extends Actor with ActorLogging with DocumentProcessor {
+  import SingleDocumentReportProcessorActor._
 
-  case object GetState extends Command
-
-  case object Removed extends State
-  case object Created extends State
-  case object Uninitialized extends State
-}
-
-trait AggregateRoot extends PersistentActor with ActorLogging {
-  import AggregateRoot._
-
-  type S <: State
-  var state: S
-
-  case class Initialize(state: S) extends Command
-
-  def updateState(evt: PersistentEvent): Unit
-  def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
-
-  def afterRecoveryCompleted(): Unit = {}
-
-  def now = System.currentTimeMillis
-
-  protected def afterEventPersisted(evt: PersistentEvent): Unit = {
-    updateState(evt)
-    publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
+  val receive: Receive = {
+    case GenerateReport(file, data) =>
+      sender ! generateReport(file, data)
   }
 
-  protected def publish(event: Object) =
-    context.system.eventStream.publish(event)
-
-  override val receiveRecover: Receive = {
-    case evt: PersistentEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
-    case SnapshotOffer(metadata, state: State) =>
-      restoreFromSnapshot(metadata, state)
-      log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted =>
-      afterRecoveryCompleted()
+  private def generateReport(file: Source[ByteString, Unit], data: JsObject): Source[Try[ByteString], Unit] = {
+    file.map { stream =>
+      for {
+        doc <- Try(TextDocument.loadDocument(new ByteBufferBackedInputStream(stream.asByteBuffer)))
+        result <- processDocument(doc, data)
+      } yield {
+        val baos = new ByteArrayOutputStream()
+        doc.save(baos)
+        ByteString(ByteBuffer.wrap(baos.toByteArray))
+      }
+    }
   }
 }

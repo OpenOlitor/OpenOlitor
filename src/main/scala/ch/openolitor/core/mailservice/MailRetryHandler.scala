@@ -20,65 +20,48 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.mailservice
 
-import akka.persistence._
-import akka.actor._
-import java.util.UUID
-import ch.openolitor.core.models.PersonId
-import ch.openolitor.core.JSONSerializable
+import org.joda.time.DateTime
+import scala.math._
+import scala.concurrent.duration.Duration
 
-trait State
+case class RetryFailed(expired: Boolean)
 
-trait Command
+trait MailRetryHandler {
 
-trait UserCommand extends Command {
-  val originator: PersonId
+  val maxNumberOfRetries: Int
+  def calculateRetryEnqueued(enqueued: MailEnqueued): Either[RetryFailed, Option[MailEnqueued]]
+  def calculateExpires(duration: Option[Duration]): DateTime
 }
 
-object AggregateRoot {
-  case object KillAggregate extends Command
+trait DefaultMailRetryHandler extends MailRetryHandler {
+  val RetryTime = List(10, 60, 300, 900, 3600)
 
-  case object GetState extends Command
-
-  case object Removed extends State
-  case object Created extends State
-  case object Uninitialized extends State
-}
-
-trait AggregateRoot extends PersistentActor with ActorLogging {
-  import AggregateRoot._
-
-  type S <: State
-  var state: S
-
-  case class Initialize(state: S) extends Command
-
-  def updateState(evt: PersistentEvent): Unit
-  def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
-
-  def afterRecoveryCompleted(): Unit = {}
-
-  def now = System.currentTimeMillis
-
-  protected def afterEventPersisted(evt: PersistentEvent): Unit = {
-    updateState(evt)
-    publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
+  override def calculateRetryEnqueued(enqueued: MailEnqueued): Either[RetryFailed, Option[MailEnqueued]] = {
+    val now = DateTime.now()
+    val expired = enqueued.expires.isBefore(now)
+    if (enqueued.retries < maxNumberOfRetries && !expired) {
+      if (enqueued.nextTry.isBefore(now)) {
+        Right(Some(enqueued.copy(
+          retries = enqueued.retries + 1,
+          nextTry = enqueued.nextTry.plusSeconds(
+            if (enqueued.retries < RetryTime.size) RetryTime(enqueued.retries) else RetryTime.last
+          )
+        )))
+      } else {
+        Right(None)
+      }
+    } else {
+      Left(RetryFailed(expired))
+    }
   }
 
-  protected def publish(event: Object) =
-    context.system.eventStream.publish(event)
-
-  override val receiveRecover: Receive = {
-    case evt: PersistentEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
-    case SnapshotOffer(metadata, state: State) =>
-      restoreFromSnapshot(metadata, state)
-      log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted =>
-      afterRecoveryCompleted()
+  def calculateExpires(maybeDuration: Option[Duration]): DateTime = {
+    maybeDuration map { duration =>
+      DateTime.now().plusSeconds(duration.toSeconds.toInt)
+    } getOrElse {
+      DateTime.now().plusSeconds(RetryTime.sum)
+    }
   }
 }

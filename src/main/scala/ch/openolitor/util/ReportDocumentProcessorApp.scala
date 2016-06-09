@@ -20,65 +20,63 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.util
 
-import akka.persistence._
-import akka.actor._
-import java.util.UUID
-import ch.openolitor.core.models.PersonId
-import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.reporting.DocumentProcessor
+import java.io.File
+import org.odftoolkit.simple._
+import scala.io.Source
+import spray.json._
+import DefaultJsonProtocol._
+import scala.util._
+import java.util.Locale
 
-trait State
+/**
+ * This helper app reads a template filename and a json data filename from the args and tries
+ * to generate a report with those informations. This app may be used to verify the report engine
+ * as well as verify custom report templates within a console
+ *
+ */
+object ReportDocumentProcessorApp extends App with DocumentProcessor {
 
-trait Command
-
-trait UserCommand extends Command {
-  val originator: PersonId
-}
-
-object AggregateRoot {
-  case object KillAggregate extends Command
-
-  case object GetState extends Command
-
-  case object Removed extends State
-  case object Created extends State
-  case object Uninitialized extends State
-}
-
-trait AggregateRoot extends PersistentActor with ActorLogging {
-  import AggregateRoot._
-
-  type S <: State
-  var state: S
-
-  case class Initialize(state: S) extends Command
-
-  def updateState(evt: PersistentEvent): Unit
-  def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
-
-  def afterRecoveryCompleted(): Unit = {}
-
-  def now = System.currentTimeMillis
-
-  protected def afterEventPersisted(evt: PersistentEvent): Unit = {
-    updateState(evt)
-    publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
+  if (args.length < 2) {
+    sys.error(s"Missing argument <template file> <json data file> <output file>")
+  }
+  val template = new File(args(0))
+  if (!template.exists) {
+    sys.error(s"Template file $template does not exist!")
   }
 
-  protected def publish(event: Object) =
-    context.system.eventStream.publish(event)
-
-  override val receiveRecover: Receive = {
-    case evt: PersistentEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
-    case SnapshotOffer(metadata, state: State) =>
-      restoreFromSnapshot(metadata, state)
-      log.debug("recovering aggregate from snapshot")
-    case RecoveryCompleted =>
-      afterRecoveryCompleted()
+  val jsonDataFile = new File(args(1))
+  if (!jsonDataFile.exists) {
+    sys.error(s"Json data file $jsonDataFile does not exist!")
   }
+
+  // load template
+  println(s"Load template document...")
+  val doc = TextDocument.loadDocument(template)
+
+  // load json data
+  println(s"Load json data...")
+  val jsonData = Source.fromFile(jsonDataFile).getLines.mkString.parseJson
+
+  // process report
+  println(s"Process report...")
+  processDocument(doc, jsonData, Locale.GERMAN) match {
+    case Success(true) =>
+      val outFile = if (args.length > 2) {
+        new File(args(2))
+      } else {
+        File.createTempFile("report", ".odt")
+      }
+
+      // save result
+      println(s"Save result document...")
+      doc.save(outFile)
+      println(s"Report successful processed. Output file: $outFile")
+    case Failure(error) =>
+      println(s"Failed processing report")
+      error.printStackTrace
+  }
+
 }
