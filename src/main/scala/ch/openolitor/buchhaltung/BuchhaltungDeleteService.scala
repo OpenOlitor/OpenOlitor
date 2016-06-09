@@ -60,7 +60,7 @@ class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends Eve
 
   def deleteRechnung(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      buchhaltungWriteRepository.deleteEntity[Rechnung, RechnungId](id)
+      buchhaltungWriteRepository.deleteEntity[Rechnung, RechnungId](id, { rechnung: Rechnung => rechnung.status == Erstellt })
     }
   }
 }
