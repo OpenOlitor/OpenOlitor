@@ -41,6 +41,7 @@ import ch.openolitor.core.Macros._
 import scala.reflect._
 import scala.reflect.runtime.universe.{ Try => TTry, _ }
 import ch.openolitor.buchhaltung.models._
+import DefaultMessages._
 
 /**
  * _
@@ -119,8 +120,8 @@ trait EntityStore extends AggregateRoot
   }
 
   def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: Long) = {
-    log.debug(s"updateId:$clOf -> $id")
     if (state.dbSeeds.get(clOf).map(_ < id).getOrElse(true)) {
+      log.debug(s"updateId:$clOf -> $id")
       //only update if current id is smaller than new one or no id did exist 
       state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
     }
@@ -205,6 +206,11 @@ trait EntityStore extends AggregateRoot
       log.debug(s"uninitialized => Initialize: $state")
       this.state = state
       context become created
+    case Startup =>
+      context become uncheckedDB
+      //reprocess event
+      uncheckedDB(Startup)
+      sender ! Started
     case e =>
       log.debug(s"uninitialized => Initialize eventstore with event:$e, $self")
       state = incState
