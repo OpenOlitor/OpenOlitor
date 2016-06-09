@@ -89,8 +89,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ EntityCreated(personId, entity: Rechnung) => handleRechnungCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Rechnung) => handleRechnungDeleted(entity)(personId)
-    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if (orig.status == Erstellt && entity.status == Bezahlt) =>
+    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if (orig.status != Bezahlt && entity.status == Bezahlt) =>
       handleRechnungBezahlt(entity, orig)(personId)
+    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if entity.anzahlLieferungen != orig.anzahlLieferungen =>
+      handleRechnungGuthabenModified(entity, orig)(personId)
 
     case e @ EntityCreated(userId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(userId)
 
@@ -383,41 +385,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleRechnungDeleted(rechnung: Rechnung)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen
-        )
-      })
-      modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen
-        )
-      })
-      modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen
-        )
-      })
+      adjustGuthabenInRechnung(rechnung.aboId, 0 - rechnung.anzahlLieferungen)
     }
   }
 
   def handleRechnungCreated(rechnung: Rechnung)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId, { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen
-        )
-      })
-      modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen
-        )
-      })
-      modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung + rechnung.anzahlLieferungen
-        )
-      })
+      adjustGuthabenInRechnung(rechnung.aboId, rechnung.anzahlLieferungen)
     }
   }
 
@@ -445,6 +419,30 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         )
       })
     }
+  }
+
+  def handleRechnungGuthabenModified(rechnung: Rechnung, orig: Rechnung)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      adjustGuthabenInRechnung(rechnung.aboId, rechnung.anzahlLieferungen - orig.anzahlLieferungen)
+    }
+  }
+
+  private def adjustGuthabenInRechnung(aboId: AboId, diff: Int)(implicit personId: PersonId, session: DBSession) = {
+    modifyEntity[DepotlieferungAbo, AboId](aboId, { abo =>
+      abo.copy(
+        guthabenInRechnung = abo.guthabenInRechnung + diff
+      )
+    })
+    modifyEntity[PostlieferungAbo, AboId](aboId, { abo =>
+      abo.copy(
+        guthabenInRechnung = abo.guthabenInRechnung + diff
+      )
+    })
+    modifyEntity[HeimlieferungAbo, AboId](aboId, { abo =>
+      abo.copy(
+        guthabenInRechnung = abo.guthabenInRechnung + diff
+      )
+    })
   }
 
   def handleLieferplanungCreated(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {

@@ -34,6 +34,7 @@ import ch.openolitor.core.JSONSerializable
 
 trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
   //V1 persisters
+  implicit val rechnungCreatePersister = persister[RechnungCreate]("rechnung-create")
   implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
   implicit val rechnungVerschicktEventPersister = persister[RechnungVerschicktEvent]("rechnung-verschickt-event")
   implicit val rechnungMahnungVerschicktEventPersister = persister[RechnungMahnungVerschicktEvent]("rechnung-mahnung-verschickt-event")
@@ -47,6 +48,7 @@ trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with Entit
   implicit val zahlungsEingangErledigtEventPersister = persister[ZahlungsEingangErledigtEvent]("zahlungs-eingang-erledigt-event")
 
   val buchhaltungPersisters = List(
+    rechnungCreatePersister,
     rechnungModifyPersister,
     rechnungIdPersister,
     rechnungVerschicktEventPersister,

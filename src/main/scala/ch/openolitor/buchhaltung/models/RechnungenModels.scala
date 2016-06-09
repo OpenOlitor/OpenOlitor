@@ -153,7 +153,7 @@ case class RechnungDetail(
   modifikator: PersonId
 ) extends JSONSerializable
 
-case class RechnungModify(
+case class RechnungCreate(
   kundeId: KundeId,
   aboId: AboId,
   titel: String,
@@ -164,6 +164,20 @@ case class RechnungModify(
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime,
   eingangsDatum: Option[DateTime],
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String
+) extends JSONSerializable
+
+case class RechnungModify(
+  titel: String,
+  anzahlLieferungen: Int,
+  waehrung: Waehrung,
+  betrag: BigDecimal,
+  rechnungsDatum: DateTime,
+  faelligkeitsDatum: DateTime,
   strasse: String,
   hausNummer: Option[String],
   adressZusatz: Option[String],
