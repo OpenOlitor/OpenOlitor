@@ -30,6 +30,7 @@ import ch.openolitor._
 import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.domain._
 import ch.openolitor.core.AkkaEventStream
+import DefaultMessages._
 
 trait EventService[E <: PersistentEvent] {
   type Handle = (E => Unit)
@@ -53,7 +54,6 @@ trait EntityStoreViewComponent extends Actor {
 }
 
 object EntityStoreView {
-  case object Startup
 }
 
 /**
@@ -87,6 +87,7 @@ trait EntityStoreView extends PersistentView with ActorLogging {
       deleteService.handle(e)
     case Startup =>
       log.debug("Received startup command")
+      sender ! Started
     case e: PersistentEvent =>
       // handle custom events
       aktionenService.handle(e)
