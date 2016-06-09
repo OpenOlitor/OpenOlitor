@@ -163,7 +163,6 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val eventStore = Await.result(system ? SystemActor.Child(SystemEventStore.props, "event-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> eventStore:$eventStore")
-      eventStore ! "Nop"
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
 
       //start actor listening on dbevents to modify calculated fields
@@ -180,7 +179,9 @@ object Boot extends App with LazyLogging {
 
       //initialize global persistentviews
       logger.debug(s"oo-system: send Startup to entityStoreview")
-      stammdatenEntityStoreView ! EntityStoreView.Startup
+      eventStore ? DefaultMessages.Startup
+      stammdatenEntityStoreView ? DefaultMessages.Startup
+      buchhaltungEntityStoreView ? DefaultMessages.Startup
 
       // create and start our service actor
       val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
