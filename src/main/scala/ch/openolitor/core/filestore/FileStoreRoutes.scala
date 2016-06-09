@@ -62,13 +62,13 @@ import akka.actor._
 import akka.util.ByteString
 
 trait StreamSupport {
-  def streamThenClose[T](stream: Stream[T], closeable: Closeable)(implicit marshaller: Marshaller[T], refFactory: ActorRefFactory) =
+  def streamThenClose[T](stream: Stream[T], closeable: Option[Closeable])(implicit marshaller: Marshaller[T], refFactory: ActorRefFactory) =
     new StandardRoute {
       val closingMarshaller = Marshaller[Stream[T]] {
         (value, ctx) =>
-          if (value.isEmpty) { closeable.close(); ctx.marshalTo(HttpEntity.Empty) }
+          if (value.isEmpty) { closeable.map(_.close()); ctx.marshalTo(HttpEntity.Empty) }
           else refFactory.actorOf(Props(new MetaMarshallers.ChunkingActor(marshaller, ctx) {
-            override def postStop() { closeable.close(); super.postStop() }
+            override def postStop() { closeable.map(_.close()); super.postStop() }
           })) ! value
       }
 
@@ -101,8 +101,7 @@ trait FileStoreRoutes extends HttpService with ActorReferences with SprayDeseria
               case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found. Error: ${e}")
               case Right(file) => {
                 logger.debug(s"serving file: $file")
-                val streamResponse: Stream[ByteString] = Stream.continually(file.file.read).takeWhile(_ != -1).map(ByteString(_))
-                streamThenClose(streamResponse, file.file)
+                stream(file.file)
               }
             }
           }

@@ -36,13 +36,14 @@ object BuildSettings {
 	    "com.typesafe.akka"            %%  "akka-persistence"                     % akkaV,    
 	    "com.typesafe.akka"            %%  "akka-persistence-query-experimental"  % akkaV,
 	    "com.typesafe.akka"            %%  "akka-slf4j"    					              % akkaV,
+	    "com.typesafe.akka"            %%  "akka-stream"    					              % akkaV,
 	    "com.typesafe.akka"            %%  "akka-testkit"  			    	            % akkaV       % "test",    
 	    "com.github.dnvriend"          %%  "akka-persistence-inmemory" 		        % "1.0.5"     % "test",
 	    "org.specs2"                   %%  "specs2-core"   					              % specs2V     % "test",
 	    "org.specs2"                   %%  "specs2-mock"                          % specs2V     % "test",
 	    "org.specs2"                   %%  "specs2-junit"                         % specs2V     % "test",
 	    "org.mockito"                  %   "mockito-core"                         % "1.10.19"   % "test",
-	    "org.scalaz" 		               %%  "scalaz-core"						              % "7.1.5",
+	    "org.scalaz" 		               %%  "scalaz-core"						              % "7.1.8",
 	    //use scala logging to log outside of the actor system
 	    "com.typesafe.scala-logging"   %%  "scala-logging"				                % "3.1.0",
 	    //akka persistence journal driver
@@ -64,7 +65,8 @@ object BuildSettings {
 	    "com.scalapenos"               %%  "stamina-json"                         % "0.1.1",
       // s3
       "com.amazonaws"                %   "aws-java-sdk"                         % "1.11.4",
-      "de.svenkubiak"                %   "jBCrypt"                              % "0.4.1"
+      "de.svenkubiak"                %   "jBCrypt"                              % "0.4.1",
+      "me.lessis"                    %%  "courier"                              % "0.1.3"
 	  )
 	}
   )

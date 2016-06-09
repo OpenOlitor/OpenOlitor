@@ -22,7 +22,7 @@
 \*                                                                           */
 package ch.openolitor.core.filestore
 
-sealed trait FileType {
+sealed trait FileType extends Product {
   val bucket: FileStoreBucket
 }
 

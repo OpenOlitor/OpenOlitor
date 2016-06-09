@@ -64,6 +64,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getBestellungen(id: LieferplanungId)(implicit session: DBSession): List[Bestellung]
+
+  def getTourlieferungenByKunde(id: KundeId)(implicit session: DBSession): List[Tourlieferung]
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with AkkaEventStream with StammdatenRepositoryQueries {
@@ -207,10 +209,16 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int] = {
     countAbwesendQuery(lieferungId, aboId).apply()
   }
+
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung] = {
     getLieferungenQuery(id).apply()
   }
+
   def getBestellungen(id: LieferplanungId)(implicit session: DBSession): List[Bestellung] = {
     getBestellungenQuery(id).apply()
+  }
+
+  def getTourlieferungenByKunde(id: KundeId)(implicit session: DBSession): List[Tourlieferung] = {
+    getTourlieferungenByKundeQuery(id).apply()
   }
 }

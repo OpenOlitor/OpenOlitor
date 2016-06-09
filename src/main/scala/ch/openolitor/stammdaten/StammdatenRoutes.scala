@@ -89,11 +89,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   import EntityStore._
 
-  def stammdatenRoute(implicit subect: Subject) = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
+  def stammdatenRoute(implicit subject: Subject) = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
     kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
     produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute
 
-  def kundenRoute(implicit subect: Subject) =
+  def kundenRoute(implicit subject: Subject) =
     path("kunden") {
       get(list(stammdatenReadRepository.getKunden)) ~
         post(create[KundeModify, KundeId](KundeId.apply _))
@@ -165,7 +165,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(buchhaltungReadRepository.getKundenRechnungen(kundeId)))
       }
 
-  def kundentypenRoute(implicit subect: Subject) =
+  def kundentypenRoute(implicit subject: Subject) =
     path("kundentypen") {
       get(list(stammdatenReadRepository.getKundentypen)) ~
         post(create[CustomKundentypCreate, CustomKundentypId](CustomKundentypId.apply _))
@@ -175,7 +175,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(kundentypId))
       }
 
-  def aboTypenRoute(implicit subect: Subject) =
+  def aboTypenRoute(implicit subject: Subject) =
     path("abotypen") {
       get(list(stammdatenReadRepository.getAbotypen)) ~
         post(create[AbotypModify, AbotypId](AbotypId.apply _))
@@ -246,7 +246,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         delete(remove(lieferungId))
       }
 
-  def depotsRoute(implicit subect: Subject) =
+  def depotsRoute(implicit subject: Subject) =
     path("depots") {
       get(list(stammdatenReadRepository.getDepots)) ~
         post(create[DepotModify, DepotId](DepotId.apply _))
@@ -257,17 +257,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  def aboRoute(implicit subect: Subject) =
+  def aboRoute(implicit subject: Subject) =
     path("abos") {
       get(list(stammdatenReadRepository.getAbos))
     }
 
-  def pendenzenRoute(implicit subect: Subject) =
+  def pendenzenRoute(implicit subject: Subject) =
     path("pendenzen") {
       get(list(stammdatenReadRepository.getPendenzen))
     }
 
-  def produkteRoute(implicit subect: Subject) =
+  def produkteRoute(implicit subject: Subject) =
     path("produkte") {
       get(list(stammdatenReadRepository.getProdukte)) ~
         post(create[ProduktModify, ProduktId](ProduktId.apply _))
@@ -277,7 +277,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  def produktekategorienRoute(implicit subect: Subject) =
+  def produktekategorienRoute(implicit subject: Subject) =
     path("produktekategorien") {
       get(list(stammdatenReadRepository.getProduktekategorien)) ~
         post(create[ProduktekategorieModify, ProduktekategorieId](ProduktekategorieId.apply _))
@@ -287,7 +287,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  def produzentenRoute(implicit subect: Subject) =
+  def produzentenRoute(implicit subject: Subject) =
     path("produzenten") {
       get(list(stammdatenReadRepository.getProduzenten)) ~
         post(create[ProduzentModify, ProduzentId](ProduzentId.apply _))
@@ -298,17 +298,18 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  def tourenRoute(implicit subect: Subject) =
+  def tourenRoute(implicit subject: Subject) =
     path("touren") {
       get(list(stammdatenReadRepository.getTouren)) ~
         post(create[TourModify, TourId](TourId.apply _))
     } ~
       path("touren" / tourIdPath) { id =>
-        (put | post)(update[TourModify, TourId](id)) ~
+        get(detail(stammdatenReadRepository.getTourDetail(id))) ~
+          (put | post)(update[TourModify, TourId](id)) ~
           delete(remove(id))
       }
 
-  def projektRoute(implicit subect: Subject) =
+  def projektRoute(implicit subject: Subject) =
     path("projekt") {
       get(detail(stammdatenReadRepository.getProjekt)) ~
         post(create[ProjektModify, ProjektId](ProjektId.apply _))
@@ -325,7 +326,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           })
       }
 
-  def lieferplanungRoute(implicit subect: Subject) =
+  def lieferplanungRoute(implicit subject: Subject) =
     path("lieferplanungen") {
       get(list(stammdatenReadRepository.getLieferplanungen)) ~
         post(create[LieferplanungCreate, LieferplanungId](LieferplanungId.apply _))
@@ -398,7 +399,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 class DefaultStammdatenRoutes(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
+  override val mailService: ActorRef,
+  override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )

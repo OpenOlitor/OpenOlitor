@@ -731,7 +731,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.waehrung -> parameter(projekt.waehrung),
         column.geschaeftsjahrMonat -> parameter(projekt.geschaeftsjahrMonat),
         column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag),
-        column.twoFactorAuthentication -> parameter(projekt.twoFactorAuthentication)
+        column.twoFactorAuthentication -> parameter(projekt.twoFactorAuthentication),
+        column.sprache -> parameter(projekt.sprache)
       )
     }
   }
@@ -788,6 +789,23 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferungId -> parameter(entity.lieferungId),
         column.datum -> parameter(entity.datum),
         column.bemerkung -> parameter(entity.bemerkung)
+      )
+    }
+  }
+
+  implicit val tourlieferungMapping = new BaseEntitySQLSyntaxSupport[Tourlieferung] {
+    override val tableName = "Tourlieferung"
+
+    override lazy val columns = autoColumns[Tourlieferung]()
+
+    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Tourlieferung): Seq[Any] = parameters(Tourlieferung.unapply(entity).get)
+
+    override def updateParameters(entity: Tourlieferung) = {
+      super.updateParameters(entity) ++ Seq(
+        column.sort -> parameter(entity.sort)
       )
     }
   }

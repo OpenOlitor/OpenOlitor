@@ -384,4 +384,19 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val korbModifyFormat = autoProductFormat[KorbModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
+
+  // special report formats
+  def enhancedProjektReportFormatDef(implicit defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
+    def write(obj: ProjektReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
+          "plzOrt" -> JsString(obj.plzOrt.getOrElse(""))
+        ))
+    }
+
+    def read(json: JsValue): ProjektReport = defaultFormat.read(json)
+  }
+  implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef
 }

@@ -26,6 +26,7 @@ import akka.persistence._
 import akka.actor._
 import java.util.UUID
 import ch.openolitor.core.models.PersonId
+import ch.openolitor.core.JSONSerializable
 
 trait State
 
