@@ -59,7 +59,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
     }
 
     "calculate correct referenzNummer" in {
-      val rechnung = RechnungModify(
+      val rechnung = RechnungCreate(
         KundeId(123),
         AboId(111),
         "titel",
@@ -81,7 +81,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
     }
 
     "calculate correct esrNummer" in {
-      val rechnung = RechnungModify(
+      val rechnung = RechnungCreate(
         KundeId(321),
         AboId(565656),
         "titel",
@@ -112,7 +112,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
     val service = new MockBuchhaltungInsertService(config, null, 6, 5, "132", "")
 
     "fill teilnehmernummer from right" in {
-      val rechnung = RechnungModify(
+      val rechnung = RechnungCreate(
         KundeId(321),
         AboId(565656),
         "titel",
