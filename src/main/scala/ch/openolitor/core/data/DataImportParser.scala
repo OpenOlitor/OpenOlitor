@@ -40,6 +40,7 @@ import scala.collection.immutable.TreeMap
 import java.io.InputStream
 import scala.util._
 import org.joda.time.format.DateTimeFormatter
+import java.util.Locale
 
 case class ParseException(msg: String) extends Exception(msg)
 
@@ -126,13 +127,13 @@ class DataImportParser extends Actor with ActorLogging {
 
   def parseProjekte = {
     parse[Projekt, ProjektId]("id", Seq("bezeichnung", "strasse", "haus_nummer", "adress_zusatz", "plz", "ort",
-      "preise_sichtbar", "preise_editierbar", "email_erforderlich", "waehrung", "geschaeftsjahr_monat", "geschaeftsjahr_tag", "two_factor_auth") ++ modifyColumns) { id => indexes =>
+      "preise_sichtbar", "preise_editierbar", "email_erforderlich", "waehrung", "geschaeftsjahr_monat", "geschaeftsjahr_tag", "two_factor_auth", "sprache") ++ modifyColumns) { id => indexes =>
       row =>
         //match column indexes
         val Seq(indexBezeichnung, indexStrasse, indexHausNummer, indexAdressZusatz, indexPlz, indexOrt, indexPreiseSichtbar,
-          indexPreiseEditierbar, indexEmailErforderlich, indexWaehrung, indexGeschaeftsjahrMonat, indexGeschaeftsjahrTag, indexTwoFactorAuth) = indexes take (13)
+          indexPreiseEditierbar, indexEmailErforderlich, indexWaehrung, indexGeschaeftsjahrMonat, indexGeschaeftsjahrTag, indexTwoFactorAuth, indexSprache) = indexes take (14)
         val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
-        val twoFactorAuth = parseMap(row.value[String](indexTwoFactorAuth))(r => Rolle(r) getOrElse (throw ParseException(s"Unknown Rolle $r while parsing Projekt")), _.toBoolean)
+        val twoFactorAuth = parseMap(row.value[String](indexTwoFactorAuth))(r => Rolle(r).getOrElse(throw ParseException(s"Unknown Rolle $r while parsing Projekt")), _.toBoolean)
 
         Projekt(
           id = ProjektId(id),
@@ -149,6 +150,7 @@ class DataImportParser extends Actor with ActorLogging {
           geschaeftsjahrMonat = row.value[Int](indexGeschaeftsjahrMonat),
           geschaeftsjahrTag = row.value[Int](indexGeschaeftsjahrTag),
           twoFactorAuthentication = twoFactorAuth,
+          sprache = new Locale(row.value[String](indexSprache)),
           //modification flags
           erstelldat = row.value[DateTime](indexErstelldat),
           ersteller = PersonId(row.value[Long](indexErsteller)),

@@ -84,7 +84,7 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   // connects the services environment to the enclosing actor or test
   val actorRefFactory = context
 
-  val routeMap = mandanten.list.map(c => (c.config.key, c)).toMap
+  val routeMap = mandanten.list.map(c => (c.config.key, c)).toList.toMap
 
   log.debug(s"Configure proxy service for mandanten${routeMap.keySet}")
 

@@ -37,6 +37,7 @@ import scala.collection.immutable.TreeMap
 import ch.openolitor.core.repositories.BaseWriteRepository
 import ch.openolitor.core.NoPublishEventStream
 import ch.openolitor.core.models.PersonId
+import java.util.Locale
 
 object V1Scripts {
   val StammdatenDBInitializationScript = new Script with LazyLogging with StammdatenDBMappings {
@@ -71,12 +72,6 @@ object V1Scripts {
       sql"drop table if exists ${produktProduzentMapping.table}".execute.apply()
       sql"drop table if exists ${produktProduktekategorieMapping.table}".execute.apply()
       sql"drop table if exists ${abwesenheitMapping.table}".execute.apply()
-
-      sql"drop table if exists ${tourlieferungMapping.table}".execute.apply()
-
-      sql"drop table if exists ${depotAuslieferungMapping.table}".execute.apply()
-      sql"drop table if exists ${tourAuslieferungMapping.table}".execute.apply()
-      sql"drop table if exists ${postAuslieferungMapping.table}".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - create tables - stammdaten")
       //create tables
@@ -473,6 +468,7 @@ object V1Scripts {
         geschaeftsjahr_monat DECIMAL(2,0) not null,
         geschaeftsjahr_tag DECIMAL(2,0) not null,
         two_factor_authentication varchar(100),
+        sprache varchar(10),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -506,63 +502,6 @@ object V1Scripts {
         ersteller BIGINT not null,
         modifidat datetime not null,
         modifikator BIGINT not null)""".execute.apply()
-
-      sql"""create table ${tourlieferungMapping.table}  (
-        id BIGINT not null,
-        tour_id BIGINT not null,
-        abotyp_id BIGINT not null,
-        kunde_id BIGINT not null,
-        vertriebsart_id BIGINT not null,
-        vertrieb_id BIGINT not null,
-        kunde_bezeichnung varchar(100),
-        strasse varchar(50) not null,
-        haus_nummer varchar(10),
-        adress_zusatz varchar(100),
-        plz varchar(10) not null,
-        ort varchar(50) not null,
-        abotyp_name varchar(50),
-        sort INT,
-        erstelldat datetime not null,
-        ersteller BIGINT not null,
-        modifidat datetime not null,
-        modifikator BIGINT not null)""".execute.apply()
-
-      sql"""create table ${depotAuslieferungMapping.table}  (
-        id BIGINT not null,
-        lieferung_id BIGINT not null,
-        status varchar(50) not null,
-        depot_name varchar(50) not null,
-        datum datetime not null,
-        anzahl_koerbe INT not null, 
-        erstelldat datetime not null,
-        ersteller BIGINT not null,
-        modifidat datetime not null,
-        modifikator BIGINT not null)""".execute.apply()
-
-      sql"""create table ${tourAuslieferungMapping.table}  (
-        id BIGINT not null,
-        lieferung_id BIGINT not null,
-        status varchar(50) not null,
-        tour_name varchar(50) not null,
-        datum datetime not null,
-        anzahl_koerbe INT not null, 
-        erstelldat datetime not null,
-        ersteller BIGINT not null,
-        modifidat datetime not null,
-        modifikator BIGINT not null)""".execute.apply()
-
-      sql"""create table ${postAuslieferungMapping.table}  (
-        id BIGINT not null,
-        lieferung_id BIGINT not null,
-        status varchar(50) not null,
-        datum datetime not null,
-        anzahl_koerbe INT not null, 
-        erstelldat datetime not null,
-        ersteller BIGINT not null,
-        modifidat datetime not null,
-        modifikator BIGINT not null)""".execute.apply()
-
-      sql"ALTER TABLE ${korbMapping.table} ADD COLUMN IF NOT EXISTS auslieferung_id BIGINT AFTER guthaben_vor_lieferung".execute.apply()
 
       logger.debug(s"oo-system: cleanupDatabase - end - stammdaten")
       Success(true)
@@ -647,6 +586,7 @@ object V1Scripts {
         geschaeftsjahrMonat = 1,
         geschaeftsjahrTag = 1,
         twoFactorAuthentication = Map(AdministratorZugang -> false, KundenZugang -> true),
+        sprache = Locale.forLanguageTag("de-CH"),
         //modification flags
         erstelldat = DateTime.now,
         ersteller = personId,

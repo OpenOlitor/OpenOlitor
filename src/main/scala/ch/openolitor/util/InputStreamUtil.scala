@@ -20,26 +20,14 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.util
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.LazyLogging
+import java.io.InputStream
+import scala.util.Try
 
-trait FileStoreComponent {
-  val fileStore: FileStore
-}
-
-class DefaultFileStoreComponent(mandant: String, sysConfig: SystemConfig, system: ActorSystem) extends FileStoreComponent with LazyLogging {
-
-  override lazy val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration, system)
-
-  fileStore.createBuckets map {
-    _.fold(
-      error => logger.error(s"Error creating buckets for $mandant: ${error.message}"),
-      success => logger.debug(s"Created file store buckets for $mandant")
-    )
+object InputStreamUtil {
+  implicit class ExtInputStream(self: InputStream) {
+    def toByteArray: Try[Array[Byte]] =
+      Try(Stream.continually(self.read).takeWhile(_ != -1).map(_.toByte).toArray)
   }
 }

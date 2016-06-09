@@ -20,26 +20,52 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.util
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.LazyLogging
+import java.util.zip._
+import java.io.ByteArrayOutputStream
+import scala.util.Try
+import java.io.InputStream
 
-trait FileStoreComponent {
-  val fileStore: FileStore
-}
+class ZipBuilder {
 
-class DefaultFileStoreComponent(mandant: String, sysConfig: SystemConfig, system: ActorSystem) extends FileStoreComponent with LazyLogging {
+  val byteArrayOutputStream: ByteArrayOutputStream = new ByteArrayOutputStream
+  val zipOutputStream: ZipOutputStream = new ZipOutputStream(byteArrayOutputStream)
 
-  override lazy val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration, system)
+  def addZipEntry(fileName: String, document: Array[Byte]): Try[Boolean] = {
+    Try {
+      val zipEntry = new ZipEntry(fileName)
+      zipOutputStream.putNextEntry(zipEntry)
+      zipOutputStream.write(document)
+      zipOutputStream.closeEntry()
+      true
+    }
+  }
 
-  fileStore.createBuckets map {
-    _.fold(
-      error => logger.error(s"Error creating buckets for $mandant: ${error.message}"),
-      success => logger.debug(s"Created file store buckets for $mandant")
-    )
+  def addZipEntry(fileName: String, is: InputStream): Try[Boolean] = {
+    Try {
+      val zipEntry = new ZipEntry(fileName)
+      zipOutputStream.putNextEntry(zipEntry)
+      val baos = new ByteArrayOutputStream()
+      val bytes = new Array[Byte](1024);
+      var length = is.read(bytes)
+      while (length >= 0) {
+        zipOutputStream.write(bytes, 0, length);
+        length = is.read(bytes)
+      }
+
+      zipOutputStream.closeEntry()
+      true
+    }
+  }
+
+  def close(): Option[Array[Byte]] = {
+    try {
+      Try(zipOutputStream.close)
+      Try(byteArrayOutputStream.toByteArray).toOption
+    } finally {
+      //close streams
+      Try(byteArrayOutputStream.close)
+    }
   }
 }

@@ -23,8 +23,6 @@
 package ch.openolitor.core.reporting
 
 import akka.actor._
-import akka.stream._
-import akka.stream.scaladsl._
 import akka.util._
 import scala.concurrent.duration._
 import java.io.InputStream
@@ -34,31 +32,42 @@ import scala.util._
 import spray.json._
 import java.io._
 import java.nio._
+import ch.openolitor.util.ByteBufferBackedInputStream
+import java.util.Locale
 
 object SingleDocumentReportProcessorActor {
-  def props(): Props = Props(classOf[SingleDocumentReportProcessorActor])
-
-  case class GenerateReport(file: Source[ByteString, Unit], data: JsObject)
+  def props(name: String, locale: Locale): Props = Props(classOf[SingleDocumentReportProcessorActor], name, locale)
 }
 
-class SingleDocumentReportProcessorActor extends Actor with ActorLogging with DocumentProcessor {
-  import SingleDocumentReportProcessorActor._
+/**
+ * This generates a single report documet from a given json data object
+ */
+class SingleDocumentReportProcessorActor(name: String, locale: Locale) extends Actor with ActorLogging with DocumentProcessor {
+  import ReportSystem._
 
   val receive: Receive = {
     case GenerateReport(file, data) =>
-      sender ! generateReport(file, data)
+      generateReport(file, data) match {
+        case Success(result) => {
+          sender ! DocumentReportResult(result, name + ".odt")
+        }
+        case Failure(error) => {
+          error.printStackTrace()
+          log.warning(s"Couldn't generate report document {}", error)
+          sender ! ReportError(error.getMessage)
+        }
+      }
+      self ! PoisonPill
   }
 
-  private def generateReport(file: Source[ByteString, Unit], data: JsObject): Source[Try[ByteString], Unit] = {
-    file.map { stream =>
-      for {
-        doc <- Try(TextDocument.loadDocument(new ByteBufferBackedInputStream(stream.asByteBuffer)))
-        result <- processDocument(doc, data)
-      } yield {
-        val baos = new ByteArrayOutputStream()
-        doc.save(baos)
-        ByteString(ByteBuffer.wrap(baos.toByteArray))
-      }
+  private def generateReport(file: Array[Byte], data: JsObject): Try[Array[Byte]] = {
+    for {
+      doc <- Try(TextDocument.loadDocument(new ByteArrayInputStream(file)))
+      result <- processDocument(doc, data, locale)
+    } yield {
+      val baos = new ByteArrayOutputStream()
+      doc.save(baos)
+      baos.toByteArray
     }
   }
 }

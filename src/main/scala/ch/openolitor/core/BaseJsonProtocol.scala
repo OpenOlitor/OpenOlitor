@@ -30,6 +30,7 @@ import ch.openolitor.core.models._
 import java.util.UUID
 import java.text.SimpleDateFormat
 import zangelo.spray.json.AutoProductFormats
+import java.util.Locale
 
 trait JSONSerializable extends Product
 
@@ -45,6 +46,16 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
     def read(json: JsValue): UUID =
       json match {
         case (JsString(value)) => UUID.fromString(value)
+        case value => deserializationError(s"Unrecognized UUID format:$value")
+      }
+  }
+
+  implicit val localeFormat = new RootJsonFormat[Locale] {
+    def write(obj: Locale): JsValue = JsString(obj.toString)
+
+    def read(json: JsValue): Locale =
+      json match {
+        case (JsString(value)) => new Locale(value)
         case value => deserializationError(s"Unrecognized UUID format:$value")
       }
   }

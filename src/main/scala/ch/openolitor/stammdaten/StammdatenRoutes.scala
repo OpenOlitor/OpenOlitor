@@ -411,7 +411,9 @@ class DefaultStammdatenRoutes(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,
+  override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )
