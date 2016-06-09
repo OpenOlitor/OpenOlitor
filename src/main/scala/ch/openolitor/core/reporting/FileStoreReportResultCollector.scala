@@ -20,26 +20,43 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.core.reporting
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.LazyLogging
+import akka.actor._
+import ch.openolitor.core.reporting.ReportSystem._
+import java.io.ByteArrayOutputStream
+import scala.util._
+import ch.openolitor.util.ZipBuilder
+import ch.openolitor.core.filestore.FileStoreFileReference
 
-trait FileStoreComponent {
-  val fileStore: FileStore
+object FileStoreReportResultCollector {
+  def props(reportSystem: ActorRef): Props = Props(classOf[FileStoreReportResultCollector], reportSystem)
 }
 
-class DefaultFileStoreComponent(mandant: String, sysConfig: SystemConfig, system: ActorSystem) extends FileStoreComponent with LazyLogging {
+/**
+ * Collect all results filestore id results
+ */
+class FileStoreReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
 
-  override lazy val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration, system)
+  var origSender: Option[ActorRef] = None
+  var storeResults: Seq[FileStoreFileReference] = Seq()
+  var errors: Seq[ReportError] = Seq()
 
-  fileStore.createBuckets map {
-    _.fold(
-      error => logger.error(s"Error creating buckets for $mandant: ${error.message}"),
-      success => logger.debug(s"Created file store buckets for $mandant")
-    )
+  val receive: Receive = {
+    case request: GenerateReports[_] =>
+      origSender = Some(sender)
+      reportSystem ! request
+      context become waitingForResult
+  }
+
+  val waitingForResult: Receive = {
+    case SingleReportResult(_, Left(error)) =>
+      errors = errors :+ error
+    case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) =>
+      storeResults = storeResults :+ FileStoreFileReference(fileType, id)
+    case result: GenerateReportsStats =>
+      //finished, send back collected result
+      origSender.map(_ ! BatchStoredPdfReportResult(result, errors, storeResults))
+      self ! PoisonPill
   }
 }

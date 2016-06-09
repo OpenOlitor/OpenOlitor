@@ -20,26 +20,51 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.core.reporting
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.LazyLogging
+import akka.actor._
+import ch.openolitor.core.reporting.pdf.PDFGeneratorActor
+import java.util.Locale
 
-trait FileStoreComponent {
-  val fileStore: FileStore
+object SingleDocumentReportPDFProcessorActor {
+  def props(name: String, locale: Locale): Props = Props(classOf[SingleDocumentReportPDFProcessorActor], name, locale)
 }
 
-class DefaultFileStoreComponent(mandant: String, sysConfig: SystemConfig, system: ActorSystem) extends FileStoreComponent with LazyLogging {
+/**
+ * This actor generates a report document and converts the result to a pdf afterwards
+ */
+class SingleDocumentReportPDFProcessorActor(name: String, locale: Locale) extends Actor with ActorLogging {
+  import ReportSystem._
+  import PDFGeneratorActor._
 
-  override lazy val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration, system)
+  val generateDocumentActor = context.actorOf(SingleDocumentReportProcessorActor.props(name, locale), "generate-document-" + System.currentTimeMillis)
+  val generatePdfActor = context.actorOf(PDFGeneratorActor.props, "pdf-" + System.currentTimeMillis)
 
-  fileStore.createBuckets map {
-    _.fold(
-      error => logger.error(s"Error creating buckets for $mandant: ${error.message}"),
-      success => logger.debug(s"Created file store buckets for $mandant")
-    )
+  var origSender: Option[ActorRef] = None
+
+  val receive: Receive = {
+    case cmd: GenerateReport =>
+      origSender = Some(sender)
+      generateDocumentActor ! cmd
+      context become waitingForDocumentResult
+  }
+
+  val waitingForDocumentResult: Receive = {
+    case DocumentReportResult(document, _) =>
+      generatePdfActor ! GeneratePDF(document)
+      context become waitingForPdfResult
+    case e: ReportError =>
+      //stop on error
+      origSender.map(_ ! e)
+      self ! PoisonPill
+  }
+
+  val waitingForPdfResult: Receive = {
+    case PDFResult(pdf) =>
+      origSender.map(_ ! PdfReportResult(pdf, name + ".pdf"))
+      self ! PoisonPill
+    case PDFError(error) =>
+      origSender.map(_ ! ReportError(error))
+      self ! PoisonPill
   }
 }

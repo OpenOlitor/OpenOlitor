@@ -58,6 +58,7 @@ import ch.openolitor.core.domain.SystemEvents
 import spray.routing.authentication.UserPass
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import akka.pattern.ask
+import akka.actor.ActorSystem
 import ch.openolitor.core.mailservice.MailService._
 import ch.openolitor.core.mailservice.Mail
 import scala.concurrent.duration._
@@ -380,7 +381,9 @@ class DefaultLoginRouteService(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,
+  override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory,
   override val loginTokenCache: Cache[Subject]

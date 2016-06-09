@@ -37,6 +37,7 @@ import scala.collection.immutable.TreeMap
 import ch.openolitor.core.repositories.BaseWriteRepository
 import ch.openolitor.core.NoPublishEventStream
 import ch.openolitor.core.models.PersonId
+import java.util.Locale
 
 object V1Scripts {
   val StammdatenDBInitializationScript = new Script with LazyLogging with StammdatenDBMappings {
@@ -467,6 +468,7 @@ object V1Scripts {
         geschaeftsjahr_monat DECIMAL(2,0) not null,
         geschaeftsjahr_tag DECIMAL(2,0) not null,
         two_factor_authentication varchar(100),
+        sprache varchar(10),
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -604,6 +606,7 @@ object V1Scripts {
         geschaeftsjahrMonat = 1,
         geschaeftsjahrTag = 1,
         twoFactorAuthentication = Map(AdministratorZugang -> false, KundenZugang -> true),
+        sprache = Locale.forLanguageTag("de-CH"),
         //modification flags
         erstelldat = DateTime.now,
         ersteller = personId,

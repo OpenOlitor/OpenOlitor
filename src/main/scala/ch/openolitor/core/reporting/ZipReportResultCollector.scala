@@ -20,26 +20,49 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.core.reporting
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.scalalogging.LazyLogging
+import akka.actor._
+import ch.openolitor.core.reporting.ReportSystem._
+import java.io.ByteArrayOutputStream
+import scala.util._
+import ch.openolitor.util.ZipBuilder
 
-trait FileStoreComponent {
-  val fileStore: FileStore
+object ZipReportResultCollector {
+  def props(reportSystem: ActorRef): Props = Props(classOf[ZipReportResultCollector], reportSystem)
 }
 
-class DefaultFileStoreComponent(mandant: String, sysConfig: SystemConfig, system: ActorSystem) extends FileStoreComponent with LazyLogging {
+/**
+ * Collect all results into a zip file. Send back the zip result when all reports got generated
+ */
+class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
 
-  override lazy val fileStore = new S3FileStore(mandant, sysConfig.mandantConfiguration, system)
+  var origSender: Option[ActorRef] = None
+  val zipBuilder: ZipBuilder = new ZipBuilder
+  var errors: Seq[ReportError] = Seq()
 
-  fileStore.createBuckets map {
-    _.fold(
-      error => logger.error(s"Error creating buckets for $mandant: ${error.message}"),
-      success => logger.debug(s"Created file store buckets for $mandant")
-    )
+  val receive: Receive = {
+    case request: GenerateReports[_] =>
+      origSender = Some(sender)
+      reportSystem ! request
+      context become waitingForResult
+  }
+
+  val waitingForResult: Receive = {
+    case SingleReportResult(_, Left(error)) =>
+      errors = errors :+ error
+    case SingleReportResult(_, Right(result: ReportResultWithDocument)) =>
+      log.debug(s"Add Zip Entry:${result.name}")
+      zipBuilder.addZipEntry(result.name, result.document) match {
+        case Success(r) =>
+        case Failure(error) =>
+          log.warning(s"Coulnd't att document to  zip file:$error")
+          errors = errors :+ ReportError(s"Dokument konnte nicht zum Zip hinzugefügt werde:$error")
+      }
+    case result: GenerateReportsStats =>
+      //finished, send back zip result
+      val zip = zipBuilder.close()
+      origSender.map(_ ! ZipReportResult(result, errors, zip))
+      self ! PoisonPill
   }
 }

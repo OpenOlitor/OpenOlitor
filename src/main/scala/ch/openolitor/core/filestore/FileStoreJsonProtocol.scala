@@ -20,27 +20,10 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.reporting
+package ch.openolitor.core.filestore
 
-import java.io._
-import java.nio._
+import ch.openolitor.core.BaseJsonProtocol
 
-class ByteBufferBackedInputStream(buf: ByteBuffer) extends InputStream {
-
-  override def read(): Int = {
-    if (!buf.hasRemaining()) {
-      return -1;
-    }
-    return buf.get() & 0xFF;
-  }
-
-  override def read(bytes: Array[Byte], off: Int, len: Int): Int = {
-    if (!buf.hasRemaining()) {
-      -1;
-    } else {
-      val minLen = Math.min(len, buf.remaining());
-      buf.get(bytes, off, minLen);
-      minLen;
-    }
-  }
+trait FileStoreJsonProtocol extends BaseJsonProtocol {
+  implicit val fileTypeFormat = enumFormat(FileType.apply)
 }
