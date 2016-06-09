@@ -72,7 +72,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   val checkSumDefinition = List(0, 9, 4, 6, 8, 2, 7, 1, 3, 5)
 
   val handle: Handle = {
-    case EntityInsertedEvent(meta, id: RechnungId, entity: RechnungModify) =>
+    case EntityInsertedEvent(meta, id: RechnungId, entity: RechnungCreate) =>
       createRechnung(meta, id, entity)
     case EntityInsertedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
@@ -80,11 +80,11 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       logger.warn(s"Unknown event:$e")
   }
 
-  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungModify)(implicit personId: PersonId = meta.originator) = {
+  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungCreate)(implicit personId: PersonId = meta.originator) = {
     val referenzNummer = generateReferenzNummer(entity, id)
     val esrNummer = generateEsrNummer(entity, referenzNummer)
 
-    val typ = copyTo[RechnungModify, Rechnung](
+    val typ = copyTo[RechnungCreate, Rechnung](
       entity,
       "id" -> id,
       "status" -> Erstellt,
@@ -104,7 +104,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   /**
    * Generieren einer Referenznummer, die die Kundennummer und Rechnungsnummer enthält.
    */
-  def generateReferenzNummer(rechnung: RechnungModify, id: RechnungId): String = {
+  def generateReferenzNummer(rechnung: RechnungCreate, id: RechnungId): String = {
     val zeroesLength = ReferenznummerLength - ReferenznummerPrefix.size
     val zeroes = s"%0${zeroesLength}d".format(0)
     val filled = (s"$ReferenznummerPrefix$zeroes${rechnung.kundeId.id}${id.id}") takeRight (ReferenznummerLength)
@@ -113,7 +113,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
     s"$filled$checksum"
   }
 
-  def generateEsrNummer(rechnung: RechnungModify, referenzNummer: String): String = {
+  def generateEsrNummer(rechnung: RechnungCreate, referenzNummer: String): String = {
     val bc = belegarten(rechnung.waehrung)
     val zeroes = s"%0${BetragLength}d".format(0)
     val betrag = (s"$zeroes${(rechnung.betrag * 100).toBigInt}") takeRight (BetragLength)

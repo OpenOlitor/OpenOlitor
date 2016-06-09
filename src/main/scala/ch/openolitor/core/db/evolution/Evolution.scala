@@ -39,6 +39,7 @@ import ch.openolitor.core.repositories.SqlBinder
 import scala.reflect._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import ch.openolitor.core.db.evolution.scripts.Scripts
 
 trait Script {
   def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean]
@@ -49,7 +50,7 @@ case class EvolutionException(msg: String) extends Exception
 /**
  * Base evolution class to evolve database from a specific revision to another
  */
-class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = V1Scripts.scripts) extends CoreDBMappings with LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
+class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current) extends CoreDBMappings with LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
   import IteratorUtil._
 
   logger.debug(s"Evolution manager consists of:$scripts")
@@ -127,8 +128,9 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = V1Scripts.script
 
   def evolveDatabase(fromRevision: Int = 0)(implicit cpContext: ConnectionPoolContext, personId: PersonId): Try[Int] = {
     val currentDBRevision = DB readOnly { implicit session => currentRevision }
-    val revision = Math.max(fromRevision, currentDBRevision)
-    scripts.take(scripts.length - revision) match {
+    val revision = if (currentDBRevision > 0) currentDBRevision else fromRevision
+    logger.debug(s"evolveDatabase from ($currentDBRevision, $revision) to ${scripts.length}")
+    scripts.takeRight(scripts.length - revision) match {
       case Nil => Success(revision)
       case scriptsToApply => evolve(scriptsToApply, revision)
     }
@@ -181,15 +183,7 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = V1Scripts.script
     withSQL {
       select(max(schema.revision))
         .from(dbSchemaMapping as schema)
-        .where.eq(schema.status, parameter(Applying))
+        .where.eq(schema.status, parameter(Done))
     }.map(_.intOpt(1).getOrElse(0)).single.apply().getOrElse(0)
-  }
-
-  def revisions(implicit session: DBSession): List[DBSchema] = {
-    withSQL {
-      select
-        .from(dbSchemaMapping as schema)
-        .where.eq(schema.status, parameter(Applying))
-    }.map(dbSchemaMapping(schema)).list.apply()
   }
 }

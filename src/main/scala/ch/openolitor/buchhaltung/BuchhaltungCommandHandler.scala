@@ -171,8 +171,8 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
     /*
        * Insert command handling
        */
-    case e @ InsertEntityCommand(personId, entity: RechnungModify) => idFactory => meta =>
-      handleEntityInsert[RechnungModify, RechnungId](idFactory, meta, entity, RechnungId.apply)
+    case e @ InsertEntityCommand(personId, entity: RechnungCreate) => idFactory => meta =>
+      handleEntityInsert[RechnungCreate, RechnungId](idFactory, meta, entity, RechnungId.apply)
   }
 }
 
