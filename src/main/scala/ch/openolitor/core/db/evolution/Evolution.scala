@@ -39,7 +39,7 @@ import ch.openolitor.core.repositories.SqlBinder
 import scala.reflect._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
-import ch.openolitor.core.db.evolution.scripts.V2Scripts
+import ch.openolitor.core.db.evolution.scripts.Scripts
 
 trait Script {
   def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean]
@@ -50,7 +50,7 @@ case class EvolutionException(msg: String) extends Exception
 /**
  * Base evolution class to evolve database from a specific revision to another
  */
-class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = V2Scripts.scripts) extends CoreDBMappings with LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
+class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current) extends CoreDBMappings with LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
   import IteratorUtil._
 
   logger.debug(s"Evolution manager consists of:$scripts")

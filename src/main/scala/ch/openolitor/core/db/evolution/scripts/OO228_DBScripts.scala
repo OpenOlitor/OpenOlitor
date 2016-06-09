@@ -1,3 +1,25 @@
+/*                                                                           *\
+*    ____                   ____  ___ __                                      *
+*   / __ \____  ___  ____  / __ \/ (_) /_____  _____                          *
+*  / / / / __ \/ _ \/ __ \/ / / / / / __/ __ \/ ___/   OpenOlitor             *
+* / /_/ / /_/ /  __/ / / / /_/ / / / /_/ /_/ / /       contributed by tegonal *
+* \____/ .___/\___/_/ /_/\____/_/_/\__/\____/_/        http://openolitor.ch   *
+*     /_/                                                                     *
+*                                                                             *
+* This program is free software: you can redistribute it and/or modify it     *
+* under the terms of the GNU General Public License as published by           *
+* the Free Software Foundation, either version 3 of the License,              *
+* or (at your option) any later version.                                      *
+*                                                                             *
+* This program is distributed in the hope that it will be useful, but         *
+* WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY  *
+* or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for *
+* more details.                                                               *
+*                                                                             *
+* You should have received a copy of the GNU General Public License along     *
+* with this program. If not, see http://www.gnu.org/licenses/                 *
+*                                                                             *
+\*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
 import ch.openolitor.core.db.evolution.Script
@@ -8,10 +30,7 @@ import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
 
-/**
- * This scripts contains changes after first release of 01.06.2016
- */
-object V2Scripts {
+object OO228_DBScripts {
   val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"drop table if exists ${tourlieferungMapping.table}".execute.apply()
@@ -77,12 +96,9 @@ object V2Scripts {
 
       sql"ALTER TABLE ${korbMapping.table} ADD COLUMN IF NOT EXISTS auslieferung_id BIGINT AFTER guthaben_vor_lieferung".execute.apply()
 
-      logger.debug(s"Add column sprache to projekt...")
-      // add column sprache to projekt
-      sql"ALTER TABLE ${projektMapping.table} ADD COLUMN IF NOT EXISTS sprache varchar(10) ".execute.apply()
       Success(true)
     }
   }
 
-  val scripts = V1Scripts.scripts ++ Seq(StammdatenScripts)
+  val scripts = Seq(StammdatenScripts)
 }
