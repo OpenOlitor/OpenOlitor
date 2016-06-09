@@ -220,7 +220,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       }) orElse (stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
         abo.kundeId
       })) map { kundeId =>
-        val pendenzCreate = PendenzCreate(kundeId, meta.timestamp, Some(entity.bemerkung), Erledigt, true)
+        //TODO: assemble text using gettext
+        val title = "Guthaben angepasst: "
+        val pendenzCreate = PendenzCreate(kundeId, meta.timestamp, Some(title + entity.bemerkung), Erledigt, true)
         EntityInsertedEvent[PendenzId, PendenzCreate](meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
       }
     }

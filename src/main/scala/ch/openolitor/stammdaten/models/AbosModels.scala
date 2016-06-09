@@ -297,7 +297,6 @@ case class AbwesenheitCreate(
 ) extends JSONSerializable
 
 case class AboGuthabenModify(
-  aboId: AboId,
   guthabenNeu: Int,
   bemerkung: String
 ) extends JSONSerializable
