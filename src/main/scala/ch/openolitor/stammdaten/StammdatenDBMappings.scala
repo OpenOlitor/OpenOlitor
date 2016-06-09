@@ -71,12 +71,15 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
   implicit val abwesenheitIdBinder: TypeBinder[AbwesenheitId] = baseIdTypeBinder(AbwesenheitId.apply _)
   implicit val korbIdBinder: TypeBinder[KorbId] = baseIdTypeBinder(KorbId.apply _)
+  implicit val auslieferungIdBinder: TypeBinder[AuslieferungId] = baseIdTypeBinder(AuslieferungId.apply _)
+  implicit val optionAuslieferungIdBinder: TypeBinder[Option[AuslieferungId]] = optionBaseIdTypeBinder(AuslieferungId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
   implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
   implicit val lieferungStatusTypeBinder: TypeBinder[LieferungStatus] = string.map(LieferungStatus.apply)
-  implicit val kornStatusTypeBinder: TypeBinder[KorbStatus] = string.map(KorbStatus.apply)
+  implicit val korbStatusTypeBinder: TypeBinder[KorbStatus] = string.map(KorbStatus.apply)
+  implicit val auslieferungStatusTypeBinder: TypeBinder[AuslieferungStatus] = string.map(AuslieferungStatus.apply)
   implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
   implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
@@ -106,6 +109,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
   implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
   implicit val korbStatusSqlBinder = toStringSqlBinder[KorbStatus]
+  implicit val auslieferungStatusSqlBinder = toStringSqlBinder[AuslieferungStatus]
   implicit val lieferzeitpunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
   implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
   implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
@@ -131,6 +135,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val bestellungIdSqlBinder = baseIdSqlBinder[BestellungId]
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
   implicit val korbIdSqlBinder = baseIdSqlBinder[KorbId]
+  implicit val auslieferungIdSqlBinder = baseIdSqlBinder[AuslieferungId]
+  implicit val auslieferungIdOptionSqlBinder = optionSqlBinder[AuslieferungId]
   implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
   implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
   implicit val produktekategorieIdSqlBinder = baseIdSqlBinder[ProduktekategorieId]
@@ -824,8 +830,67 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(entity) ++ Seq(
         column.lieferungId -> parameter(entity.lieferungId),
         column.aboId -> parameter(entity.aboId),
-        column.status -> parameter(entity.status)
+        column.status -> parameter(entity.status),
+        column.auslieferungId -> parameter(entity.auslieferungId)
       )
     }
+  }
+
+  trait AuslieferungMapping[E <: Auslieferung] extends BaseEntitySQLSyntaxSupport[E] {
+    override def updateParameters(auslieferung: E) = {
+      super.updateParameters(auslieferung) ++ Seq(
+        column.status -> parameter(auslieferung.status),
+        column.datum -> parameter(auslieferung.datum),
+        column.anzahlKoerbe -> parameter(auslieferung.anzahlKoerbe)
+      )
+    }
+  }
+
+  implicit val depotAuslieferungMapping = new AuslieferungMapping[DepotAuslieferung] {
+    override val tableName = "DepotAuslieferung"
+
+    override lazy val columns = autoColumns[DepotAuslieferung]()
+
+    def apply(rn: ResultName[DepotAuslieferung])(rs: WrappedResultSet): DepotAuslieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: DepotAuslieferung): Seq[Any] =
+      parameters(DepotAuslieferung.unapply(entity).get)
+
+    override def updateParameters(entity: DepotAuslieferung) = {
+      super.updateParameters(entity) ++ Seq(
+        column.depotName -> parameter(entity.depotName)
+      )
+    }
+  }
+
+  implicit val tourAuslieferungMapping = new AuslieferungMapping[TourAuslieferung] {
+    override val tableName = "TourAuslieferung"
+
+    override lazy val columns = autoColumns[TourAuslieferung]()
+
+    def apply(rn: ResultName[TourAuslieferung])(rs: WrappedResultSet): TourAuslieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: TourAuslieferung): Seq[Any] =
+      parameters(TourAuslieferung.unapply(entity).get)
+
+    override def updateParameters(entity: TourAuslieferung) = {
+      super.updateParameters(entity) ++ Seq(
+        column.tourName -> parameter(entity.tourName)
+      )
+    }
+  }
+
+  implicit val postAuslieferungMapping = new AuslieferungMapping[PostAuslieferung] {
+    override val tableName = "PostAuslieferung"
+
+    override lazy val columns = autoColumns[PostAuslieferung]()
+
+    def apply(rn: ResultName[PostAuslieferung])(rs: WrappedResultSet): PostAuslieferung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: PostAuslieferung): Seq[Any] =
+      parameters(PostAuslieferung.unapply(entity).get)
   }
 }

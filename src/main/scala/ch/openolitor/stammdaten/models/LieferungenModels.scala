@@ -36,7 +36,7 @@ case object Verrechnet extends LieferungStatus
 
 object LieferungStatus {
   def apply(value: String): LieferungStatus = {
-    Vector(Ungeplant, Offen, Abgeschlossen, Verrechnet).find(_.toString == value).getOrElse(Offen)
+    Vector(Ungeplant, Offen, Abgeschlossen, Verrechnet) find (_.toString == value) getOrElse (Offen)
   }
 }
 
@@ -50,7 +50,7 @@ case object FaelltAusGekuendigt extends KorbStatus
 
 object KorbStatus {
   def apply(value: String): KorbStatus = {
-    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief, FaelltAusGekuendigt).find(_.toString == value).getOrElse(WirdGeliefert)
+    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief, FaelltAusGekuendigt) find (_.toString == value) getOrElse (WirdGeliefert)
   }
 }
 
@@ -263,6 +263,7 @@ case class Korb(
   aboId: AboId,
   status: KorbStatus,
   guthabenVorLieferung: Int,
+  auslieferungId: Option[AuslieferungId],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -272,7 +273,8 @@ case class Korb(
 
 case class KorbModify(
   status: KorbStatus,
-  guthabenVorLieferung: Int
+  guthabenVorLieferung: Int,
+  auslieferungId: Option[AuslieferungId]
 ) extends JSONSerializable
 
 case class KorbCreate(

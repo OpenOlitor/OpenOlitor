@@ -20,13 +20,80 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.stammdaten.models
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts
+import ch.openolitor.core.models._
+import org.joda.time.DateTime
 
+case class AuslieferungId(id: Long) extends BaseId
+
+sealed trait AuslieferungStatus
+
+case object Erfasst extends AuslieferungStatus
+case object Ausgeliefert extends AuslieferungStatus
+
+object AuslieferungStatus {
+  def apply(value: String): AuslieferungStatus = {
+    Vector(Erfasst, Ausgeliefert) find (_.toString == value) getOrElse (Erfasst)
+  }
 }
+
+/**
+ * Die Auslieferung repräsentiert eine Sammlung von Körben zu einem Bestimmten Lieferzeitpunkt mit einem Ziel.
+ */
+trait Auslieferung extends BaseEntity[AuslieferungId] {
+  val lieferungId: LieferungId
+  val status: AuslieferungStatus
+  val datum: DateTime
+  val anzahlKoerbe: Int
+}
+
+/**
+ * Auslieferung pro Depot
+ */
+case class DepotAuslieferung(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  depotName: String,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends Auslieferung
+
+/**
+ * Auslieferung pro Tour
+ */
+case class TourAuslieferung(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  tourName: String,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends Auslieferung
+
+/**
+ * Auslieferung zur Post
+ */
+case class PostAuslieferung(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends Auslieferung

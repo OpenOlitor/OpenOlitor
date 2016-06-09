@@ -29,7 +29,7 @@ case object USD extends Waehrung
 
 object Waehrung {
   def apply(value: String): Waehrung = {
-    Vector(CHF, EUR, USD).find(_.toString == value).getOrElse(CHF)
+    Vector(CHF, EUR, USD) find (_.toString == value) getOrElse (CHF)
   }
 }
 

@@ -24,21 +24,21 @@ package ch.openolitor.stammdaten
 
 import akka.actor._
 
+import spray.json._
+import scalikejdbc._
 import ch.openolitor.core.models._
 import ch.openolitor.core.domain._
 import ch.openolitor.core.ws._
-import spray.json._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.db._
-import scalikejdbc._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
-import scala.concurrent.ExecutionContext.Implicits.global;
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models._
+import ch.openolitor.util.IdUtil
+import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
-import scala.util.Random
 import scala.concurrent.Future
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
@@ -97,6 +97,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleRechnungGuthabenModified(entity, orig)(personId)
 
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
+    case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) => handleLieferplanungAbgeschlossen(entity)(personId)
 
     case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) => handleLieferungModified(entity, orig)(personId)
 
@@ -453,6 +454,92 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   }
 
+  def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
+        stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
+
+          if (!isAuslieferungExisting(lieferung.id, vertriebsart)) {
+            val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.id, vertriebsart.id, WirdGeliefert)
+
+            if (!koerbe.isEmpty) {
+              val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+
+              val auslieferung = createAuslieferung(lieferung, vertriebsart, koerbe.size)
+
+              koerbe map { korb =>
+                val copy = korb.copy(auslieferungId = Some(auslieferung.id))
+                stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private def isAuslieferungExisting(lieferungId: LieferungId, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Boolean = {
+    vertriebsart match {
+      case _: DepotlieferungDetail =>
+        stammdatenWriteRepository.getDepotAuslieferung(lieferungId).isDefined
+      case _: HeimlieferungDetail =>
+        stammdatenWriteRepository.getTourAuslieferung(lieferungId).isDefined
+      case _: PostlieferungDetail =>
+        stammdatenWriteRepository.getPostAuslieferung(lieferungId).isDefined
+    }
+  }
+
+  private def createAuslieferung(lieferung: Lieferung, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession): Auslieferung = {
+    val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+
+    vertriebsart match {
+      case d: DepotlieferungDetail =>
+        val result = DepotAuslieferung(
+          auslieferungId,
+          lieferung.id,
+          Erfasst,
+          d.depot.name,
+          lieferung.datum,
+          anzahlKoerbe,
+          DateTime.now,
+          personId,
+          DateTime.now,
+          personId
+        )
+        stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
+        result
+      case h: HeimlieferungDetail =>
+        val result = TourAuslieferung(
+          auslieferungId,
+          lieferung.id,
+          Erfasst,
+          h.tour.name,
+          lieferung.datum,
+          anzahlKoerbe,
+          DateTime.now,
+          personId,
+          DateTime.now,
+          personId
+        )
+        stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
+        result
+      case p: PostlieferungDetail =>
+        val result = PostAuslieferung(
+          auslieferungId,
+          lieferung.id,
+          Erfasst,
+          lieferung.datum,
+          anzahlKoerbe,
+          DateTime.now,
+          personId,
+          DateTime.now,
+          personId
+        )
+        stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
+        result
+    }
+  }
+
   def handleLieferungModified(lieferung: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
     logger.debug(s"handleLieferungModified: lieferung:\n$lieferung\norig:$orig")
     if (lieferung.lieferplanungId.isDefined && !orig.lieferplanungId.isDefined) {
@@ -484,13 +571,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
               case _ => 0
             }
             val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
-            val kId = KorbId(Random.nextLong)
+            val korbId = KorbId(IdUtil.positiveRandomId)
             val korb = Korb(
-              kId,
+              korbId,
               lieferungId,
               abo.id,
               status,
               abo.guthaben,
+              None,
               DateTime.now,
               personId,
               DateTime.now,
@@ -583,9 +671,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def calculateKorbStatus(abwCount: Option[Int], guthaben: Int, minGuthaben: Int): KorbStatus = {
     (abwCount, guthaben) match {
-      case (Some(abw), gut) if abw > 0 => FaelltAusAbwesend
-      case (_, gut) if gut > minGuthaben => WirdGeliefert
-      case (_, gut) if gut <= minGuthaben => FaelltAusSaldoZuTief
+      case (Some(abw), _) if abw > 0 => FaelltAusAbwesend
+      case (_, guthaben) if guthaben > minGuthaben => WirdGeliefert
+      case (_, guthaben) if guthaben <= minGuthaben => FaelltAusSaldoZuTief
     }
   }
 
