@@ -20,32 +20,11 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.models
 
-import scala.util.Try
-import ch.openolitor.core.models._
-import scala.reflect._
-import scala.reflect.runtime.universe.{ Try => TTry, _ }
-import com.typesafe.scalalogging.LazyLogging
-import scala.util.Success
+trait Defaults {
+  val FALSE = false
+  val TRUE = true
 
-/**
- * Used for handling custom module specific commands.
- * Validates the preconditions for a given command and returns resulting events.
- */
-trait CommandHandler extends LazyLogging with Defaults {
-  import EntityStore._
-  type IdFactory = Class[_ <: BaseId] => Long
-  val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]]
-
-  def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, meta: EventMetadata, entity: E, f: Long => I): Try[Seq[PersistentEvent]] = {
-    Success(Seq(insertEntityEvent(idFactory, meta, entity, f)))
-  }
-
-  def insertEntityEvent[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, meta: EventMetadata, entity: E, f: Long => I): PersistentEvent = {
-    val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
-    logger.debug(s"created => Insert entity:$entity")
-    val id = f(idFactory(clOf))
-    EntityInsertedEvent(meta, id, entity)
-  }
+  val ZERO = 0
 }

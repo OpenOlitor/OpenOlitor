@@ -193,7 +193,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       val pendenzenPartitions = entity.pendenzen.partition(_.id.isDefined)
       val newPendenzen = pendenzenPartitions._2.map {
         case newPendenz =>
-          val pendenzCreate = copyTo[PendenzModify, PendenzCreate](newPendenz, "kundeId" -> id)
+          val pendenzCreate = copyTo[PendenzModify, PendenzCreate](newPendenz, "kundeId" -> id, "generiert" -> FALSE)
           val event = EntityInsertedEvent(meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
           (event, newPendenz.copy(id = Some(event.id)))
       }
@@ -203,6 +203,27 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       val updateEntity = entity.copy(ansprechpersonen = updatePersons, pendenzen = updatePendenzen)
       val updateEvent = EntityUpdatedEvent(meta, id, updateEntity)
       Success(updateEvent +: (newPersonsEvents ++ newPendenzenEvents))
+
+    case UpdateEntityCommand(personId, id: AboId, entity: AboGuthabenModify) => idFactory => meta =>
+      val pendenzEvent = handleAboGuthabenModify(idFactory, meta, id, entity)
+      Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+  }
+
+  def handleAboGuthabenModify(idFactory: IdFactory, meta: EventMetadata, id: AboId, entity: AboGuthabenModify): Option[PersistentEvent] = {
+    DB readOnly { implicit session =>
+      // zusätzlich eine pendenz erstellen      
+      ((stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
+        DepotlieferungAboModify
+        abo.kundeId
+      }) orElse (stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
+        abo.kundeId
+      }) orElse (stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
+        abo.kundeId
+      })) map { kundeId =>
+        val pendenzCreate = PendenzCreate(kundeId, meta.timestamp, Some(entity.bemerkung), Erledigt, true)
+        EntityInsertedEvent[PendenzId, PendenzCreate](meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
+      }
+    }
   }
 }
 
