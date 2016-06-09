@@ -20,47 +20,12 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.core.db.evolution.scripts
 
-import akka.persistence.PersistentView
-import akka.actor._
-import ch.openolitor.core._
-import ch.openolitor.core.db._
-import ch.openolitor.core.domain._
-import scala.concurrent.duration._
-import ch.openolitor.buchhaltung._
-import scalikejdbc.DB
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.buchhaltung.models._
-import scala.concurrent.ExecutionContext.Implicits.global
-import ch.openolitor.core.models.PersonId
+object Scripts {
+  val current =
+    V1Scripts.scripts ++
+      OO205_DBScripts.scripts ++
+      OO219_DBScripts.scripts
 
-object BuchhaltungDeleteService {
-  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungDeleteService = new DefaultBuchhaltungDeleteService(sysConfig, system)
-}
-
-class DefaultBuchhaltungDeleteService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungDeleteService(sysConfig: SystemConfig) with DefaultBuchhaltungWriteRepositoryComponent {
-}
-
-/**
- * Actor zum Verarbeiten der Delete Anweisungen für das Buchhaltung Modul
- */
-class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends EventService[EntityDeletedEvent[_]]
-    with LazyLogging with AsyncConnectionPoolContextAware with BuchhaltungDBMappings {
-  self: BuchhaltungWriteRepositoryComponent =>
-  import EntityStore._
-
-  val handle: Handle = {
-    case EntityDeletedEvent(meta, id: RechnungId) => deleteRechnung(meta, id)
-    case e =>
-      logger.warn(s"Unknown event:$e")
-  }
-
-  def deleteRechnung(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
-      buchhaltungWriteRepository.deleteEntity[Rechnung, RechnungId](id, { rechnung: Rechnung => rechnung.status == Erstellt })
-    }
-  }
 }

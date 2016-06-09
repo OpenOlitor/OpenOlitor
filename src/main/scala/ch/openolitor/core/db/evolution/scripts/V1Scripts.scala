@@ -503,26 +503,6 @@ object V1Scripts {
         modifidat datetime not null,
         modifikator BIGINT not null)""".execute.apply()
 
-      sql"""create table ${tourlieferungMapping.table}  (
-        id BIGINT not null,
-        tour_id BIGINT not null,
-        abotyp_id BIGINT not null,
-        kunde_id BIGINT not null,
-        vertriebsart_id BIGINT not null,
-        vertrieb_id BIGINT not null,
-        kunde_bezeichnung varchar(100),
-        strasse varchar(50) not null,
-        haus_nummer varchar(10),
-        adress_zusatz varchar(100),
-        plz varchar(10) not null,
-        ort varchar(50) not null,
-        abotyp_name varchar(50),
-        sort INT,
-        erstelldat datetime not null,
-        ersteller BIGINT not null,
-        modifidat datetime not null,
-        modifikator BIGINT not null)""".execute.apply()
-
       logger.debug(s"oo-system: cleanupDatabase - end - stammdaten")
       Success(true)
     }
