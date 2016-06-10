@@ -136,6 +136,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "aktionen" / "guthabenanpassen") { (kundeId, aboId) =>
         (put | post)(update[AboGuthabenModify, AboId](aboId))
       } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "aktionen" / "vertriebsartanpassen") { (kundeId, aboId) =>
+        (put | post)(update[AboVertriebsartModify, AboId](aboId))
+      } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten") { (_, aboId) =>
         post {
           requestInstance { request =>
