@@ -205,11 +205,18 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       Success(updateEvent +: (newPersonsEvents ++ newPendenzenEvents))
 
     case UpdateEntityCommand(personId, id: AboId, entity: AboGuthabenModify) => idFactory => meta =>
-      val pendenzEvent = handleAboGuthabenModify(idFactory, meta, id, entity)
+      //TODO: assemble text using gettext
+      val title = "Guthaben angepasst. Abo Nr.:"+id.id+", Grund:" 
+      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title+entity.bemerkung)
+      Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+    case UpdateEntityCommand(personId, id: AboId, entity: AboVertriebsartModify) => idFactory => meta =>
+      //TODO: assemble text using gettext
+      val title = "Vertriebsart angepasst. Abo Nr.:"+id.id+", Grund:" 
+      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title+entity.bemerkung)
       Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
   }
 
-  def handleAboGuthabenModify(idFactory: IdFactory, meta: EventMetadata, id: AboId, entity: AboGuthabenModify): Option[PersistentEvent] = {
+  def addKundenPendenz(idFactory: IdFactory, meta: EventMetadata, id: AboId, bemerkung: String): Option[PersistentEvent] = {
     DB readOnly { implicit session =>
       // zusätzlich eine pendenz erstellen      
       ((stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
@@ -222,7 +229,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       })) map { kundeId =>
         //TODO: assemble text using gettext
         val title = "Guthaben angepasst: "
-        val pendenzCreate = PendenzCreate(kundeId, meta.timestamp, Some(title + entity.bemerkung), Erledigt, true)
+        val pendenzCreate = PendenzCreate(kundeId, meta.timestamp, Some(bemerkung), Erledigt, true)
         EntityInsertedEvent[PendenzId, PendenzCreate](meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
       }
     }

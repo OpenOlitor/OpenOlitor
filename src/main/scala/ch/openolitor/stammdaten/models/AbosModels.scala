@@ -33,6 +33,7 @@ import ch.openolitor.core.JSONSerializable
 case class AboId(id: Long) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
+  val id: AboId
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
   val abotypId: AbotypId
@@ -298,5 +299,10 @@ case class AbwesenheitCreate(
 
 case class AboGuthabenModify(
   guthabenNeu: Int,
+  bemerkung: String
+) extends JSONSerializable
+
+case class AboVertriebsartModify(
+  vertriebsartIdNeu: VertriebsartId,
   bemerkung: String
 ) extends JSONSerializable

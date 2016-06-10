@@ -229,6 +229,59 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       }
     }
   }
+  
+  private def swapOrUpdateAboVertriebsart(meta: EventMetadata, abo: Abo, update: AboVertriebsartModify)(implicit personId: PersonId = meta.originator) = {
+    stammdatenWriteRepository.getById(depotlieferungMapping, update.vertriebsartIdNeu) map { va =>
+      abo match {
+        case abo: DepotlieferungAbo =>
+          // wechsel innerhalb selber vertriebart-art
+          val copy = abo.copy(vertriebsartId = update.vertriebsartIdNeu, depotId = va.depotId, depotName = va.depotName)
+          stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+        case abo: Abo =>
+          // wechsel
+          val aboNeu = copyTo[Abo, DepotlieferungAbo](abo, "depotId" -> va.depotId, "depotName" -> va.depotName)
+          stammdatenWriteRepository.deleteEntity(abo)
+          stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](aboNeu)
+      }
+    } orElse stammdatenWriteRepository.getById(heimlieferungMapping, update.vertriebsartIdNeu) map { va =>
+      abo match {
+        case abo: HeimlieferungAbo =>
+          // wechsel innerhalb selber vertriebart-art
+          val copy = abo.copy(vertriebsartId = update.vertriebsartIdNeu, tourId = va.tourId, tourName = va.tourName)
+          stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+        case abo: Abo =>
+          // wechsel
+          val aboNeu = copyTo[Abo, HeimlieferungAbo](abo, "tourId" -> va.tourId, "tourName" -> va.tourName)
+          stammdatenWriteRepository.deleteEntity(abo)
+          stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](aboNeu)
+      }
+    } orElse stammdatenWriteRepository.getById(postlieferungMapping, update.vertriebsartIdNeu) map { va =>
+      abo match {
+        case abo: PostlieferungAbo =>
+          // wechsel innerhalb selber vertriebart-art
+          // nothing to do
+        case abo: Abo =>
+          // wechsel
+          val aboNeu = copyTo[Abo, PostlieferungAbo](abo)
+          stammdatenWriteRepository.deleteEntity(abo)
+          stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](aboNeu)
+      }
+    }
+  }
+  
+  def updateAboVertriebsart(meta: EventMetadata, id: AboId, update: AboVertriebsartModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
+        swapOrUpdateAboVertriebsart(meta, abo, update)
+      }
+      stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
+        swapOrUpdateAboVertriebsart(meta, abo, update)
+      }
+      stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
+        swapOrUpdateAboVertriebsart(meta, abo, update)
+      }
+    }
+  }
 
   def updateDepotlieferungAbo(meta: EventMetadata, id: AboId, update: DepotlieferungAboModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
