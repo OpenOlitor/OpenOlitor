@@ -206,13 +206,13 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
     case UpdateEntityCommand(personId, id: AboId, entity: AboGuthabenModify) => idFactory => meta =>
       //TODO: assemble text using gettext
-      val title = "Guthaben angepasst. Abo Nr.:"+id.id+", Grund:" 
-      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title+entity.bemerkung)
+      val title = "Guthaben angepasst. Abo Nr.:" + id.id + ", Grund:"
+      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title + entity.bemerkung)
       Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
     case UpdateEntityCommand(personId, id: AboId, entity: AboVertriebsartModify) => idFactory => meta =>
       //TODO: assemble text using gettext
-      val title = "Vertriebsart angepasst. Abo Nr.:"+id.id+", Grund:" 
-      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title+entity.bemerkung)
+      val title = "Vertriebsart angepasst. Abo Nr.:" + id.id + ", Grund:"
+      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title + entity.bemerkung)
       Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
   }
 

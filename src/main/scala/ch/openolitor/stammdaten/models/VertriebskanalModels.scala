@@ -142,6 +142,8 @@ case class Tour(
   id: TourId,
   name: String,
   beschreibung: Option[String],
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

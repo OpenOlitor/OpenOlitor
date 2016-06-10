@@ -49,6 +49,11 @@ sealed trait Abo extends BaseEntity[AboId] {
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
   val anzahlLieferungen: TreeMap[String, Int]
+
+  val erstelldat: DateTime
+  val ersteller: PersonId
+  val modifidat: DateTime
+  val modifikator: PersonId
 }
 
 sealed trait AboDetail extends JSONSerializable {
