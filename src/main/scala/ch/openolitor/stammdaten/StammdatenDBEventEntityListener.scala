@@ -74,6 +74,15 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(personId, entity: DepotlieferungAbo) =>
       handleDepotlieferungAboDeleted(entity)(personId)
       handleAboDeleted(entity)(personId)
+    case e @ EntityModified(personId, entity: DepotlieferungAbo, orig: DepotlieferungAbo) if entity.depotId != orig.depotId => handleDepotlieferungAboDepotChanged(orig.depotId, entity.depotId)(personId)
+    case e @ EntityCreated(personId, entity: HeimlieferungAbo) =>
+      handleHeimlieferungAboCreated(entity)(personId)
+      handleAboCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: HeimlieferungAbo) =>
+      handleHeimlieferungAboDeleted(entity)(personId)
+      handleAboDeleted(entity)(personId)
+    case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) if entity.tourId != orig.tourId => handleHeimlieferungAboDepotChanged(orig.tourId, entity.tourId)(personId)
+
     case e @ EntityCreated(personId, entity: Abo) => handleAboCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Abo) => handleAboDeleted(entity)(personId)
     case e @ EntityCreated(personId, entity: Abwesenheit) => handleAbwesenheitCreated(entity)(personId)
@@ -123,6 +132,50 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       modifyEntity[Depot, DepotId](abo.depotId, { depot =>
         log.debug(s"Remove abonnent from depot:${depot.id}")
         depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten - 1)
+      })
+    }
+  }
+
+  def handleDepotlieferungAboDepotChanged(from: DepotId, to: DepotId)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      modifyEntity[Depot, DepotId](from, { depot =>
+        log.debug(s"Remove abonnent from depot:${depot.id}")
+        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten - 1)
+      })
+      modifyEntity[Depot, DepotId](to, { depot =>
+        log.debug(s"Add abonnent to depot:${depot.id}")
+        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1)
+      })
+    }
+  }
+
+  def handleHeimlieferungAboCreated(abo: HeimlieferungAbo)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      modifyEntity[Tour, TourId](abo.tourId, { tour =>
+        log.debug(s"Add abonnent to tour:${tour.id}")
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1)
+      })
+    }
+  }
+
+  def handleHeimlieferungAboDeleted(abo: HeimlieferungAbo)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      modifyEntity[Tour, TourId](abo.tourId, { tour =>
+        log.debug(s"Remove abonnent from tour:${tour.id}")
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1)
+      })
+    }
+  }
+
+  def handleHeimlieferungAboDepotChanged(from: TourId, to: TourId)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      modifyEntity[Tour, TourId](from, { tour =>
+        log.debug(s"Remove abonnent from tour:${tour.id}")
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1)
+      })
+      modifyEntity[Tour, TourId](to, { tour =>
+        log.debug(s"Add abonnent to tour:${tour.id}")
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1)
       })
     }
   }
