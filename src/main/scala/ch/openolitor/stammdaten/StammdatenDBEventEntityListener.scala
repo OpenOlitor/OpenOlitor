@@ -339,9 +339,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         })
 
         modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
-          log.debug(s"Add abwesenheit to lieferung:${lieferung.id}")
+          log.debug(s"Add abwesenheit to lieferung:${lieferung.id}")          
           lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + 1)
-        })
+        })                    
       }
 
       stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
