@@ -70,6 +70,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: AboId, entity: HeimlieferungAboModify) => updateHeimlieferungAbo(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AboId, entity: PostlieferungAboModify) => updatePostlieferungAbo(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AboId, entity: DepotlieferungAboModify) => updateDepotlieferungAbo(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: AboGuthabenModify) => updateAboGuthaben(meta, id, entity)
     case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(meta, id, entity)
     case EntityUpdatedEvent(meta, id: CustomKundentypId, entity: CustomKundentypModify) => updateKundentyp(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProduzentId, entity: ProduzentModify) => updateProduzent(meta, id, entity)
@@ -208,6 +209,23 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(pendenz, update, "id" -> id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
         stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
+      }
+    }
+  }
+
+  def updateAboGuthaben(meta: EventMetadata, id: AboId, update: AboGuthabenModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
+        val copy = abo.copy(guthaben = update.guthabenNeu)
+        stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+      }
+      stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
+        val copy = abo.copy(guthaben = update.guthabenNeu)
+        stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+      }
+      stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
+        val copy = abo.copy(guthaben = update.guthabenNeu)
+        stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
       }
     }
   }

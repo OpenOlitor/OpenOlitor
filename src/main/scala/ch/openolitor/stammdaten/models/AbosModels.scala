@@ -28,6 +28,7 @@ import java.util.UUID
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
+import ch.openolitor.core.JSONSerializable
 
 case class AboId(id: Long) extends BaseId
 
@@ -293,4 +294,9 @@ case class AbwesenheitCreate(
   lieferungId: LieferungId,
   datum: DateTime,
   bemerkung: Option[String]
+) extends JSONSerializable
+
+case class AboGuthabenModify(
+  guthabenNeu: Int,
+  bemerkung: String
 ) extends JSONSerializable

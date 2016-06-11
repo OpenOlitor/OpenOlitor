@@ -295,5 +295,6 @@ case class PendenzCreate(
   kundeId: KundeId,
   datum: DateTime,
   bemerkung: Option[String],
-  status: PendenzStatus
+  status: PendenzStatus,
+  generiert: Boolean
 ) extends JSONSerializable
