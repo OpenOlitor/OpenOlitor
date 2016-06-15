@@ -29,8 +29,8 @@ class UriQueryParamFilterParserSpec extends Specification {
   "UriQueryParamFilterParser" should {
 
     "parse single attribute number expression" in {
-      UriQueryParamFilterParser.parse("attribute=123").get ===
-        FilterAttributeList(List(FilterAttribute(Attribute("attribute"), List(ValueComparison(NumberValue(123), None)))))
+      UriQueryParamFilterParser.parse("attribute=123.4").get ===
+        FilterAttributeList(List(FilterAttribute(Attribute("attribute"), List(ValueComparison(DecimalNumberValue(123.4), None)))))
     }
 
     "parse single attribute regex expression" in {
@@ -41,7 +41,8 @@ class UriQueryParamFilterParserSpec extends Specification {
     "parse single attribute date expression" in {
       UriQueryParamFilterParser.parse("datumVon=2016-05-30").get ===
         FilterAttributeList(List(FilterAttribute(Attribute("datumVon"), List(ValueComparison(DateValue(
-          new DateTime("2016-05-30")), None)))))
+          new DateTime("2016-05-30")
+        ), None)))))
     }
 
     "parse single attribute null expression" in {
@@ -53,32 +54,40 @@ class UriQueryParamFilterParserSpec extends Specification {
       UriQueryParamFilterParser.parse("a=null;b=null").get ===
         FilterAttributeList(List(
           FilterAttribute(Attribute("a"), List(ValueComparison(NullValue(null), None))),
-          FilterAttribute(Attribute("b"), List(ValueComparison(NullValue(null), None)))))
+          FilterAttribute(Attribute("b"), List(ValueComparison(NullValue(null), None)))
+        ))
     }
 
     "parse attribute with listing" in {
       UriQueryParamFilterParser.parse("a=1,20,300").get ===
         FilterAttributeList(List(
           FilterAttribute(Attribute("a"), List(
-            ValueComparison(NumberValue(1), None),
-            ValueComparison(NumberValue(20), None),
-            ValueComparison(NumberValue(300), None)))))
+            ValueComparison(LongNumberValue(1), None),
+            ValueComparison(LongNumberValue(20), None),
+            ValueComparison(LongNumberValue(300), None)
+          ))
+        ))
     }
 
     "parse attribute with range" in {
       UriQueryParamFilterParser.parse("a=1-20,300").get ===
         FilterAttributeList(List(
           FilterAttribute(Attribute("a"), List(
-            ValueComparison(RangeValue(NumberValue(1), NumberValue(20)), None),
-            ValueComparison(NumberValue(300), None)))))
+            ValueComparison(RangeValue(LongNumberValue(1), LongNumberValue(20)), None),
+            ValueComparison(LongNumberValue(300), None)
+          ))
+        ))
     }
 
     "parse attribute with operator modifiers" in {
-      UriQueryParamFilterParser.parse("a=~gt(300);b=~!30").get ===
+      UriQueryParamFilterParser.parse("a=~gt(300);b=~!(30);c=~!(1-20)").get ===
         FilterAttributeList(List(
           FilterAttribute(Attribute("a"), List(
-            ValueComparison(RangeValue(NumberValue(1), NumberValue(20)), None),
-            ValueComparison(NumberValue(300), None)))))
+            ValueComparison(LongNumberValue(300), Some(ValueComparator(GT)))
+          )),
+          FilterAttribute(Attribute("b"), List(ValueComparison(LongNumberValue(30), Some(ValueComparator(NOT))))),
+          FilterAttribute(Attribute("c"), List(ValueComparison(RangeValue(LongNumberValue(1), LongNumberValue(20)), Some(ValueComparator(NOT)))))
+        ))
     }
   }
 }

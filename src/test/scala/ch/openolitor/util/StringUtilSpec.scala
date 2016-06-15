@@ -20,43 +20,28 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.util.parsing
+package ch.openolitor.util
 
-import org.joda.time.DateTime
+import org.specs2.mutable._
 
-abstract class FilterExpr
+class StringUtilSpec extends Specification {
 
-trait Value extends FilterExpr
+  "StringUtil" should {
+    "convert empty" in {
+      StringUtil.toUnderscore("") === ""
+    }
 
-case class FilterAttributeList(value: List[FilterAttribute]) extends FilterExpr
+    "convert non-matching" in {
+      StringUtil.toUnderscore("heyhey") === "heyhey"
+    }
 
-case class FilterAttribute(attribute: Attribute, values: List[ValueComparison]) extends FilterExpr
+    "convert camel case to lower case with underscores" in {
+      StringUtil.toUnderscore("CamelCase") === "camel_case"
+    }
 
-case class ValueComparison(value: Value, operator: Option[ValueComparator]) extends FilterExpr
+    "convert camel case to lower case with underscores" in {
+      StringUtil.toUnderscore("OpenOlitorVersion1") === "open_olitor_version1"
+    }
+  }
 
-case class Attribute(value: String) extends FilterExpr {
-  def getAttributePath: List[String] = value.split('.').toList
 }
-
-case class RangeValue(from: Value, to: Value) extends Value
-
-case class DecimalNumberValue(value: BigDecimal) extends Value
-
-case class LongNumberValue(value: Long) extends Value
-
-case class RegexValue(value: String) extends Value
-
-case class BooleanValue(value: Boolean) extends Value
-
-case class DateValue(value: DateTime) extends Value
-
-case class NullValue(value: Any) extends Value
-
-case class ValueComparator(value: ComparatorFunction) extends FilterExpr
-
-trait ComparatorFunction extends FilterExpr
-case object GTE extends ComparatorFunction
-case object GT extends ComparatorFunction
-case object LTE extends ComparatorFunction
-case object LT extends ComparatorFunction
-case object NOT extends ComparatorFunction

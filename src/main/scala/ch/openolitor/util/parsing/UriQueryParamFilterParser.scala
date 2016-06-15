@@ -24,21 +24,32 @@ package ch.openolitor.util.parsing
 
 import scala.util.parsing.combinator._
 import org.joda.time.DateTime
+import com.typesafe.scalalogging.LazyLogging
 
-object UriQueryParamFilterParser extends RegexParsers {
+object UriQueryParamFilterParser extends RegexParsers with LazyLogging {
   private def separator = ";"
 
   private def assignment = "="
 
-  private def comparator = "~gte" | "~gt" | "~lte" | "~lt" | "~!"
-
   private def date = """(\d{4}-\d{2}-\d{2})""".r
 
-  private def number = """(\d+)""".r | """(\d+\.\d)""".r
+  private def decimalNumber = """(\d+\.\d*)""".r
+
+  private def longNumber = """(\d+)""".r
 
   private def regexLiteral = """([^=]*)""".r
 
-  def parse(input: String) = parseAll(filterExpression, input)
+  def parse(input: String): Option[FilterExpr] = {
+    parseAll(filterExpression, input) match {
+      case Success(result, _) => Some(result)
+      case Failure(message, _) =>
+        logger.error("Could not parse input: $message")
+        None
+      case Error(message, _) =>
+        logger.error("Could not parse input: $message")
+        None
+    }
+  }
 
   def filterExpression: Parser[FilterExpr] =
     repsep(filterAttribute, separator) ^^ { case l => FilterAttributeList(l) }
@@ -47,20 +58,29 @@ object UriQueryParamFilterParser extends RegexParsers {
     attribute ~ assignment ~ valueComparison ~ rep("," ~> valueComparison) ^^ { case a ~ _ ~ head ~ rest => FilterAttribute(a, head :: rest) }
 
   private def valueComparison: Parser[ValueComparison] =
-    valueComparator ~ "(" ~ value ~ ")" ^^ { case c ~ _ ~ v ~ _ => ValueComparison(v, Some(c)) } |
+    valueComparator ~ "(" ~ value ~ "-" ~ value ~ ")" ^^ { case c ~ _ ~ from ~ _ ~ to ~ _ => ValueComparison(RangeValue(from, to), Some(c)) } |
+      valueComparator ~ "(" ~ value ~ ")" ^^ { case c ~ _ ~ v ~ _ => ValueComparison(v, Some(c)) } |
       value ~ "-" ~ value ^^ { case from ~ _ ~ to => ValueComparison(RangeValue(from, to), None) } |
       value ^^ (v => ValueComparison(v, None))
 
   private def valueComparator: Parser[ValueComparator] =
-    comparator ^^ (c => ValueComparator(c))
+    comparatorFunction ^^ (c => ValueComparator(c))
 
   private def value: Parser[Value] =
     date ^^ (x => DateValue(DateTime.parse(x))) |
       "true" ^^^ BooleanValue(true) |
       "false" ^^^ BooleanValue(false) |
       "null" ^^^ NullValue(null) |
-      number ^^ (x => NumberValue(BigDecimal(x))) |
+      decimalNumber ^^ (x => DecimalNumberValue(BigDecimal(x))) |
+      longNumber ^^ (x => LongNumberValue(x.toLong)) |
       regexLiteral ^^ (x => RegexValue(x))
+
+  private def comparatorFunction: Parser[ComparatorFunction] =
+    "~gte" ^^^ GTE |
+      "~gt" ^^^ GT |
+      "~lte" ^^^ LTE |
+      "~lt" ^^^ LT |
+      "~!" ^^^ NOT
 
   private def attribute: Parser[Attribute] =
     """([^=]*)""".r ^^ { case value => Attribute(value) }

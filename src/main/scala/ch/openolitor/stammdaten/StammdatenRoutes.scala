@@ -58,6 +58,8 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.util.parsing.UriQueryParamFilterParser
+import ch.openolitor.util.parsing.FilterExpr
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -89,9 +91,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   import EntityStore._
 
-  def stammdatenRoute(implicit subject: Subject) = aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
-    kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-    produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute
+  def stammdatenRoute(implicit subject: Subject) =
+    parameters('f.?) { (f) =>
+      implicit val filter = f flatMap { filterString =>
+        UriQueryParamFilterParser.parse(filterString)
+      }
+      aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
+        kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
+        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute
+    }
 
   def kundenRoute(implicit subject: Subject) =
     path("kunden") {
@@ -257,9 +265,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           delete(remove(id))
       }
 
-  def aboRoute(implicit subject: Subject) =
+  def aboRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
     path("abos") {
-      get(list(stammdatenReadRepository.getAbos))
+      get {
+        list(stammdatenReadRepository.getAbos)
+      }
     }
 
   def pendenzenRoute(implicit subject: Subject) =

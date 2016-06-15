@@ -20,43 +20,9 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.util.parsing
+package ch.openolitor.util
 
-import org.joda.time.DateTime
-
-abstract class FilterExpr
-
-trait Value extends FilterExpr
-
-case class FilterAttributeList(value: List[FilterAttribute]) extends FilterExpr
-
-case class FilterAttribute(attribute: Attribute, values: List[ValueComparison]) extends FilterExpr
-
-case class ValueComparison(value: Value, operator: Option[ValueComparator]) extends FilterExpr
-
-case class Attribute(value: String) extends FilterExpr {
-  def getAttributePath: List[String] = value.split('.').toList
+object StringUtil {
+  def toUnderscore(input: String): String =
+    (input replaceAll ("([A-Z]+)([A-Z][a-z])", "$1_$2") replaceAll ("([a-z\\d])([A-Z])", "$1_$2")).toLowerCase
 }
-
-case class RangeValue(from: Value, to: Value) extends Value
-
-case class DecimalNumberValue(value: BigDecimal) extends Value
-
-case class LongNumberValue(value: Long) extends Value
-
-case class RegexValue(value: String) extends Value
-
-case class BooleanValue(value: Boolean) extends Value
-
-case class DateValue(value: DateTime) extends Value
-
-case class NullValue(value: Any) extends Value
-
-case class ValueComparator(value: ComparatorFunction) extends FilterExpr
-
-trait ComparatorFunction extends FilterExpr
-case object GTE extends ComparatorFunction
-case object GT extends ComparatorFunction
-case object LTE extends ComparatorFunction
-case object LT extends ComparatorFunction
-case object NOT extends ComparatorFunction
