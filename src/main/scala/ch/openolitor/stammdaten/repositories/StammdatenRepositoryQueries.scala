@@ -13,6 +13,8 @@ import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
 import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import ch.openolitor.util.parsing.FilterExpr
 
 trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
 
@@ -222,21 +224,22 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(depotMapping(depot)).single
   }
 
-  protected def getDepotlieferungAbosQuery = {
+  protected def getDepotlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, depotlieferungAbo))
     }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
-  protected def getHeimlieferungAbosQuery = {
+  protected def getHeimlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
-  protected def getPostlieferungAbosQuery = {
+  protected def getPostlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
