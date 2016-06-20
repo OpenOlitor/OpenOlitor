@@ -33,6 +33,16 @@ class UriQueryParamFilterParserSpec extends Specification {
         FilterAttributeList(List(FilterAttribute(Attribute("attribute"), List(ValueComparison(DecimalNumberValue(123.4), None)))))
     }
 
+    "parse single attribute number expression ignoring spaces" in {
+      UriQueryParamFilterParser.parse("attribute = 12").get ===
+        FilterAttributeList(List(FilterAttribute(Attribute("attribute"), List(ValueComparison(LongNumberValue(12), None)))))
+    }
+
+    "parse single attribute number expression with ending ';'" in {
+      UriQueryParamFilterParser.parse("attribute=123.4;").get ===
+        FilterAttributeList(List(FilterAttribute(Attribute("attribute"), List(ValueComparison(DecimalNumberValue(123.4), None)))))
+    }
+
     "parse single attribute regex expression" in {
       UriQueryParamFilterParser.parse("attribute=ab*ba").get ===
         FilterAttributeList(List(FilterAttribute(Attribute("attribute"), List(ValueComparison(RegexValue("ab*ba"), None)))))
@@ -55,6 +65,14 @@ class UriQueryParamFilterParserSpec extends Specification {
         FilterAttributeList(List(
           FilterAttribute(Attribute("a"), List(ValueComparison(NullValue(null), None))),
           FilterAttribute(Attribute("b"), List(ValueComparison(NullValue(null), None)))
+        ))
+    }
+
+    "parse multiple attributes with ending ';'" in {
+      UriQueryParamFilterParser.parse("a=null;b=test;").get ===
+        FilterAttributeList(List(
+          FilterAttribute(Attribute("a"), List(ValueComparison(NullValue(null), None))),
+          FilterAttribute(Attribute("b"), List(ValueComparison(RegexValue("test"), None)))
         ))
     }
 

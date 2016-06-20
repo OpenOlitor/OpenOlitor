@@ -37,7 +37,7 @@ object UriQueryParamFilterParser extends RegexParsers with LazyLogging {
 
   private def longNumber = """(\d+)""".r
 
-  private def regexLiteral = """([^=]*)""".r
+  private def regexLiteral = """([^=;]*)""".r
 
   def parse(input: String): Option[FilterExpr] = {
     parseAll(filterExpression, input) match {
@@ -52,7 +52,7 @@ object UriQueryParamFilterParser extends RegexParsers with LazyLogging {
   }
 
   def filterExpression: Parser[FilterExpr] =
-    repsep(filterAttribute, separator) ^^ { case l => FilterAttributeList(l) }
+    repsep(filterAttribute, separator) ~ opt(separator) ^^ { case l ~ _ => FilterAttributeList(l) }
 
   private def filterAttribute: Parser[FilterAttribute] =
     attribute ~ assignment ~ valueComparison ~ rep("," ~> valueComparison) ^^ { case a ~ _ ~ head ~ rest => FilterAttribute(a, head :: rest) }
@@ -83,6 +83,6 @@ object UriQueryParamFilterParser extends RegexParsers with LazyLogging {
       "~!" ^^^ NOT
 
   private def attribute: Parser[Attribute] =
-    """([^=]*)""".r ^^ { case value => Attribute(value) }
+    """([^=\s]*)""".r ^^ { case value => Attribute(value) }
 
 }

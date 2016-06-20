@@ -236,6 +236,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, heimlieferungAbo))
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
@@ -243,6 +244,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 
