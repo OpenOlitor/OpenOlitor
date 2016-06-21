@@ -44,7 +44,11 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
       case FilterAttribute(attribute, ValueComparison(BooleanValue(value), None) :: Nil) => usingEq(sqlSyntax, attribute, value)
       case FilterAttribute(attribute, ValueComparison(DateValue(value), None) :: Nil) => usingEq(sqlSyntax, attribute, value)
       case FilterAttribute(attribute, ValueComparison(NullValue(value), None) :: Nil) => retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.isNull(c))
-      case FilterAttribute(attribute, ValueComparison(RangeValue(from, to), None) :: Nil) => retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.between(c, from, to))
+      case FilterAttribute(attribute, ValueComparison(RangeValue(LongNumberValue(from), LongNumberValue(to)), None) :: Nil) => usingBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(DecimalNumberValue(from), DecimalNumberValue(to)), None) :: Nil) => usingBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(DateValue(from), DateValue(to)), None) :: Nil) => usingBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(RegexValue(from), RegexValue(to)), None) :: Nil) => usingBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(from, to), None) :: Nil) => None
       case FilterAttribute(attribute, ValueComparison(RegexValue(value), None) :: Nil) => retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.like(c, toSqlLike(value)))
       case FilterAttribute(attribute, ValueComparison(RegexValue(value), Some(ValueComparator(NOT))) :: Nil) => retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.notLike(c, toSqlLike(value)))
       case FilterAttribute(attribute, ValueComparison(LongNumberValue(value), Some(ValueComparator(comparator))) :: Nil) => usingComparator(sqlSyntax, attribute, value, comparator)
@@ -52,7 +56,11 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
       case FilterAttribute(attribute, ValueComparison(BooleanValue(value), Some(ValueComparator(NOT))) :: Nil) => usingComparator(sqlSyntax, attribute, value, NOT)
       case FilterAttribute(attribute, ValueComparison(DateValue(value), Some(ValueComparator(comparator))) :: Nil) => usingComparator(sqlSyntax, attribute, value, comparator)
       case FilterAttribute(attribute, ValueComparison(NullValue(value), Some(ValueComparator(NOT))) :: Nil) => retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.isNotNull(c))
-      case FilterAttribute(attribute, ValueComparison(RangeValue(from, to), Some(ValueComparator(NOT))) :: Nil) => retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.notBetween(c, from, to))
+      case FilterAttribute(attribute, ValueComparison(RangeValue(LongNumberValue(from), LongNumberValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(DecimalNumberValue(from), DecimalNumberValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(DateValue(from), DateValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(RegexValue(from), RegexValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
+      case FilterAttribute(attribute, ValueComparison(RangeValue(from, to), Some(ValueComparator(NOT))) :: Nil) => None
       case FilterAttribute(attribute, ValueComparison(LongNumberValue(value), Some(ValueComparator(comparator))) :: Nil) => usingComparator(sqlSyntax, attribute, value, comparator)
       case FilterAttribute(attribute, values) => sqls.toOrConditionOpt((values map (v => build(FilterAttribute(attribute, List(v)), sqlSyntax)): _*))
     }
@@ -73,6 +81,12 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
     }
   }
 
+  private def usingBetween[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, from: Any, to: Any) =
+    retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.between(c, from, to))
+
+  private def usingNotBetween[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, from: Any, to: Any) =
+    retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.between(c, from, to))
+
   private def retrieveColumn[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: String): Option[SQLSyntax] = {
     try {
       Some(sqlSyntax.column(StringUtil.toUnderscore(attribute)))
@@ -85,7 +99,7 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
    * Simplified implementation replacing * with % for sql like. Should use native mySql REGEXP
    */
   private def toSqlLike(regex: String) = {
-    regex replaceAll ("\\*", "%")
+    s"%${regex replaceAll ("\\*", "%")}%"
   }
 
 }
