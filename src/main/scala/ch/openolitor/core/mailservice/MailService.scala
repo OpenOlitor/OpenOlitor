@@ -44,6 +44,7 @@ import java.util.UUID
 import scala.collection.immutable.TreeSet
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.util.ConfigUtil._
+import scala.concurrent.Await
 
 object MailService {
   import AggregateRoot._
@@ -93,7 +94,6 @@ trait MailService extends AggregateRoot
   override protected def afterEventPersisted(evt: PersistentEvent): Unit = {
     updateState(evt)
     publish(evt)
-    state = incState
   }
 
   def initialize(): Unit = {
@@ -104,27 +104,30 @@ trait MailService extends AggregateRoot
   def checkMailQueue(): Unit = {
     if (!state.mailQueue.isEmpty) {
       state.mailQueue map { enqueued =>
-        sendMail(enqueued.meta, enqueued.uid, enqueued.mail, enqueued.commandMeta) map { event =>
-          persist(event)(afterEventPersisted)
-        } recoverWith {
-          case e =>
+        // sending a mail has to be blocking, otherwise there will be concurrent mail queue access 
+        sendMail(enqueued.meta, enqueued.uid, enqueued.mail, enqueued.commandMeta) match {
+          case Success(event) =>
+            state = incState
+            persist(event)(afterEventPersisted)
+          case Failure(e) =>
             log.error(s"Failed to send mail ${e} ${e.getMessage}. Trying again later.")
 
             calculateRetryEnqueued(enqueued).fold(
-              _ => persist(SendMailFailedEvent(enqueued.meta, enqueued.uid, enqueued.retries, enqueued.commandMeta))(afterEventPersisted),
+              _ => {
+                state = incState
+                persist(SendMailFailedEvent(metadata(enqueued.meta.originator), enqueued.uid, enqueued.retries, enqueued.commandMeta))(afterEventPersisted)
+              },
               maybeRequeue =>
                 maybeRequeue map { result =>
                   state = state.copy(mailQueue = state.mailQueue - enqueued + result)
                 }
             )
-
-            Future.failed(e)
         }
       }
     }
   }
 
-  def sendMail(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef]): Future[MailSentEvent] = {
+  def sendMail(meta: EventMetadata, uid: String, mail: Mail, commandMeta: Option[AnyRef]): Try[MailSentEvent] = {
     if (sendEmailOutbound) {
       var envelope = Envelope.from(new InternetAddress(fromAddress))
         .to(InternetAddress.parse(mail.to): _*)
@@ -139,15 +142,19 @@ trait MailService extends AggregateRoot
         envelope = envelope.bcc(InternetAddress.parse(bcc): _*)
       }
 
-      mailer(envelope) map { _ =>
-        MailSentEvent(meta, uid, commandMeta)
+      // we have to await the result, maybe switch to standard javax.mail later
+      val result = Await.ready(mailer(envelope), 5 seconds).value.get
+
+      result match {
+        case Success(_) => Success(MailSentEvent(metadata(meta.originator), uid, commandMeta))
+        case Failure(e) => Failure(e)
       }
     } else {
       log.debug(s"=====================================================================")
       log.debug(s"| Sending Email: ${mail}")
       log.debug(s"=====================================================================")
 
-      Future.successful(MailSentEvent(meta, uid, commandMeta))
+      Success(MailSentEvent(metadata(meta.originator), uid, commandMeta))
     }
   }
 
@@ -212,6 +219,7 @@ trait MailService extends AggregateRoot
       val meta = metadata(personId)
       val id = newId
       val event = SendMailEvent(meta, id, mail, calculateExpires(retryDuration), Some(commandMeta))
+      state = incState
       persist(event) { result =>
         afterEventPersisted(result)
         sender ! result
@@ -220,6 +228,7 @@ trait MailService extends AggregateRoot
       val meta = metadata(personId)
       val id = newId
       val event = SendMailEvent(meta, id, mail, calculateExpires(retryDuration), None)
+      state = incState
       persist(event) { result =>
         afterEventPersisted(result)
         sender ! result
