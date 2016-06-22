@@ -61,7 +61,6 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
       case FilterAttribute(attribute, ValueComparison(RangeValue(DateValue(from), DateValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
       case FilterAttribute(attribute, ValueComparison(RangeValue(RegexValue(from), RegexValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
       case FilterAttribute(attribute, ValueComparison(RangeValue(from, to), Some(ValueComparator(NOT))) :: Nil) => None
-      case FilterAttribute(attribute, ValueComparison(LongNumberValue(value), Some(ValueComparator(comparator))) :: Nil) => usingComparator(sqlSyntax, attribute, value, comparator)
       case FilterAttribute(attribute, values) => sqls.toOrConditionOpt((values map (v => build(FilterAttribute(attribute, List(v)), sqlSyntax)): _*))
     }
   }
