@@ -24,10 +24,11 @@ package ch.openolitor.core.reporting
 
 import akka.actor._
 import scala.util._
+import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.filestore.FileStore
 
 object ReportProcessorActor {
-  def props(fileStore: FileStore): Props = Props(classOf[ReportProcessorActor], fileStore)
+  def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportProcessorActor], fileStore, sysConfig)
 }
 
 /**
@@ -35,7 +36,7 @@ object ReportProcessorActor {
  * object. The same report template object should be shared across all reports. As a result the actor returns a list of successful
  * and unsuccessful sources which might then get processed further
  */
-class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging {
+class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extends Actor with ActorLogging {
   import ReportProcessorActor._
   import ReportSystem._
 
@@ -46,9 +47,9 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
     case GenerateReports(file, data, false, None) =>
       processReports(file, data, row => SingleDocumentReportProcessorActor.props(row.name, row.locale))
     case GenerateReports(file, data, true, None) =>
-      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(row.name, row.locale))
+      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(sysConfig, row.name, row.locale))
     case GenerateReports(file, data, true, Some(option)) =>
-      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, option.fileType, row.id, row.name, row.locale))
+      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, sysConfig, option.fileType, row.id, row.name, row.locale))
   }
 
   val collectingResults: Receive = {
@@ -59,34 +60,33 @@ class ReportProcessorActor(fileStore: FileStore) extends Actor with ActorLogging
   def receivedResult(result: ReportResult) = {
     result match {
       case result: ReportSuccess =>
-        log.debug(s"Received result, send to:$origSender")
         stats = stats.copy(numberOfSuccess = stats.numberOfSuccess + 1)
-        origSender.map(_ ! SingleReportResult(stats, Right(result)))
+        origSender map (_ ! SingleReportResult(stats, Right(result)))
       //send result direct to client
       case error: ReportError =>
-        log.debug(s"Received error:$error")
         stats = stats.copy(numberOfFailures = stats.numberOfFailures + 1)
-        origSender.map(_ ! SingleReportResult(stats, Left(error)))
+        origSender map (_ ! SingleReportResult(stats, Left(error)))
     }
+
     stats = stats.copy(numberOfReportsInProgress = stats.numberOfReportsInProgress - 1)
+
     if (stats.numberOfReportsInProgress <= 0) {
       //send completed result
-      origSender.map(_ ! stats)
+      origSender map (_ ! stats)
       self ! PoisonPill
     }
   }
 
   def processReports(file: Array[Byte], data: ReportData[_], f: ReportDataRow => Props) = {
     origSender = Some(sender)
-    log.debug(s"Process request, send results to:$origSender")
     stats = stats.copy(jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
-    var i = 1
+
     for {
-      row <- data.rows
+      (row, index) <- data.rows.zipWithIndex
     } yield {
-      context.actorOf(f(row), s"report-$i-${System.currentTimeMillis}") ! GenerateReport(file, row.value)
-      i = i + 1
+      context.actorOf(f(row), s"report-$index-${System.currentTimeMillis}") ! GenerateReport(file, row.value)
     }
+
     context become collectingResults
   }
 }

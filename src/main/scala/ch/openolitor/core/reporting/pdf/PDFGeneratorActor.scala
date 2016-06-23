@@ -25,31 +25,34 @@ package ch.openolitor.core.reporting.pdf
 import akka.actor._
 import scala.concurrent.blocking
 import scala.util._
+import ch.openolitor.core.SystemConfig
 
 object PDFGeneratorActor {
-  def props(): Props = Props(classOf[PDFGeneratorActor])
+  def props(sysConfig: SystemConfig, name: String): Props = Props(classOf[PDFGeneratorActor], sysConfig, name)
 
   case class GeneratePDF(document: Array[Byte])
   case class PDFResult(pdf: Array[Byte])
   case class PDFError(error: String)
 }
 
-class PDFGeneratorActor extends Actor with ActorLogging with PDFGeneratorService {
+class PDFGeneratorActor(override val sysConfig: SystemConfig, name: String) extends Actor with ActorLogging with PDFGeneratorService {
   import PDFGeneratorActor._
+
+  override lazy val system = context.system
 
   val receive: Receive = {
     case GeneratePDF(document) =>
       val rec = sender
       blocking {
         //run pdf service in blocking mode, only one pdf can get generated once
-        generatePDF(document) match {
+        generatePDF(document, name) match {
           case Success(result) => rec ! PDFResult(result)
           case Failure(error) =>
             log.warning(s"Failed converting pdf {}", error)
             rec ! PDFError(error.getMessage)
         }
 
-        //kill outself
+        //kill ourself
         self ! PoisonPill
       }
   }

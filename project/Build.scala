@@ -31,6 +31,7 @@ object BuildSettings {
 	    "io.spray"                     %%  "spray-routing-shapeless2" 		        % sprayV,
 	    "io.spray"                     %%  "spray-testkit" 					              % sprayV  % "test",
 	    "io.spray" 			               %%  "spray-json"    					              % sprayV,
+	    "io.spray" 			               %%  "spray-client"  					              % sprayV,
 	    "com.wandoulabs.akka"          %%  "spray-websocket" 				              % "0.1.4",
 	    "com.typesafe.akka"            %%  "akka-actor"    					              % akkaV,
 	    "com.typesafe.akka"            %%  "akka-persistence"                     % akkaV,    

@@ -27,11 +27,12 @@ import spray.json._
 import ch.openolitor.core.filestore._
 import java.util.zip.ZipFile
 import java.util.Locale
+import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 
 object ReportSystem {
-  def props(fileStore: FileStore): Props = Props(classOf[ReportSystem], fileStore)
+  def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportSystem], fileStore, sysConfig)
 
   case class JobId(id: Long = System.currentTimeMillis) extends JSONSerializable
   case class ReportDataRow(value: JsObject, id: Option[String], name: String, locale: Locale)
@@ -62,13 +63,12 @@ object ReportSystem {
 /**
  * The reportsystem is responsible to dispatch report generating request to processor actors
  */
-class ReportSystem(fileStore: FileStore) extends Actor with ActorLogging {
+class ReportSystem(fileStore: FileStore, sysConfig: SystemConfig) extends Actor with ActorLogging {
   import ReportSystem._
 
   val receive: Receive = {
     case request: GenerateReports[_] =>
-      log.debug(s"Generate report from:" + sender)
-      val processor = context.actorOf(ReportProcessorActor.props(fileStore), "report-processor-" + System.currentTimeMillis)
+      val processor = context.actorOf(ReportProcessorActor.props(fileStore, sysConfig), "report-processor-" + System.currentTimeMillis)
       //forward request to new processor-actor
       processor forward request
     case x =>

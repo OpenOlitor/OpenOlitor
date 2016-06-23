@@ -45,7 +45,7 @@ class HeadReportResultCollector(reportSystem: ActorRef) extends Actor with Actor
 
   val waitingForResult: Receive = {
     case result: SingleReportResult =>
-      origSender.map(_ ! result)
+      origSender map (_ ! result)
       self ! PoisonPill
   }
 
