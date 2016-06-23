@@ -47,7 +47,7 @@ sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
 //case class Berichtsvorlage(id: BerichtsVorlageId) extends BerichtsVorlage
 case class EinzelBerichtsVorlage(file: Array[Byte]) extends BerichtsVorlage
-case class ServiceFailed(msg: String, e: Throwable) extends Exception(msg, e)
+case class ServiceFailed(msg: String, e: Throwable = null) extends Exception(msg, e)
 
 case class ReportForm[I](ids: Seq[I], pdfGenerieren: Boolean, pdfAblegen: Boolean) extends JSONSerializable {
   def toConfig(vorlage: BerichtsVorlage): ReportConfig[I] = {
@@ -58,10 +58,6 @@ case class ReportConfig[I](ids: Seq[I], vorlage: BerichtsVorlage, pdfGenerieren:
 case class ValidationError[I](id: I, message: String)
 case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[ValidationError[I]], result: ReportResult) {
   val hasErrors = !validationErrors.isEmpty
-}
-
-object ServiceFailed {
-  def apply(msg: String) = new ServiceFailed(msg, null)
 }
 
 trait ReportService extends LazyLogging {
@@ -92,10 +88,7 @@ trait ReportService extends LazyLogging {
         Future { Right(ReportServiceResult(jobId, errors, ReportError(errors.mkString(",")))) }
       case (errors, result) =>
         logger.debug(s"Valdidation errors:$errors, process result records:${result.length}")
-        val ablageParams = config.pdfAblegen match {
-          case false => None
-          case true => Some(FileStoreParameters[E](ablageType))
-        }
+        val ablageParams = if (config.pdfAblegen) Some(FileStoreParameters[E](ablageType)) else None
         generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams).run map {
           case -\/(e) =>
             logger.warn(s"Failed generating report {}", e.getMessage)
@@ -114,7 +107,7 @@ trait ReportService extends LazyLogging {
   }
 
   def generateReport[E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = EitherT {
-    implicit val timeout = Timeout(60.seconds)
+    implicit val timeout = Timeout(60 seconds)
     val collector =
       if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem)
       else if (pdfGenerieren) FileStoreReportResultCollector.props(reportSystem)
@@ -132,7 +125,7 @@ trait ReportService extends LazyLogging {
   }
 
   /**
-   * Resolve from S3 or local as a local resource
+   * Resolve from S3 or as a local resource
    */
   def resolveStandardBerichtsVorlage(fileType: FileType, id: Option[String] = None): ServiceResult[Array[Byte]] = {
     resolveBerichtsVorlageFromFileStore(fileType, id) ||| resolveBerichtsVorlageFromResources(fileType, id)

@@ -62,7 +62,7 @@ class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorL
     case result: GenerateReportsStats =>
       //finished, send back zip result
       val zip = zipBuilder.close()
-      origSender.map(_ ! ZipReportResult(result, errors, zip))
+      origSender map (_ ! ZipReportResult(result, errors, zip))
       self ! PoisonPill
   }
 }

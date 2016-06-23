@@ -23,12 +23,49 @@
 package ch.openolitor.core.reporting.pdf
 
 import scala.util.Try
+import scala.util.{ Success, Failure }
+import ch.openolitor.core.SystemConfig
+import akka.actor.ActorSystem
+import spray.http._
+import spray.client.pipelining._
+import spray.util._
+import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import akka.actor.ActorRefFactory
+import scala.concurrent.ExecutionContext
+import akka.util.Timeout
+import akka.io.IO
+import spray.can.server.UHttp
 
 trait PDFGeneratorService {
-  def generatePDF(input: Array[Byte]): Try[Array[Byte]] = synchronized {
+  def sysConfig: SystemConfig
+
+  lazy val endpointUri = sysConfig.mandantConfiguration.config.getString("converttopdf.endpoint")
+
+  implicit val system: ActorSystem
+  import system.dispatcher
+
+  def uSendReceive(implicit refFactory: ActorRefFactory, executionContext: ExecutionContext,
+    futureTimeout: Timeout = 60.seconds): SendReceive =
+    sendReceive(IO(UHttp)(actorSystem))
+
+  val pipeline: HttpRequest => Future[HttpResponse] = uSendReceive
+
+  def generatePDF(input: Array[Byte], name: String): Try[Array[Byte]] = synchronized {
     Try {
-      //TODO: access rest webservice to generate pdf
-      Array[Byte]()
+      val uri = Uri(endpointUri)
+      val formFile = FormFile(Some(name), HttpEntity(HttpData(input)).asInstanceOf[HttpEntity.NonEmpty])
+      val formData = MultipartFormData(Seq(BodyPart(formFile, "upload"), BodyPart(HttpEntity(name), "name")))
+
+      val result = pipeline(Post(uri, formData)) map {
+        case HttpResponse(StatusCodes.OK, entity, _, _) =>
+          entity.data.toByteArray
+        case other =>
+          throw new RequestProcessingException(StatusCodes.InternalServerError, s"PDF konnte nicht generiert werden ${other}")
+      }
+
+      Await.result(result, 5 seconds)
     }
   }
 }

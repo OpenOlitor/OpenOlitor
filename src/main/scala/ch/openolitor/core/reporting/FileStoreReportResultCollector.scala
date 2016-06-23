@@ -56,7 +56,7 @@ class FileStoreReportResultCollector(reportSystem: ActorRef) extends Actor with 
       storeResults = storeResults :+ FileStoreFileReference(fileType, id)
     case result: GenerateReportsStats =>
       //finished, send back collected result
-      origSender.map(_ ! BatchStoredPdfReportResult(result, errors, storeResults))
+      origSender map (_ ! BatchStoredPdfReportResult(result, errors, storeResults))
       self ! PoisonPill
   }
 }
