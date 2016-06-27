@@ -40,6 +40,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
 
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
+  def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
 
   def getProjekt(implicit session: DBSession): Option[Projekt]
   def getKunden(implicit session: DBSession): List[Kunde]
@@ -141,6 +142,22 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
 
   def getPostlieferungAbo(id: AboId)(implicit session: DBSession): Option[PostlieferungAboDetail] = {
     getPostlieferungAboQuery(id).apply()
+  }
+
+  def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail] = {
+    getDepotlieferungAboAusstehend(id) orElse getHeimlieferungAboAusstehend(id) orElse getPostlieferungAboAusstehend(id)
+  }
+
+  def getDepotlieferungAboAusstehend(id: AboId)(implicit session: DBSession): Option[DepotlieferungAboDetail] = {
+    getDepotlieferungAboAusstehendQuery(id).apply()
+  }
+
+  def getHeimlieferungAboAusstehend(id: AboId)(implicit session: DBSession): Option[HeimlieferungAboDetail] = {
+    getHeimlieferungAboAusstehendQuery(id).apply()
+  }
+
+  def getPostlieferungAboAusstehend(id: AboId)(implicit session: DBSession): Option[PostlieferungAboDetail] = {
+    getPostlieferungAboAusstehendQuery(id).apply()
   }
 
   def getKunden(implicit session: DBSession): List[Kunde] = {

@@ -246,7 +246,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         })
       }
 
-      stammdatenWriteRepository.getAboDetail(abw.aboId) match {
+      stammdatenWriteRepository.getAboDetailAusstehend(abw.aboId) match {
         case Some(abo) => {
           stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
             case Some(korb) => {
