@@ -178,9 +178,10 @@ class DataImportParser extends Actor with ActorLogging {
       if (personenByKundeId.isEmpty) {
         throw ParseException(s"Kunde id $kundeId does not reference any person. At least one person is required")
       }
+      val bez = row.value[Option[String]](indexBezeichnung) getOrElse (s"${personenByKundeId.head.vorname}  ${personenByKundeId.head.name}")
       Kunde(
         kundeId,
-        bezeichnung = row.value[String](indexBezeichnung),
+        bezeichnung = bez,
         strasse = row.value[String](indexStrasse),
         hausNummer = row.value[Option[String]](indexHausNummer),
         adressZusatz = row.value[Option[String]](indexAdressZusatz),
