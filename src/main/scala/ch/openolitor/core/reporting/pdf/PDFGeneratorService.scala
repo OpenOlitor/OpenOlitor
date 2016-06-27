@@ -55,11 +55,11 @@ trait PDFGeneratorService {
   def generatePDF(input: Array[Byte], name: String): Try[Array[Byte]] = synchronized {
     Try {
       val uri = Uri(endpointUri)
-      val formFile = FormFile(Some(name), HttpEntity(HttpData(input)).asInstanceOf[HttpEntity.NonEmpty])
-      val formData = MultipartFormData(Seq(BodyPart(formFile, "upload"), BodyPart(HttpEntity(name), "name")))
+      val formFile = FormFile(Some(name + ".odt"), HttpEntity(HttpData(input)).asInstanceOf[HttpEntity.NonEmpty])
+      val formData = MultipartFormData(Seq(BodyPart(formFile, "upload"), BodyPart(HttpEntity(name + ".odt"), "name")))
 
       val result = pipeline(Post(uri, formData)) map {
-        case HttpResponse(StatusCodes.OK, entity, _, _) =>
+        case HttpResponse(StatusCodes.OK, entity, headers, _) =>
           entity.data.toByteArray
         case other =>
           throw new RequestProcessingException(StatusCodes.InternalServerError, s"PDF konnte nicht generiert werden ${other}")

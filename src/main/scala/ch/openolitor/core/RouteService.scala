@@ -260,7 +260,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
       case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found.")
       case Right(file) =>
-        respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", file.metaData.name)))) {
+        val name = if (file.metaData.name.isEmpty) id else file.metaData.name
+        respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
           stream(file.file)
         }
     }
