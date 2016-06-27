@@ -58,7 +58,7 @@ trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportS
   }
 
   def name(rechnung: RechnungDetailReport) = {
-    s"Rechnung Nr. ${rechnung.id.id}";
+    s"rechnung_nr_${rechnung.id.id}";
   }
 
   def rechungenById(rechnungIds: Seq[RechnungId]): Future[(Seq[ValidationError[RechnungId]], Seq[RechnungDetailReport])] = {

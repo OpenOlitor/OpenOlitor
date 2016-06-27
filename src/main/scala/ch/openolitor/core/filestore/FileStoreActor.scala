@@ -27,6 +27,7 @@ import java.util.UUID
 import ch.openolitor.util.ByteBufferBackedInputStream
 import scala.concurrent.ExecutionContext
 import java.io.ByteArrayInputStream
+import scala.concurrent.Future
 
 object FileStoreActor {
   def props(fileStore: FileStore): Props = Props(classOf[FileStoreActor], fileStore)
@@ -48,7 +49,7 @@ class FileStoreActor(fileStore: FileStore) extends Actor with ActorLogging {
       }
   }
 
-  def storeFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: Array[Byte]) = {
+  def storeFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: Array[Byte]): Future[Either[FileStoreError, FileStoreFileMetadata]] = {
     val name = id.getOrElse(UUID.randomUUID.toString)
     val is = new ByteArrayInputStream(file)
     fileStore.putFile(bucket, Some(name), metadata, is)
