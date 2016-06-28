@@ -94,6 +94,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val bestellungIdPersister = persister[BestellungId]("bestellung-id")
   implicit val bestellpositionModifyPersister = persister[BestellpositionModify]("bestellposition-modify")
   implicit val bestellpositionIdPersister = persister[BestellpositionId]("bestellposition-id")
+  implicit val auslieferungIdPersister = persister[AuslieferungId]("auslieferung-id")
 
   implicit val produktModifyPersister = persister[ProduktModify]("produkt-modify")
   implicit val produktIdPersister = persister[ProduktId]("produkt-id")
@@ -119,6 +120,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val korbModifyPersister = persister[KorbModify]("korb-modify")
+
+  implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -178,6 +181,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     abwesenheitIdPersister,
     korbCreatePersister,
     korbModifyPersister,
+    auslieferungIdPersister,
 
     //event persisters
     lieferplanungAbschliessenEventPersister,

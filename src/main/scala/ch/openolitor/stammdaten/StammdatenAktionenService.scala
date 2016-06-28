@@ -65,6 +65,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
       lieferplanungVerrechnet(meta, id)
     case BestellungVersendenEvent(meta, id: BestellungId) =>
       bestellungVersenden(meta, id)
+    case AuslieferungAlsAusgeliefertMarkierenEvent(meta, id: AuslieferungId) =>
+      auslieferungAusgeliefert(meta, id)
     case PasswortGewechseltEvent(meta, personId, pwd) =>
       updatePasswort(meta, personId, pwd)
     case e =>
@@ -120,6 +122,28 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
       stammdatenWriteRepository.getById(personMapping, id) map { person =>
         val updated = person.copy(passwort = Some(pwd))
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
+      }
+    }
+  }
+
+  def auslieferungAusgeliefert(meta: EventMetadata, id: AuslieferungId)(implicit personId: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(depotAuslieferungMapping, id) map { auslieferung =>
+        if (Erfasst == auslieferung.status) {
+          stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
+        }
+      } orElse {
+        stammdatenWriteRepository.getById(tourAuslieferungMapping, id) map { auslieferung =>
+          if (Erfasst == auslieferung.status) {
+            stammdatenWriteRepository.updateEntity[TourAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
+          }
+        }
+      } orElse {
+        stammdatenWriteRepository.getById(postAuslieferungMapping, id) map { auslieferung =>
+          if (Erfasst == auslieferung.status) {
+            stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
+          }
+        }
       }
     }
   }

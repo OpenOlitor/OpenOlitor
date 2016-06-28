@@ -414,7 +414,34 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("postauslieferungen") {
         get(list(stammdatenReadRepository.getPostAuslieferungen))
+      } ~
+      path("depotauslieferungen" / "aktionen" / "ausliefern") {
+        auslieferungenAlsAusgeliefertMarkierenRoute
+      } ~
+      path("tourauslieferungen" / "aktionen" / "ausliefern") {
+        auslieferungenAlsAusgeliefertMarkierenRoute
+      } ~
+      path("postauslieferungen" / "aktionen" / "ausliefern") {
+        auslieferungenAlsAusgeliefertMarkierenRoute
       }
+
+  def auslieferungenAlsAusgeliefertMarkierenRoute(implicit subject: Subject) =
+    post {
+      requestInstance { request =>
+        entity(as[Seq[AuslieferungId]]) { ids =>
+          auslieferungenAlsAusgeliefertMarkieren(ids)
+        }
+      }
+    }
+
+  def auslieferungenAlsAusgeliefertMarkieren(ids: Seq[AuslieferungId])(implicit idPersister: Persister[AuslieferungId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.AuslieferungenAlsAusgeliefertMarkierenCommand(subject.personId, ids)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Auslieferungen konnten nicht als ausgeliefert markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
 }
 
 class DefaultStammdatenRoutes(

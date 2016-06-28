@@ -39,11 +39,13 @@ object StammdatenCommandHandler {
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class BestellungErneutVersenden(originator: PersonId, id: BestellungId) extends UserCommand
   case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char]) extends UserCommand
+  case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
+  case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -87,6 +89,29 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
       }
+
+    case AuslieferungenAlsAusgeliefertMarkierenCommand(personId, ids: Seq[AuslieferungId]) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        val (events, failures) = ids map { id =>
+          stammdatenWriteRepository.getById(depotAuslieferungMapping, id) orElse
+            stammdatenWriteRepository.getById(tourAuslieferungMapping, id) orElse
+            stammdatenWriteRepository.getById(postAuslieferungMapping, id) map { auslieferung =>
+              auslieferung.status match {
+                case Erfasst =>
+                  Success(AuslieferungAlsAusgeliefertMarkierenEvent(meta, id))
+                case _ =>
+                  Failure(new InvalidStateException(s"Eine Auslieferung kann nur im Status 'Erfasst' als ausgeliefert markiert werden. Nr. $id"))
+              }
+            } getOrElse (Failure(new InvalidStateException(s"Keine Auslieferung mit der Nr. $id gefunden")))
+        } partition (_.isSuccess)
+
+        if (events.isEmpty) {
+          Failure(new InvalidStateException(s"Keine der Auslieferungen konnte abgearbeitet werden"))
+        } else {
+          Success(events map (_.get))
+        }
+      }
+
     case PasswortWechselCommand(originator, personId, pwd) => idFactory => meta =>
       Success(Seq(PasswortGewechseltEvent(meta, personId, pwd)))
 
