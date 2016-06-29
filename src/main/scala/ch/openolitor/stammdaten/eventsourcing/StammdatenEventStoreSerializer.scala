@@ -191,6 +191,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
     bestellungVersendenEventPersister,
-    passwortGewechseltEventPersister
+    passwortGewechseltEventPersister,
+    auslieferungAlsAusgeliefertMarkierenEventPersister
   )
 }
