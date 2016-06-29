@@ -320,15 +320,17 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseTours = {
-    parse[Tour, TourId]("id", Seq("name", "beschreibung") ++ modifyColumns) { id => indexes => row =>
+    parse[Tour, TourId]("id", Seq("name", "beschreibung", "anzahl_abonnenten") ++ modifyColumns) { id => indexes => row =>
       //match column indexes
-      val Seq(indexName, indexBeschreibung) = indexes take (2)
+      val Seq(indexName, indexBeschreibung, indexAnzahlAbonnenten) = indexes take (3)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       Tour(
         id = TourId(id),
         name = row.value[String](indexName),
         beschreibung = row.value[Option[String]](indexBeschreibung),
+        //Zusatzinformationen
+        anzahlAbonnenten = row.value[Int](indexAnzahlAbonnenten),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),

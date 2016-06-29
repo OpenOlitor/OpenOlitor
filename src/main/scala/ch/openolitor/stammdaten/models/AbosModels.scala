@@ -28,10 +28,12 @@ import java.util.UUID
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
+import ch.openolitor.core.JSONSerializable
 
 case class AboId(id: Long) extends BaseId
 
 sealed trait Abo extends BaseEntity[AboId] {
+  val id: AboId
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
   val abotypId: AbotypId
@@ -47,6 +49,11 @@ sealed trait Abo extends BaseEntity[AboId] {
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
   val anzahlLieferungen: TreeMap[String, Int]
+
+  val erstelldat: DateTime
+  val ersteller: PersonId
+  val modifidat: DateTime
+  val modifikator: PersonId
 }
 
 sealed trait AboDetail extends JSONSerializable {
@@ -293,6 +300,16 @@ case class AbwesenheitCreate(
   lieferungId: LieferungId,
   datum: DateTime,
   bemerkung: Option[String]
+) extends JSONSerializable
+
+case class AboGuthabenModify(
+  guthabenNeu: Int,
+  bemerkung: String
+) extends JSONSerializable
+
+case class AboVertriebsartModify(
+  vertriebsartIdNeu: VertriebsartId,
+  bemerkung: String
 ) extends JSONSerializable
 
 case class Tourlieferung(

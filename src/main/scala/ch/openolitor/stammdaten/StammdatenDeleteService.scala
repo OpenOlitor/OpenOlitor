@@ -70,6 +70,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     case EntityDeletedEvent(meta, id: ProduzentId) => deleteProduzent(meta, id)
     case EntityDeletedEvent(meta, id: TourId) => deleteTour(meta, id)
     case EntityDeletedEvent(meta, id: VertriebId) => deleteVertrieb(meta, id)
+    case EntityDeletedEvent(meta, id: LieferplanungId) => deleteLieferplanung(meta, id)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -151,6 +152,23 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.deleteEntity[Depotlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
       stammdatenWriteRepository.deleteEntity[Heimlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
       stammdatenWriteRepository.deleteEntity[Postlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
+    }
+  }
+
+  def deleteLieferplanung(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.deleteEntity[Lieferplanung, LieferplanungId](id, { lieferplanung: Lieferplanung => lieferplanung.status == Offen }) match {
+        case Some(lieferplanung) =>
+          //remove LieferplanungId from Lieferungen and remove all Lieferposition
+          stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
+            val copy = lieferung.copy(lieferplanungId = None)
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+          }
+          stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id) map { lieferposition =>
+            stammdatenWriteRepository.deleteEntity[Lieferposition, LieferpositionId](lieferposition.id)
+          }
+        case None =>
+      }
     }
   }
 
