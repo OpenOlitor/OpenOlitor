@@ -28,6 +28,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.scalax.Product27
 import ch.openolitor.core.scalax.Tuple27
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 sealed trait Vertriebskanal {
   val name: String
@@ -151,7 +152,20 @@ case class Tour(
   modifikator: PersonId
 ) extends BaseEntity[TourId] with Vertriebskanal
 
+case class TourDetail(
+  id: TourId,
+  name: String,
+  beschreibung: Option[String],
+  tourlieferungen: Seq[Tourlieferung],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class TourModify(
   name: String,
-  beschreibung: Option[String]
+  beschreibung: Option[String],
+  tourlieferungen: Seq[Tourlieferung]
 ) extends JSONSerializable

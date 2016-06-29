@@ -32,7 +32,7 @@ sealed trait Liefersaison extends Product
 sealed trait Monat extends Liefersaison
 
 object Liefersaison {
-  def apply(value: String): Liefersaison = Monat.apply(value).getOrElse(sys.error(s"Couldn't parse liefersaison:$value"))
+  def apply(value: String): Liefersaison = Monat(value) getOrElse (sys.error(s"Couldn't parse liefersaison:$value"))
 }
 
 case object Januar extends Monat
@@ -50,7 +50,7 @@ case object Dezember extends Monat
 
 object Monat {
   def apply(value: String): Option[Monat] = {
-    Vector(Januar, Februar, Maerz, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember).find(_.toString == value)
+    Vector(Januar, Februar, Maerz, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember) find (_.toString == value)
   }
 }
 
@@ -63,7 +63,7 @@ case object Liter extends Liefereinheit
 
 object Liefereinheit {
   def apply(value: String): Liefereinheit = {
-    Vector(Stueck, Bund, Gramm, Kilogramm).find(_.toString == value).getOrElse(Kilogramm)
+    Vector(Stueck, Bund, Gramm, Kilogramm) find (_.toString == value) getOrElse (Kilogramm)
   }
 }
 

@@ -46,4 +46,17 @@ trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with Aut
   implicit val rechnungIdFormat = baseIdFormat(RechnungId)
   implicit val zahlungsImportIdFormat = baseIdFormat(ZahlungsImportId)
   implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
+
+  // special report formats
+  def enhancedRechnungDetailFormatDef(implicit defaultFormat: JsonFormat[RechnungDetailReport]): RootJsonFormat[RechnungDetailReport] = new RootJsonFormat[RechnungDetailReport] {
+    def write(obj: RechnungDetailReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        ("referenzNummerFormatiert" -> JsString(obj.referenzNummerFormatiert),
+          "betragRappen" -> JsNumber(obj.betragRappen)))
+    }
+
+    def read(json: JsValue): RechnungDetailReport = defaultFormat.read(json)
+  }
+  implicit val enhancedRechnungDetailFormat = enhancedRechnungDetailFormatDef
 }

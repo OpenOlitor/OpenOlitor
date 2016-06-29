@@ -98,6 +98,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
   implicit val korbStatusFormat = enumFormat(KorbStatus.apply)
+  implicit val auslieferungStatusFormat = enumFormat(AuslieferungStatus.apply)
   implicit val pendenzStatusFormat = enumFormat(PendenzStatus.apply)
   implicit val liefereinheitFormat = enumFormat(Liefereinheit.apply)
 
@@ -107,6 +108,8 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val abotypIdFormat = baseIdFormat(AbotypId)
   implicit val depotIdFormat = baseIdFormat(DepotId)
   implicit val tourIdFormat = baseIdFormat(TourId)
+  implicit val auslieferungIdFormat = baseIdFormat(AuslieferungId)
+  implicit val optionAuslieferungIdFormat = new OptionFormat[AuslieferungId]
   implicit val kundeIdFormat = baseIdFormat(KundeId)
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
   implicit val aboIdFormat = baseIdFormat(AboId)
@@ -384,4 +387,19 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val korbModifyFormat = autoProductFormat[KorbModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
+
+  // special report formats
+  def enhancedProjektReportFormatDef(implicit defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
+    def write(obj: ProjektReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
+          "plzOrt" -> JsString(obj.plzOrt.getOrElse(""))
+        ))
+    }
+
+    def read(json: JsValue): ProjektReport = defaultFormat.read(json)
+  }
+  implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef
 }

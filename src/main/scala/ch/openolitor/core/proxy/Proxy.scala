@@ -45,9 +45,7 @@ import com.typesafe.scalalogging.LazyLogging
 trait Proxy extends LazyLogging {
 
   private def proxyRequest(updateRequest: RequestContext => HttpRequest)(implicit system: ActorSystem): Route =
-    ctx => {
-      IO(UHttp)(system) tell (updateRequest(ctx), ctx.responder)
-    }
+    ctx => IO(UHttp)(system) tell (updateRequest(ctx), ctx.responder)
 
   private def stripHeader(headers: List[HttpHeader] = Nil) =
     headers filterNot (header => filterHostHeader(header) || filterContinueHeader(header))
@@ -56,7 +54,8 @@ trait Proxy extends LazyLogging {
 
   private def filterContinueHeader(header: HttpHeader) = header.name.toLowerCase == HttpHeaders.Expect.lowercaseName
 
-  private val updateUriUnmatchedPath = (ctx: RequestContext, uri: Uri) => uri.withPath(uri.path ++ ctx.unmatchedPath)
+  private val updateUriUnmatchedPath = (ctx: RequestContext, uri: Uri) =>
+    uri.withPath(uri.path ++ ctx.unmatchedPath).withQuery(ctx.request.uri.query)
 
   def updateRequest(uri: Uri, updateUri: (RequestContext, Uri) => Uri): RequestContext => HttpRequest =
     ctx => ctx.request.copy(
@@ -84,7 +83,7 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
   // connects the services environment to the enclosing actor or test
   val actorRefFactory = context
 
-  val routeMap = mandanten.list.map(c => (c.config.key, c)).toMap
+  val routeMap = mandanten.list.map(c => (c.config.key, c)).toList.toMap
 
   log.debug(s"Configure proxy service for mandanten${routeMap.keySet}")
 
