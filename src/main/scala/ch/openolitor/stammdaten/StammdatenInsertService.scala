@@ -266,7 +266,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         val pendenz = copyTo[PendenzCreate, Pendenz](create, "id" -> id,
           "kundeId" -> create.kundeId,
           "kundeBezeichnung" -> kunde.bezeichnung,
-          "generiert" -> FALSE,
           "erstelldat" -> meta.timestamp,
           "ersteller" -> meta.originator,
           "modifidat" -> meta.timestamp,
@@ -464,6 +463,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val tour = copyTo[TourModify, Tour](
       create,
       "id" -> id,
+      "anzahlAbonnenten" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
