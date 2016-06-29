@@ -47,7 +47,7 @@ case object Sonntag extends Wochentag
 
 object Wochentag {
   def apply(value: String): Option[Wochentag] = {
-    Vector(Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag, Sonntag).find(_.toString == value)
+    Vector(Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag, Sonntag) find (_.toString == value)
   }
 }
 
@@ -59,7 +59,7 @@ case object Unregelmaessig extends Rhythmus
 
 object Rhythmus {
   def apply(value: String): Rhythmus = {
-    Vector(Woechentlich, Zweiwoechentlich, Monatlich, Unregelmaessig).find(_.toString == value).getOrElse(Woechentlich)
+    Vector(Woechentlich, Zweiwoechentlich, Monatlich, Unregelmaessig) find (_.toString == value) getOrElse (Woechentlich)
   }
 }
 
@@ -72,7 +72,7 @@ case object ProAbo extends Preiseinheit
 
 object Preiseinheit {
   def apply(value: String): Preiseinheit = {
-    Vector(ProLieferung, ProMonat, ProMonat, ProJahr, ProAbo).find(_.toString == value).getOrElse(ProLieferung)
+    Vector(ProLieferung, ProMonat, ProMonat, ProJahr, ProAbo) find (_.toString == value) getOrElse (ProLieferung)
   }
 }
 
@@ -83,7 +83,7 @@ case object Unbeschraenkt extends Laufzeiteinheit
 
 object Laufzeiteinheit {
   def apply(value: String): Laufzeiteinheit = {
-    Vector(Unbeschraenkt, Lieferungen, Monate).find(_.toString == value).getOrElse(Lieferungen)
+    Vector(Unbeschraenkt, Lieferungen, Monate) find (_.toString == value) getOrElse (Lieferungen)
   }
 }
 
@@ -93,8 +93,8 @@ trait AktivRange {
 
   def aktiv = {
     val now = DateTime.now();
-    aktivVon.map(_.isBefore(now)).getOrElse(true) &&
-      aktivBis.map(_.isAfter(now)).getOrElse(true)
+    (aktivVon map (_.isBefore(now)) getOrElse (true)) &&
+      (aktivBis map (_.isAfter(now)) getOrElse (true))
   }
 }
 

@@ -28,6 +28,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.scalax.Tuple23
+import java.text.DecimalFormat
 
 /**
  *        +
@@ -152,6 +153,38 @@ case class RechnungDetail(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends JSONSerializable
+
+case class RechnungDetailReport(
+    id: RechnungId,
+    kunde: Kunde,
+    abo: Abo,
+    titel: String,
+    anzahlLieferungen: Int,
+    waehrung: Waehrung,
+    betrag: BigDecimal,
+    einbezahlterBetrag: Option[BigDecimal],
+    rechnungsDatum: DateTime,
+    faelligkeitsDatum: DateTime,
+    eingangsDatum: Option[DateTime],
+    status: RechnungStatus,
+    referenzNummer: String,
+    esrNummer: String,
+    // rechnungsadresse
+    strasse: String,
+    hausNummer: Option[String],
+    adressZusatz: Option[String],
+    plz: String,
+    ort: String,
+    // modification flags
+    erstelldat: DateTime,
+    ersteller: PersonId,
+    modifidat: DateTime,
+    modifikator: PersonId,
+    projekt: ProjektReport
+) extends JSONSerializable {
+  lazy val referenzNummerFormatiert: String = referenzNummer.reverse.grouped(5).map(_.reverse).toList.reverse.mkString(" ")
+  lazy val betragRappen = (betrag - betrag.toLong) * 100
+}
 
 case class RechnungCreate(
   kundeId: KundeId,

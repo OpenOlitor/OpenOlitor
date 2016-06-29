@@ -40,8 +40,7 @@ import ch.openolitor.core.Macros._
 import scala.collection.immutable.TreeMap
 import scalaz._
 import Scalaz._
-import scala.util.Random
-import scala.collection.immutable.Nil
+import ch.openolitor.util.IdUtil
 import ch.openolitor.stammdaten.models.LieferpositionenCreate
 import scalikejdbc.DBSession
 
@@ -573,7 +572,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                   // enhance or create bestellung by produzentT
                   if (!newBs.isDefinedAt((lieferposition.produzentId, create.lieferplanungId, lieferung.datum))) {
                     val bestellung = Bestellung(
-                      BestellungId(Random.nextLong),
+                      BestellungId(IdUtil.positiveRandomId),
                       lieferposition.produzentId,
                       lieferposition.produzentKurzzeichen,
                       lieferplanung.id,
@@ -607,7 +606,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                       case None => {
                         //create bestellposition
                         val bestellposition = Bestellposition(
-                          BestellpositionId(Random.nextLong),
+                          BestellpositionId(IdUtil.positiveRandomId),
                           bestellung.id,
                           lieferposition.produktId,
                           lieferposition.produktBeschrieb,
@@ -658,7 +657,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
         //save Lieferpositionen
         creates.lieferpositionen map { create =>
-          val lpId = LieferpositionId(Random.nextLong)
+          val lpId = LieferpositionId(IdUtil.positiveRandomId)
           val newObj = copyTo[LieferpositionModify, Lieferposition](
             create,
             "id" -> lpId,

@@ -46,13 +46,15 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.AmazonClientException
 import com.amazonaws.services.s3.S3ClientOptions
+import ch.openolitor.core.JSONSerializable
 
 case class FileStoreError(message: String)
 case class FileStoreSuccess()
 
 case class FileStoreFileMetadata(name: String, fileType: FileType)
 case class FileStoreFile(metaData: FileStoreFileMetadata, file: InputStream)
-case class FileStoreFileId(id: String)
+case class FileStoreFileId(id: String) extends JSONSerializable
+case class FileStoreFileReference(fileType: FileType, id: FileStoreFileId) extends JSONSerializable
 
 trait FileStore {
   val mandant: String
@@ -156,7 +158,6 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
         val result = FileStoreBucket.AllFileStoreBuckets map { b =>
           client.createBucket(new CreateBucketRequest(bucketName(b)))
         }
-        logger.debug(s"#######################################################Created buckets $result")
         Right(FileStoreSuccess())
       } catch {
         case e: AmazonClientException =>

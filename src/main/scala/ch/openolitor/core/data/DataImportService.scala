@@ -91,10 +91,10 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
   val waitForResult: Receive = {
     case e: ParseError =>
       e.error.printStackTrace
-      originator.map(_ ! e)
+      originator map (_ ! e)
     case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, vertriebe, lieferungen,
       lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
-      produzenten, produktProduzenten, bestellungen, bestellpositionen) =>
+      produzenten, produktProduzenten, bestellungen, bestellpositionen, tourlieferungen) =>
       log.debug(s"Received parse result, start importing...")
       try {
         DB localTx { implicit session =>
@@ -121,7 +121,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
           result = importEntityList[Abotyp, AbotypId]("Abotypen", abotypen, result)
 
           log.debug(s"Import ${vertriebsarten.length} Vertriebsarten...")
-          vertriebsarten.map {
+          vertriebsarten map {
             case dl: Depotlieferung =>
               insertEntity[Depotlieferung, VertriebsartId](dl)
             case hl: Heimlieferung =>
@@ -137,7 +137,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
           result = importEntityList[Lieferposition, LieferpositionId]("Lieferpositionen", lieferpositionen, result)
 
           log.debug(s"Import ${abos.length} Abos...")
-          abos.map {
+          abos map {
             case dl: DepotlieferungAbo =>
               insertEntity[DepotlieferungAbo, AboId](dl)
             case hl: HeimlieferungAbo =>
@@ -156,17 +156,19 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
           result = importEntityList[Bestellung, BestellungId]("Bestellungen", bestellungen, result)
           result = importEntityList[Bestellposition, BestellpositionId]("Bestellpositionen", bestellpositionen, result)
 
+          result = importEntityList[Tourlieferung, AboId]("Tourlieferungen", tourlieferungen, result)
+
           //save snapshot in entitystore actor
           log.debug(s"Save Snapshot in entitystore")
           entityStore ! EntityStore.StartSnapshotCommand
 
-          originator.map(_ ! ImportResult(None, result))
+          originator map (_ ! ImportResult(None, result))
         }
       } catch {
         case t: Throwable =>
           t.printStackTrace
           logger.warn(s"Received error while importing data {}", t)
-          originator.map(_ ! ImportResult(Option(t.getMessage), Map()))
+          originator map (_ ! ImportResult(Option(t.getMessage), Map()))
       }
 
       //force reread of db seeds after importing data
@@ -180,7 +182,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I]) = {
     log.debug(s"Import ${entities.length} $name...")
-    entities.map { entity =>
+    entities map { entity =>
       insertEntity[E, I](entity)
     }
     result + (name -> entities.length)

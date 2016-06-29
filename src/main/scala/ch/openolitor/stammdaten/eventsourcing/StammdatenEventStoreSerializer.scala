@@ -24,6 +24,7 @@ package ch.openolitor.stammdaten.eventsourcing
 
 import stamina._
 import stamina.json._
+import spray.json.lenses.JsonLenses._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.domain.EntityStore._
@@ -32,6 +33,7 @@ import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.core.eventsourcing.CoreEventStoreSerializer
+import java.util.Locale
 
 trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol with CoreEventStoreSerializer {
   //V1 persisters
@@ -106,7 +108,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
   implicit val tourIdPersister = persister[TourId]("tour-id")
 
-  implicit val projektModifyPersiter = persister[ProjektModify]("projekt-modify")
+  val projektModifyPersister = persister[ProjektModify]("projekt-modify")
+  implicit val projektModifyV2Persister = persister[ProjektModify, V2]("projekt-modify", from[V1]
+    .to[V2](_.update('sprache ! set[Locale](Locale.GERMAN))))
   implicit val projektIdPersister = persister[ProjektId]("projekt-id")
 
   implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent]("lieferplanung-abschliessen-event")
@@ -170,7 +174,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     produzentIdPersister,
     tourModifyPersiter,
     tourIdPersister,
-    projektModifyPersiter,
+    projektModifyV2Persister,
     projektIdPersister,
     abwesenheitCreatePersister,
     abwesenheitIdPersister,
