@@ -26,7 +26,7 @@ object Scripts {
   val current =
     V1Scripts.scripts ++
       OO205_DBScripts.scripts ++
+      OO215_DBScripts.scripts ++
       OO219_DBScripts.scripts ++
       OO228_DBScripts.scripts
-
 }

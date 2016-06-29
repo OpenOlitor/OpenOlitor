@@ -462,6 +462,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     val tour = copyTo[TourModify, Tour](
       create,
       "id" -> id,
+      "anzahlAbonnenten" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
