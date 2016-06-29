@@ -58,6 +58,7 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.models.AboGuthabenModify
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
 
@@ -65,7 +66,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with StammdatenJsonProtocol
     with StammdatenEventStoreSerializer
-    with BuchhaltungJsonProtocol {
+    with BuchhaltungJsonProtocol
+    with Defaults {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
@@ -139,6 +141,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           } ~
           delete(remove(aboId))
       } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "aktionen" / "guthabenanpassen") { (kundeId, aboId) =>
+        (put | post)(update[AboGuthabenModify, AboId](aboId))
+      } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten") { (_, aboId) =>
         post {
           requestInstance { request =>
@@ -156,7 +161,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           post {
             requestInstance { request =>
               entity(as[PendenzModify]) { p =>
-                created(request)(copyTo[PendenzModify, PendenzCreate](p, "kundeId" -> kundeId))
+                created(request)(copyTo[PendenzModify, PendenzCreate](p, "kundeId" -> kundeId, "generiert" -> FALSE))
               }
             }
           }

@@ -265,7 +265,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         val pendenz = copyTo[PendenzCreate, Pendenz](create, "id" -> id,
           "kundeId" -> create.kundeId,
           "kundeBezeichnung" -> kunde.bezeichnung,
-          "generiert" -> FALSE,
           "erstelldat" -> meta.timestamp,
           "ersteller" -> meta.originator,
           "modifidat" -> meta.timestamp,
