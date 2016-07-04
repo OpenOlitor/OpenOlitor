@@ -25,5 +25,9 @@ package ch.openolitor.util
 import scala.util.Random
 
 object IdUtil {
-  def positiveRandomId: Long = Random.nextLong >>> 1
+
+  /**
+   * @return next Int as Long (avoid problem on client side limitation of 53bit number).
+   */
+  def positiveRandomId: Long = Random.nextInt >>> 1
 }

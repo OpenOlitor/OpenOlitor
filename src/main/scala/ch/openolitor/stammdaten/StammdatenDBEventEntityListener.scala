@@ -109,6 +109,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ EntityModified(personId, entity: Vertriebsart, orig: Vertriebsart) => handleVertriebsartModified(entity, orig)(personId)
 
+    case e @ EntityModified(personId, entity: Auslieferung, orig: Auslieferung) if (orig.status == Erfasst && entity.status == Ausgeliefert) =>
+      handleAuslieferungAusgeliefert(entity)(personId)
+
     case x => //log.debug(s"receive unused event $x")
   }
 
@@ -294,7 +297,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         })
       }
 
-      stammdatenWriteRepository.getAboDetail(abw.aboId) match {
+      stammdatenWriteRepository.getAboDetailAusstehend(abw.aboId) match {
         case Some(abo) => {
           stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
             case Some(korb) => {
@@ -585,6 +588,31 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         )
         stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
         result
+    }
+  }
+
+  def handleAuslieferungAusgeliefert(entity: Auslieferung)(implicit personId: PersonId) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(lieferungMapping, entity.lieferungId) map { lieferung =>
+        stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
+          val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.id, vertriebsart.id, WirdGeliefert)
+
+          koerbe map { korb =>
+            val copy = korb.copy(status = Geliefert)
+            stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+
+            modifyEntity[DepotlieferungAbo, AboId](korb.aboId, { abo =>
+              abo.copy(guthaben = korb.guthabenVorLieferung - 1)
+            })
+            modifyEntity[HeimlieferungAbo, AboId](korb.aboId, { abo =>
+              abo.copy(guthaben = korb.guthabenVorLieferung - 1)
+            })
+            modifyEntity[PostlieferungAbo, AboId](korb.aboId, { abo =>
+              abo.copy(guthaben = korb.guthabenVorLieferung - 1)
+            })
+          }
+        }
+      }
     }
   }
 
