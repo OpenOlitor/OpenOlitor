@@ -74,11 +74,17 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(personId, entity: DepotlieferungAbo) =>
       handleDepotlieferungAboDeleted(entity)(personId)
       handleAboDeleted(entity)(personId)
-    case e @ EntityModified(personId, entity: DepotlieferungAbo, orig: DepotlieferungAbo) if entity.depotId != orig.depotId => handleDepotlieferungAboDepotChanged(orig.depotId, entity.depotId)(personId)
+    case e @ EntityModified(personId, entity: DepotlieferungAbo, orig: DepotlieferungAbo) if entity.depotId != orig.depotId =>
+      handleDepotlieferungAboDepotChanged(orig.depotId, entity.depotId)(personId)
+      handleAboModified(orig, entity)(personId)
     case e @ EntityDeleted(personId, entity: HeimlieferungAbo) =>
       handleHeimlieferungAboDeleted(entity)(personId)
       handleAboDeleted(entity)(personId)
-    case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) if entity.tourId != orig.tourId => handleHeimlieferungAboDepotChanged(orig.tourId, entity.tourId)(personId)
+    case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) if entity.tourId != orig.tourId =>
+      handleHeimlieferungAboDepotChanged(orig.tourId, entity.tourId)(personId)
+      handleAboModified(orig, entity)(personId)
+    case e @ EntityModified(personId, entity: PostlieferungAbo, orig: PostlieferungAbo) if entity.vertriebId != orig.vertriebId =>
+      handleAboModified(orig, entity)(personId)
     case e @ EntityCreated(personId, entity: HeimlieferungAbo) => handleHeimlieferungAboCreated(entity)(personId)
     case e @ EntityCreated(personId, entity: Abo) => handleAboCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Abo) => handleAboDeleted(entity)(personId)
@@ -210,6 +216,21 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
+  def handleAboModified(from: Abo, to: Abo)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      if (from.vertriebId != to.vertriebId) {
+        modifyEntity[Vertrieb, VertriebId](from.vertriebId, { vertrieb =>
+          log.debug(s"Remove abonnent from vertrieb:${vertrieb.id}")
+          vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos - 1)
+        })
+        modifyEntity[Vertrieb, VertriebId](to.vertriebId, { vertrieb =>
+          log.debug(s"Add abonnent to vertrieb:${vertrieb.id}")
+          vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1)
+        })
+      }
+    }
+  }
+
   def handleAboDeleted(abo: Abo)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       modifyEntity[Abotyp, AbotypId](abo.abotypId, { abotyp =>
@@ -221,19 +242,19 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         kunde.copy(anzahlAbos = kunde.anzahlAbos - 1)
       })
       modifyEntity[Vertrieb, VertriebId](abo.vertriebId, { vertrieb =>
-        log.debug(s"Add abonnent to vertrieb:${vertrieb.id}")
+        log.debug(s"Remove abonnent from vertrieb:${vertrieb.id}")
         vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos - 1)
       })
       modifyEntity[Depotlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
-        log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
+        log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1)
       })
       modifyEntity[Heimlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
-        log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
+        log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1)
       })
       modifyEntity[Postlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
-        log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
+        log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1)
       })
     }
