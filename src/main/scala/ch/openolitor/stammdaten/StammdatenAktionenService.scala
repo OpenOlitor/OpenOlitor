@@ -34,6 +34,8 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.util.Timeout
 import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.UUID
@@ -45,23 +47,24 @@ import ch.openolitor.stammdaten.models.Abgeschlossen
 import ch.openolitor.stammdaten.repositories._
 import org.joda.time.DateTime
 import ch.openolitor.core.mailservice.Mail
-import ch.openolitor.core.mailservice.MailService.SendMailCommand
-import ch.openolitor.core.mailservice.MailService.SendMailEvent
+import ch.openolitor.core.mailservice.MailService._
 
 object StammdatenAktionenService {
-  def apply(implicit sysConfig: SystemConfig, system: ActorSystem, mailService: ActorRef): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system)
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem, mailService: ActorRef): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system, mailService)
 }
 
 class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem, override val mailService: ActorRef)
-    extends StammdatenAktionenService(sysConfig) with DefaultStammdatenReadRepositoryComponent with DefaultStammdatenWriteRepositoryComponent {
+    extends StammdatenAktionenService(sysConfig, mailService) with DefaultStammdatenReadRepositoryComponent with DefaultStammdatenWriteRepositoryComponent {
 }
 
 /**
  * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
  */
-class StammdatenAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
-    with StammdatenDBMappings {
+class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
+    with StammdatenDBMappings with MailServiceReference {
   self: StammdatenReadRepositoryComponent with StammdatenWriteRepositoryComponent =>
+
+  implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
 
   val handle: Handle = {
     case LieferplanungAbschliessenEvent(meta, id: LieferplanungId) =>
@@ -119,34 +122,36 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig) extends Ev
   }
 
   def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
-    //send mails to Produzenten
-    stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
-      stammdatenReadRepository.getProduzentDetail(bestellung.produzentId) map {
-        case Some(produzent) =>
-          val bestellpositionen = stammdatenReadRepository.getBestellpositionen(bestellung.id) map {
-            bestellposition =>
-              s"""$bestellposition.produktBeschrieb $bestellposition.anzahl x $bestellposition.menge $bestellposition.einheit à $bestellposition.preisEinheit = $bestellposition.preis"""
-          }
-          val text = s"""Bestellung von Soliterre an ${produzent.name} ${produzent.vorname}:
-          
-          Lieferung: ${bestellung.datum}
-          
-          Bestellpositionen:
-          ${bestellpositionen}
-          
-          Summe [CHF]: ${bestellung.preisTotal}
-          
-          """
+    DB localTx { implicit session =>
+      //send mails to Produzenten
+      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+        stammdatenReadRepository.getProduzentDetail(bestellung.produzentId) map {
+          case Some(produzent) =>
+            val bestellpositionen = stammdatenReadRepository.getBestellpositionen(bestellung.id) map {
+              bestellposition =>
+                s"""$bestellposition.produktBeschrieb $bestellposition.anzahl x $bestellposition.menge $bestellposition.einheit à $bestellposition.preisEinheit = $bestellposition.preis"""
+            }
+            val text = s"""Bestellung von Soliterre an ${produzent.name} ${produzent.vorname}:
+            
+            Lieferung: ${bestellung.datum}
+            
+            Bestellpositionen:
+            ${bestellpositionen}
+            
+            Summe [CHF]: ${bestellung.preisTotal}
+            
+            """
 
-          val mail = Mail(1, produzent.email, None, None, "Bestellung " + bestellung.datum, text)
+            val mail = Mail(1, produzent.email, None, None, "Bestellung " + bestellung.datum, text)
 
-          mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
-            case _: SendMailEvent =>
-            // ok
-            case other =>
-              logger.debug(s"Sending Mail failed resulting in $other")
-          }
-        case None => logger.debug(s"Produzent was not found with id :$bestellung.produzentId")
+            mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
+              case _: SendMailEvent =>
+              // ok
+              case other =>
+                logger.debug(s"Sending Mail failed resulting in $other")
+            }
+          case None => logger.debug(s"Produzent was not found with id :$bestellung.produzentId")
+        }
       }
     }
   }
