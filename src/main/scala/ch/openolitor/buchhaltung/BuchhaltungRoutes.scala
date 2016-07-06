@@ -87,6 +87,17 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
           delete(remove(id)) ~
           (put | post)(update[RechnungModify, RechnungId](id))
       } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "download") { id =>
+        (get)(
+          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { x =>
+            x.flatMap { rechnung =>
+              rechnung.fileStoreId.map { fileStoreId =>
+                download(GeneriertRechnung, fileStoreId)
+              }
+            }.getOrElse(complete(StatusCodes.BadRequest))
+          }
+        )
+      } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "verschicken") { id =>
         (post)(verschicken(id))
       } ~
@@ -191,10 +202,12 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def rechnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
     generateReport[RechnungId](Some(id), generateRechnungReports _)(RechnungId.apply)
   }
 
   def rechnungBerichte()(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
     generateReport[RechnungId](None, generateRechnungReports _)(RechnungId.apply)
   }
 }

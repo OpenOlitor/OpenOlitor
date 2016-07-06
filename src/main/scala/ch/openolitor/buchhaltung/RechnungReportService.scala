@@ -40,16 +40,18 @@ import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.stammdaten.models.ProjektId
 import ch.openolitor.stammdaten.models.ProjektReport
+import ch.openolitor.core.models.PersonId
 
 trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol {
   self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
-  def generateRechnungReports(config: ReportConfig[RechnungId]): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
+  def generateRechnungReports(config: ReportConfig[RechnungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
     generateReports[RechnungId, RechnungDetailReport](
       config,
       rechungenById,
       VorlageRechnung,
       None,
+      _.id,
       GeneriertRechnung,
       x => Some(x.id.id.toString),
       name,

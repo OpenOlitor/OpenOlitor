@@ -26,6 +26,8 @@ import akka.actor._
 import scala.util._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.filestore.FileStore
+import ch.openolitor.core.models.PersonId
+import ch.openolitor.core.Boot
 
 object ReportProcessorActor {
   def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportProcessorActor], fileStore, sysConfig)
@@ -40,16 +42,16 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
   import ReportProcessorActor._
   import ReportSystem._
 
-  var stats = GenerateReportsStats(None, 0, 0, 0)
+  var stats = GenerateReportsStats(Boot.systemPersonId, None, 0, 0, 0)
   var origSender: Option[ActorRef] = None
 
   val receive: Receive = {
-    case GenerateReports(file, data, false, None) =>
-      processReports(file, data, row => SingleDocumentReportProcessorActor.props(row.name, row.locale))
-    case GenerateReports(file, data, true, None) =>
-      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(sysConfig, row.name, row.locale))
-    case GenerateReports(file, data, true, Some(option)) =>
-      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, sysConfig, option.fileType, row.id, row.name, row.locale))
+    case GenerateReports(originator, file, data, false, None) =>
+      processReports(file, data, row => SingleDocumentReportProcessorActor.props(row.name, row.locale))(originator)
+    case GenerateReports(originator, file, data, true, None) =>
+      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(sysConfig, row.name, row.locale))(originator)
+    case GenerateReports(originator, file, data, true, Some(option)) =>
+      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, sysConfig, option.fileType, row.fileStoreId, row.name, row.locale))(originator)
   }
 
   val collectingResults: Receive = {
@@ -57,15 +59,21 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
       receivedResult(result)
   }
 
+  def publish(result: AnyRef) = {
+    //publish to eventstream as well
+    context.system.eventStream.publish(result)
+    //send result direct to client
+    origSender map (_ ! result)
+  }
+
   def receivedResult(result: ReportResult) = {
     result match {
       case result: ReportSuccess =>
         stats = stats.copy(numberOfSuccess = stats.numberOfSuccess + 1)
-        origSender map (_ ! SingleReportResult(stats, Right(result)))
-      //send result direct to client
+        publish(SingleReportResult(result.id, stats, Right(result)))
       case error: ReportError =>
         stats = stats.copy(numberOfFailures = stats.numberOfFailures + 1)
-        origSender map (_ ! SingleReportResult(stats, Left(error)))
+        publish(SingleReportResult(error.id, stats, Left(error)))
     }
 
     stats = stats.copy(numberOfReportsInProgress = stats.numberOfReportsInProgress - 1)
@@ -77,14 +85,14 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
     }
   }
 
-  def processReports(file: Array[Byte], data: ReportData[_], f: ReportDataRow => Props) = {
+  def processReports(file: Array[Byte], data: ReportData[_], f: ReportDataRow => Props)(originator: PersonId) = {
     origSender = Some(sender)
-    stats = stats.copy(jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
+    stats = stats.copy(originator = originator, jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
 
     for {
       (row, index) <- data.rows.zipWithIndex
     } yield {
-      context.actorOf(f(row), s"report-$index-${System.currentTimeMillis}") ! GenerateReport(file, row.value)
+      context.actorOf(f(row), s"report-$index-${System.currentTimeMillis}") ! GenerateReport(row.id, file, row.value)
     }
 
     context become collectingResults

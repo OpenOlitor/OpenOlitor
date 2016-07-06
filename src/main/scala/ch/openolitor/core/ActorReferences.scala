@@ -25,10 +25,25 @@ package ch.openolitor.core
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 
-trait ActorReferences {
+trait EntityStoreReference {
   val entityStore: ActorRef
+}
+
+trait EventStoreReference {
   val eventStore: ActorRef
+}
+
+trait ReportSystemReference {
   val reportSystem: ActorRef
-  val system: ActorSystem
+}
+
+trait MailServiceReference {
   val mailService: ActorRef
+}
+
+trait ActorSystemReference {
+  val system: ActorSystem
+}
+
+trait ActorReferences extends ActorSystemReference with EntityStoreReference with EventStoreReference with ReportSystemReference with MailServiceReference {
 }

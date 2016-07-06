@@ -49,15 +49,15 @@ class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorL
   }
 
   val waitingForResult: Receive = {
-    case SingleReportResult(_, Left(error)) =>
+    case SingleReportResult(_, _, Left(error)) =>
       errors = errors :+ error
-    case SingleReportResult(_, Right(result: ReportResultWithDocument)) =>
+    case SingleReportResult(id, _, Right(result: ReportResultWithDocument)) =>
       log.debug(s"Add Zip Entry:${result.name}")
       zipBuilder.addZipEntry(result.name, result.document) match {
         case Success(r) =>
         case Failure(error) =>
           log.warning(s"Coulnd't att document to  zip file:$error")
-          errors = errors :+ ReportError(s"Dokument konnte nicht zum Zip hinzugefügt werde:$error")
+          errors = errors :+ ReportError(Some(id), s"Dokument konnte nicht zum Zip hinzugefügt werde:$error")
       }
     case result: GenerateReportsStats =>
       //finished, send back zip result

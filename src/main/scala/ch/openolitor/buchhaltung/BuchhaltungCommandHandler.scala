@@ -54,6 +54,8 @@ object BuchhaltungCommandHandler {
   case class RechnungBezahlenCommand(originator: PersonId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
   case class RechnungStornierenCommand(originator: PersonId, id: RechnungId) extends UserCommand
 
+  case class RechnungPDFStoredCommand(originator: PersonId, id: RechnungId, fileStoreId: String) extends UserCommand
+
   case class RechnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungBezahltEvent(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt) extends PersistentEvent with JSONSerializable
@@ -65,6 +67,8 @@ object BuchhaltungCommandHandler {
 
   case class ZahlungsImportCreatedEvent(meta: EventMetadata, entity: ZahlungsImportCreate) extends PersistentEvent with JSONSerializable
   case class ZahlungsEingangErledigtEvent(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt) extends PersistentEvent with JSONSerializable
+
+  case class RechnungPDFStoredEvent(meta: EventMetadata, id: RechnungId, fileStoreId: String) extends PersistentEvent with JSONSerializable
 }
 
 trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware with AsyncConnectionPoolContextAware {
@@ -167,6 +171,9 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
       } else {
         Success(successfuls flatMap (_.get))
       }
+
+    case RechnungPDFStoredCommand(personId, id, fileStoreId) => idFactory => meta =>
+      Success(Seq(RechnungPDFStoredEvent(meta, id, fileStoreId)))
 
     /*
        * Insert command handling
