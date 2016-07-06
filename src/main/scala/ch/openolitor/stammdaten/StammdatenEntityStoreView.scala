@@ -33,7 +33,7 @@ object StammdatenEntityStoreView {
   def props(mailService: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenEntityStoreView], mailService, sysConfig, system)
 }
 
-class DefaultStammdatenEntityStoreView(implicit val sysConfig: SystemConfig, implicit val system: ActorSystem, override val mailService: ActorRef) extends StammdatenEntityStoreView
+class DefaultStammdatenEntityStoreView(override val mailService: ActorRef, implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends StammdatenEntityStoreView
   with DefaultStammdatenWriteRepositoryComponent
 
 /**
