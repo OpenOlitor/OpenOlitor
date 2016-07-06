@@ -42,6 +42,7 @@ class SingleDocumentReportPDFProcessorActor(sysConfig: SystemConfig, name: Strin
   val generatePdfActor = context.actorOf(PDFGeneratorActor.props(sysConfig, name), "pdf-" + System.currentTimeMillis)
 
   var origSender: Option[ActorRef] = None
+  var id: Any = null
 
   val receive: Receive = {
     case cmd: GenerateReport =>
@@ -51,7 +52,8 @@ class SingleDocumentReportPDFProcessorActor(sysConfig: SystemConfig, name: Strin
   }
 
   val waitingForDocumentResult: Receive = {
-    case DocumentReportResult(document, _) =>
+    case DocumentReportResult(id, document, _) =>
+      this.id = id
       generatePdfActor ! GeneratePDF(document)
       context become waitingForPdfResult
     case e: ReportError =>
@@ -62,10 +64,10 @@ class SingleDocumentReportPDFProcessorActor(sysConfig: SystemConfig, name: Strin
 
   val waitingForPdfResult: Receive = {
     case PDFResult(pdf) =>
-      origSender map (_ ! PdfReportResult(pdf, name + ".pdf"))
+      origSender map (_ ! PdfReportResult(id, pdf, name + ".pdf"))
       self ! PoisonPill
     case PDFError(error) =>
-      origSender map (_ ! ReportError(error))
+      origSender map (_ ! ReportError(Some(id), error))
       self ! PoisonPill
   }
 }

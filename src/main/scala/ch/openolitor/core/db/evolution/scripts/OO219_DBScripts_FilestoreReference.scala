@@ -20,57 +20,29 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.reporting
+package ch.openolitor.core.db.evolution.scripts
 
-import akka.actor._
-import akka.util._
-import scala.concurrent.duration._
-import java.io.InputStream
-import org.odftoolkit.simple._
-import org.odftoolkit.simple.common.field._
-import scala.util._
-import spray.json._
-import java.io._
-import java.nio._
-import ch.openolitor.util.ByteBufferBackedInputStream
-import java.util.Locale
-
-object SingleDocumentReportProcessorActor {
-  def props(name: String, locale: Locale): Props = Props(classOf[SingleDocumentReportProcessorActor], name, locale)
-}
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 /**
- * This generates a single report documet from a given json data object
+ *
  */
-class SingleDocumentReportProcessorActor(name: String, locale: Locale) extends Actor with ActorLogging with DocumentProcessor {
-  import ReportSystem._
-
-  var id: Any = null
-
-  val receive: Receive = {
-    case GenerateReport(id, file, data) =>
-      this.id = id
-      generateReport(file, data) match {
-        case Success(result) => {
-          sender ! DocumentReportResult(id, result, name + ".odt")
-        }
-        case Failure(error) => {
-          error.printStackTrace()
-          log.warning(s"Couldn't generate report document {}", error)
-          sender ! ReportError(Some(id), error.getMessage)
-        }
-      }
-      self ! PoisonPill
-  }
-
-  private def generateReport(file: Array[Byte], data: JsObject): Try[Array[Byte]] = {
-    for {
-      doc <- Try(TextDocument.loadDocument(new ByteArrayInputStream(file)))
-      result <- processDocument(doc, data, locale)
-    } yield {
-      val baos = new ByteArrayOutputStream()
-      doc.save(baos)
-      baos.toByteArray
+object OO219_DBScripts_FilestoreReference {
+  val BuchhaltungScripts = new Script with LazyLogging with BuchhaltungDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"add column fileStoreId to rechnung...")
+      // add column sprache to projekt
+      sql"ALTER TABLE ${rechnungMapping.table} ADD COLUMN IF NOT EXISTS file_store_id varchar(20) after esr_nummer".execute.apply()
+      Success(true)
     }
   }
+
+  val scripts = Seq(BuchhaltungScripts)
 }

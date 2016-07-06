@@ -50,9 +50,9 @@ class FileStoreReportResultCollector(reportSystem: ActorRef) extends Actor with 
   }
 
   val waitingForResult: Receive = {
-    case SingleReportResult(_, Left(error)) =>
+    case SingleReportResult(_, _, Left(error)) =>
       errors = errors :+ error
-    case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) =>
+    case SingleReportResult(_, _, Right(StoredPdfReportResult(_, fileType, id))) =>
       storeResults = storeResults :+ FileStoreFileReference(fileType, id)
     case result: GenerateReportsStats =>
       //finished, send back collected result

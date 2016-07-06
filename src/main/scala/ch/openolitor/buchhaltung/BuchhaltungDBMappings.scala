@@ -86,6 +86,7 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
         column.status -> parameter(entity.status),
         column.referenzNummer -> parameter(entity.referenzNummer),
         column.esrNummer -> parameter(entity.esrNummer),
+        column.fileStoreId -> parameter(entity.fileStoreId),
         column.strasse -> parameter(entity.strasse),
         column.hausNummer -> parameter(entity.hausNummer),
         column.adressZusatz -> parameter(entity.adressZusatz),

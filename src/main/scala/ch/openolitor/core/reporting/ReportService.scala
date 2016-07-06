@@ -42,6 +42,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import ch.openolitor.util.InputStreamUtil._
 import java.util.Locale
+import ch.openolitor.core.models.PersonId
 
 sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
@@ -76,20 +77,21 @@ trait ReportService extends LazyLogging {
     validationFunction: Seq[I] => Future[(Seq[ValidationError[I]], Seq[E])],
     vorlageType: FileType,
     vorlageId: Option[String],
+    idFactory: E => Any,
     ablageType: FileType,
     ablageIdFactory: E => Option[String],
     nameFactory: E => String,
     localeFactory: E => Locale,
     jobId: JobId = JobId()
-  ): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
+  )(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
     logger.debug(s"Validate ids:${config.ids}")
     validationFunction(config.ids) flatMap {
       case (errors, Seq()) =>
-        Future { Right(ReportServiceResult(jobId, errors, ReportError(errors.mkString(",")))) }
+        Future { Right(ReportServiceResult(jobId, errors, ReportError(None, errors.mkString(",")))) }
       case (errors, result) =>
-        logger.debug(s"Valdidation errors:$errors, process result records:${result.length}")
+        logger.debug(s"Validation errors:$errors, process result records:${result.length}")
         val ablageParams = if (config.pdfAblegen) Some(FileStoreParameters[E](ablageType)) else None
-        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams).run map {
+        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, idFactory, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams).run map {
           case -\/(e) =>
             logger.warn(s"Failed generating report {}", e.getMessage)
             Left(e)
@@ -98,23 +100,23 @@ trait ReportService extends LazyLogging {
     }
   }
 
-  def generateDocument[E](vorlage: BerichtsVorlage, fileType: FileType, id: Option[String], data: ReportData[E],
-    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = {
+  def generateDocument[I, E](vorlage: BerichtsVorlage, fileType: FileType, id: Option[String], data: ReportData[E],
+    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])(implicit personId: PersonId): ServiceResult[ReportResult] = {
     for {
       temp <- loadBerichtsvorlage(vorlage, fileType, id)
       source <- generateReport(temp, data, pdfGenerieren, pdfAblage)
     } yield source
   }
 
-  def generateReport[E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]]): ServiceResult[ReportResult] = EitherT {
+  def generateReport[I, E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])(implicit personId: PersonId): ServiceResult[ReportResult] = EitherT {
     implicit val timeout = Timeout(60 seconds)
     val collector =
       if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem)
-      else if (pdfGenerieren) FileStoreReportResultCollector.props(reportSystem)
+      else if (pdfAblage.isDefined) FileStoreReportResultCollector.props(reportSystem)
       else ZipReportResultCollector.props(reportSystem)
 
     val ref = actorSystem.actorOf(collector)
-    (ref ? GenerateReports(vorlage, data, pdfGenerieren, pdfAblage)).map(_.asInstanceOf[ReportResult].right)
+    (ref ? GenerateReports(personId, vorlage, data, pdfGenerieren, pdfAblage)).map(_.asInstanceOf[ReportResult].right)
   }
 
   def loadBerichtsvorlage(vorlage: BerichtsVorlage, fileType: FileType, id: Option[String]): ServiceResult[Array[Byte]] = {

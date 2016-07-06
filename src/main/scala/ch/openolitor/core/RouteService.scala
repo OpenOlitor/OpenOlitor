@@ -357,7 +357,10 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  protected def generateReport[I](id: Option[I], reportFunction: ReportConfig[I] => Future[Either[ServiceFailed, ReportServiceResult[I]]])(idFactory: Long => I)(implicit subject: Subject) = {
+  protected def generateReport[I](
+    id: Option[I],
+    reportFunction: ReportConfig[I] => Future[Either[ServiceFailed, ReportServiceResult[I]]]
+  )(idFactory: Long => I)(implicit subject: Subject) = {
     uploadOpt("vorlage") { formData => file =>
       //use custom or default template whether content was delivered or not
       (for {
@@ -389,12 +392,13 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
             complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
           case Right(result) =>
             result.result match {
-              case SingleReportResult(_, Left(ReportError(error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
-              case SingleReportResult(_, Right(DocumentReportResult(result, name))) => streamOdt(name, result)
-              case SingleReportResult(_, Right(PdfReportResult(result, name))) => streamPdf(name, result)
-              case SingleReportResult(_, Right(StoredPdfReportResult(fileType, id))) if downloadFile => download(fileType, id.id)
-              case SingleReportResult(_, Right(result: StoredPdfReportResult)) =>
-                complete(result)
+              case SingleReportResult(_, _, Left(ReportError(_, error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
+              case SingleReportResult(_, _, Right(DocumentReportResult(_, result, name))) => streamOdt(name, result)
+              case SingleReportResult(_, _, Right(PdfReportResult(_, result, name))) => streamPdf(name, result)
+              case SingleReportResult(_, _, Right(StoredPdfReportResult(_, fileType, fileStoreId))) if downloadFile => download(fileType, fileStoreId.id)
+              case SingleReportResult(_, _, Right(result: StoredPdfReportResult)) =>
+                //complete(result)
+                complete("")
               case ZipReportResult(_, errors, zip) if !zip.isDefined =>
                 val errorString: String = errors.map(_.error).mkString("\n")
                 complete(StatusCodes.BadRequest, errorString)
@@ -404,7 +408,9 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
                 zip.map(result => streamZip("Report_" + System.currentTimeMillis + ".zip", result)) getOrElse (complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden, es wurden keine Dateien erzeugt"))
               case BatchStoredPdfReportResult(_, errors, results) if downloadFile =>
                 downloadAsZip("Report_" + System.currentTimeMillis + ".zip", results)
-              case result: BatchStoredPdfReportResult => complete(result)
+              case result: BatchStoredPdfReportResult =>
+                //complete(result)
+                complete("")
               case x =>
                 logger.error(s"Received unexpected result:$x")
                 complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden")

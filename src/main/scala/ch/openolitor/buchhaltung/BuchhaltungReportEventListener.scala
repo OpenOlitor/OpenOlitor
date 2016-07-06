@@ -20,57 +20,50 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.reporting
+package ch.openolitor.buchhaltung
 
 import akka.actor._
-import akka.util._
-import scala.concurrent.duration._
-import java.io.InputStream
-import org.odftoolkit.simple._
-import org.odftoolkit.simple.common.field._
-import scala.util._
+import ch.openolitor.core.models._
+import ch.openolitor.core.ws._
 import spray.json._
-import java.io._
-import java.nio._
-import ch.openolitor.util.ByteBufferBackedInputStream
-import java.util.Locale
+import ch.openolitor.buchhaltung.models._
+import ch.openolitor.core.db._
+import scalikejdbc._
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.Boot
+import ch.openolitor.core.repositories.SqlBinder
+import scala.concurrent.ExecutionContext.Implicits.global
+import ch.openolitor.core.EntityStoreReference
+import ch.openolitor.core.reporting.ReportSystem._
+import ch.openolitor.core.filestore.FileStoreFileId
 
-object SingleDocumentReportProcessorActor {
-  def props(name: String, locale: Locale): Props = Props(classOf[SingleDocumentReportProcessorActor], name, locale)
+object BuchhaltungReportEventListener extends DefaultJsonProtocol {
+  def props(entityStore: ActorRef): Props = Props(classOf[DefaultBuchhaltungReportEventListener], entityStore)
 }
 
+class DefaultBuchhaltungReportEventListener(override val entityStore: ActorRef) extends BuchhaltungReportEventListener
+
 /**
- * This generates a single report documet from a given json data object
+ * Listen on Report results to persist ids
  */
-class SingleDocumentReportProcessorActor(name: String, locale: Locale) extends Actor with ActorLogging with DocumentProcessor {
-  import ReportSystem._
-
-  var id: Any = null
-
-  val receive: Receive = {
-    case GenerateReport(id, file, data) =>
-      this.id = id
-      generateReport(file, data) match {
-        case Success(result) => {
-          sender ! DocumentReportResult(id, result, name + ".odt")
-        }
-        case Failure(error) => {
-          error.printStackTrace()
-          log.warning(s"Couldn't generate report document {}", error)
-          sender ! ReportError(Some(id), error.getMessage)
-        }
-      }
-      self ! PoisonPill
+abstract class BuchhaltungReportEventListener extends Actor with ActorLogging with BuchhaltungDBMappings with EntityStoreReference {
+  override def preStart() {
+    super.preStart()
+    context.system.eventStream.subscribe(self, classOf[SingleReportResult])
   }
 
-  private def generateReport(file: Array[Byte], data: JsObject): Try[Array[Byte]] = {
-    for {
-      doc <- Try(TextDocument.loadDocument(new ByteArrayInputStream(file)))
-      result <- processDocument(doc, data, locale)
-    } yield {
-      val baos = new ByteArrayOutputStream()
-      doc.save(baos)
-      baos.toByteArray
-    }
+  override def postStop() {
+    context.system.eventStream.unsubscribe(self, classOf[SingleReportResult])
+    super.postStop()
+  }
+
+  val receive: Receive = {
+    case SingleReportResult(id: RechnungId, stats, Right(StoredPdfReportResult(_, fileType, fileStoreId))) =>
+      handleRechnungPDFStored(stats.originator, id, fileStoreId)
+    case x =>
+  }
+
+  def handleRechnungPDFStored(originator: PersonId, id: RechnungId, fileStoreId: FileStoreFileId) = {
+    entityStore ! BuchhaltungCommandHandler.RechnungPDFStoredCommand(originator, id, fileStoreId.id)
   }
 }

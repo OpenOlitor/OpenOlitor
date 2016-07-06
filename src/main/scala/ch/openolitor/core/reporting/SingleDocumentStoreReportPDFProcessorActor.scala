@@ -21,16 +21,18 @@ class SingleDocumentStoreReportPDFProcessorActor(fileStore: FileStore, sysConfig
   val fileStoreActor = context.actorOf(FileStoreActor.props(fileStore), "file-store-" + System.currentTimeMillis)
 
   var origSender: Option[ActorRef] = None
+  var id: Any = null
 
   val receive: Receive = {
     case cmd: GenerateReport =>
       origSender = Some(sender)
+      id = cmd.id
       generatePdfActor ! cmd
       context become waitingForDocumentResult
   }
 
   val waitingForDocumentResult: Receive = {
-    case PdfReportResult(result, name) =>
+    case PdfReportResult(id, result, name) =>
       fileStoreActor ! StoreFile(fileType.bucket, Some(name), FileStoreFileMetadata(name, fileType), result)
       context become waitigForStoreCompleted
     case e: ReportError =>
@@ -40,10 +42,10 @@ class SingleDocumentStoreReportPDFProcessorActor(fileStore: FileStore, sysConfig
 
   val waitigForStoreCompleted: Receive = {
     case FileStoreError(message) =>
-      origSender map (_ ! ReportError(message))
+      origSender map (_ ! ReportError(Some(id), message))
       self ! PoisonPill
     case FileStoreFileMetadata(name, _) =>
-      origSender map (_ ! StoredPdfReportResult(fileType, FileStoreFileId(name)))
+      origSender map (_ ! StoredPdfReportResult(id, fileType, FileStoreFileId(name)))
       self ! PoisonPill
 
   }

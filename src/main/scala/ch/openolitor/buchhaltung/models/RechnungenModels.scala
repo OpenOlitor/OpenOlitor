@@ -27,7 +27,7 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.scalax.Tuple23
+import ch.openolitor.core.scalax.Tuple24
 import java.text.DecimalFormat
 
 /**
@@ -83,6 +83,7 @@ case class Rechnung(
   status: RechnungStatus,
   referenzNummer: String,
   esrNummer: String,
+  fileStoreId: Option[String],
   // rechnungsadresse
   strasse: String,
   hausNummer: Option[String],
@@ -98,7 +99,7 @@ case class Rechnung(
 
 object Rechnung {
   def unapply(entity: Rechnung) = {
-    Some(Tuple23(
+    Some(Tuple24(
       entity.id,
       entity.kundeId,
       entity.aboId,
@@ -113,6 +114,7 @@ object Rechnung {
       entity.status,
       entity.referenzNummer,
       entity.esrNummer,
+      entity.fileStoreId,
       entity.strasse,
       entity.hausNummer,
       entity.adressZusatz,
@@ -141,6 +143,7 @@ case class RechnungDetail(
   status: RechnungStatus,
   referenzNummer: String,
   esrNummer: String,
+  fileStoreId: Option[String],
   // rechnungsadresse
   strasse: String,
   hausNummer: Option[String],
