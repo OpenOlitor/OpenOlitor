@@ -48,13 +48,14 @@ import ch.openolitor.stammdaten.repositories._
 import org.joda.time.DateTime
 import ch.openolitor.core.mailservice.Mail
 import ch.openolitor.core.mailservice.MailService._
+import org.joda.time.format.DateTimeFormat
 
 object StammdatenAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem, mailService: ActorRef): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system, mailService)
 }
 
 class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem, override val mailService: ActorRef)
-    extends StammdatenAktionenService(sysConfig, mailService) with DefaultStammdatenReadRepositoryComponent with DefaultStammdatenWriteRepositoryComponent {
+    extends StammdatenAktionenService(sysConfig, mailService) with DefaultStammdatenWriteRepositoryComponent {
 }
 
 /**
@@ -62,7 +63,7 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
  */
 class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
     with StammdatenDBMappings with MailServiceReference {
-  self: StammdatenReadRepositoryComponent with StammdatenWriteRepositoryComponent =>
+  self: StammdatenWriteRepositoryComponent =>
 
   implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
 
@@ -122,26 +123,25 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
+    val format = DateTimeFormat.forPattern("dd.MM.yyyy")
+
     DB localTx { implicit session =>
       //send mails to Produzenten
-      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
-        stammdatenReadRepository.getProduzentDetail(bestellung.produzentId) map {
-          case Some(produzent) =>
-            val bestellpositionen = stammdatenReadRepository.getBestellpositionen(bestellung.id) map {
+      stammdatenWriteRepository.getProjekt map { projekt =>
+        stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+          stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
+            val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
               bestellposition =>
-                s"""$bestellposition.produktBeschrieb $bestellposition.anzahl x $bestellposition.menge $bestellposition.einheit à $bestellposition.preisEinheit = $bestellposition.preis"""
+                s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.get} = ${bestellposition.preis.get} ${projekt.waehrung}"""
             }
-            val text = s"""Bestellung von Soliterre an ${produzent.name} ${produzent.vorname}:
-            
-            Lieferung: ${bestellung.datum}
-            
-            Bestellpositionen:
-            ${bestellpositionen}
-            
-            Summe [CHF]: ${bestellung.preisTotal}
-            
-            """
+            val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.get}:
+              
+Lieferung: ${format.print(bestellung.datum)}
 
+Bestellpositionen:
+${bestellpositionen.mkString("\n")}
+
+Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
             val mail = Mail(1, produzent.email, None, None, "Bestellung " + bestellung.datum, text)
 
             mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
@@ -150,7 +150,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
               case other =>
                 logger.debug(s"Sending Mail failed resulting in $other")
             }
-          case None => logger.debug(s"Produzent was not found with id :$bestellung.produzentId")
+          }
         }
       }
     }
