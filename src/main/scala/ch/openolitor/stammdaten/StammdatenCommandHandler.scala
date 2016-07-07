@@ -59,7 +59,11 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Offen =>
-              Success(Seq(LieferplanungAbschliessenEvent(meta, id)))
+              val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
+              val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungenCreate(id))
+              val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
+              val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
+              Success(Seq(insertEvent, lpAbschliessenEvent, bestellungVersendenEvent))
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
