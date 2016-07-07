@@ -142,7 +142,7 @@ Bestellpositionen:
 ${bestellpositionen.mkString("\n")}
 
 Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
-            val mail = Mail(1, produzent.email, None, None, "Bestellung " + bestellung.datum, text)
+            val mail = Mail(1, produzent.email, None, None, "Bestellung " + format.print(bestellung.datum), text)
 
             mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
               case _: SendMailEvent =>
