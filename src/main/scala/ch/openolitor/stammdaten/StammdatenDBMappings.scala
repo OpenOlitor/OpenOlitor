@@ -87,7 +87,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
   implicit val liefereinheitypeBinder: TypeBinder[Liefereinheit] = string.map(Liefereinheit.apply)
   implicit val liefersaisonTypeBinder: TypeBinder[Liefersaison] = string.map(Liefersaison.apply)
-  implicit val anredeTypeBinder: TypeBinder[Anrede] = string.map(Anrede.apply)
+  implicit val anredeTypeBinder: TypeBinder[Option[Anrede]] = string.map(Anrede.apply)
   implicit val fristOptionTypeBinder: TypeBinder[Option[Frist]] = string.map {
     case fristeinheitPattern(wert, "W") => Some(Frist(wert.toInt, Wochenfrist))
     case fristeinheitPattern(wert, "M") => Some(Frist(wert.toInt, Monatsfrist))

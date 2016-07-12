@@ -94,6 +94,21 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
+  implicit val anredeFormat = new JsonFormat[Anrede] {
+    def write(obj: Anrede): JsValue =
+      obj match {
+        case Herr => JsString("Herr")
+        case Frau => JsString("Frau")
+      }
+
+    def read(json: JsValue): Anrede =
+      json match {
+        case JsString("Herr") => Herr
+        case JsString("Frau") => Frau
+        case pe => sys.error(s"Unknown Anrede:$pe")
+      }
+  }
+
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
@@ -359,15 +374,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       } else {
         json.convertTo[PostlieferungAboModify]
       }
-    }
-  }
-
-  implicit val anredeFormat = new JsonFormat[Anrede] {
-    def write(obj: Anrede): JsValue = JsString(obj.productPrefix)
-
-    def read(json: JsValue): Anrede = json match {
-      case JsString(value) => Anrede(value)
-      case pt => sys.error(s"Unknown anrede:$pt")
     }
   }
 
