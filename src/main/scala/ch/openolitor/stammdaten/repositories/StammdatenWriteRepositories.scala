@@ -75,6 +75,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getDepotAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[DepotAuslieferung]
   def getTourAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[TourAuslieferung]
   def getPostAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[PostAuslieferung]
+  def getDepotlieferungAbosByDepot(id: DepotId)(implicit session: DBSession): List[DepotlieferungAbo]
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with AkkaEventStream with StammdatenRepositoryQueries {
@@ -306,5 +307,9 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
 
   def getPostAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[PostAuslieferung] = {
     getPostAuslieferungQuery(lieferungId).apply()
+  }
+
+  def getDepotlieferungAbosByDepot(id: DepotId)(implicit session: DBSession): List[DepotlieferungAbo] = {
+    getDepotlieferungAbosByDepotQuery(id).apply()
   }
 }

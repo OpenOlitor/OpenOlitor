@@ -118,6 +118,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(personId, entity: Auslieferung, orig: Auslieferung) if (orig.status == Erfasst && entity.status == Ausgeliefert) =>
       handleAuslieferungAusgeliefert(entity)(personId)
 
+    case e @ EntityModified(userId, entity: Depot, orig: Depot) => handleDepotModified(entity, orig)(userId)
+
     case x => //log.debug(s"receive unused event $x")
   }
 
@@ -646,6 +648,21 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) {
       //Lieferung was removed in a Lieferplanung
       removeKoerbe(lieferung.id)
+    }
+  }
+
+  def handleDepotModified(depot: Depot, orig: Depot)(implicit personId: PersonId) = {
+    logger.debug(s"handleDepotModified: depot:\depot\norig:$orig")
+    if (depot.name != orig.name) {
+      //Depot name was changed. Replace it in Abos
+      DB localTx { implicit session =>
+        stammdatenWriteRepository.getDepotlieferungAbosByDepot(depot.id) map { abo =>
+          val copy = abo.copy(
+            depotName = depot.name
+          )
+          stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+        }
+      }
     }
   }
 
