@@ -224,7 +224,7 @@ class DataImportParser extends Actor with ActorLogging {
         Person(
           id = PersonId(id),
           kundeId = kundeId,
-          anrede = row.value[Option[String]](indexAnrede) map (Anrede.apply),
+          anrede = row.value[Option[String]](indexAnrede) map (r => Anrede(r) getOrElse (throw ParseException(s"Unbekannte Anrede $r bei Person Nr. $id"))),
           name = row.value[String](indexName),
           vorname = row.value[String](indexVorname),
           email = row.value[Option[String]](indexEmail),
