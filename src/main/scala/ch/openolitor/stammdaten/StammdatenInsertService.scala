@@ -557,7 +557,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungenCreate)(implicit personId: PersonId = meta.originator) = {
     DB localTx { implicit session =>
-      //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is added)
+      //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
       stammdatenWriteRepository.getBestellpositionenByLieferplan(create.lieferplanungId) foreach {
         position => stammdatenWriteRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)
       }
@@ -577,7 +577,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                       lieferposition.produzentId,
                       lieferposition.produzentKurzzeichen,
                       lieferplanung.id,
-                      Offen,
+                      Abgeschlossen,
                       lieferung.datum,
                       None,
                       0,
@@ -589,7 +589,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     newBs += (lieferposition.produzentId, create.lieferplanungId, lieferung.datum) -> bestellung
                   }
 
-                  newBs.get((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) map { bestellung =>
+                  val modBestellung = newBs.get((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) map { bestellung =>
                     //fetch or create bestellposition by produkt
                     val bp = newBPs.get((bestellung.id, lieferposition.produktId)) match {
                       case Some(existingBP) => {
@@ -630,6 +630,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                       bestellung,
                       "preisTotal" -> newPreisTotal
                     )
+                    newBs += ((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) -> copyB
                   }
                 }
               }

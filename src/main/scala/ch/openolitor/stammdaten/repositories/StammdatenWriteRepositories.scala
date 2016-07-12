@@ -56,6 +56,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit session: DBSession): List[Lieferposition]
   def getUngeplanteLieferungen(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung]
   def getProduktProduzenten(id: ProduktId)(implicit session: DBSession): List[ProduktProduzent]
+  def getProduzentDetail(id: ProduzentId)(implicit session: DBSession): Option[Produzent]
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit session: DBSession): Option[Produzent]
   def getProduktProduktekategorien(id: ProduktId)(implicit session: DBSession): List[ProduktProduktekategorie]
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit session: DBSession): Option[Produktekategorie]
@@ -66,6 +67,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getBestellungen(id: LieferplanungId)(implicit session: DBSession): List[Bestellung]
+  def getBestellpositionen(id: BestellungId)(implicit session: DBSession): List[Bestellposition]
   def getVertriebsarten(vertriebId: VertriebId)(implicit session: DBSession): List[VertriebsartDetail]
 
   def getTourlieferungenByKunde(id: KundeId)(implicit session: DBSession): List[Tourlieferung]
@@ -212,6 +214,10 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     getProduktProduzentenQuery(id).apply()
   }
 
+  def getProduzentDetail(id: ProduzentId)(implicit session: DBSession): Option[Produzent] = {
+    getProduzentDetailQuery(id).apply()
+  }
+
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit session: DBSession): Option[Produzent] = {
     getProduzentDetailByKurzzeichenQuery(kurzzeichen).apply()
   }
@@ -264,6 +270,10 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
 
   def getBestellungen(id: LieferplanungId)(implicit session: DBSession): List[Bestellung] = {
     getBestellungenQuery(id).apply()
+  }
+
+  def getBestellpositionen(id: BestellungId)(implicit session: DBSession): List[Bestellposition] = {
+    getBestellpositionenQuery(id).apply()
   }
 
   def getTourlieferungenByKunde(id: KundeId)(implicit session: DBSession): List[Tourlieferung] = {

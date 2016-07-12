@@ -37,7 +37,7 @@ import com.fasterxml.jackson.databind.JsonSerializable
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
-  case class BestellungErneutVersenden(originator: PersonId, id: BestellungId) extends UserCommand
+  case class BestellungAnProduzentenVersenden(originator: PersonId, id: BestellungId) extends UserCommand
   case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char]) extends UserCommand
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
 
@@ -59,7 +59,11 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Offen =>
-              Success(Seq(LieferplanungAbschliessenEvent(meta, id)))
+              val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
+              val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungenCreate(id))
+              val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
+              val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
+              Success(Seq(insertEvent, lpAbschliessenEvent, bestellungVersendenEvent))
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
@@ -78,14 +82,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
       }
 
-    case BestellungErneutVersenden(personId, id: BestellungId) => idFactory => meta =>
+    case BestellungAnProduzentenVersenden(personId, id: BestellungId) => idFactory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
           bestellung.status match {
             case Offen | Abgeschlossen =>
               Success(Seq(BestellungVersendenEvent(meta, id)))
             case _ =>
-              Failure(new InvalidStateException("Eine Bestellung kann nur in den Stati 'Offen' oder 'Abgeschlossen' erneut versendet werden"))
+              Failure(new InvalidStateException("Eine Bestellung kann nur in den Stati 'Offen' oder 'Abgeschlossen' versendet werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
       }

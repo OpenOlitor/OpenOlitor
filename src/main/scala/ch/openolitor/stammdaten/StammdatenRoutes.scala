@@ -61,6 +61,7 @@ import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComp
 import ch.openolitor.stammdaten.models.AboGuthabenModify
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.core.security.RequestFailed
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -392,6 +393,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
       case _ =>
+        stammdatenReadRepository.getBestellungen(id) map {
+          _ map { bestellung =>
+            onSuccess(entityStore ? StammdatenCommandHandler.BestellungAnProduzentenVersenden(subject.personId, bestellung.id)) {
+              case UserCommandFailed =>
+                complete(StatusCodes.BadRequest, s"Could not execute BestellungAnProduzentenVersenden on Bestellung")
+              case _ =>
+                complete("")
+            }
+          }
+        }
+
         complete("")
     }
   }
@@ -406,7 +418,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   }
 
   def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.BestellungErneutVersenden(subject.personId, bestellungId)) {
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungAnProduzentenVersenden(subject.personId, bestellungId)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
       case _ =>
