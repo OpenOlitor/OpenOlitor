@@ -62,13 +62,15 @@ import ch.openolitor.stammdaten.models.AboGuthabenModify
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.core.security.RequestFailed
+import ch.openolitor.stammdaten.reporting.AuslieferungLieferscheinReportService
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with StammdatenJsonProtocol
     with StammdatenEventStoreSerializer
     with BuchhaltungJsonProtocol
-    with Defaults {
+    with Defaults
+    with AuslieferungLieferscheinReportService {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
@@ -444,6 +446,18 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("postauslieferungen" / "aktionen" / "ausliefern") {
         auslieferungenAlsAusgeliefertMarkierenRoute
+      } ~
+      path("depotauslieferungen" / "berichte" / "lieferschein") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports _)(AuslieferungId.apply)
+      } ~
+      path("tourauslieferungen" / "berichte" / "lieferschein") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / "berichte" / "lieferschein") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports _)(AuslieferungId.apply)
       }
 
   def auslieferungenAlsAusgeliefertMarkierenRoute(implicit subject: Subject) =

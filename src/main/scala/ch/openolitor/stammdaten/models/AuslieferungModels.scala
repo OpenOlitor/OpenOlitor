@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten.models
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 case class AuslieferungId(id: Long) extends BaseId
 
@@ -49,6 +50,11 @@ trait Auslieferung extends BaseEntity[AuslieferungId] {
   val anzahlKoerbe: Int
 }
 
+trait AuslieferungReport extends Auslieferung {
+  val koerbe: Seq[Korb]
+  val projekt: Projekt
+}
+
 /**
  * Auslieferung pro Depot
  */
@@ -56,6 +62,7 @@ case class DepotAuslieferung(
   id: AuslieferungId,
   lieferungId: LieferungId,
   status: AuslieferungStatus,
+  depotId: DepotId,
   depotName: String,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -66,6 +73,22 @@ case class DepotAuslieferung(
   modifikator: PersonId
 ) extends Auslieferung
 
+case class DepotAuslieferungReport(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  projekt: Projekt,
+  koerbe: Seq[Korb],
+  depot: Depot,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends AuslieferungReport with JSONSerializable
+
 /**
  * Auslieferung pro Tour
  */
@@ -73,6 +96,7 @@ case class TourAuslieferung(
   id: AuslieferungId,
   lieferungId: LieferungId,
   status: AuslieferungStatus,
+  tourId: TourId,
   tourName: String,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -82,6 +106,22 @@ case class TourAuslieferung(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Auslieferung
+
+case class TourAuslieferungReport(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  projekt: Projekt,
+  koerbe: Seq[Korb],
+  tour: Tour,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends AuslieferungReport with JSONSerializable
 
 /**
  * Auslieferung zur Post
@@ -98,6 +138,21 @@ case class PostAuslieferung(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Auslieferung
+
+case class PostAuslieferungReport(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  projekt: Projekt,
+  koerbe: Seq[Korb],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends AuslieferungReport with JSONSerializable
 
 case class AuslieferungenAlsAusgeliefertMarkieren(
   ids: Seq[AuslieferungId]

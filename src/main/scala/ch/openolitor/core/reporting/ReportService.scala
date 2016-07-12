@@ -146,7 +146,7 @@ trait ReportService extends LazyLogging {
   def defaultFileTypeId(fileType: FileType) = {
     fileType match {
       case VorlageRechnung => "Rechnung.odt"
-      case VorlageEtikette => "Etiketten.odt"
+      case VorlageAuslieferung => "Auslieferung.odt"
       case VorlageMahnung => "Mahnung.odt"
       case VorlageBestellung => "Bestellung.odt"
       case _ => "undefined.odt"

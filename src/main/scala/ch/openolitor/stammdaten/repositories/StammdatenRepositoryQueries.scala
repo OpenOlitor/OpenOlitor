@@ -779,6 +779,50 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(postAuslieferungMapping(postAuslieferung)).list
   }
 
+  protected def getDepotAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: Projekt) = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+        .join(depotMapping as depot).on(depotAuslieferung.depotId, depot.id)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, depotAuslieferung.id)
+        .where.eq(depotAuslieferung.id, parameter(auslieferungId))
+    }.one(depotAuslieferungMapping(depotAuslieferung))
+      .toManies(
+        rs => depotMapping.opt(depot)(rs),
+        rs => korbMapping.opt(korb)(rs)
+      )
+      .map((auslieferung, depot, koerbe) =>
+        copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depot.head, "koerbe" -> koerbe, "projekt" -> projekt)).single
+  }
+
+  protected def getTourAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: Projekt) = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+        .join(tourMapping as tour).on(tourAuslieferung.tourId, tour.id)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, tourAuslieferung.id)
+        .where.eq(tourAuslieferung.id, parameter(auslieferungId))
+    }.one(tourAuslieferungMapping(tourAuslieferung))
+      .toManies(
+        rs => tourMapping.opt(tour)(rs),
+        rs => korbMapping.opt(korb)(rs)
+      )
+      .map((auslieferung, tour, koerbe) =>
+        copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour.head, "koerbe" -> koerbe, "projekt" -> projekt)).single
+  }
+
+  protected def getPostAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: Projekt) = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, postAuslieferung.id)
+        .where.eq(postAuslieferung.id, parameter(auslieferungId))
+    }.one(postAuslieferungMapping(postAuslieferung))
+      .toMany(rs => korbMapping.opt(korb)(rs))
+      .map((auslieferung, koerbe) =>
+        copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> koerbe, "projekt" -> projekt)).single
+  }
+
   protected def getDepotAuslieferungQuery(lieferungId: LieferungId) = {
     withSQL {
       select

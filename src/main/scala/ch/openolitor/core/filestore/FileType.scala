@@ -27,11 +27,11 @@ sealed trait FileType extends Product {
 }
 
 case object VorlageRechnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageEtikette extends FileType { val bucket = VorlagenBucket }
+case object VorlageAuslieferung extends FileType { val bucket = VorlagenBucket }
 case object VorlageMahnung extends FileType { val bucket = VorlagenBucket }
 case object VorlageBestellung extends FileType { val bucket = VorlagenBucket }
 case object GeneriertRechnung extends FileType { val bucket = GeneriertBucket }
-case object GeneriertEtikette extends FileType { val bucket = GeneriertBucket }
+case object GeneriertAuslieferung extends FileType { val bucket = GeneriertBucket }
 case object GeneriertMahnung extends FileType { val bucket = GeneriertBucket }
 case object GeneriertBestellung extends FileType { val bucket = GeneriertBucket }
 case object ProjektStammdaten extends FileType { val bucket = StammdatenBucket }
@@ -41,11 +41,11 @@ case object UnknownFileType extends FileType { lazy val bucket = sys.error("This
 object FileType {
   val AllFileTypes = List(
     VorlageRechnung,
-    VorlageEtikette,
+    VorlageAuslieferung,
     VorlageMahnung,
     VorlageBestellung,
     GeneriertRechnung,
-    GeneriertEtikette,
+    GeneriertAuslieferung,
     GeneriertMahnung,
     GeneriertBestellung,
     ProjektStammdaten,

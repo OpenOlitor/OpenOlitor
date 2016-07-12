@@ -860,6 +860,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(entity: DepotAuslieferung) = {
       super.updateParameters(entity) ++ Seq(
+        column.depotId -> parameter(entity.depotId),
         column.depotName -> parameter(entity.depotName)
       )
     }
@@ -878,6 +879,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(entity: TourAuslieferung) = {
       super.updateParameters(entity) ++ Seq(
+        column.tourId -> parameter(entity.tourId),
         column.tourName -> parameter(entity.tourName)
       )
     }

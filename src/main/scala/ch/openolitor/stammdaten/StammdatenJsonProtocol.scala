@@ -155,6 +155,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
   implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
+  implicit val korbIdFormat = baseIdFormat(KorbId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -358,6 +359,30 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         json.convertTo[HeimlieferungAboModify]
       } else {
         json.convertTo[PostlieferungAboModify]
+      }
+    }
+  }
+
+  implicit val korbFormat = autoProductFormat[Korb]
+  implicit val depotAuslieferungReportFormat = autoProductFormat[DepotAuslieferungReport]
+  implicit val tourAuslieferungReportFormat = autoProductFormat[TourAuslieferungReport]
+  implicit val postAuslieferungReportFormat = autoProductFormat[PostAuslieferungReport]
+  implicit val auslieferungReportFormat = new RootJsonFormat[AuslieferungReport] {
+    def write(obj: AuslieferungReport): JsValue =
+      obj match {
+        case d: DepotAuslieferungReport => d.toJson
+        case h: TourAuslieferungReport => h.toJson
+        case p: PostAuslieferungReport => p.toJson
+        case _ => JsObject()
+      }
+
+    def read(json: JsValue): AuslieferungReport = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[DepotAuslieferungReport]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[TourAuslieferungReport]
+      } else {
+        json.convertTo[PostAuslieferungReport]
       }
     }
   }
