@@ -279,7 +279,14 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get {
         list(stammdatenReadRepository.getAbos)
       }
-    }
+    } ~
+      path("abos" / "aktionen" / "anzahllieferungenrechnungen") {
+        post {
+          entity(as[AboLieferungenRechnungCreate]) { rechnungCreate =>
+            createAnzahlLieferungenRechnungen(rechnungCreate)
+          }
+        }
+      }
 
   def pendenzenRoute(implicit subject: Subject) =
     path("pendenzen") {
@@ -459,6 +466,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess(entityStore ? StammdatenCommandHandler.AuslieferungenAlsAusgeliefertMarkierenCommand(subject.personId, ids)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Auslieferungen konnten nicht als ausgeliefert markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def createAnzahlLieferungenRechnungen(rechnungCreate: AboLieferungenRechnungCreate)(implicit idPersister: Persister[AboId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.CreateAnzahlLieferungenRechnungenCommand(subject.personId, rechnungCreate))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen AboIds erstellt werden.")
       case _ =>
         complete("")
     }
