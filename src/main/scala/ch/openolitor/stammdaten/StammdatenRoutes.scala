@@ -279,7 +279,21 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get {
         list(stammdatenReadRepository.getAbos)
       }
-    }
+    } ~
+      path("abos" / "aktionen" / "anzahllieferungenrechnungen") {
+        post {
+          entity(as[AboRechnungCreate]) { rechnungCreate =>
+            createAnzahlLieferungenRechnungen(rechnungCreate)
+          }
+        }
+      } ~
+      path("abos" / "aktionen" / "bisguthabenrechnungen") {
+        post {
+          entity(as[AboRechnungCreate]) { rechnungCreate =>
+            createBisGuthabenRechnungen(rechnungCreate)
+          }
+        }
+      }
 
   def pendenzenRoute(implicit subject: Subject) =
     path("pendenzen") {
@@ -459,6 +473,24 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess(entityStore ? StammdatenCommandHandler.AuslieferungenAlsAusgeliefertMarkierenCommand(subject.personId, ids)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Auslieferungen konnten nicht als ausgeliefert markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def createAnzahlLieferungenRechnungen(rechnungCreate: AboRechnungCreate)(implicit idPersister: Persister[AboId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.CreateAnzahlLieferungenRechnungenCommand(subject.personId, rechnungCreate))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen AboIds erstellt werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def createBisGuthabenRechnungen(rechnungCreate: AboRechnungCreate)(implicit idPersister: Persister[AboId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.CreateBisGuthabenRechnungenCommand(subject.personId, rechnungCreate))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen AboIds erstellt werden.")
       case _ =>
         complete("")
     }
