@@ -42,6 +42,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import java.text.DecimalFormat
+import scala.annotation.tailrec
 
 case class Value(jsValue: JsValue, value: String)
 
@@ -104,24 +105,24 @@ trait DocumentProcessor extends LazyLogging {
       props <- Try(extractProperties(data))
       // process header
       _ <- Try(processVariables(doc.getHeader, props))
-      _ <- Try(processTables(doc.getHeader, props, locale, ""))
+      _ <- Try(processTables(doc.getHeader, props, locale, Nil))
       //_ <- Try(processLists(doc.getHeader, props, locale, ""))
       headerContainer = new GenericParagraphContainerImpl(doc.getHeader.getOdfElement)
-      _ <- Try(processTextboxes(headerContainer, props, locale))
+      _ <- Try(processTextboxes(headerContainer, props, locale, Nil))
 
       // process footer
       _ <- Try(processVariables(doc.getFooter, props))
-      _ <- Try(processTables(doc.getFooter, props, locale, ""))
+      _ <- Try(processTables(doc.getFooter, props, locale, Nil))
       //_ <- Try(processLists(doc.getFooter, props, locale, ""))
       footerContainer = new GenericParagraphContainerImpl(doc.getFooter.getOdfElement)
-      _ <- Try(processTextboxes(footerContainer, props, locale))
+      _ <- Try(processTextboxes(footerContainer, props, locale, Nil))
 
       // process content
       _ <- Try(processVariables(doc, props))
-      _ <- Try(processTables(doc, props, locale, ""))
-      _ <- Try(processLists(doc, props, locale, ""))
+      _ <- Try(processTables(doc, props, locale, Nil))
+      _ <- Try(processLists(doc, props, locale, Nil))
       _ <- Try(processSections(doc, props, locale))
-      _ <- Try(processTextboxes(doc, props, locale))
+      _ <- Try(processTextboxes(doc, props, locale, Nil))
       _ <- Try(registerVariables(doc, props))
     } yield true
   }
@@ -169,57 +170,58 @@ trait DocumentProcessor extends LazyLogging {
     }
   }
 
-  def processTables(doc: TableContainer, props: Map[String, Value], locale: Locale, prefix: String) = {
-    doc.getTableList map (table => processTable(doc, table, props, locale, prefix))
+  def processTables(doc: TableContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
+    doc.getTableList map (table => processTable(doc, table, props, locale, pathPrefixes))
   }
 
   /**
    * Process table:
    * duplicate all rows except header rows. Try to replace textbox values with value from property map
    */
-  def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, prefix: String) = {
-    props.get(prefix + table.getTableName) map {
+  def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
+    val propertyKey = parsePropertyKey(table.getTableName, pathPrefixes)
+    props.get(propertyKey) map {
       case Value(JsArray(values), _) =>
         logger.debug(s"processTable (dynamic): ${table.getTableName}")
-        processTableWithValues(doc, table, props, values, locale, prefix)
+        processTableWithValues(doc, table, props, values, locale, pathPrefixes)
 
     } getOrElse {
       //static proccesing
-      logger.debug(s"processTable (static): ${table.getTableName}")
-      processStaticTable(table, props, locale, prefix)
+      logger.debug(s"processTable (static): ${table.getTableName}: $pathPrefixes, $propertyKey")
+      processStaticTable(table, props, locale, pathPrefixes)
     }
   }
 
-  def processStaticTable(table: Table, props: Map[String, Value], locale: Locale = Locale.getDefault, prefix: String) = {
+  def processStaticTable(table: Table, props: Map[String, Value], locale: Locale = Locale.getDefault, pathPrefixes: Seq[String]) = {
     for (r <- 0 to table.getRowCount - 1) {
       //replace textfields
       for (c <- 0 to table.getColumnCount - 1) {
         val cell = table.getCellByPosition(c, r)
-        processTextboxes(cell, props, locale, prefix)
+        processTextboxes(cell, props, locale, pathPrefixes)
       }
     }
   }
 
-  def processLists(doc: ListContainer, props: Map[String, Value], locale: Locale, prefix: String) = {
+  def processLists(doc: ListContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       list <- doc.getListIterator
-    } processList(doc, list, props, locale, prefix)
+    } processList(doc, list, props, locale, pathPrefixes)
   }
 
   /**
    * Process list:
    * process content of every list item as paragraph container
    */
-  def processList(doc: ListContainer, list: List, props: Map[String, Value], locale: Locale, prefix: String) = {
+  def processList(doc: ListContainer, list: List, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       item <- list.getItems
     } yield {
       val container = new GenericParagraphContainerImpl(item.getOdfElement())
-      processTextboxes(container, props, locale, prefix)
+      processTextboxes(container, props, locale, pathPrefixes)
     }
   }
 
-  def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, prefix: String) = {
+  def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, pathPrefixes: Seq[String]) = {
     val startIndex = Math.max(table.getHeaderRowCount, 0)
     val rows = table.getRowList.toList
     val nonHeaderRows = rows.takeRight(rows.length - startIndex)
@@ -227,7 +229,7 @@ trait DocumentProcessor extends LazyLogging {
     logger.debug(s"processTable: ${table.getTableName} -> Header rows: ${table.getHeaderRowCount}")
 
     for (index <- 0 to values.length - 1) {
-      val rowKey = s"$prefix${table.getTableName}.$index."
+      val rowPathPrefix = findPathPrefixes(table.getTableName + s".$index", pathPrefixes)
 
       //copy rows
       val newRows = table.appendRows(nonHeaderRows.length).toList
@@ -242,7 +244,7 @@ trait DocumentProcessor extends LazyLogging {
           copyCell(origCell, newCell)
 
           // replace textfields
-          processTextboxes(newCell, props, locale, rowKey)
+          processTextboxes(newCell, props, locale, rowPathPrefix)
         }
       }
     }
@@ -289,11 +291,11 @@ trait DocumentProcessor extends LazyLogging {
 
   private def processSectionWithValues(doc: TextDocument, section: Section, props: Map[String, Value], values: Vector[JsValue], locale: Locale) = {
     for (index <- 0 to values.length - 1) {
-      val sectionKey = s"${section.getName}.$index."
+      val sectionKey = s"${section.getName}.$index"
       logger.debug(s"processSection:$sectionKey")
-      processTextboxes(section, props, locale, sectionKey)
-      processTables(section, props, locale, sectionKey)
-      processLists(section, props, locale, sectionKey)
+      processTextboxes(section, props, locale, Seq(sectionKey))
+      processTables(section, props, locale, Seq(sectionKey))
+      processLists(section, props, locale, Seq(sectionKey))
       //append section
       doc.appendSection(section, false)
     }
@@ -305,20 +307,33 @@ trait DocumentProcessor extends LazyLogging {
   /**
    * Process textboxes and fill in content based on
    */
-  private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefix: String = "") = {
+  private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       p <- cont.getParagraphIterator
       t <- p.getTextboxIterator
     } {
       t.removeCommonStyle()
       val (name, format) = parseFormat(t.getName)
-      val propertyKey = s"$pathPrefix$name"
+      val propertyKey = parsePropertyKey(name, pathPrefixes)
       logger.debug(s"processTextbox: ${propertyKey} | format:$format")
       props.get(propertyKey) map {
         case Value(_, value) =>
           val formatValue = format getOrElse ""
           applyFormat(t, formatValue, value, locale)
       }
+    }
+  }
+
+  private def parsePropertyKey(name: String, pathPrefixes: Seq[String] = Nil): String = {
+    findPathPrefixes(name, pathPrefixes).mkString(".")
+  }
+
+  @tailrec
+  private def findPathPrefixes(name: String, pathPrefixes: Seq[String] = Nil): Seq[String] = {
+    val r = """\$parent\.(.*)""".r
+    name match {
+      case r(rest) if !pathPrefixes.isEmpty => findPathPrefixes(rest, pathPrefixes.tail)
+      case _ => pathPrefixes :+ name
     }
   }
 
