@@ -320,13 +320,16 @@ trait DocumentProcessor extends LazyLogging {
       val (name, formats) = parseFormats(t.getName)
       val propertyKey = parsePropertyKey(name, pathPrefixes)
       logger.debug(s"processTextbox: ${propertyKey} | formats:$formats")
-      props.get(propertyKey) map {
-        case Value(_, value) =>
-          //apply all formats
-          formats :+ "" map { formatValue =>
-            logger.debug(s"Apply format: $formatValue")
-            applyFormat(t, formatValue, value, props, locale, pathPrefixes)
-          }
+
+      // resolve textbox content from properties, otherwise only apply formats to current content
+      val value = props.get(propertyKey) map {
+        case Value(_, value) => value
+      } getOrElse (t.getTextContent())
+
+      //apply all formats
+      formats :+ "" map { formatValue =>
+        logger.debug(s"Apply format: $formatValue")
+        applyFormat(t, formatValue, value, props, locale, pathPrefixes)
       }
     }
   }
@@ -367,6 +370,8 @@ trait DocumentProcessor extends LazyLogging {
               logger.debug(s"Resolved native color:$color")
               textbox.setFontColor(color)
             }
+          } else {
+            textbox.setFontColor(Color.BLACK)
           }
           textbox.setTextContentStyleAware(formattedValue)
         } else {
@@ -376,6 +381,8 @@ trait DocumentProcessor extends LazyLogging {
               logger.debug(s"Resolved positive color:$color")
               textbox.setFontColor(color)
             }
+          } else {
+            textbox.setFontColor(Color.BLACK)
           }
           textbox.setTextContentStyleAware(formattedValue)
         }
