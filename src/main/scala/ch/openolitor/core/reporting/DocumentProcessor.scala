@@ -52,8 +52,8 @@ trait DocumentProcessor extends LazyLogging {
   import OdfToolkitUtils._
 
   val dateFormatPattern = """date:\s*"(.*)"""".r
-  val numberFormatPattern = """number:\s*"(\[([#@]?\w+)\])?([#,.0]+)(;((\[([#@]?\w+)\])?-([#,.0]+)))?"""".r
-  val backgroundColorFormatPattern = """bg-color:\s*"([#@]?\w+)"""".r
+  val numberFormatPattern = """number:\s*"(\[([#@]?[\w\.]+)\])?([#,.0]+)(;((\[([#@]?[\w\.]+)\])?-([#,.0]+)))?"""".r
+  val backgroundColorFormatPattern = """bg-color:\s*"([#@]?[\w\.]+)"""".r
   val dateFormatter = ISODateTimeFormat.dateTime
   val libreOfficeDateFormat = DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss")
 
