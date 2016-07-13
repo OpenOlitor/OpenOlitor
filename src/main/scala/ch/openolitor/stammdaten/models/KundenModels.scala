@@ -61,6 +61,59 @@ case class Kunde(
   modifikator: PersonId
 ) extends BaseEntity[KundeId]
 
+case class KundeReport(
+    id: KundeId,
+    bezeichnung: String,
+    strasse: String,
+    hausNummer: Option[String],
+    adressZusatz: Option[String],
+    plz: String,
+    ort: String,
+    bemerkungen: Option[String],
+    abweichendeLieferadresse: Boolean,
+    bezeichnungLieferung: Option[String],
+    strasseLieferung: Option[String],
+    hausNummerLieferung: Option[String],
+    adressZusatzLieferung: Option[String],
+    plzLieferung: Option[String],
+    ortLieferung: Option[String],
+    zusatzinfoLieferung: Option[String],
+    typen: Set[KundentypId],
+    //Zusatzinformationen
+    anzahlAbos: Int,
+    anzahlPendenzen: Int,
+    anzahlPersonen: Int,
+    //modification flags
+    erstelldat: DateTime,
+    ersteller: PersonId,
+    modifidat: DateTime,
+    modifikator: PersonId
+) extends BaseEntity[KundeId] {
+  lazy val strasseUndNummer: String = strasse + hausNummer.map(" " + _).getOrElse("")
+  lazy val plzOrt: String = plz + " " + ort
+
+  lazy val strasseUndNummerLieferung = strasseLieferung.map(_ + hausNummerLieferung.map(" " + _).getOrElse(""))
+  lazy val plzOrtLieferung = plzLieferung.map(_ + ortLieferung.map(" " + _).getOrElse(""))
+
+  lazy val adresszeilen = Seq(
+    Some(bezeichnung),
+    adressZusatz,
+    Some(strasseUndNummer),
+    Some(plzOrt)
+  ).flatten.padTo(6, "")
+
+  lazy val lieferAdresszeilen = abweichendeLieferadresse match {
+    case true =>
+      Seq(
+        Some(bezeichnungLieferung.getOrElse(bezeichnung)),
+        adressZusatzLieferung,
+        strasseUndNummerLieferung,
+        plzOrtLieferung
+      ).flatten.padTo(6, "")
+    case false => adresszeilen
+  }
+}
+
 object Kunde {
   def unapply(k: Kunde) = Some(Tuple24(
     k.id: KundeId,

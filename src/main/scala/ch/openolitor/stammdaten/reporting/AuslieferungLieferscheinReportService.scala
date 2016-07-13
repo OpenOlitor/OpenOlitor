@@ -32,6 +32,7 @@ import ch.openolitor.core.filestore._
 import scala.concurrent.Future
 import ch.openolitor.core.models.PersonId
 import scala.concurrent.ExecutionContext.Implicits.global
+import ch.openolitor.core.Macros._
 
 trait AuslieferungLieferscheinReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
@@ -56,8 +57,9 @@ trait AuslieferungLieferscheinReportService extends AsyncConnectionPoolContextAw
   def auslieferungById(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[AuslieferungReport])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
+        val projektReport = copyTo[Projekt, ProjektReport](projekt)
         val results = Future.sequence(auslieferungIds.map { auslieferungId =>
-          stammdatenReadRepository.getAuslieferungReport(auslieferungId, projekt).map(_.map { auslieferung =>
+          stammdatenReadRepository.getAuslieferungReport(auslieferungId, projektReport).map(_.map { auslieferung =>
             Right(auslieferung)
           }.getOrElse(Left(ValidationError[AuslieferungId](auslieferungId, s"Auslieferung konnte nicht gefunden werden"))))
         })

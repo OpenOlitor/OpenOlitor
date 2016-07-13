@@ -51,8 +51,8 @@ trait Auslieferung extends BaseEntity[AuslieferungId] {
 }
 
 trait AuslieferungReport extends Auslieferung {
-  val koerbe: Seq[Korb]
-  val projekt: Projekt
+  val koerbe: Seq[KorbReport]
+  val projekt: ProjektReport
 }
 
 /**
@@ -79,8 +79,8 @@ case class DepotAuslieferungReport(
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
-  projekt: Projekt,
-  koerbe: Seq[Korb],
+  projekt: ProjektReport,
+  koerbe: Seq[KorbReport],
   depot: Depot,
   //modification flags
   erstelldat: DateTime,
@@ -113,8 +113,8 @@ case class TourAuslieferungReport(
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
-  projekt: Projekt,
-  koerbe: Seq[Korb],
+  projekt: ProjektReport,
+  koerbe: Seq[KorbReport],
   tour: Tour,
   //modification flags
   erstelldat: DateTime,
@@ -145,8 +145,8 @@ case class PostAuslieferungReport(
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
-  projekt: Projekt,
-  koerbe: Seq[Korb],
+  projekt: ProjektReport,
+  koerbe: Seq[KorbReport],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

@@ -98,7 +98,7 @@ trait DocumentProcessor extends LazyLogging {
   )
 
   def processDocument(doc: TextDocument, data: JsValue, locale: Locale = Locale.getDefault): Try[Boolean] = {
-    logger.debug(s"processDocument with data: $data")
+    logger.debug(s"processDocument with data: ${data.prettyPrint}")
     doc.setLocale(locale)
     for {
       props <- Try(extractProperties(data))
@@ -158,7 +158,6 @@ trait DocumentProcessor extends LazyLogging {
    * accessor which should resolve nested properties as well (with support for arrays .index notation i.e. 'adressen.0.strasse').
    */
   def processVariables(cont: VariableContainer, props: Map[String, Value]) = {
-    logger.debug(s"processVariables with Properties: $props")
     props map {
       case (property, Value(_, value)) =>
         cont.getVariableFieldByName(property) match {

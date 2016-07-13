@@ -414,17 +414,37 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 
   // special report formats
-  def enhancedProjektReportFormatDef(implicit defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
+  def enhancedProjektReportFormatDef(defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
     def write(obj: ProjektReport): JsValue = {
       JsObject(defaultFormat.write(obj)
         .asJsObject.fields +
         (
           "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
-          "plzOrt" -> JsString(obj.plzOrt.getOrElse(""))
+          "plzOrt" -> JsString(obj.plzOrt.getOrElse("")),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector)
         ))
     }
 
     def read(json: JsValue): ProjektReport = defaultFormat.read(json)
   }
-  implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef
+  implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef(autoProductFormat[ProjektReport])
+
+  def enhancedKundeReportFormatDef(defaultFormat: JsonFormat[KundeReport]): RootJsonFormat[KundeReport] = new RootJsonFormat[KundeReport] {
+    def write(obj: KundeReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer),
+          "plzOrt" -> JsString(obj.plzOrt),
+          "strasseUndNummerLieferung" -> JsString(obj.strasseUndNummerLieferung.getOrElse("")),
+          "plzOrtLieferung" -> JsString(obj.plzOrtLieferung.getOrElse("")),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector),
+          "lieferAdresszeilen" -> JsArray(obj.lieferAdresszeilen.map(JsString(_)).toVector)
+        ))
+    }
+
+    def read(json: JsValue): KundeReport = defaultFormat.read(json)
+  }
+  implicit val enhancedKundeReportFormat: RootJsonFormat[KundeReport] = enhancedKundeReportFormatDef(autoProductFormat[KundeReport])
+  implicit val korbReportFormat = autoProductFormat[KorbReport]
 }

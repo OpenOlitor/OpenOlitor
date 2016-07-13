@@ -113,6 +113,13 @@ case class ProjektReport(
   lazy val geschaftsjahr = Geschaeftsjahr(geschaeftsjahrMonat, geschaeftsjahrTag)
   lazy val strasseUndNummer = strasse.map(_ + hausNummer.map(" " + _).getOrElse(""))
   lazy val plzOrt = plz.map(_ + ort.map(" " + _).getOrElse(""))
+
+  lazy val adresszeilen = Seq(
+    Some(bezeichnung),
+    adressZusatz,
+    strasseUndNummer,
+    plzOrt
+  ).flatten.padTo(6, "")
 }
 
 case class ProjektModify(
