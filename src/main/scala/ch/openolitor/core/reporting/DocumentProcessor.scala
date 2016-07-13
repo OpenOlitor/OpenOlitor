@@ -475,32 +475,26 @@ object OdfToolkitUtils {
       val styleName = p.getStyleName()
 
       val lastNode = p.getOdfElement.getLastChild();
-      if (lastNode != null && lastNode.getNodeName() != null
-        && (lastNode.getNodeName().equals("text:a") || lastNode.getNodeName().equals("text:span"))) {
-        // register style as well on span element
-        lastNode.asInstanceOf[OdfElement].setAttributeNS("urn:oasis:names:tc:opendocument:xlmns:style:1.0", "style:style-name", styleName)
+      // create new style element to support coloring of font
+      val content = self.getTextContent
+      //remove last node (current text node)
+      p.getOdfElement.removeChild(lastNode)
+      val textP = p.getOdfElement.asInstanceOf[TextPElement]
+      val span = textP.newTextSpanElement()
+
+      val dom = self.getOdfElement.getOwnerDocument
+      val styles = if (dom.isInstanceOf[OdfContentDom]) {
+        dom.asInstanceOf[OdfContentDom].getAutomaticStyles
       } else {
-        // create new style element to support coloring of font
-        val content = self.getTextContent
-        //remove last node (current text node)
-        p.getOdfElement.removeChild(lastNode)
-        val textP = p.getOdfElement.asInstanceOf[TextPElement]
-        val span = textP.newTextSpanElement()
-
-        val dom = self.getOdfElement.getOwnerDocument
-        val styles = if (dom.isInstanceOf[OdfContentDom]) {
-          dom.asInstanceOf[OdfContentDom].getAutomaticStyles
-        } else {
-          dom.asInstanceOf[OdfStylesDom].getAutomaticStyles
-        }
-        val textStyle = styles.newStyle(OdfStyleFamily.Text)
-        val styleTextPropertiesElement = textStyle.newStyleTextPropertiesElement(null)
-        styleTextPropertiesElement.setFoColorAttribute(color.toString)
-
-        // set comment content
-        span.setStyleName(textStyle.getStyleNameAttribute)
-        span.setTextContent(content)
+        dom.asInstanceOf[OdfStylesDom].getAutomaticStyles
       }
+      val textStyle = styles.newStyle(OdfStyleFamily.Text)
+      val styleTextPropertiesElement = textStyle.newStyleTextPropertiesElement(null)
+      styleTextPropertiesElement.setFoColorAttribute(color.toString)
+
+      // set comment content
+      span.setStyleName(textStyle.getStyleNameAttribute)
+      span.setTextContent(content)
     }
   }
 }
