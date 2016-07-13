@@ -313,11 +313,13 @@ case class AboVertriebsartModify(
   bemerkung: String
 ) extends JSONSerializable
 
-case class AboLieferungenRechnungCreate(
+case class AboRechnungCreate(
   ids: Seq[AboId],
   titel: String,
-  anzahlLieferungen: Int,
+  anzahlLieferungen: Option[Int],
+  bisGuthaben: Option[Int],
   waehrung: Waehrung,
+  betrag: Option[BigDecimal],
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime
 ) extends JSONSerializable
