@@ -449,15 +449,27 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("depotauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageDepotLieferschein) _)(AuslieferungId.apply)
       } ~
       path("tourauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferschein) _)(AuslieferungId.apply)
       } ~
       path("postauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferschein) _)(AuslieferungId.apply)
+      } ~
+      path("depotauslieferungen" / "berichte" / "lieferetiketten") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("tourauslieferungen" / "berichte" / "lieferetiketten") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / "berichte" / "lieferetiketten") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
       }
 
   def auslieferungenAlsAusgeliefertMarkierenRoute(implicit subject: Subject) =

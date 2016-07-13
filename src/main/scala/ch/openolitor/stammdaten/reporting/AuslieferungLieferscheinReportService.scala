@@ -33,25 +33,35 @@ import scala.concurrent.Future
 import ch.openolitor.core.models.PersonId
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
+import ch.openolitor.core.filestore._
 
 trait AuslieferungLieferscheinReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
-  def generateAuslieferungLieferscheinReports(config: ReportConfig[AuslieferungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[AuslieferungId]]] = {
+  def generateAuslieferungLieferscheinReports(fileType: FileType)(config: ReportConfig[AuslieferungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[AuslieferungId]]] = {
     generateReports[AuslieferungId, AuslieferungReport](
       config,
       auslieferungById,
-      VorlageAuslieferung,
+      fileType,
       None,
       _.id,
       GeneriertAuslieferung,
       x => Some(x.id.id.toString),
-      name,
+      name(fileType),
       _.projekt.sprache
     )
   }
 
-  def name(auslieferung: AuslieferungReport) = {
-    s"auslieferung_nr_${auslieferung.id.id}_${auslieferung.datum}";
+  def name(fileType: FileType)(auslieferung: AuslieferungReport) = {
+    fileType match {
+      case VorlageDepotLieferschein => s"depot_lieferschein_nr_${auslieferung.id.id}_${auslieferung.datum}"
+      case VorlageTourLieferschein => s"tour_lieferschein_nr_${auslieferung.id.id}_${auslieferung.datum}"
+      case VorlagePostLieferschein => s"post_lieferschein_nr_${auslieferung.id.id}_${auslieferung.datum}"
+
+      case VorlageDepotLieferetiketten => s"depot_lieferetiketten_nr_${auslieferung.id.id}_${auslieferung.datum}"
+      case VorlageTourLieferetiketten => s"tour_lieferetiketten_nr_${auslieferung.id.id}_${auslieferung.datum}"
+      case VorlagePostLieferetiketten => s"post_lieferetiketten_nr_${auslieferung.id.id}_${auslieferung.datum}"
+      case _ => s"auslieferung_nr_${auslieferung.id.id}_${auslieferung.datum}"
+    }
   }
 
   def auslieferungById(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[AuslieferungReport])] = {
