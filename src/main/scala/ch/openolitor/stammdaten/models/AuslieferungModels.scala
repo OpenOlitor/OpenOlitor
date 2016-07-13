@@ -81,7 +81,7 @@ case class DepotAuslieferungReport(
   anzahlKoerbe: Int,
   projekt: ProjektReport,
   koerbe: Seq[KorbReport],
-  depot: Depot,
+  depot: DepotReport,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

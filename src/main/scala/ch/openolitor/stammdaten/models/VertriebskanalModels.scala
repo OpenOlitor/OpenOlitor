@@ -72,6 +72,47 @@ case class Depot(
   modifikator: PersonId
 ) extends BaseEntity[DepotId] with Vertriebskanal
 
+case class DepotReport(
+    id: DepotId,
+    name: String,
+    kurzzeichen: String,
+    apName: Option[String],
+    apVorname: Option[String],
+    apTelefon: Option[String],
+    apEmail: Option[String],
+    vName: Option[String],
+    vVorname: Option[String],
+    vTelefon: Option[String],
+    vEmail: Option[String],
+    strasse: Option[String],
+    hausNummer: Option[String],
+    plz: String,
+    ort: String,
+    aktiv: Boolean,
+    oeffnungszeiten: Option[String],
+    farbCode: Option[String],
+    iban: Option[String], //maybe use dedicated type
+    bank: Option[String],
+    beschreibung: Option[String],
+    anzahlAbonnentenMax: Option[Int],
+    //Zusatzinformationen
+    anzahlAbonnenten: Int,
+    //modification flags
+    erstelldat: DateTime,
+    ersteller: PersonId,
+    modifidat: DateTime,
+    modifikator: PersonId
+) extends BaseEntity[DepotId] {
+  lazy val strasseUndNummer = strasse.map(_ + hausNummer.map(" " + _).getOrElse(""))
+  lazy val plzOrt = plz + " " + ort
+
+  lazy val adresszeilen = Seq(
+    Some(name),
+    strasseUndNummer,
+    Some(plzOrt)
+  ).flatten.padTo(6, "")
+}
+
 object Depot {
   def unapply(d: Depot) = {
     Some(Tuple27(

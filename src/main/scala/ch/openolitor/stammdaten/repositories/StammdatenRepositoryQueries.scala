@@ -797,7 +797,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         rs => abotypMapping.opt(aboTyp)(rs),
         rs => kundeMapping.opt(kunde)(rs)
       )
-      .map((auslieferung, depot, koerbe, abos, abotypen, kunden) => {
+      .map((auslieferung, depots, koerbe, abos, abotypen, kunden) => {
         val korbReports = koerbe map { korb =>
           val korbAbo = abos.filter(_.id == korb.aboId).head
           val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
@@ -806,7 +806,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
           copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
         }
 
-        copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depot.head, "koerbe" -> korbReports, "projekt" -> projekt)
+        val depot = copyTo[Depot, DepotReport](depots.head)
+        copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depot, "koerbe" -> korbReports, "projekt" -> projekt)
       }).single
   }
 
