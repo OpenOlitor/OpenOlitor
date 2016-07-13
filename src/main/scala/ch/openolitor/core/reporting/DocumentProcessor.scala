@@ -52,9 +52,13 @@ trait DocumentProcessor extends LazyLogging {
   import OdfToolkitUtils._
 
   val dateFormatPattern = """date:\s*"(.*)"""".r
-  val numberFormatPattern = """number:\s*"(\[(\w+)\])?([#,.0]+)(;((\[(\w+)\])?-([#,.0]+)))?"""".r
+  val numberFormatPattern = """number:\s*"(\[([#@]?\w+)\])?([#,.0]+)(;((\[([#@]?\w+)\])?-([#,.0]+)))?"""".r
+  val backgroundColorFormatPattern = """bg-color:\s*"([#@]?\w+)"""".r
   val dateFormatter = ISODateTimeFormat.dateTime
   val libreOfficeDateFormat = DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss")
+
+  val parentPathPattern = """\$parent\.(.*)""".r
+  val resolvePropertyPattern = """@(.*)""".r
 
   val colorMap: Map[String, Color] = Map(
     // english words
@@ -313,13 +317,16 @@ trait DocumentProcessor extends LazyLogging {
       t <- p.getTextboxIterator
     } {
       t.removeCommonStyle()
-      val (name, format) = parseFormat(t.getName)
+      val (name, formats) = parseFormats(t.getName)
       val propertyKey = parsePropertyKey(name, pathPrefixes)
-      logger.debug(s"processTextbox: ${propertyKey} | format:$format")
+      logger.debug(s"processTextbox: ${propertyKey} | formats:$formats")
       props.get(propertyKey) map {
         case Value(_, value) =>
-          val formatValue = format getOrElse ""
-          applyFormat(t, formatValue, value, locale)
+          //apply all formats
+          formats :+ "" map { formatValue =>
+            logger.debug(s"Apply format: $formatValue")
+            applyFormat(t, formatValue, value, props, locale, pathPrefixes)
+          }
       }
     }
   }
@@ -330,9 +337,9 @@ trait DocumentProcessor extends LazyLogging {
 
   @tailrec
   private def findPathPrefixes(name: String, pathPrefixes: Seq[String] = Nil): Seq[String] = {
-    val r = """\$parent\.(.*)""".r
+
     name match {
-      case r(rest) if !pathPrefixes.isEmpty => findPathPrefixes(rest, pathPrefixes.tail)
+      case parentPathPattern(rest) if !pathPrefixes.isEmpty => findPathPrefixes(rest, pathPrefixes.tail)
       case _ => pathPrefixes :+ name
     }
   }
@@ -340,27 +347,36 @@ trait DocumentProcessor extends LazyLogging {
   /**
    *
    */
-  private def applyFormat(textbox: Textbox, format: String, value: String, locale: Locale) = {
+  private def applyFormat(textbox: Textbox, format: String, value: String, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     format match {
       case dateFormatPattern(pattern) =>
         // parse date
         val formattedDate = libreOfficeDateFormat.parseDateTime(value).toString(pattern, locale)
         textbox.setTextContentStyleAware(formattedDate)
+      case backgroundColorFormatPattern(pattern) =>
+        // set background to textbox
+        resolveColor(pattern, props, pathPrefixes) map { color =>
+          textbox.setBackgroundColor(color)
+        }
       case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
         // lookup color value        
         val number = value.toDouble
         if (number < 0 && negativeFormat != null) {
           val formattedValue = decimaleFormatForLocale(negativeFormat, locale).format(value.toDouble)
           if (negativeColor != null) {
-            val color = if (Color.isValid(negativeColor)) Color.valueOf(negativeColor) else colorMap.get(negativeColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:$negativeColor"))
-            textbox.setFontColor(color)
+            resolveColor(negativeColor, props, pathPrefixes) map { color =>
+              logger.debug(s"Resolved native color:$color")
+              textbox.setFontColor(color)
+            }
           }
           textbox.setTextContentStyleAware(formattedValue)
         } else {
           val formattedValue = decimaleFormatForLocale(positivePattern, locale).format(value.toDouble)
           if (positiveColor != null) {
-            val color = if (Color.isValid(positiveColor)) Color.valueOf(positiveColor) else colorMap.get(positiveColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:positiveColor"))
-            textbox.setFontColor(color)
+            resolveColor(positiveColor, props, pathPrefixes) map { color =>
+              logger.debug(s"Resolved positive color:$color")
+              textbox.setFontColor(color)
+            }
           }
           textbox.setTextContentStyleAware(formattedValue)
         }
@@ -378,14 +394,31 @@ trait DocumentProcessor extends LazyLogging {
     decimalFormat
   }
 
-  private def parseFormat(name: String): (String, Option[String]) = {
+  private def parseFormats(name: String): (String, Seq[String]) = {
     if (name == null || name.trim.isEmpty) {
-      return (name, None)
+      return (name, Nil)
     }
-    name.split('|') match {
-      case Array(name, format) => (name.trim, Some(format.trim))
-      case Array(name) => (name.trim, None)
-      case x => (x.mkString("|"), None)
+    name.split('|').toList match {
+      case name :: Nil => (name.trim, Nil)
+      case name :: tail => (name.trim, tail.map(_.trim))
+    }
+  }
+
+  private def resolveColor(color: String, props: Map[String, Value], pathPrefixes: Seq[String]): Option[Color] = {
+    color match {
+      case resolvePropertyPattern(property) =>
+        //resolve color in props
+        val propertyKey = parsePropertyKey(property, pathPrefixes)
+        props.get(propertyKey) flatMap {
+          case Value(_, value) =>
+            resolveColor(value, props, pathPrefixes)
+        }
+      case color =>
+        if (Color.isValid(color)) Some(Color.valueOf(color))
+        else colorMap.get(color.toUpperCase).orElse {
+          logger.debug(s"Unsupported color: $color")
+          None
+        }
     }
   }
 

@@ -7,6 +7,7 @@
  		"name": "Child NameXXX"
  	},
  	"visible": true,
+ 	"color": "#f00",
  	"addresses": [
  		{
  			"id": 1,
