@@ -941,7 +941,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   protected def deleteLieferpositionenQuery(id: LieferungId) = {
     withSQL {
       delete
-        .from(lieferpositionMapping)
+        .from(lieferpositionMapping as lieferpositionShort)
         .where.eq(lieferpositionShort.lieferungId, parameter(id))
     }
   }
@@ -949,7 +949,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   protected def deleteKoerbeQuery(id: LieferungId) = {
     withSQL {
       delete
-        .from(korbMapping)
+        .from(korbMapping as korbShort)
         .where.eq(korbShort.lieferungId, parameter(id))
     }
   }

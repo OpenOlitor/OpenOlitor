@@ -42,6 +42,7 @@ import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import scala.concurrent.Future
 import scalikejdbc.DBSession
+import ch.openolitor.util.IdUtil
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -83,6 +84,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungAdd) => addLieferungPlanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
+      updateLieferpositionen(meta, id, lieferpositionen)
 
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
@@ -520,6 +523,28 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       }
     }
 
+  }
+
+  def updateLieferpositionen(meta: EventMetadata, lieferungId: LieferungId, positionen: LieferpositionenModify)(implicit personId: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
+      stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
+        //save Lieferpositionen
+        positionen.lieferpositionen map { create =>
+          val lpId = LieferpositionId(IdUtil.positiveRandomId)
+          val newObj = copyTo[LieferpositionModify, Lieferposition](
+            create,
+            "id" -> lpId,
+            "lieferungId" -> lieferungId,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator
+          )
+          stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
+        }
+      }
+    }
   }
 
 }
