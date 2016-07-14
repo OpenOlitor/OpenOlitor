@@ -114,6 +114,7 @@ trait StammdatenReadRepository {
   def getDepotAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotAuslieferung]]
   def getTourAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[TourAuslieferung]]
   def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]]
+  def getAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]]
 
 }
 
@@ -413,7 +414,25 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
   }
   def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]] = {
     getPostAuslieferungenQuery.future
-
   }
 
+  def getAuslieferungReport(id: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
+    for {
+      d <- getDepotAuslieferungReport(id, projekt)
+      h <- getTourAuslieferungReport(id, projekt)
+      p <- getPostAuslieferungReport(id, projekt)
+    } yield (d orElse h orElse p)
+  }
+
+  def getDepotAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
+    getDepotAuslieferungReportQuery(auslieferungId, projekt).future
+  }
+
+  def getTourAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
+    getTourAuslieferungReportQuery(auslieferungId, projekt).future
+  }
+
+  def getPostAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
+    getPostAuslieferungReportQuery(auslieferungId, projekt).future
+  }
 }

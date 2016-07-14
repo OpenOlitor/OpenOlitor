@@ -779,6 +779,98 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(postAuslieferungMapping(postAuslieferung)).list
   }
 
+  protected def getDepotAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+        .join(depotMapping as depot).on(depotAuslieferung.depotId, depot.id)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, depotAuslieferung.id)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(korb.aboId, depotlieferungAbo.id)
+        .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(kundeMapping as kunde).on(depotlieferungAbo.kundeId, kunde.id)
+        .where.eq(depotAuslieferung.id, parameter(auslieferungId))
+    }.one(depotAuslieferungMapping(depotAuslieferung))
+      .toManies(
+        rs => depotMapping.opt(depot)(rs),
+        rs => korbMapping.opt(korb)(rs),
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => kundeMapping.opt(kunde)(rs)
+      )
+      .map((auslieferung, depots, koerbe, abos, abotypen, kunden) => {
+        val korbReports = koerbe map { korb =>
+          val korbAbo = abos.filter(_.id == korb.aboId).head
+          val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
+          val kunde = copyTo[Kunde, KundeReport](kunden.filter(_.id == korbAbo.kundeId).head)
+
+          copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+        }
+
+        val depot = copyTo[Depot, DepotReport](depots.head)
+        copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depot, "koerbe" -> korbReports, "projekt" -> projekt)
+      }).single
+  }
+
+  protected def getTourAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+        .join(tourMapping as tour).on(tourAuslieferung.tourId, tour.id)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, tourAuslieferung.id)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(korb.aboId, heimlieferungAbo.id)
+        .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(kundeMapping as kunde).on(heimlieferungAbo.kundeId, kunde.id)
+        .where.eq(tourAuslieferung.id, parameter(auslieferungId))
+    }.one(tourAuslieferungMapping(tourAuslieferung))
+      .toManies(
+        rs => tourMapping.opt(tour)(rs),
+        rs => korbMapping.opt(korb)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => kundeMapping.opt(kunde)(rs)
+      )
+      .map((auslieferung, tour, koerbe, abos, abotypen, kunden) => {
+        val korbReports = koerbe map { korb =>
+          val korbAbo = abos.filter(_.id == korb.aboId).head
+          val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
+          val kunde = copyTo[Kunde, KundeReport](kunden.filter(_.id == korbAbo.kundeId).head)
+
+          copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+        }
+
+        copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour.head, "koerbe" -> korbReports, "projekt" -> projekt)
+      }).single
+  }
+
+  protected def getPostAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, postAuslieferung.id)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(korb.aboId, postlieferungAbo.id)
+        .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(kundeMapping as kunde).on(postlieferungAbo.kundeId, kunde.id)
+        .where.eq(postAuslieferung.id, parameter(auslieferungId))
+    }.one(postAuslieferungMapping(postAuslieferung))
+      .toManies(
+        rs => korbMapping.opt(korb)(rs),
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => kundeMapping.opt(kunde)(rs)
+      )
+      .map((auslieferung, koerbe, abos, abotypen, kunden) => {
+        val korbReports = koerbe map { korb =>
+          val korbAbo = abos.filter(_.id == korb.aboId).head
+          val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
+          val kunde = copyTo[Kunde, KundeReport](kunden.filter(_.id == korbAbo.kundeId).head)
+
+          copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+        }
+
+        copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> korbReports, "projekt" -> projekt)
+      }).single
+  }
+
   protected def getDepotAuslieferungQuery(lieferungId: LieferungId) = {
     withSQL {
       select

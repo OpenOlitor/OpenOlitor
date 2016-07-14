@@ -22,13 +22,24 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+
+object OO220_DBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"add column depotId and tourId to auslieferungen...")
+      // add column sprache to projekt
+      sql"ALTER TABLE ${depotAuslieferungMapping.table} ADD COLUMN IF NOT EXISTS depot_id BIGINT after status".execute.apply()
+      sql"ALTER TABLE ${tourAuslieferungMapping.table} ADD COLUMN IF NOT EXISTS tour_id BIGINT after status".execute.apply()
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts)
 }

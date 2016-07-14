@@ -170,6 +170,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
   implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
+  implicit val korbIdFormat = baseIdFormat(KorbId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -395,17 +396,76 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 
   // special report formats
-  def enhancedProjektReportFormatDef(implicit defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
+  def enhancedProjektReportFormatDef(defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
     def write(obj: ProjektReport): JsValue = {
       JsObject(defaultFormat.write(obj)
         .asJsObject.fields +
         (
           "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
-          "plzOrt" -> JsString(obj.plzOrt.getOrElse(""))
+          "plzOrt" -> JsString(obj.plzOrt.getOrElse("")),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector)
         ))
     }
 
     def read(json: JsValue): ProjektReport = defaultFormat.read(json)
   }
-  implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef
+  implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef(autoProductFormat[ProjektReport])
+
+  def enhancedKundeReportFormatDef(defaultFormat: JsonFormat[KundeReport]): RootJsonFormat[KundeReport] = new RootJsonFormat[KundeReport] {
+    def write(obj: KundeReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer),
+          "plzOrt" -> JsString(obj.plzOrt),
+          "strasseUndNummerLieferung" -> JsString(obj.strasseUndNummerLieferung.getOrElse("")),
+          "plzOrtLieferung" -> JsString(obj.plzOrtLieferung.getOrElse("")),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector),
+          "lieferAdresszeilen" -> JsArray(obj.lieferAdresszeilen.map(JsString(_)).toVector)
+        ))
+    }
+
+    def read(json: JsValue): KundeReport = defaultFormat.read(json)
+  }
+  implicit val enhancedKundeReportFormat: RootJsonFormat[KundeReport] = enhancedKundeReportFormatDef(autoProductFormat[KundeReport])
+  implicit val korbReportFormat = autoProductFormat[KorbReport]
+
+  def enhancedDepotReportFormatDef(defaultFormat: JsonFormat[DepotReport]): RootJsonFormat[DepotReport] = new RootJsonFormat[DepotReport] {
+    def write(obj: DepotReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
+          "plzOrt" -> JsString(obj.plzOrt),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector)
+        ))
+    }
+
+    def read(json: JsValue): DepotReport = defaultFormat.read(json)
+  }
+  implicit val enhancedDepotReportFormat = enhancedDepotReportFormatDef(autoProductFormat[DepotReport])
+
+  implicit val depotAuslieferungReportFormat = autoProductFormat[DepotAuslieferungReport]
+  implicit val tourAuslieferungReportFormat = autoProductFormat[TourAuslieferungReport]
+  implicit val postAuslieferungReportFormat = autoProductFormat[PostAuslieferungReport]
+  implicit val auslieferungReportFormat = new RootJsonFormat[AuslieferungReport] {
+    def write(obj: AuslieferungReport): JsValue =
+      obj match {
+        case d: DepotAuslieferungReport => d.toJson
+        case h: TourAuslieferungReport => h.toJson
+        case p: PostAuslieferungReport => p.toJson
+        case _ => JsObject()
+      }
+
+    def read(json: JsValue): AuslieferungReport = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[DepotAuslieferungReport]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[TourAuslieferungReport]
+      } else {
+        json.convertTo[PostAuslieferungReport]
+      }
+    }
+  }
+
 }

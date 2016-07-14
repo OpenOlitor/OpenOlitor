@@ -20,11 +20,11 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.reporting
 
 import ch.openolitor.buchhaltung.models.RechnungId
 import scalaz._
-import Scalaz._
+import scalaz.Scalaz._
 import scala.concurrent.Future
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
@@ -34,13 +34,14 @@ import ch.openolitor.core.ActorReferences
 import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.core.Macros._
-import akka.stream.scaladsl.Source
 import ch.openolitor.stammdaten.models.Projekt
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.models.ProjektId
 import ch.openolitor.stammdaten.models.ProjektReport
 import ch.openolitor.core.models.PersonId
+import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
+import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
+import scala.Left
+import scala.Right
 
 trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol {
   self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>

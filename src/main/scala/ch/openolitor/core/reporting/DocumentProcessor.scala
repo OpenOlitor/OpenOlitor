@@ -37,11 +37,14 @@ import org.odftoolkit.simple.style._
 import scala.util.Try
 import spray.json._
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import org.joda.time.format.ISODateTimeFormat
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import java.text.DecimalFormat
+import scala.annotation.tailrec
+import ch.openolitor.core.reporting.odf.NestedTextboxIterator
 
 case class Value(jsValue: JsValue, value: String)
 
@@ -51,9 +54,13 @@ trait DocumentProcessor extends LazyLogging {
   import OdfToolkitUtils._
 
   val dateFormatPattern = """date:\s*"(.*)"""".r
-  val numberFormatPattern = """number:\s*"(\[(\w+)\])?([#,.0]+)(;((\[(\w+)\])?-([#,.0]+)))?"""".r
+  val numberFormatPattern = """number:\s*"(\[([#@]?[\w\.]+)\])?([#,.0]+)(;((\[([#@]?[\w\.]+)\])?-([#,.0]+)))?"""".r
+  val backgroundColorFormatPattern = """bg-color:\s*"([#@]?[\w\.]+)"""".r
   val dateFormatter = ISODateTimeFormat.dateTime
   val libreOfficeDateFormat = DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss")
+
+  val parentPathPattern = """\$parent\.(.*)""".r
+  val resolvePropertyPattern = """@(.*)""".r
 
   val colorMap: Map[String, Color] = Map(
     // english words
@@ -98,30 +105,30 @@ trait DocumentProcessor extends LazyLogging {
   )
 
   def processDocument(doc: TextDocument, data: JsValue, locale: Locale = Locale.getDefault): Try[Boolean] = {
-    logger.debug(s"processDocument with data: $data")
+    logger.debug(s"processDocument with data: ${data.prettyPrint}")
     doc.setLocale(locale)
     for {
       props <- Try(extractProperties(data))
       // process header
       _ <- Try(processVariables(doc.getHeader, props))
-      _ <- Try(processTables(doc.getHeader, props, locale, ""))
+      _ <- Try(processTables(doc.getHeader, props, locale, Nil))
       //_ <- Try(processLists(doc.getHeader, props, locale, ""))
       headerContainer = new GenericParagraphContainerImpl(doc.getHeader.getOdfElement)
-      _ <- Try(processTextboxes(headerContainer, props, locale))
+      _ <- Try(processTextboxes(headerContainer, props, locale, Nil))
 
       // process footer
       _ <- Try(processVariables(doc.getFooter, props))
-      _ <- Try(processTables(doc.getFooter, props, locale, ""))
+      _ <- Try(processTables(doc.getFooter, props, locale, Nil))
       //_ <- Try(processLists(doc.getFooter, props, locale, ""))
       footerContainer = new GenericParagraphContainerImpl(doc.getFooter.getOdfElement)
-      _ <- Try(processTextboxes(footerContainer, props, locale))
+      _ <- Try(processTextboxes(footerContainer, props, locale, Nil))
 
       // process content
       _ <- Try(processVariables(doc, props))
-      _ <- Try(processTables(doc, props, locale, ""))
-      _ <- Try(processLists(doc, props, locale, ""))
+      _ <- Try(processTables(doc, props, locale, Nil))
+      _ <- Try(processLists(doc, props, locale, Nil))
       _ <- Try(processSections(doc, props, locale))
-      _ <- Try(processTextboxes(doc, props, locale))
+      _ <- Try(processTextboxes(doc, props, locale, Nil))
       _ <- Try(registerVariables(doc, props))
     } yield true
   }
@@ -158,7 +165,6 @@ trait DocumentProcessor extends LazyLogging {
    * accessor which should resolve nested properties as well (with support for arrays .index notation i.e. 'adressen.0.strasse').
    */
   def processVariables(cont: VariableContainer, props: Map[String, Value]) = {
-    logger.debug(s"processVariables with Properties: $props")
     props map {
       case (property, Value(_, value)) =>
         cont.getVariableFieldByName(property) match {
@@ -170,57 +176,58 @@ trait DocumentProcessor extends LazyLogging {
     }
   }
 
-  def processTables(doc: TableContainer, props: Map[String, Value], locale: Locale, prefix: String) = {
-    doc.getTableList map (table => processTable(doc, table, props, locale, prefix))
+  def processTables(doc: TableContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
+    doc.getTableList map (table => processTable(doc, table, props, locale, pathPrefixes))
   }
 
   /**
    * Process table:
    * duplicate all rows except header rows. Try to replace textbox values with value from property map
    */
-  def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, prefix: String) = {
-    props.get(prefix + table.getTableName) map {
+  def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
+    val propertyKey = parsePropertyKey(table.getTableName, pathPrefixes)
+    props.get(propertyKey) map {
       case Value(JsArray(values), _) =>
         logger.debug(s"processTable (dynamic): ${table.getTableName}")
-        processTableWithValues(doc, table, props, values, locale, prefix)
+        processTableWithValues(doc, table, props, values, locale, pathPrefixes)
 
     } getOrElse {
       //static proccesing
-      logger.debug(s"processTable (static): ${table.getTableName}")
-      processStaticTable(table, props, locale, prefix)
+      logger.debug(s"processTable (static): ${table.getTableName}: $pathPrefixes, $propertyKey")
+      processStaticTable(table, props, locale, pathPrefixes)
     }
   }
 
-  def processStaticTable(table: Table, props: Map[String, Value], locale: Locale = Locale.getDefault, prefix: String) = {
+  def processStaticTable(table: Table, props: Map[String, Value], locale: Locale = Locale.getDefault, pathPrefixes: Seq[String]) = {
     for (r <- 0 to table.getRowCount - 1) {
       //replace textfields
       for (c <- 0 to table.getColumnCount - 1) {
         val cell = table.getCellByPosition(c, r)
-        processTextboxes(cell, props, locale, prefix)
+        processTextboxes(cell, props, locale, pathPrefixes)
       }
     }
   }
 
-  def processLists(doc: ListContainer, props: Map[String, Value], locale: Locale, prefix: String) = {
+  def processLists(doc: ListContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       list <- doc.getListIterator
-    } processList(doc, list, props, locale, prefix)
+    } processList(doc, list, props, locale, pathPrefixes)
   }
 
   /**
    * Process list:
    * process content of every list item as paragraph container
    */
-  def processList(doc: ListContainer, list: List, props: Map[String, Value], locale: Locale, prefix: String) = {
+  def processList(doc: ListContainer, list: List, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       item <- list.getItems
     } yield {
       val container = new GenericParagraphContainerImpl(item.getOdfElement())
-      processTextboxes(container, props, locale, prefix)
+      processTextboxes(container, props, locale, pathPrefixes)
     }
   }
 
-  def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, prefix: String) = {
+  def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, pathPrefixes: Seq[String]) = {
     val startIndex = Math.max(table.getHeaderRowCount, 0)
     val rows = table.getRowList.toList
     val nonHeaderRows = rows.takeRight(rows.length - startIndex)
@@ -228,7 +235,7 @@ trait DocumentProcessor extends LazyLogging {
     logger.debug(s"processTable: ${table.getTableName} -> Header rows: ${table.getHeaderRowCount}")
 
     for (index <- 0 to values.length - 1) {
-      val rowKey = s"$prefix${table.getTableName}.$index."
+      val rowPathPrefix = findPathPrefixes(table.getTableName + s".$index", pathPrefixes)
 
       //copy rows
       val newRows = table.appendRows(nonHeaderRows.length).toList
@@ -243,7 +250,7 @@ trait DocumentProcessor extends LazyLogging {
           copyCell(origCell, newCell)
 
           // replace textfields
-          processTextboxes(newCell, props, locale, rowKey)
+          processTextboxes(newCell, props, locale, rowPathPrefix)
         }
       }
     }
@@ -290,11 +297,11 @@ trait DocumentProcessor extends LazyLogging {
 
   private def processSectionWithValues(doc: TextDocument, section: Section, props: Map[String, Value], values: Vector[JsValue], locale: Locale) = {
     for (index <- 0 to values.length - 1) {
-      val sectionKey = s"${section.getName}.$index."
+      val sectionKey = s"${section.getName}.$index"
       logger.debug(s"processSection:$sectionKey")
-      processTextboxes(section, props, locale, sectionKey)
-      processTables(section, props, locale, sectionKey)
-      processLists(section, props, locale, sectionKey)
+      processTextboxes(section, props, locale, Seq(sectionKey))
+      processTables(section, props, locale, Seq(sectionKey))
+      processLists(section, props, locale, Seq(sectionKey))
       //append section
       doc.appendSection(section, false)
     }
@@ -306,55 +313,97 @@ trait DocumentProcessor extends LazyLogging {
   /**
    * Process textboxes and fill in content based on
    */
-  private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefix: String = "") = {
+  private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       p <- cont.getParagraphIterator
-      t <- p.getTextboxIterator
+      t <- new NestedTextboxIterator(p)
     } {
+      val (name, formats) = parseFormats(t.getName)
+      val propertyKey = parsePropertyKey(name, pathPrefixes)
+      logger.debug(s"processTextbox: ${propertyKey} | formats:$formats")
+
+      // resolve textbox content from properties, otherwise only apply formats to current content
       t.removeCommonStyle()
-      val (name, format) = parseFormat(t.getName)
-      val propertyKey = s"$pathPrefix$name"
-      logger.debug(s"processTextbox: ${propertyKey} | format:$format")
-      props.get(propertyKey) map {
-        case Value(_, value) =>
-          val formatValue = format getOrElse ""
-          applyFormat(t, formatValue, value, locale)
-      }
+      val value = props.get(propertyKey) map {
+        case Value(_, value) => value
+      } getOrElse (t.getTextContent())
+
+      //apply all formats
+      applyFormats(t, formats, value, props, locale, pathPrefixes)
+    }
+  }
+
+  @tailrec
+  private def applyFormats(textbox: Textbox, formats: Seq[String], value: String, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]): String = {
+    formats match {
+      case Nil => applyFormat(textbox, "", value, props, locale, pathPrefixes)
+      case format :: tail =>
+        val formattedValue = applyFormat(textbox, format, value, props, locale, pathPrefixes)
+        applyFormats(textbox, tail, formattedValue, props, locale, pathPrefixes)
+    }
+  }
+
+  private def parsePropertyKey(name: String, pathPrefixes: Seq[String] = Nil): String = {
+    findPathPrefixes(name, pathPrefixes).mkString(".")
+  }
+
+  @tailrec
+  private def findPathPrefixes(name: String, pathPrefixes: Seq[String] = Nil): Seq[String] = {
+    name match {
+      case parentPathPattern(rest) if !pathPrefixes.isEmpty => findPathPrefixes(rest, pathPrefixes.tail)
+      case _ => pathPrefixes :+ name
     }
   }
 
   /**
    *
    */
-  private def applyFormat(textbox: Textbox, format: String, value: String, locale: Locale) = {
+  private def applyFormat(textbox: Textbox, format: String, value: String, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]): String = {
     format match {
       case dateFormatPattern(pattern) =>
         // parse date
         val formattedDate = libreOfficeDateFormat.parseDateTime(value).toString(pattern, locale)
-        textbox.setTextContentStyleAware(formattedDate)
+        logger.debug(s"Formatted date with pattern $pattern => $formattedDate")
+        formattedDate
+      case backgroundColorFormatPattern(pattern) =>
+        // set background to textbox
+        resolveColor(pattern, props, pathPrefixes) map { color =>
+          textbox.setBackgroundColor(color)
+        }
+        value
       case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
         // lookup color value        
         val number = value.toDouble
         if (number < 0 && negativeFormat != null) {
           val formattedValue = decimaleFormatForLocale(negativeFormat, locale).format(value.toDouble)
           if (negativeColor != null) {
-            val color = if (Color.isValid(negativeColor)) Color.valueOf(negativeColor) else colorMap.get(negativeColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:$negativeColor"))
-            textbox.setFontColor(color)
+            resolveColor(negativeColor, props, pathPrefixes) map { color =>
+              logger.debug(s"Resolved native color:$color")
+              textbox.setFontColor(color)
+            }
+          } else {
+            textbox.setFontColor(Color.BLACK)
           }
-          textbox.setTextContentStyleAware(formattedValue)
+          formattedValue
         } else {
           val formattedValue = decimaleFormatForLocale(positivePattern, locale).format(value.toDouble)
           if (positiveColor != null) {
-            val color = if (Color.isValid(positiveColor)) Color.valueOf(positiveColor) else colorMap.get(positiveColor.toUpperCase).getOrElse(throw new ReportException(s"Unsupported color:positiveColor"))
-            textbox.setFontColor(color)
+            resolveColor(positiveColor, props, pathPrefixes) map { color =>
+              logger.debug(s"Resolved positive color:$color")
+              textbox.setFontColor(color)
+            }
+          } else {
+            textbox.setFontColor(Color.BLACK)
           }
-          textbox.setTextContentStyleAware(formattedValue)
+          formattedValue
         }
       case x if format.length > 0 =>
         logger.warn(s"Unsupported format:$format")
         textbox.setTextContentStyleAware(value)
+        value
       case _ =>
         textbox.setTextContentStyleAware(value)
+        value
     }
   }
 
@@ -364,14 +413,32 @@ trait DocumentProcessor extends LazyLogging {
     decimalFormat
   }
 
-  private def parseFormat(name: String): (String, Option[String]) = {
+  private def parseFormats(name: String): (String, Seq[String]) = {
     if (name == null || name.trim.isEmpty) {
-      return (name, None)
+      return (name, Nil)
     }
-    name.split('|') match {
-      case Array(name, format) => (name.trim, Some(format.trim))
-      case Array(name) => (name.trim, None)
-      case x => (x.mkString("|"), None)
+    name.split('|').toList match {
+      case name :: Nil => (name.trim, Nil)
+      case name :: tail => (name.trim, tail.map(_.trim))
+      case _ => (name, Nil)
+    }
+  }
+
+  private def resolveColor(color: String, props: Map[String, Value], pathPrefixes: Seq[String]): Option[Color] = {
+    color match {
+      case resolvePropertyPattern(property) =>
+        //resolve color in props
+        val propertyKey = parsePropertyKey(property, pathPrefixes)
+        props.get(propertyKey) flatMap {
+          case Value(_, value) =>
+            resolveColor(value, props, pathPrefixes)
+        }
+      case color =>
+        if (Color.isValid(color)) Some(Color.valueOf(color))
+        else colorMap.get(color.toUpperCase).orElse {
+          logger.debug(s"Unsupported color: $color")
+          None
+        }
     }
   }
 
@@ -428,32 +495,26 @@ object OdfToolkitUtils {
       val styleName = p.getStyleName()
 
       val lastNode = p.getOdfElement.getLastChild();
-      if (lastNode != null && lastNode.getNodeName() != null
-        && (lastNode.getNodeName().equals("text:a") || lastNode.getNodeName().equals("text:span"))) {
-        // register style as well on span element
-        lastNode.asInstanceOf[OdfElement].setAttributeNS("urn:oasis:names:tc:opendocument:xlmns:style:1.0", "style:style-name", styleName)
+      // create new style element to support coloring of font
+      val content = self.getTextContent
+      //remove last node (current text node)
+      p.getOdfElement.removeChild(lastNode)
+      val textP = p.getOdfElement.asInstanceOf[TextPElement]
+      val span = textP.newTextSpanElement()
+
+      val dom = self.getOdfElement.getOwnerDocument
+      val styles = if (dom.isInstanceOf[OdfContentDom]) {
+        dom.asInstanceOf[OdfContentDom].getAutomaticStyles
       } else {
-        // create new style element to support coloring of font
-        val content = self.getTextContent
-        //remove last node (current text node)
-        p.getOdfElement.removeChild(lastNode)
-        val textP = p.getOdfElement.asInstanceOf[TextPElement]
-        val span = textP.newTextSpanElement()
-
-        val dom = self.getOdfElement.getOwnerDocument
-        val styles = if (dom.isInstanceOf[OdfContentDom]) {
-          dom.asInstanceOf[OdfContentDom].getAutomaticStyles
-        } else {
-          dom.asInstanceOf[OdfStylesDom].getAutomaticStyles
-        }
-        val textStyle = styles.newStyle(OdfStyleFamily.Text)
-        val styleTextPropertiesElement = textStyle.newStyleTextPropertiesElement(null)
-        styleTextPropertiesElement.setFoColorAttribute(color.toString)
-
-        // set comment content
-        span.setStyleName(textStyle.getStyleNameAttribute)
-        span.setTextContent(content)
+        dom.asInstanceOf[OdfStylesDom].getAutomaticStyles
       }
+      val textStyle = styles.newStyle(OdfStyleFamily.Text)
+      val styleTextPropertiesElement = textStyle.newStyleTextPropertiesElement(null)
+      styleTextPropertiesElement.setFoColorAttribute(color.toString)
+
+      // set comment content
+      span.setStyleName(textStyle.getStyleNameAttribute)
+      span.setTextContent(content)
     }
   }
 }

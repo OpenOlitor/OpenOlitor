@@ -26,6 +26,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import java.util.UUID
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus
 
@@ -270,6 +271,22 @@ case class Korb(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[KorbId]
+
+case class KorbReport(
+  id: KorbId,
+  lieferungId: LieferungId,
+  abo: Abo,
+  status: KorbStatus,
+  guthabenVorLieferung: Int,
+  auslieferungId: Option[AuslieferungId],
+  kunde: KundeReport,
+  abotyp: Abotyp,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
 
 case class KorbModify(
   status: KorbStatus,
