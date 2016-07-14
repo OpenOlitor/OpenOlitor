@@ -157,18 +157,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteLieferplanung(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
     DB localTx { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Lieferplanung, LieferplanungId](id, { lieferplanung: Lieferplanung => lieferplanung.status == Offen }) match {
-        case Some(lieferplanung) =>
-          //remove LieferplanungId from Lieferungen and remove all Lieferposition
-          stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
-            val copy = lieferung.copy(lieferplanungId = None)
-            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-          }
-          stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id) map { lieferposition =>
-            stammdatenWriteRepository.deleteEntity[Lieferposition, LieferpositionId](lieferposition.id)
-          }
-        case None =>
-      }
+      stammdatenWriteRepository.deleteEntity[Lieferplanung, LieferplanungId](id, { lieferplanung: Lieferplanung => lieferplanung.status == Offen })
     }
   }
 

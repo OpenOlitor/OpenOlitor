@@ -108,6 +108,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
     case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) => handleLieferplanungAbgeschlossen(entity)(personId)
+    case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
 
     case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) => handleLieferungModified(entity, orig)(personId)
 
@@ -528,6 +529,16 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   }
 
+  def handleLieferplanungDeleted(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
+    DB localTx { implicit session =>
+      //remove LieferplanungId from Lieferungen
+      stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
+        val copy = lieferung.copy(lieferplanungId = None)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+      }
+    }
+  }
+
   def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
     DB localTx { implicit session =>
       stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
@@ -650,6 +661,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) {
       //Lieferung was removed in a Lieferplanung
       removeKoerbe(lieferung.id)
+
+      //remove lieferpositionen as well
+      removeLieferpositionen(lieferung.id)
     }
   }
 
@@ -671,6 +685,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def removeKoerbe(lieferungId: LieferungId)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.deleteKoerbe(lieferungId)
+    }
+  }
+
+  def removeLieferpositionen(lieferungId: LieferungId)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
     }
   }
 
