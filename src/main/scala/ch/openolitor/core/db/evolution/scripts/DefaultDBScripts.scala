@@ -22,27 +22,22 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
-import ch.openolitor.core.db.evolution.Script
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.core.SystemConfig
 import scalikejdbc._
-import scala.util.Try
-import scala.util.Success
-import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-/**
- *
- */
-object OO219_DBScripts_FilestoreReference extends DefaultDBScripts {
-  val BuchhaltungScripts = new Script with LazyLogging with BuchhaltungDBMappings {
-    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      logger.debug(s"add column fileStoreId to rechnung...")
-      // add column sprache to projekt
-      alterTableAddColumnIfNotExists(rechnungMapping, "file_store_id", "varchar(20)", "esr_nummer")
-      Success(true)
-    }
+trait DefaultDBScripts {
+
+  /**
+   * Helper method to allow easier syntax to add safely column on mariadb server version < 10.0
+   */
+  def alterTableAddColumnIfNotExists(syntax: SQLSyntaxSupport[_], columnName: String, columnDef: String, after: String)(implicit session: DBSession) = {
+    sql"""
+      SELECT count(*) INTO @exist FROM INFORMATION_SCHEMA.COLUMNS  WHERE TABLE_SCHEMA=DATABASE() AND 
+      	COLUMN_NAME='$columnName' AND 
+      	TABLE_NAME = '${syntax.table}';
+      set @query = IF(@exist <= 0, 
+      	'ALTER TABLE ${syntax.table} ADD $columnName $columnDef after $after;', 
+      	'select \'Column Exists\' status');
+      prepare stmt from @query;
+      EXECUTE stmt;""".execute.apply()
   }
-
-  val scripts = Seq(BuchhaltungScripts)
 }

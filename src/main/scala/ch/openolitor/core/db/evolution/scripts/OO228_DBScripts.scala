@@ -31,7 +31,7 @@ import scala.util.Try
 import scala.util.Success
 
 object OO228_DBScripts {
-  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"drop table if exists ${tourlieferungMapping.table}".execute.apply()
 
@@ -94,7 +94,7 @@ object OO228_DBScripts {
         modifidat datetime not null,
         modifikator BIGINT not null)""".execute.apply()
 
-      sql"ALTER TABLE ${korbMapping.table} ADD COLUMN IF NOT EXISTS auslieferung_id BIGINT AFTER guthaben_vor_lieferung".execute.apply()
+      alterTableAddColumnIfNotExists(korbMapping, "auslieferung_id", "BIGINT", "guthaben_vor_lieferung")
 
       Success(true)
     }

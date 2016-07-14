@@ -9,9 +9,9 @@ import scala.util.{ Try, Success }
 
 object OO215_DBScripts {
 
-  val StammdatenDBScript = new Script with LazyLogging with StammdatenDBMappings {
+  val StammdatenDBScript = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      sql"alter table ${tourMapping.table} add Column anzahl_abonnenten int not null after beschreibung".execute.apply()
+      alterTableAddColumnIfNotExists(tourMapping, "anzahl_abonnenten", "int not null", "beschreibung")
 
       Success(true)
     }
