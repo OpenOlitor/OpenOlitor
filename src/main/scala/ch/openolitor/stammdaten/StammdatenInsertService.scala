@@ -517,40 +517,41 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       insert match {
         case obj =>
           //create lieferplanung
-          stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](obj)
-          //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
-          val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map {
-            lieferung =>
-              //TODO use StammdatenUpdateSerivce.addLieferungPlanung
-              val anzahlLieferungen = stammdatenWriteRepository.getLastGeplanteLieferung(lieferung.abotypId) match {
-                case Some(l) => l.anzahlLieferungen + 1
-                case None => 1
-              }
-              logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
+          stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](obj) map { l =>
+            //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
+            val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map {
+              lieferung =>
+                //TODO use StammdatenUpdateSerivce.addLieferungPlanung
+                val anzahlLieferungen = stammdatenWriteRepository.getLastGeplanteLieferung(lieferung.abotypId) match {
+                  case Some(l) => l.anzahlLieferungen + 1
+                  case None => 1
+                }
+                logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
 
-              val lpId = Some(lieferplanungId)
+                val lpId = Some(lieferplanungId)
 
-              val lObj = copyTo[Lieferung, Lieferung](
-                lieferung,
-                "lieferplanungId" -> lpId,
-                "status" -> Offen,
-                "anzahlLieferungen" -> anzahlLieferungen,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> personId
-              )
-              //update Lieferung
-              stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lObj)
+                val lObj = copyTo[Lieferung, Lieferung](
+                  lieferung,
+                  "lieferplanungId" -> lpId,
+                  "status" -> Offen,
+                  "anzahlLieferungen" -> anzahlLieferungen,
+                  "modifidat" -> meta.timestamp,
+                  "modifikator" -> personId
+                )
+                //update Lieferung
+                stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lObj)
 
-              lObj.abotypBeschrieb
+                lObj.abotypBeschrieb
+            }
+            val abotypStr = abotypDepotTour.filter(_.nonEmpty).mkString(", ")
+            val updatedObj = copyTo[Lieferplanung, Lieferplanung](
+              obj,
+              "abotypDepotTour" -> abotypStr
+            )
+
+            //update lieferplanung
+            stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
           }
-          val abotypStr = abotypDepotTour.filter(_.nonEmpty).mkString(", ")
-          val updatedObj = copyTo[Lieferplanung, Lieferplanung](
-            obj,
-            "abotypDepotTour" -> abotypStr
-          )
-
-          //update lieferplanung
-          stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
       }
     }
   }
