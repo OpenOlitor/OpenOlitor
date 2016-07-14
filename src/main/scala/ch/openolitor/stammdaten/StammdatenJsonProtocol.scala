@@ -383,7 +383,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val lieferplanungModifyFormat = autoProductFormat[LieferplanungModify]
   implicit val lieferplanungCreateFormat = autoProductFormat[LieferplanungCreate]
   implicit val lieferpositionModifyFormat = autoProductFormat[LieferpositionModify]
-  implicit val lieferpositionenCreateFormat = autoProductFormat[LieferpositionenCreate]
+  implicit val lieferpositionenCreateFormat = autoProductFormat[LieferpositionenModify]
   implicit val lieferungPlanungAddFormat = autoProductFormat[LieferungPlanungAdd]
   implicit val lieferungPlanungRemoveFormat = autoProductFormat[LieferungPlanungRemove]
   implicit val bestellungModifyFormat = autoProductFormat[BestellungModify]

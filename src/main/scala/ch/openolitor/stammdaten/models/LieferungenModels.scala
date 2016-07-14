@@ -190,8 +190,7 @@ case class LieferpositionModify(
   anzahl: Int
 ) extends JSONSerializable
 
-case class LieferpositionenCreate(
-  lieferungId: LieferungId,
+case class LieferpositionenModify(
   lieferpositionen: List[LieferpositionModify]
 ) extends JSONSerializable
 

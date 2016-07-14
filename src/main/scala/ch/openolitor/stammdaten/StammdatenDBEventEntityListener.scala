@@ -50,7 +50,10 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 /**
  * Listen on DBEvents and adjust calculated fields within this module
  */
-class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with StammdatenDBMappings with AsyncConnectionPoolContextAware {
+class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
+    with StammdatenDBMappings
+    with AsyncConnectionPoolContextAware
+    with KorbStatusHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
@@ -109,10 +112,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
     case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) => handleLieferplanungAbgeschlossen(entity)(personId)
     case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
-
-    case e @ EntityModified(personId, lieferung: Lieferung, orig: Lieferung) if lieferung.lieferplanungId.isDefined && !orig.lieferplanungId.isDefined => handleLieferungAttachedToLieferplanung(lieferung)(personId)
-    case e @ EntityModified(personId, lieferung: Lieferung, orig: Lieferung) if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) => handleLieferungDetachedFromLieferplanung(lieferung)(personId)
-
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
     case e @ EntityModified(personId, entity: Vertriebsart, orig: Vertriebsart) => handleVertriebsartModified(entity, orig)(personId)
@@ -527,17 +526,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleLieferplanungCreated(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
-
   }
 
   def handleLieferplanungDeleted(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
-      //remove LieferplanungId from Lieferungen
-      stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
-        val copy = lieferung.copy(lieferplanungId = None)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-      }
-    }
+
   }
 
   def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
@@ -653,21 +645,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleLieferungAttachedToLieferplanung(lieferung: Lieferung)(implicit personId: PersonId) = {
-    logger.debug(s"lieferung attached to lieferplanung: lieferung:\n$lieferung")
-    //Lieferung was planed in a Lieferplanung
-    createKoerbe(lieferung.id)
-  }
-
-  def handleLieferungDetachedFromLieferplanung(lieferung: Lieferung)(implicit personId: PersonId) = {
-    logger.debug(s"lieferung detached from to lieferplanung: lieferung:\n$lieferung")
-    //Lieferung was removed in a Lieferplanung
-    removeKoerbe(lieferung.id)
-
-    //remove lieferpositionen as well
-    removeLieferpositionen(lieferung.id)
-  }
-
   def handleDepotModified(depot: Depot, orig: Depot)(implicit personId: PersonId) = {
     logger.debug(s"handleDepotModified: depot:\depot\norig:$orig")
     if (depot.name != orig.name) {
@@ -678,62 +655,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             depotName = depot.name
           )
           stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
-        }
-      }
-    }
-  }
-
-  def removeKoerbe(lieferungId: LieferungId)(implicit personId: PersonId) = {
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteKoerbe(lieferungId)
-    }
-  }
-
-  def removeLieferpositionen(lieferungId: LieferungId)(implicit personId: PersonId) = {
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
-    }
-  }
-
-  def createKoerbe(lieferungId: LieferungId)(implicit personId: PersonId) = {
-    logger.debug(s"Create Koerbe:$lieferungId")
-    DB localTx { implicit session =>
-      stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
-        stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
-          val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
-          val statusL = abos map { abo =>
-            val abwCount = stammdatenWriteRepository.countAbwesend(lieferungId, abo.id)
-            val retAbw = abwCount match {
-              case Some(abw) if abw > 0 => 1
-              case _ => 0
-            }
-            val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
-            val korbId = KorbId(IdUtil.positiveRandomId)
-            val korb = Korb(
-              korbId,
-              lieferungId,
-              abo.id,
-              status,
-              abo.guthaben,
-              None,
-              DateTime.now,
-              personId,
-              DateTime.now,
-              personId
-            )
-            stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
-            status
-          }
-
-          val counts = statusL.groupBy { _.getClass }.mapValues(_.size)
-
-          val copy = lieferung.copy(
-            anzahlKoerbeZuLiefern = counts.get(WirdGeliefert.getClass).getOrElse(0),
-            anzahlAbwesenheiten = counts.get(FaelltAusAbwesend.getClass).getOrElse(0),
-            anzahlSaldoZuTief = counts.get(FaelltAusSaldoZuTief.getClass).getOrElse(0)
-          )
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-
         }
       }
     }
@@ -794,14 +715,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         val updated = person.copy(letzteAnmeldung = Some(timestamp))
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
       }
-    }
-  }
-
-  def calculateKorbStatus(abwCount: Option[Int], guthaben: Int, minGuthaben: Int): KorbStatus = {
-    (abwCount, guthaben) match {
-      case (Some(abw), _) if abw > 0 => FaelltAusAbwesend
-      case (_, guthaben) if guthaben > minGuthaben => WirdGeliefert
-      case (_, guthaben) if guthaben <= minGuthaben => FaelltAusSaldoZuTief
     }
   }
 

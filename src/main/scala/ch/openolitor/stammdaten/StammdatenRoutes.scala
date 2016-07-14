@@ -383,7 +383,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
         get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~
-          (put | post)(create[LieferpositionenCreate, LieferpositionId](LieferpositionId.apply _))
+          (put | post)(update[LieferpositionenModify, LieferungId](lieferungId))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "abschliessen") { id =>
         (post)(lieferplanungAbschliessen(id))
