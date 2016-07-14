@@ -31,12 +31,11 @@ import scala.util.Try
 import scala.util.Success
 
 object OO220_DBScripts {
-  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       logger.debug(s"add column depotId and tourId to auslieferungen...")
-      // add column sprache to projekt
-      sql"ALTER TABLE ${depotAuslieferungMapping.table} ADD COLUMN IF NOT EXISTS depot_id BIGINT after status".execute.apply()
-      sql"ALTER TABLE ${tourAuslieferungMapping.table} ADD COLUMN IF NOT EXISTS tour_id BIGINT after status".execute.apply()
+      alterTableAddColumnIfNotExists(depotAuslieferungMapping, "tourAuslieferungMapping", "BIGINT", "status")
+      alterTableAddColumnIfNotExists(tourAuslieferungMapping, "tourAuslieferungMapping", "BIGINT", "status")
       Success(true)
     }
   }
