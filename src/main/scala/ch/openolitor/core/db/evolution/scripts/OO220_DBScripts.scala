@@ -34,8 +34,8 @@ object OO220_DBScripts {
   val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       logger.debug(s"add column depotId and tourId to auslieferungen...")
-      alterTableAddColumnIfNotExists(depotAuslieferungMapping, "tourAuslieferungMapping", "BIGINT", "status")
-      alterTableAddColumnIfNotExists(tourAuslieferungMapping, "tourAuslieferungMapping", "BIGINT", "status")
+      alterTableAddColumnIfNotExists(depotAuslieferungMapping, "depot_id", "BIGINT", "status")
+      alterTableAddColumnIfNotExists(tourAuslieferungMapping, "tour_id", "BIGINT", "status")
       Success(true)
     }
   }
