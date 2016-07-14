@@ -110,7 +110,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) => handleLieferplanungAbgeschlossen(entity)(personId)
     case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
 
-    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) => handleLieferungModified(entity, orig)(personId)
+    case e @ EntityModified(personId, lieferung: Lieferung, orig: Lieferung) if lieferung.lieferplanungId.isDefined && !orig.lieferplanungId.isDefined => handleLieferungAttachedToLieferplanung(lieferung)(personId)
+    case e @ EntityModified(personId, lieferung: Lieferung, orig: Lieferung) if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) => handleLieferungDetachedFromLieferplanung(lieferung)(personId)
 
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
@@ -652,19 +653,19 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleLieferungModified(lieferung: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
-    logger.debug(s"handleLieferungModified: lieferung:\n$lieferung\norig:$orig")
-    if (lieferung.lieferplanungId.isDefined && !orig.lieferplanungId.isDefined) {
-      //Lieferung was planed in a Lieferplanung
-      createKoerbe(lieferung.id)
-    }
-    if (!lieferung.lieferplanungId.isDefined && orig.lieferplanungId.isDefined) {
-      //Lieferung was removed in a Lieferplanung
-      removeKoerbe(lieferung.id)
+  def handleLieferungAttachedToLieferplanung(lieferung: Lieferung)(implicit personId: PersonId) = {
+    logger.debug(s"lieferung attached to lieferplanung: lieferung:\n$lieferung")
+    //Lieferung was planed in a Lieferplanung
+    createKoerbe(lieferung.id)
+  }
 
-      //remove lieferpositionen as well
-      removeLieferpositionen(lieferung.id)
-    }
+  def handleLieferungDetachedFromLieferplanung(lieferung: Lieferung)(implicit personId: PersonId) = {
+    logger.debug(s"lieferung detached from to lieferplanung: lieferung:\n$lieferung")
+    //Lieferung was removed in a Lieferplanung
+    removeKoerbe(lieferung.id)
+
+    //remove lieferpositionen as well
+    removeLieferpositionen(lieferung.id)
   }
 
   def handleDepotModified(depot: Depot, orig: Depot)(implicit personId: PersonId) = {
