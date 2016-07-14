@@ -29,6 +29,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 case class AboId(id: Long) extends BaseId
 
@@ -310,6 +311,17 @@ case class AboGuthabenModify(
 case class AboVertriebsartModify(
   vertriebsartIdNeu: VertriebsartId,
   bemerkung: String
+) extends JSONSerializable
+
+case class AboRechnungCreate(
+  ids: Seq[AboId],
+  titel: String,
+  anzahlLieferungen: Option[Int],
+  bisGuthaben: Option[Int],
+  waehrung: Waehrung,
+  betrag: Option[BigDecimal],
+  rechnungsDatum: DateTime,
+  faelligkeitsDatum: DateTime
 ) extends JSONSerializable
 
 case class Tourlieferung(

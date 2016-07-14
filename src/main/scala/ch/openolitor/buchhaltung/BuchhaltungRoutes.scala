@@ -59,6 +59,8 @@ import ch.openolitor.core.security.Subject
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
 import ch.openolitor.buchhaltung.reporting.RechnungReportService
+import ch.openolitor.util.parsing.UriQueryParamFilterParser
+import ch.openolitor.util.parsing.FilterExpr
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -73,9 +75,15 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 
   import EntityStore._
 
-  def buchhaltungRoute(implicit subect: Subject) = rechnungenRoute ~ zahlungsImportsRoute
+  def buchhaltungRoute(implicit subect: Subject) =
+    parameters('f.?) { (f) =>
+      implicit val filter = f flatMap { filterString =>
+        UriQueryParamFilterParser.parse(filterString)
+      }
+      rechnungenRoute ~ zahlungsImportsRoute
+    }
 
-  def rechnungenRoute(implicit subect: Subject) =
+  def rechnungenRoute(implicit subect: Subject, filter: Option[FilterExpr]) =
     path("rechnungen") {
       get(list(buchhaltungReadRepository.getRechnungen)) ~
         post(create[RechnungCreate, RechnungId](RechnungId.apply _))

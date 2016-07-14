@@ -33,6 +33,8 @@ import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.Macros._
 import com.fasterxml.jackson.databind.JsonSerializable
+import ch.openolitor.buchhaltung.models.RechnungCreate
+import ch.openolitor.buchhaltung.models.RechnungId
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
@@ -40,6 +42,8 @@ object StammdatenCommandHandler {
   case class BestellungAnProduzentenVersenden(originator: PersonId, id: BestellungId) extends UserCommand
   case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char]) extends UserCommand
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
+  case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
+  case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
@@ -115,6 +119,12 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           Success(events map (_.get))
         }
       }
+
+    case CreateAnzahlLieferungenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
+      createAboRechnungen(idFactory, meta, rechnungCreate)
+
+    case CreateBisGuthabenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
+      createAboRechnungen(idFactory, meta, rechnungCreate)
 
     case PasswortWechselCommand(originator, personId, pwd) => idFactory => meta =>
       Success(Seq(PasswortGewechseltEvent(meta, personId, pwd)))
@@ -260,6 +270,61 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         val title = "Guthaben angepasst: "
         val pendenzCreate = PendenzCreate(kundeId, meta.timestamp, Some(bemerkung), Erledigt, true)
         EntityInsertedEvent[PendenzId, PendenzCreate](meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
+      }
+    }
+  }
+
+  def createAboRechnungen(idFactory: IdFactory, meta: EventMetadata, rechnungCreate: AboRechnungCreate) = {
+    DB readOnly { implicit session =>
+      val (events, failures) = rechnungCreate.ids map { id =>
+        stammdatenWriteRepository.getAboDetail(id) flatMap { aboDetail =>
+          stammdatenWriteRepository.getById(abotypMapping, aboDetail.abotypId) flatMap { abotyp =>
+            stammdatenWriteRepository.getById(kundeMapping, aboDetail.kundeId) map { kunde =>
+
+              // TODO check preisEinheit
+              if (abotyp.preiseinheit != ProLieferung) {
+                Failure(new InvalidStateException(s"Für den Abotyp dieses Abos ($id) kann keine Guthabenrechnung erstellt werden"))
+              } else {
+                // has to be refactored as soon as more modes are available
+                val anzahlLieferungen = rechnungCreate.anzahlLieferungen getOrElse {
+                  math.max(((rechnungCreate.bisGuthaben getOrElse aboDetail.guthaben) - aboDetail.guthaben), 0)
+                }
+
+                if (anzahlLieferungen > 0) {
+                  val betrag = rechnungCreate.betrag getOrElse abotyp.preis * anzahlLieferungen
+
+                  val rechnung = RechnungCreate(
+                    aboDetail.kundeId,
+                    id,
+                    rechnungCreate.titel,
+                    anzahlLieferungen,
+                    rechnungCreate.waehrung,
+                    betrag,
+                    None,
+                    rechnungCreate.rechnungsDatum,
+                    rechnungCreate.faelligkeitsDatum,
+                    None,
+                    kunde.strasseLieferung getOrElse kunde.strasse,
+                    kunde.hausNummerLieferung orElse kunde.hausNummer,
+                    kunde.adressZusatzLieferung orElse kunde.adressZusatz,
+                    kunde.plzLieferung getOrElse kunde.plz,
+                    kunde.ortLieferung getOrElse kunde.ort
+                  )
+
+                  Success(insertEntityEvent(idFactory, meta, rechnung, RechnungId.apply))
+                } else {
+                  Failure(new InvalidStateException(s"Für das Abo mit der Id $id wurde keine Rechnung erstellt. Anzahl Lieferungen 0"))
+                }
+              }
+            }
+          }
+        } getOrElse (Failure(new InvalidStateException(s"Für das Abo mit der Id $id konnte keine Rechnung erstellt werden.")))
+      } partition (_.isSuccess)
+
+      if (events.isEmpty) {
+        Failure(new InvalidStateException(s"Keine der Rechnungen konnte erstellt werden"))
+      } else {
+        Success(events map (_.get))
       }
     }
   }

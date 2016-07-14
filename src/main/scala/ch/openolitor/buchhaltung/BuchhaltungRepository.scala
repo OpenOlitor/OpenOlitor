@@ -43,6 +43,8 @@ import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.core.AkkaEventStream
+import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 
 trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMappings with StammdatenDBMappings {
   lazy val rechnung = rechnungMapping.syntax("rechnung")
@@ -53,10 +55,11 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
   lazy val heimlieferungAbo = heimlieferungAboMapping.syntax("heimlieferungAbo")
   lazy val postlieferungAbo = postlieferungAboMapping.syntax("postlieferungAbo")
 
-  protected def getRechnungenQuery = {
+  protected def getRechnungenQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(rechnungMapping as rechnung)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, rechnung))
         .orderBy(rechnung.rechnungsDatum)
     }.map(rechnungMapping(rechnung)).list
   }
@@ -130,7 +133,7 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
  * Asynchronous Repository
  */
 trait BuchhaltungReadRepository {
-  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
+  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]]
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]
   def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]]
@@ -155,8 +158,8 @@ trait BuchhaltungWriteRepository extends BaseWriteRepository with EventStream {
 }
 
 class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyLogging with BuchhaltungRepositoryQueries {
-  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]] = {
-    getRechnungenQuery.future
+  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]] = {
+    getRechnungenQuery(filter).future
   }
 
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]] = {
@@ -190,7 +193,7 @@ class BuchhaltungWriteRepositoryImpl(val system: ActorSystem) extends Buchhaltun
   }
 
   def getRechnungen(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung] = {
-    getRechnungenQuery.apply()
+    getRechnungenQuery(None).apply()
   }
 
   def getKundenRechnungen(kundeId: KundeId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung] = {

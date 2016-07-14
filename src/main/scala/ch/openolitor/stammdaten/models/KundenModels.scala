@@ -198,13 +198,15 @@ case class KundeModify(
   ansprechpersonen: Seq[PersonModify]
 ) extends JSONSerializable
 
-sealed trait Anrede extends Product
+sealed trait Anrede
 case object Herr extends Anrede
 case object Frau extends Anrede
 
 object Anrede {
-  def apply(value: String): Anrede = {
-    Vector(Herr, Frau).find(_.toString == value).getOrElse(Herr)
+  val AlleAnreden = Vector(Herr, Frau)
+
+  def apply(value: String): Option[Anrede] = {
+    AlleAnreden.find(_.toString == value)
   }
 }
 
