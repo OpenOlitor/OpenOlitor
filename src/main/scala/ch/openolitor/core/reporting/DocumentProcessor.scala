@@ -37,12 +37,14 @@ import org.odftoolkit.simple.style._
 import scala.util.Try
 import spray.json._
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import org.joda.time.format.ISODateTimeFormat
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import java.text.DecimalFormat
 import scala.annotation.tailrec
+import ch.openolitor.core.reporting.odf.NestedTextboxIterator
 
 case class Value(jsValue: JsValue, value: String)
 
@@ -314,23 +316,30 @@ trait DocumentProcessor extends LazyLogging {
   private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       p <- cont.getParagraphIterator
-      t <- p.getTextboxIterator
+      t <- new NestedTextboxIterator(p)
     } {
-      t.removeCommonStyle()
       val (name, formats) = parseFormats(t.getName)
       val propertyKey = parsePropertyKey(name, pathPrefixes)
       logger.debug(s"processTextbox: ${propertyKey} | formats:$formats")
 
       // resolve textbox content from properties, otherwise only apply formats to current content
+      t.removeCommonStyle()
       val value = props.get(propertyKey) map {
         case Value(_, value) => value
       } getOrElse (t.getTextContent())
 
       //apply all formats
-      formats :+ "" map { formatValue =>
-        logger.debug(s"Apply format: $formatValue")
-        applyFormat(t, formatValue, value, props, locale, pathPrefixes)
-      }
+      applyFormats(t, formats, value, props, locale, pathPrefixes)
+    }
+  }
+
+  @tailrec
+  private def applyFormats(textbox: Textbox, formats: Seq[String], value: String, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]): String = {
+    formats match {
+      case Nil => applyFormat(textbox, "", value, props, locale, pathPrefixes)
+      case format :: tail =>
+        val formattedValue = applyFormat(textbox, format, value, props, locale, pathPrefixes)
+        applyFormats(textbox, tail, formattedValue, props, locale, pathPrefixes)
     }
   }
 
@@ -349,17 +358,19 @@ trait DocumentProcessor extends LazyLogging {
   /**
    *
    */
-  private def applyFormat(textbox: Textbox, format: String, value: String, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
+  private def applyFormat(textbox: Textbox, format: String, value: String, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]): String = {
     format match {
       case dateFormatPattern(pattern) =>
         // parse date
         val formattedDate = libreOfficeDateFormat.parseDateTime(value).toString(pattern, locale)
-        textbox.setTextContentStyleAware(formattedDate)
+        logger.debug(s"Formatted date with pattern $pattern => $formattedDate")
+        formattedDate
       case backgroundColorFormatPattern(pattern) =>
         // set background to textbox
         resolveColor(pattern, props, pathPrefixes) map { color =>
           textbox.setBackgroundColor(color)
         }
+        value
       case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
         // lookup color value        
         val number = value.toDouble
@@ -373,7 +384,7 @@ trait DocumentProcessor extends LazyLogging {
           } else {
             textbox.setFontColor(Color.BLACK)
           }
-          textbox.setTextContentStyleAware(formattedValue)
+          formattedValue
         } else {
           val formattedValue = decimaleFormatForLocale(positivePattern, locale).format(value.toDouble)
           if (positiveColor != null) {
@@ -384,13 +395,15 @@ trait DocumentProcessor extends LazyLogging {
           } else {
             textbox.setFontColor(Color.BLACK)
           }
-          textbox.setTextContentStyleAware(formattedValue)
+          formattedValue
         }
       case x if format.length > 0 =>
         logger.warn(s"Unsupported format:$format")
         textbox.setTextContentStyleAware(value)
+        value
       case _ =>
         textbox.setTextContentStyleAware(value)
+        value
     }
   }
 
