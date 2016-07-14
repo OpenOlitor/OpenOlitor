@@ -30,14 +30,14 @@ trait DefaultDBScripts {
    * Helper method to allow easier syntax to add safely column on mariadb server version < 10.0
    */
   def alterTableAddColumnIfNotExists(syntax: SQLSyntaxSupport[_], columnName: String, columnDef: String, after: String)(implicit session: DBSession) = {
-    sql"""
-      SELECT count(*) INTO @exist FROM INFORMATION_SCHEMA.COLUMNS  WHERE TABLE_SCHEMA=DATABASE() AND 
-      	COLUMN_NAME='$columnName' AND 
-      	TABLE_NAME = '${syntax.table}';
+    val query = s"""SELECT count(*) INTO @exist FROM INFORMATION_SCHEMA.COLUMNS  WHERE TABLE_SCHEMA=DATABASE() AND 
+      	COLUMN_NAME='""" + columnName + """' AND 
+      	TABLE_NAME = '""" + syntax.table + """';
       set @query = IF(@exist <= 0, 
-      	'ALTER TABLE ${syntax.table} ADD $columnName $columnDef after $after;', 
+      	'ALTER TABLE """ + syntax.table + " ADD " + columnName + " " + columnDef + " after " + after + """;', 
       	'select \'Column Exists\' status');
       prepare stmt from @query;
-      EXECUTE stmt;""".execute.apply()
+      EXECUTE stmt;"""
+    sql"$query".execute.apply()
   }
 }
