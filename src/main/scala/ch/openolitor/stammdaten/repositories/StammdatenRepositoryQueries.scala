@@ -13,6 +13,8 @@ import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
 import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import ch.openolitor.util.parsing.FilterExpr
 
 trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
 
@@ -43,6 +45,10 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val abwesenheit = abwesenheitMapping.syntax("abwesenheit")
   lazy val korb = korbMapping.syntax("korb")
   lazy val vertrieb = vertriebMapping.syntax("vertrieb")
+  lazy val tourlieferung = tourlieferungMapping.syntax("tourlieferung")
+  lazy val depotAuslieferung = depotAuslieferungMapping.syntax("depotAuslieferung")
+  lazy val tourAuslieferung = tourAuslieferungMapping.syntax("tourAuslieferung")
+  lazy val postAuslieferung = postAuslieferungMapping.syntax("postAuslieferung")
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
@@ -122,7 +128,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
         .where.eq(depotlieferung.vertriebId, parameter(vertriebId))
     }.one(depotlieferungMapping(depotlieferung)).toOne(depotMapping.opt(depot)).map { (vertriebsart, depot) =>
-      val depotSummary = DepotSummary(depot.head.id, depot.head.name)
+      val depotSummary = DepotSummary(depot.head.id, depot.head.name, depot.head.kurzzeichen)
       copyTo[Depotlieferung, DepotlieferungDetail](vertriebsart, "depot" -> depotSummary)
     }.list
   }
@@ -156,7 +162,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(depotMapping as depot).on(depotlieferung.depotId, depot.id)
         .where.eq(depotlieferung.id, parameter(vertriebsartId))
     }.one(depotlieferungMapping(depotlieferung)).toOne(depotMapping.opt(depot)).map { (vertriebsart, depot) =>
-      val depotSummary = DepotSummary(depot.head.id, depot.head.name)
+      val depotSummary = DepotSummary(depot.head.id, depot.head.name, depot.head.kurzzeichen)
       copyTo[Depotlieferung, DepotlieferungDetail](vertriebsart, "depot" -> depotSummary)
     }.single
   }
@@ -218,28 +224,47 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(depotMapping(depot)).single
   }
 
-  protected def getDepotlieferungAbosQuery = {
+  protected def getDepotlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, depotlieferungAbo))
     }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
-  protected def getHeimlieferungAbosQuery = {
+  protected def getHeimlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, heimlieferungAbo))
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
-  protected def getPostlieferungAbosQuery = {
+  protected def getPostlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 
+  protected def getDepotlieferungAbosByDepotQuery(id: DepotId) = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.eq(depotlieferungAbo.depotId, parameter(id))
+    }.map(depotlieferungAboMapping(depotlieferungAbo)).list
+  }
+
+  protected def getDepotlieferungAboAusstehendQuery(id: AboId) = {
+    getDepotlieferungAboBaseQuery(id, Some(()))
+  }
+
   protected def getDepotlieferungAboQuery(id: AboId) = {
+    getDepotlieferungAboBaseQuery(id, None)
+  }
+
+  private def getDepotlieferungAboBaseQuery(id: AboId, ausstehend: Option[Unit]) = {
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
@@ -247,9 +272,11 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(lieferungMapping as lieferung).on(depotlieferungAbo.abotypId, lieferung.abotypId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
-        .leftJoin(vertriebMapping as vertrieb).on(vertrieb.abotypId, aboTyp.id)
+        .leftJoin(vertriebMapping as vertrieb).on(depotlieferungAbo.vertriebId, vertrieb.id)
         .where.eq(depotlieferungAbo.id, parameter(id))
-        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        .and(sqls.toAndConditionOpt(
+          ausstehend map (_ => sqls.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        ))
     }
       .one(depotlieferungAboMapping(depotlieferungAbo))
       .toManies(
@@ -266,7 +293,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
+  protected def getHeimlieferungAboAusstehendQuery(id: AboId) = {
+    getHeimlieferungAboBaseQuery(id, Some(()))
+  }
+
   protected def getHeimlieferungAboQuery(id: AboId) = {
+    getHeimlieferungAboBaseQuery(id, None)
+  }
+
+  private def getHeimlieferungAboBaseQuery(id: AboId, ausstehend: Option[Unit]) = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
@@ -274,9 +309,11 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(lieferungMapping as lieferung).on(heimlieferungAbo.abotypId, lieferung.abotypId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
-        .leftJoin(vertriebMapping as vertrieb).on(vertrieb.abotypId, aboTyp.id)
+        .leftJoin(vertriebMapping as vertrieb).on(heimlieferungAbo.vertriebId, vertrieb.id)
         .where.eq(heimlieferungAbo.id, parameter(id))
-        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        .and(sqls.toAndConditionOpt(
+          ausstehend map (_ => sqls.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        ))
     }.one(heimlieferungAboMapping(heimlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
@@ -292,7 +329,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
+  protected def getPostlieferungAboAusstehendQuery(id: AboId) = {
+    getPostlieferungAboBaseQuery(id, Some(()))
+  }
+
   protected def getPostlieferungAboQuery(id: AboId) = {
+    getPostlieferungAboBaseQuery(id, None)
+  }
+
+  private def getPostlieferungAboBaseQuery(id: AboId, ausstehend: Option[Unit]) = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
@@ -300,9 +345,11 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(lieferungMapping as lieferung).on(postlieferungAbo.abotypId, lieferung.abotypId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
-        .leftJoin(vertriebMapping as vertrieb).on(vertrieb.abotypId, aboTyp.id)
+        .leftJoin(vertriebMapping as vertrieb).on(postlieferungAbo.vertriebId, vertrieb.id)
         .where.eq(postlieferungAbo.id, parameter(id))
-        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        .and(sqls.toAndConditionOpt(
+          ausstehend map (_ => sqls.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        ))
     }.one(postlieferungAboMapping(postlieferungAbo))
       .toManies(
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
@@ -415,6 +462,46 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(tourMapping as tour)
     }.map(tourMapping(tour)).list
+  }
+
+  protected def getTourDetailQuery(id: TourId) = {
+    withSQL {
+      select
+        .from(tourMapping as tour)
+        .leftJoin(tourlieferungMapping as tourlieferung).on(tour.id, tourlieferung.tourId)
+        .where.eq(tour.id, parameter(id))
+        .orderBy(tourlieferung.sort)
+    }.one(tourMapping(tour))
+      .toMany(
+        rs => tourlieferungMapping.opt(tourlieferung)(rs)
+      )
+      .map({ (tour, tourlieferungen) =>
+        copyTo[Tour, TourDetail](tour, "tourlieferungen" -> tourlieferungen)
+      }).single
+  }
+
+  protected def getTourlieferungenQuery(tourId: TourId) = {
+    withSQL {
+      select
+        .from(tourlieferungMapping as tourlieferung)
+        .where.eq(tourlieferung.tourId, parameter(tourId))
+    }.map(tourlieferungMapping(tourlieferung)).list
+  }
+
+  protected def getTourlieferungenByKundeQuery(kundeId: KundeId) = {
+    withSQL {
+      select
+        .from(tourlieferungMapping as tourlieferung)
+        .where.eq(tourlieferung.kundeId, parameter(kundeId))
+    }.map(tourlieferungMapping(tourlieferung)).list
+  }
+
+  protected def getTourlieferungenByTourQuery(tourId: TourId) = {
+    withSQL {
+      select
+        .from(tourlieferungMapping as tourlieferung)
+        .where.eq(tourlieferung.tourId, parameter(tourId))
+    }.map(tourlieferungMapping(tourlieferung)).list
   }
 
   protected def getProjektQuery = {
@@ -649,6 +736,165 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(korbMapping(korb)).single
   }
 
+  protected def getKoerbeQuery(lieferungId: LieferungId, vertriebsartId: VertriebsartId, status: KorbStatus) = {
+    withSQL {
+      select
+        .from(korbMapping as korb)
+        .innerJoin(lieferungMapping as lieferung).on(lieferung.id, korb.lieferungId)
+        .innerJoin(vertriebMapping as vertrieb).on(vertrieb.id, lieferung.vertriebId)
+        .leftJoin(depotlieferungMapping as depotlieferung).on(depotlieferung.vertriebId, vertrieb.id)
+        .leftJoin(heimlieferungMapping as heimlieferung).on(heimlieferung.vertriebId, vertrieb.id)
+        .leftJoin(postlieferungMapping as postlieferung).on(postlieferung.vertriebId, vertrieb.id)
+        .where.eq(korb.lieferungId, parameter(lieferungId)).and.eq(korb.status, parameter(status))
+    }.one(korbMapping(korb))
+      .toManies(
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => vertriebMapping.opt(vertrieb)(rs),
+        rs => depotlieferungMapping.opt(depotlieferung)(rs),
+        rs => heimlieferungMapping.opt(heimlieferung)(rs),
+        rs => postlieferungMapping.opt(postlieferung)(rs)
+      )
+      .map { (korb, _, _, _, _, _) => korb }
+      .list
+  }
+
+  protected def getDepotAuslieferungenQuery = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+    }.map(depotAuslieferungMapping(depotAuslieferung)).list
+  }
+
+  protected def getTourAuslieferungenQuery = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+    }.map(tourAuslieferungMapping(tourAuslieferung)).list
+  }
+
+  protected def getPostAuslieferungenQuery = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+    }.map(postAuslieferungMapping(postAuslieferung)).list
+  }
+
+  protected def getDepotAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+        .join(depotMapping as depot).on(depotAuslieferung.depotId, depot.id)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, depotAuslieferung.id)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(korb.aboId, depotlieferungAbo.id)
+        .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(kundeMapping as kunde).on(depotlieferungAbo.kundeId, kunde.id)
+        .where.eq(depotAuslieferung.id, parameter(auslieferungId))
+    }.one(depotAuslieferungMapping(depotAuslieferung))
+      .toManies(
+        rs => depotMapping.opt(depot)(rs),
+        rs => korbMapping.opt(korb)(rs),
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => kundeMapping.opt(kunde)(rs)
+      )
+      .map((auslieferung, depots, koerbe, abos, abotypen, kunden) => {
+        val korbReports = koerbe map { korb =>
+          val korbAbo = abos.filter(_.id == korb.aboId).head
+          val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
+          val kunde = copyTo[Kunde, KundeReport](kunden.filter(_.id == korbAbo.kundeId).head)
+
+          copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+        }
+
+        val depot = copyTo[Depot, DepotReport](depots.head)
+        copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depot, "koerbe" -> korbReports, "projekt" -> projekt)
+      }).single
+  }
+
+  protected def getTourAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+        .join(tourMapping as tour).on(tourAuslieferung.tourId, tour.id)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, tourAuslieferung.id)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(korb.aboId, heimlieferungAbo.id)
+        .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(kundeMapping as kunde).on(heimlieferungAbo.kundeId, kunde.id)
+        .where.eq(tourAuslieferung.id, parameter(auslieferungId))
+    }.one(tourAuslieferungMapping(tourAuslieferung))
+      .toManies(
+        rs => tourMapping.opt(tour)(rs),
+        rs => korbMapping.opt(korb)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => kundeMapping.opt(kunde)(rs)
+      )
+      .map((auslieferung, tour, koerbe, abos, abotypen, kunden) => {
+        val korbReports = koerbe map { korb =>
+          val korbAbo = abos.filter(_.id == korb.aboId).head
+          val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
+          val kunde = copyTo[Kunde, KundeReport](kunden.filter(_.id == korbAbo.kundeId).head)
+
+          copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+        }
+
+        copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour.head, "koerbe" -> korbReports, "projekt" -> projekt)
+      }).single
+  }
+
+  protected def getPostAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+        .leftJoin(korbMapping as korb).on(korb.auslieferungId, postAuslieferung.id)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(korb.aboId, postlieferungAbo.id)
+        .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(kundeMapping as kunde).on(postlieferungAbo.kundeId, kunde.id)
+        .where.eq(postAuslieferung.id, parameter(auslieferungId))
+    }.one(postAuslieferungMapping(postAuslieferung))
+      .toManies(
+        rs => korbMapping.opt(korb)(rs),
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => kundeMapping.opt(kunde)(rs)
+      )
+      .map((auslieferung, koerbe, abos, abotypen, kunden) => {
+        val korbReports = koerbe map { korb =>
+          val korbAbo = abos.filter(_.id == korb.aboId).head
+          val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
+          val kunde = copyTo[Kunde, KundeReport](kunden.filter(_.id == korbAbo.kundeId).head)
+
+          copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+        }
+
+        copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> korbReports, "projekt" -> projekt)
+      }).single
+  }
+
+  protected def getDepotAuslieferungQuery(lieferungId: LieferungId) = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+        .where.eq(depotAuslieferung.lieferungId, parameter(lieferungId))
+    }.map(depotAuslieferungMapping(depotAuslieferung)).single
+  }
+
+  protected def getTourAuslieferungQuery(lieferungId: LieferungId) = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+        .where.eq(tourAuslieferung.lieferungId, parameter(lieferungId))
+    }.map(tourAuslieferungMapping(tourAuslieferung)).single
+  }
+
+  protected def getPostAuslieferungQuery(lieferungId: LieferungId) = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+        .where.eq(postAuslieferung.lieferungId, parameter(lieferungId))
+    }.map(postAuslieferungMapping(postAuslieferung)).single
+  }
+
   protected def getVertriebQuery(vertriebId: VertriebId) = {
     withSQL {
       select
@@ -695,7 +941,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   protected def deleteLieferpositionenQuery(id: LieferungId) = {
     withSQL {
       delete
-        .from(lieferpositionMapping)
+        .from(lieferpositionMapping as lieferpositionShort)
         .where.eq(lieferpositionShort.lieferungId, parameter(id))
     }
   }
@@ -703,7 +949,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   protected def deleteKoerbeQuery(id: LieferungId) = {
     withSQL {
       delete
-        .from(korbMapping)
+        .from(korbMapping as korbShort)
         .where.eq(korbShort.lieferungId, parameter(id))
     }
   }

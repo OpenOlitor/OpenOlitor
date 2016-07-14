@@ -56,12 +56,18 @@ import scala.io.Source
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.core.security.Subject
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.buchhaltung.reporting.RechnungReportService
+import ch.openolitor.util.parsing.UriQueryParamFilterParser
+import ch.openolitor.util.parsing.FilterExpr
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with BuchhaltungJsonProtocol
-    with BuchhaltungEventStoreSerializer {
-  self: BuchhaltungReadRepositoryComponent with FileStoreComponent =>
+    with BuchhaltungEventStoreSerializer
+    with RechnungReportService {
+  self: BuchhaltungReadRepositoryComponent with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
@@ -69,17 +75,37 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 
   import EntityStore._
 
-  def buchhaltungRoute(implicit subect: Subject) = rechnungenRoute ~ zahlungsImportsRoute
+  def buchhaltungRoute(implicit subect: Subject) =
+    parameters('f.?) { (f) =>
+      implicit val filter = f flatMap { filterString =>
+        UriQueryParamFilterParser.parse(filterString)
+      }
+      rechnungenRoute ~ zahlungsImportsRoute
+    }
 
-  def rechnungenRoute(implicit subect: Subject) =
+  def rechnungenRoute(implicit subect: Subject, filter: Option[FilterExpr]) =
     path("rechnungen") {
       get(list(buchhaltungReadRepository.getRechnungen)) ~
         post(create[RechnungCreate, RechnungId](RechnungId.apply _))
     } ~
+      path("rechnungen" / "berichte" / "rechnungen") {
+        (post)(rechnungBerichte())
+      } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
           delete(remove(id)) ~
           (put | post)(update[RechnungModify, RechnungId](id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "download") { id =>
+        (get)(
+          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { x =>
+            x.flatMap { rechnung =>
+              rechnung.fileStoreId.map { fileStoreId =>
+                download(GeneriertRechnung, fileStoreId)
+              }
+            }.getOrElse(complete(StatusCodes.BadRequest))
+          }
+        )
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "verschicken") { id =>
         (post)(verschicken(id))
@@ -92,12 +118,15 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "stornieren") { id =>
         (post)(stornieren(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "berichte" / "rechnung") { id =>
+        (post)(rechnungBericht(id))
       }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
     path("zahlungsimports") {
       get(list(buchhaltungReadRepository.getZahlungsImports)) ~
-        (put | post)(upload(ZahlungsImportDaten) { (content, fileName) =>
+        (put | post)(upload { (form, content, fileName) =>
           // parse
           ZahlungsImportParser.parse(Source.fromInputStream(content).getLines) match {
             case Success(importResult) =>
@@ -180,14 +209,28 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
         complete("")
     }
   }
+
+  def rechnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
+    generateReport[RechnungId](Some(id), generateRechnungReports _)(RechnungId.apply)
+  }
+
+  def rechnungBerichte()(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
+    generateReport[RechnungId](None, generateRechnungReports _)(RechnungId.apply)
+  }
 }
 
 class DefaultBuchhaltungRoutes(
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
+  override val mailService: ActorRef,
+  override val reportSystem: ActorRef,
   override val sysConfig: SystemConfig,
+  override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory
 )
     extends BuchhaltungRoutes
     with DefaultBuchhaltungReadRepositoryComponent
+    with DefaultStammdatenReadRepositoryComponent

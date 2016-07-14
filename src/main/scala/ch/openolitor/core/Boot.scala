@@ -61,6 +61,10 @@ import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
 import ch.openolitor.core.models.BaseId
 import spray.caching.LruCache
 import ch.openolitor.core.security.Subject
+import ch.openolitor.core.reporting._
+import ch.openolitor.core.filestore.DefaultFileStoreComponent
+import ch.openolitor.core.mailservice.MailService
+import ch.openolitor.buchhaltung.BuchhaltungReportEventListener
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -155,7 +159,7 @@ object Boot extends App with LazyLogging {
         timeToIdle = 4 hours
       )
 
-      //initialuze root actors
+      // initialise root actors
       val duration = Duration.create(1, SECONDS);
       val system = app.actorOf(SystemActor.props, "oo-system")
       logger.debug(s"oo-system:$system")
@@ -163,13 +167,19 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
       val eventStore = Await.result(system ? SystemActor.Child(SystemEventStore.props, "event-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> eventStore:$eventStore")
-      val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props, "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
+      val mailService = Await.result(system ? SystemActor.Child(MailService.props, "mail-service"), duration).asInstanceOf[ActorRef]
+      logger.debug(s"oo-system:$system -> eventStore:$mailService")
+
+      val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props(mailService), "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
+      val fileStoreComponent = new DefaultFileStoreComponent(cfg.name, sysCfg, app)
+      val reportSystem = Await.result(system ? SystemActor.Child(ReportSystem.props(fileStoreComponent.fileStore, sysCfg), "report-system"), duration).asInstanceOf[ActorRef]
 
       //start actor listening on dbevents to modify calculated fields
       val stammdatenDBEventListener = Await.result(system ? SystemActor.Child(StammdatenDBEventEntityListener.props, "stammdaten-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
 
       val buchhaltungEntityStoreView = Await.result(system ? SystemActor.Child(BuchhaltungEntityStoreView.props, "buchhaltung-entity-store-view"), duration).asInstanceOf[ActorRef]
       val buchhaltungDBEventListener = Await.result(system ? SystemActor.Child(BuchhaltungDBEventEntityListener.props, "buchhaltung-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
+      val buchhaltungReportEventListener = Await.result(system ? SystemActor.Child(BuchhaltungReportEventListener.props(entityStore), "buchhaltung-report-event-listener"), duration).asInstanceOf[ActorRef]
 
       //start websocket service
       val clientMessages = Await.result(system ? SystemActor.Child(ClientMessagesServer.props(loginTokenCache), "ws-client-messages"), duration).asInstanceOf[ActorRef]
@@ -184,7 +194,7 @@ object Boot extends App with LazyLogging {
       buchhaltungEntityStoreView ? DefaultMessages.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler

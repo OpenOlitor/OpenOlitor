@@ -22,9 +22,6 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.repositories
 
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryImpl
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
-
 trait StammdatenReadRepositoryComponent {
   val stammdatenReadRepository: StammdatenReadRepository
 }

@@ -42,6 +42,7 @@ import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import scala.concurrent.Future
 import scalikejdbc.DBSession
+import ch.openolitor.util.IdUtil
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -83,6 +84,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungAdd) => addLieferungPlanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
+      updateLieferpositionen(meta, id, lieferpositionen)
 
     case EntityUpdatedEvent(meta, id, entity) =>
       logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
@@ -237,14 +240,15 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         abo match {
           case abo: DepotlieferungAbo =>
             // wechsel innerhalb selber vertriebart-art
-            val copy = abo.copy(vertriebsartId = update.vertriebsartIdNeu, depotId = va.depotId, depotName = depot.name)
+            val copy = abo.copy(vertriebId = va.vertriebId, vertriebsartId = update.vertriebsartIdNeu, depotId = va.depotId, depotName = depot.name)
             stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
           case abo: Abo =>
             // wechsel
             val aboNeu = copyTo[Abo, DepotlieferungAbo](
               abo,
               "depotId" -> va.depotId,
-              "depotName" -> depot.name
+              "depotName" -> depot.name,
+              "vertriebId" -> va.vertriebId
             )
             abo match {
               case abo: HeimlieferungAbo => stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
@@ -260,11 +264,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         abo match {
           case abo: HeimlieferungAbo =>
             // wechsel innerhalb selber vertriebart-art
-            val copy = abo.copy(vertriebsartId = update.vertriebsartIdNeu, tourId = va.tourId, tourName = tour.name)
+            val copy = abo.copy(vertriebId = va.vertriebId, vertriebsartId = update.vertriebsartIdNeu, tourId = va.tourId, tourName = tour.name)
             stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
           case abo: Abo =>
             // wechsel
-            val aboNeu = copyTo[Abo, HeimlieferungAbo](abo, "tourId" -> va.tourId, "tourName" -> tour.name)
+            val aboNeu = copyTo[Abo, HeimlieferungAbo](abo, "vertriebId" -> va.vertriebId, "tourId" -> va.tourId, "tourName" -> tour.name)
             abo match {
               case abo: DepotlieferungAbo => stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](abo.id)
               case abo: PostlieferungAbo => stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](abo.id)
@@ -280,7 +284,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         // nothing to do
         case abo: Abo =>
           // wechsel
-          val aboNeu = copyTo[Abo, PostlieferungAbo](abo)
+          val aboNeu = copyTo[Abo, PostlieferungAbo](abo, "vertriebId" -> va.vertriebId)
           abo match {
             case abo: HeimlieferungAbo => stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
             case abo: DepotlieferungAbo => stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](abo.id)
@@ -433,12 +437,21 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  private def updateTourlieferungen(meta: EventMetadata, tourId: TourId, update: TourModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
+    update.tourlieferungen.map { tourLieferung =>
+      val copy = tourLieferung.copy(modifidat = meta.timestamp, modifikator = meta.originator)
+      stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](copy)
+    }
+  }
+
   def updateTour(meta: EventMetadata, id: TourId, update: TourModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(tourMapping, id) map { tour =>
         //map all updatable fields
         val copy = copyFrom(tour, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
         stammdatenWriteRepository.updateEntity[Tour, TourId](copy)
+
+        updateTourlieferungen(meta, id, update)
       }
     }
   }
@@ -510,6 +523,28 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       }
     }
 
+  }
+
+  def updateLieferpositionen(meta: EventMetadata, lieferungId: LieferungId, positionen: LieferpositionenModify)(implicit personId: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
+      stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
+        //save Lieferpositionen
+        positionen.lieferpositionen map { create =>
+          val lpId = LieferpositionId(IdUtil.positiveRandomId)
+          val newObj = copyTo[LieferpositionModify, Lieferposition](
+            create,
+            "id" -> lpId,
+            "lieferungId" -> lieferungId,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator
+          )
+          stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
+        }
+      }
+    }
   }
 
 }

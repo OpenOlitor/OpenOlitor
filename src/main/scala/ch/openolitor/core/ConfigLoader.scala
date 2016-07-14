@@ -22,18 +22,27 @@
 \*                                                                           */
 package ch.openolitor.core
 
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.Config
+import com.typesafe.config._
 import scala.collection.JavaConversions._
-import com.typesafe.config.ConfigList
-import com.typesafe.config.ConfigValueFactory
-import com.typesafe.config.ConfigValue
-import com.typesafe.config.ConfigObject
-import com.typesafe.config.ConfigResolveOptions
-import com.typesafe.config.ConfigParseOptions
 
+/**
+ * The OO-ConfigLoader is used to represent environmental config lists of the form:
+ *   "ENV_VAR_ID": {
+ *     "db": [
+ *       {
+ *         "credentials": {
+ *           "host": "",
+ *         },
+ *         "name": "unique-name",
+ *       },
+ * as a configuration object which can be accessed using the index of the desired list object
+ * (${?ENV_VAR_ID.db-object.0.credentials.host})
+ * and using the name if configured
+ * (${?ENV_VAR_ID.db-object.unique-name.credentials.host}).
+ */
 object ConfigLoader {
   val ObjectIdentifier = "-object"
+  val NameIdentifier = "name"
 
   def loadConfig: Config = {
     loadEnvironmentConfigs()
@@ -68,8 +77,16 @@ object ConfigLoader {
     result
   }
 
+  /**
+   * Creates list objects identified by their index and name if present.
+   */
   def listToObject(config: ConfigList): ConfigObject = {
-    val configObject = (config.indices zip config map { case (i, v) => (i.toString, v) }).toMap
+    val configObject = (config.indices zip config flatMap {
+      case (i, v) =>
+        val name = v.asInstanceOf[ConfigObject].get(NameIdentifier)
+        val namedObject = if (name != null) (name.unwrapped.toString, v) :: Nil else Nil
+        (i.toString, v) :: namedObject
+    }).toMap
 
     ConfigValueFactory.fromMap(configObject)
   }

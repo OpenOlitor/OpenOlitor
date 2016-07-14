@@ -94,10 +94,26 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
+  implicit val anredeFormat = new JsonFormat[Anrede] {
+    def write(obj: Anrede): JsValue =
+      obj match {
+        case Herr => JsString("Herr")
+        case Frau => JsString("Frau")
+      }
+
+    def read(json: JsValue): Anrede =
+      json match {
+        case JsString("Herr") => Herr
+        case JsString("Frau") => Frau
+        case pe => sys.error(s"Unknown Anrede:$pe")
+      }
+  }
+
   implicit val waehrungFormat = enumFormat(Waehrung.apply)
   implicit val laufzeiteinheitFormat = enumFormat(Laufzeiteinheit.apply)
   implicit val lieferungStatusFormat = enumFormat(LieferungStatus.apply)
   implicit val korbStatusFormat = enumFormat(KorbStatus.apply)
+  implicit val auslieferungStatusFormat = enumFormat(AuslieferungStatus.apply)
   implicit val pendenzStatusFormat = enumFormat(PendenzStatus.apply)
   implicit val liefereinheitFormat = enumFormat(Liefereinheit.apply)
 
@@ -107,6 +123,8 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val abotypIdFormat = baseIdFormat(AbotypId)
   implicit val depotIdFormat = baseIdFormat(DepotId)
   implicit val tourIdFormat = baseIdFormat(TourId)
+  implicit val auslieferungIdFormat = baseIdFormat(AuslieferungId)
+  implicit val optionAuslieferungIdFormat = new OptionFormat[AuslieferungId]
   implicit val kundeIdFormat = baseIdFormat(KundeId)
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
   implicit val aboIdFormat = baseIdFormat(AboId)
@@ -152,6 +170,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
   implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
+  implicit val korbIdFormat = baseIdFormat(KorbId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -359,21 +378,12 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
     }
   }
 
-  implicit val anredeFormat = new JsonFormat[Anrede] {
-    def write(obj: Anrede): JsValue = JsString(obj.productPrefix)
-
-    def read(json: JsValue): Anrede = json match {
-      case JsString(value) => Anrede(value)
-      case pt => sys.error(s"Unknown anrede:$pt")
-    }
-  }
-
   implicit val lieferungAbotypCreateFormat = autoProductFormat[LieferungAbotypCreate]
   implicit val lieferungModifyFormat = autoProductFormat[LieferungModify]
   implicit val lieferplanungModifyFormat = autoProductFormat[LieferplanungModify]
   implicit val lieferplanungCreateFormat = autoProductFormat[LieferplanungCreate]
   implicit val lieferpositionModifyFormat = autoProductFormat[LieferpositionModify]
-  implicit val lieferpositionenCreateFormat = autoProductFormat[LieferpositionenCreate]
+  implicit val lieferpositionenCreateFormat = autoProductFormat[LieferpositionenModify]
   implicit val lieferungPlanungAddFormat = autoProductFormat[LieferungPlanungAdd]
   implicit val lieferungPlanungRemoveFormat = autoProductFormat[LieferungPlanungRemove]
   implicit val bestellungModifyFormat = autoProductFormat[BestellungModify]
@@ -384,4 +394,78 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val korbModifyFormat = autoProductFormat[KorbModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
+
+  // special report formats
+  def enhancedProjektReportFormatDef(defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
+    def write(obj: ProjektReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
+          "plzOrt" -> JsString(obj.plzOrt.getOrElse("")),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector)
+        ))
+    }
+
+    def read(json: JsValue): ProjektReport = defaultFormat.read(json)
+  }
+  implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef(autoProductFormat[ProjektReport])
+
+  def enhancedKundeReportFormatDef(defaultFormat: JsonFormat[KundeReport]): RootJsonFormat[KundeReport] = new RootJsonFormat[KundeReport] {
+    def write(obj: KundeReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer),
+          "plzOrt" -> JsString(obj.plzOrt),
+          "strasseUndNummerLieferung" -> JsString(obj.strasseUndNummerLieferung.getOrElse("")),
+          "plzOrtLieferung" -> JsString(obj.plzOrtLieferung.getOrElse("")),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector),
+          "lieferAdresszeilen" -> JsArray(obj.lieferAdresszeilen.map(JsString(_)).toVector)
+        ))
+    }
+
+    def read(json: JsValue): KundeReport = defaultFormat.read(json)
+  }
+  implicit val enhancedKundeReportFormat: RootJsonFormat[KundeReport] = enhancedKundeReportFormatDef(autoProductFormat[KundeReport])
+  implicit val korbReportFormat = autoProductFormat[KorbReport]
+
+  def enhancedDepotReportFormatDef(defaultFormat: JsonFormat[DepotReport]): RootJsonFormat[DepotReport] = new RootJsonFormat[DepotReport] {
+    def write(obj: DepotReport): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
+          "plzOrt" -> JsString(obj.plzOrt),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector)
+        ))
+    }
+
+    def read(json: JsValue): DepotReport = defaultFormat.read(json)
+  }
+  implicit val enhancedDepotReportFormat = enhancedDepotReportFormatDef(autoProductFormat[DepotReport])
+
+  implicit val depotAuslieferungReportFormat = autoProductFormat[DepotAuslieferungReport]
+  implicit val tourAuslieferungReportFormat = autoProductFormat[TourAuslieferungReport]
+  implicit val postAuslieferungReportFormat = autoProductFormat[PostAuslieferungReport]
+  implicit val auslieferungReportFormat = new RootJsonFormat[AuslieferungReport] {
+    def write(obj: AuslieferungReport): JsValue =
+      obj match {
+        case d: DepotAuslieferungReport => d.toJson
+        case h: TourAuslieferungReport => h.toJson
+        case p: PostAuslieferungReport => p.toJson
+        case _ => JsObject()
+      }
+
+    def read(json: JsValue): AuslieferungReport = {
+      if (!json.asJsObject.getFields("depotId").isEmpty) {
+        json.convertTo[DepotAuslieferungReport]
+      } else if (!json.asJsObject.getFields("tourId").isEmpty) {
+        json.convertTo[TourAuslieferungReport]
+      } else {
+        json.convertTo[PostAuslieferungReport]
+      }
+    }
+  }
+
 }
