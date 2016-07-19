@@ -24,6 +24,7 @@ package ch.openolitor.stammdaten.eventsourcing
 
 import stamina._
 import stamina.json._
+import spray.json.lenses.JsonLenses._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.domain.EntityStore._
@@ -32,6 +33,7 @@ import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.core.eventsourcing.CoreEventStoreSerializer
+import java.util.Locale
 
 trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol with CoreEventStoreSerializer {
   //V1 persisters
@@ -87,13 +89,14 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferplanungCreatePersister = persister[LieferplanungCreate]("lieferplanung-create")
   implicit val lieferplanungIdPersister = persister[LieferplanungId]("lieferplanung-id")
   implicit val lieferpositionModifyPersister = persister[LieferpositionModify]("lieferposition-modify")
-  implicit val lieferpositionenCreatePersister = persister[LieferpositionenCreate]("lieferpositionen-create")
+  implicit val lieferpositionenCreatePersister = persister[LieferpositionenModify]("lieferpositionen-create")
   implicit val lieferpositionIdPersister = persister[LieferpositionId]("lieferposition-id")
   implicit val bestellungenCreatePersister = persister[BestellungenCreate]("bestellungen-create")
   implicit val bestellungModifyPersister = persister[BestellungModify]("bestellung-modify")
   implicit val bestellungIdPersister = persister[BestellungId]("bestellung-id")
   implicit val bestellpositionModifyPersister = persister[BestellpositionModify]("bestellposition-modify")
   implicit val bestellpositionIdPersister = persister[BestellpositionId]("bestellposition-id")
+  implicit val auslieferungIdPersister = persister[AuslieferungId]("auslieferung-id")
 
   implicit val produktModifyPersister = persister[ProduktModify]("produkt-modify")
   implicit val produktIdPersister = persister[ProduktId]("produkt-id")
@@ -107,7 +110,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
   implicit val tourIdPersister = persister[TourId]("tour-id")
 
-  implicit val projektModifyPersiter = persister[ProjektModify]("projekt-modify")
+  val projektModifyPersister = persister[ProjektModify]("projekt-modify")
+  implicit val projektModifyV2Persister = persister[ProjektModify, V2]("projekt-modify", from[V1]
+    .to[V2](_.update('sprache ! set[Locale](Locale.GERMAN))))
   implicit val projektIdPersister = persister[ProjektId]("projekt-id")
 
   implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent]("lieferplanung-abschliessen-event")
@@ -117,6 +122,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val korbModifyPersister = persister[KorbModify]("korb-modify")
+
+  implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -172,17 +179,19 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     produzentIdPersister,
     tourModifyPersiter,
     tourIdPersister,
-    projektModifyPersiter,
+    projektModifyV2Persister,
     projektIdPersister,
     abwesenheitCreatePersister,
     abwesenheitIdPersister,
     korbCreatePersister,
     korbModifyPersister,
+    auslieferungIdPersister,
 
     //event persisters
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
     bestellungVersendenEventPersister,
-    passwortGewechseltEventPersister
+    passwortGewechseltEventPersister,
+    auslieferungAlsAusgeliefertMarkierenEventPersister
   )
 }

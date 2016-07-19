@@ -89,6 +89,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       "id" -> id,
       "status" -> Erstellt,
       "referenzNummer" -> referenzNummer,
+      "fileStoreId" -> None,
       "esrNummer" -> esrNummer,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,

@@ -73,8 +73,18 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       createZahlungsImport(meta, entity)
     case ZahlungsEingangErledigtEvent(meta, entity: ZahlungsEingangModifyErledigt) =>
       zahlungsEingangErledigen(meta, entity)
+    case RechnungPDFStoredEvent(meta, rechnungId, fileStoreId) =>
+      rechnungPDFStored(meta, rechnungId, fileStoreId)
     case e =>
       logger.warn(s"Unknown event:$e")
+  }
+
+  def rechnungPDFStored(meta: EventMetadata, id: RechnungId, fileStoreId: String)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
+        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(fileStoreId = Some(fileStoreId)))
+      }
+    }
   }
 
   def rechnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {

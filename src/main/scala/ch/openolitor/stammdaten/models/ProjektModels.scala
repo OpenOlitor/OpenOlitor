@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
+import java.util.Locale
 
 case class ProjektId(id: Long) extends BaseId
 
@@ -77,6 +78,7 @@ case class Projekt(
     geschaeftsjahrMonat: Int,
     geschaeftsjahrTag: Int,
     twoFactorAuthentication: Map[Rolle, Boolean],
+    sprache: Locale,
     //modification flags
     erstelldat: DateTime,
     ersteller: PersonId,
@@ -84,6 +86,40 @@ case class Projekt(
     modifikator: PersonId
 ) extends BaseEntity[ProjektId] {
   lazy val geschaftsjahr = Geschaeftsjahr(geschaeftsjahrMonat, geschaeftsjahrTag)
+}
+
+case class ProjektReport(
+    id: ProjektId,
+    bezeichnung: String,
+    strasse: Option[String],
+    hausNummer: Option[String],
+    adressZusatz: Option[String],
+    plz: Option[String],
+    ort: Option[String],
+    preiseSichtbar: Boolean,
+    preiseEditierbar: Boolean,
+    emailErforderlich: Boolean,
+    waehrung: Waehrung,
+    geschaeftsjahrMonat: Int,
+    geschaeftsjahrTag: Int,
+    twoFactorAuthentication: Map[Rolle, Boolean],
+    sprache: Locale,
+    //modification flags
+    erstelldat: DateTime,
+    ersteller: PersonId,
+    modifidat: DateTime,
+    modifikator: PersonId
+) extends BaseEntity[ProjektId] {
+  lazy val geschaftsjahr = Geschaeftsjahr(geschaeftsjahrMonat, geschaeftsjahrTag)
+  lazy val strasseUndNummer = strasse.map(_ + hausNummer.map(" " + _).getOrElse(""))
+  lazy val plzOrt = plz.map(_ + ort.map(" " + _).getOrElse(""))
+
+  lazy val adresszeilen = Seq(
+    Some(bezeichnung),
+    adressZusatz,
+    strasseUndNummer,
+    plzOrt
+  ).flatten.padTo(6, "")
 }
 
 case class ProjektModify(
@@ -99,7 +135,8 @@ case class ProjektModify(
   waehrung: Waehrung,
   geschaeftsjahrMonat: Int,
   geschaeftsjahrTag: Int,
-  twoFactorAuthentication: Map[Rolle, Boolean]
+  twoFactorAuthentication: Map[Rolle, Boolean],
+  sprache: Locale
 ) extends JSONSerializable
 
 case class KundentypId(id: String)
@@ -134,11 +171,10 @@ sealed trait SystemKundentyp extends Kundentyp with Product {
 }
 
 object SystemKundentyp {
-
   val ALL = Vector(Vereinsmitglied, Goenner, Genossenschafterin)
 
   def parse(value: String): Option[SystemKundentyp] = {
-    ALL.find(_.toString == value)
+    ALL find (_.toString == value)
   }
 }
 

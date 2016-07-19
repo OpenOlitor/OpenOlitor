@@ -24,7 +24,7 @@ package ch.openolitor.core.models
 
 import java.util.UUID
 import org.joda.time.DateTime
-import scala.util.Random
+import ch.openolitor.util.IdUtil
 
 sealed trait EvolutionStatus
 case object Applying extends EvolutionStatus
@@ -36,7 +36,7 @@ object EvolutionStatus {
   def apply(value: String): EvolutionStatus = AllStatus.find(_.toString == value).getOrElse(Applying)
 }
 
-case class DBSchemaId(id: Long = Random.nextLong) extends BaseId
+case class DBSchemaId(id: Long = IdUtil.positiveRandomId) extends BaseId
 case class DBSchema(id: DBSchemaId, revision: Int, status: EvolutionStatus,
   //modification flags
   erstelldat: DateTime,

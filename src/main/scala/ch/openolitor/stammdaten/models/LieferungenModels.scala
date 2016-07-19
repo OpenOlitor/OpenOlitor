@@ -26,6 +26,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import java.util.UUID
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus
 
@@ -36,7 +37,7 @@ case object Verrechnet extends LieferungStatus
 
 object LieferungStatus {
   def apply(value: String): LieferungStatus = {
-    Vector(Ungeplant, Offen, Abgeschlossen, Verrechnet).find(_.toString == value).getOrElse(Offen)
+    Vector(Ungeplant, Offen, Abgeschlossen, Verrechnet) find (_.toString == value) getOrElse (Offen)
   }
 }
 
@@ -50,7 +51,7 @@ case object FaelltAusGekuendigt extends KorbStatus
 
 object KorbStatus {
   def apply(value: String): KorbStatus = {
-    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief, FaelltAusGekuendigt).find(_.toString == value).getOrElse(WirdGeliefert)
+    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief, FaelltAusGekuendigt) find (_.toString == value) getOrElse (WirdGeliefert)
   }
 }
 
@@ -189,8 +190,7 @@ case class LieferpositionModify(
   anzahl: Int
 ) extends JSONSerializable
 
-case class LieferpositionenCreate(
-  lieferungId: LieferungId,
+case class LieferpositionenModify(
   lieferpositionen: List[LieferpositionModify]
 ) extends JSONSerializable
 
@@ -263,6 +263,7 @@ case class Korb(
   aboId: AboId,
   status: KorbStatus,
   guthabenVorLieferung: Int,
+  auslieferungId: Option[AuslieferungId],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -270,9 +271,26 @@ case class Korb(
   modifikator: PersonId
 ) extends BaseEntity[KorbId]
 
+case class KorbReport(
+  id: KorbId,
+  lieferungId: LieferungId,
+  abo: Abo,
+  status: KorbStatus,
+  guthabenVorLieferung: Int,
+  auslieferungId: Option[AuslieferungId],
+  kunde: KundeReport,
+  abotyp: Abotyp,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class KorbModify(
   status: KorbStatus,
-  guthabenVorLieferung: Int
+  guthabenVorLieferung: Int,
+  auslieferungId: Option[AuslieferungId]
 ) extends JSONSerializable
 
 case class KorbCreate(

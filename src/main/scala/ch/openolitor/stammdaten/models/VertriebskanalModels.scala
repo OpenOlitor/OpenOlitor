@@ -28,6 +28,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.scalax.Product27
 import ch.openolitor.core.scalax.Tuple27
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 sealed trait Vertriebskanal {
   val name: String
@@ -70,6 +71,47 @@ case class Depot(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[DepotId] with Vertriebskanal
+
+case class DepotReport(
+    id: DepotId,
+    name: String,
+    kurzzeichen: String,
+    apName: Option[String],
+    apVorname: Option[String],
+    apTelefon: Option[String],
+    apEmail: Option[String],
+    vName: Option[String],
+    vVorname: Option[String],
+    vTelefon: Option[String],
+    vEmail: Option[String],
+    strasse: Option[String],
+    hausNummer: Option[String],
+    plz: String,
+    ort: String,
+    aktiv: Boolean,
+    oeffnungszeiten: Option[String],
+    farbCode: Option[String],
+    iban: Option[String], //maybe use dedicated type
+    bank: Option[String],
+    beschreibung: Option[String],
+    anzahlAbonnentenMax: Option[Int],
+    //Zusatzinformationen
+    anzahlAbonnenten: Int,
+    //modification flags
+    erstelldat: DateTime,
+    ersteller: PersonId,
+    modifidat: DateTime,
+    modifikator: PersonId
+) extends BaseEntity[DepotId] {
+  lazy val strasseUndNummer = strasse.map(_ + hausNummer.map(" " + _).getOrElse(""))
+  lazy val plzOrt = plz + " " + ort
+
+  lazy val adresszeilen = Seq(
+    Some(name),
+    strasseUndNummer,
+    Some(plzOrt)
+  ).flatten.padTo(6, "")
+}
 
 object Depot {
   def unapply(d: Depot) = {
@@ -133,7 +175,8 @@ case class DepotModify(
 
 case class DepotSummary(
   id: DepotId,
-  name: String
+  name: String,
+  kurzzeichen: String
 ) extends JSONSerializable
 
 case class TourId(id: Long) extends BaseId
@@ -151,7 +194,20 @@ case class Tour(
   modifikator: PersonId
 ) extends BaseEntity[TourId] with Vertriebskanal
 
+case class TourDetail(
+  id: TourId,
+  name: String,
+  beschreibung: Option[String],
+  tourlieferungen: Seq[Tourlieferung],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class TourModify(
   name: String,
-  beschreibung: Option[String]
+  beschreibung: Option[String],
+  tourlieferungen: Seq[Tourlieferung]
 ) extends JSONSerializable
