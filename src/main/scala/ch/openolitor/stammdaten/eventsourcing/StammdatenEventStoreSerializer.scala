@@ -107,6 +107,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val produzentModifyPersister = persister[ProduzentModify]("produzent-modify")
   implicit val produzentIdPersister = persister[ProduzentId]("produzent-id")
 
+  implicit val tourCreatePersiter = persister[TourCreate]("tour-create")
   implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
   implicit val tourIdPersister = persister[TourId]("tour-id")
 
@@ -177,6 +178,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     produktkategorieIdPersister,
     produzentModifyPersister,
     produzentIdPersister,
+    tourCreatePersiter,
     tourModifyPersiter,
     tourIdPersister,
     projektModifyV2Persister,

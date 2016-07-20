@@ -206,6 +206,11 @@ case class TourDetail(
   modifikator: PersonId
 ) extends JSONSerializable
 
+case class TourCreate(
+  name: String,
+  beschreibung: Option[String]
+) extends JSONSerializable
+
 case class TourModify(
   name: String,
   beschreibung: Option[String],

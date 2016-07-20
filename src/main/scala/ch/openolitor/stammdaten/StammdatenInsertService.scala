@@ -95,7 +95,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createProduktekategorie(meta, id, produktekategorie)
     case EntityInsertedEvent(meta, id: ProduzentId, produzent: ProduzentModify) =>
       createProduzent(meta, id, produzent)
-    case EntityInsertedEvent(meta, id: TourId, tour: TourModify) =>
+    case EntityInsertedEvent(meta, id: TourId, tour: TourCreate) =>
       createTour(meta, id, tour)
     case EntityInsertedEvent(meta, id: ProjektId, projekt: ProjektModify) =>
       createProjekt(meta, id, projekt)
@@ -459,8 +459,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createTour(meta: EventMetadata, id: TourId, create: TourModify)(implicit personId: PersonId = meta.originator) = {
-    val tour = copyTo[TourModify, Tour](
+  def createTour(meta: EventMetadata, id: TourId, create: TourCreate)(implicit personId: PersonId = meta.originator) = {
+    val tour = copyTo[TourCreate, Tour](
       create,
       "id" -> id,
       "anzahlAbonnenten" -> ZERO,
