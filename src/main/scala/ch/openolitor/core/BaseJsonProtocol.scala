@@ -51,12 +51,12 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
   }
 
   implicit val localeFormat = new RootJsonFormat[Locale] {
-    def write(obj: Locale): JsValue = JsString(obj.toString)
+    def write(obj: Locale): JsValue = JsString(obj.toLanguageTag)
 
     def read(json: JsValue): Locale =
       json match {
-        case (JsString(value)) => new Locale(value)
-        case value => deserializationError(s"Unrecognized UUID format:$value")
+        case (JsString(value)) => Locale.forLanguageTag(value)
+        case value => deserializationError(s"Unrecognized locale:$value")
       }
   }
 
