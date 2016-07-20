@@ -36,7 +36,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
       "", "", "", 0, 0, Map(), null
     ), null, null)
 
-    val service = new MockBuchhaltungInsertService(config, null, 6, 5, "777777777", "")
+    val service = new MockBuchhaltungInsertService(config, null, 6, 5, "777777777", "123456")
 
     "calculate correct checksum according to definition matrix" in {
       service.calculateChecksum("00000001290381204712347234".toList map (_.asDigit)) === 0
@@ -77,7 +77,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
         "Bern"
       )
 
-      service.generateReferenzNummer(rechnung, RechnungId(777)) === "000000000000000000001237772"
+      service.generateReferenzNummer(rechnung, RechnungId(777)) === "123456000000000000001237773"
     }
 
     "calculate correct esrNummer" in {
@@ -100,7 +100,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
       )
 
       val referenzNummer = service.generateReferenzNummer(rechnung, RechnungId(555))
-      service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>000000000000000000003215552+ 777777777>"
+      service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>123456000000000000003215558+ 777777777>"
     }
   }
 
