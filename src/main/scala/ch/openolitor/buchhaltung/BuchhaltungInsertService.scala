@@ -63,7 +63,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   lazy val config = sysConfig.mandantConfiguration.config
   lazy val RechnungIdLength = config.getIntOption(s"buchhaltung.rechnung-id-length").getOrElse(6)
   lazy val KundeIdLength = config.getIntOption(s"buchhaltung.kunde-id-length").getOrElse(6)
-  lazy val Teilnehmernummer = config.getStringOption(s"buchhaltung.referenznummer-prefix").getOrElse("")
+  lazy val Teilnehmernummer = config.getStringOption(s"buchhaltung.teilnehmernummer").getOrElse("")
   lazy val ReferenznummerPrefix = config.getStringOption(s"buchhaltung.referenznummer-prefix").getOrElse("")
 
   val belegarten = Map[Waehrung, String](CHF -> "01", EUR -> "21")
