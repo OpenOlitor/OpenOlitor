@@ -35,6 +35,10 @@ import org.joda.time.DateTime
 
 class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeConversions {
   import AuthCookies._
+
+  val timeout = 5 seconds
+  val retries = 3
+
   "Authenticate" should {
     val token = "asdasd"
     val personId = PersonId(123)
@@ -55,7 +59,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.right.e must beRight(subject)).await
+      result.map(_.right.e must beRight(subject)).await(retries, timeout)
     }
 
     "Succeed with time limitation" in {
@@ -77,7 +81,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.right.e must beRight(subject)).await
+      result.map(_.right.e must beRight(subject)).await(retries, timeout)
     }
 
     "Fail when missing cookie param" in {
@@ -96,7 +100,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.left.e must beLeft(AuthenticatorRejection("Kein XSRF-Token im Cookie gefunden"))).await
+      result.map(_.left.e must beLeft(AuthenticatorRejection("Kein XSRF-Token im Cookie gefunden"))).await(retries, timeout)
     }.pendingUntilFixed("cookie is ignored for now")
 
     "Fail when missing header param" in {
@@ -116,7 +120,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.left.e must beLeft(AuthenticatorRejection("Kein XSRF-Token im Header gefunden"))).await
+      result.map(_.left.e must beLeft(AuthenticatorRejection("Kein XSRF-Token im Header gefunden"))).await(retries, timeout)
     }
 
     "Fail when header param does not contain correct time" in {
@@ -137,7 +141,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.left.e must beLeft(AuthenticatorRejection("Ungültiges Datumsformat im Header:asdasdsd"))).await
+      result.map(_.left.e must beLeft(AuthenticatorRejection("Ungültiges Datumsformat im Header:asdasdsd"))).await(retries, timeout)
     }
 
     "Fail when header token and cookie token mismatch" in {
@@ -158,7 +162,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.left.e must beLeft(AuthenticatorRejection(s"Cookie und Header Token weichen voneinander ab 'asasdfas' != '$token'"))).await
+      result.map(_.left.e must beLeft(AuthenticatorRejection(s"Cookie und Header Token weichen voneinander ab 'asasdfas' != '$token'"))).await(retries, timeout)
     }.pendingUntilFixed("cookie is ignored for now")
 
     "Fail when delay exceeded" in {
@@ -199,7 +203,7 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
 
       val result = provider.openOlitorAuthenticator.apply(ctx)
 
-      result.map(_.left.e must beLeft(AuthenticatorRejection(s"Keine Person gefunden für token: $token"))).await
+      result.map(_.left.e must beLeft(AuthenticatorRejection(s"Keine Person gefunden für token: $token"))).await(retries, timeout)
     }
   }
 }
