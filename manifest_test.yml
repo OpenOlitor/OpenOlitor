@@ -12,6 +12,6 @@ applications:
     TIMEOUT: "180"
     JBP_CONFIG_OPEN_JDK_JRE: "{jre: { version: 1.8.0_+ }}"
     application_config: openolitor-server-test
-    JAVA_OPTS: "-Dconfig.resource=openolitor-server-test.conf"
+    JAVA_OPTS: "-Dconfig.resource=openolitor-server-test.conf -Dlogback.configurationFile=src/main/resources/openolitor-server-test-logback.xml"
     application_buildnr: "${env.BUILD_NUMBER?notDefined}"
     

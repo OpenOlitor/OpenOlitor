@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="5 seconds" debug="true">
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>%X{akkaTimestamp} %-5level %logger{36} %X{sourceThread} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>./akka.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>./akka.log.%d{yyyy-MM-dd-HH}</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%X{akkaTimestamp} %-5level %logger{36} %X{sourceThread} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="proc" level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="akka.actor" level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    
+    <logger name="a.p.j.s.MySQLAsyncWriteJournal" level="ERROR">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    
+    <logger name="s.async" level="ERROR">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    
+    
+    <logger name="ch.openolitor" level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
