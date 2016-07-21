@@ -88,6 +88,19 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungen)) ~
         post(create[RechnungCreate, RechnungId](RechnungId.apply _))
     } ~
+      path("rechnungen" / "aktionen" / "download") {
+        post {
+          requestInstance { request =>
+            entity(as[RechnungenContainer]) { cont =>
+              onSuccess(buchhaltungReadRepository.getRechnungenByIds(cont.ids)) { rechnungen =>
+                val fileStoreIds = rechnungen.map(_.fileStoreId.map(FileStoreFileId(_))).flatten
+                logger.debug(s"Download rechnungen with filestoreRefs:$fileStoreIds")
+                downloadAll("Rechnungen_" + System.currentTimeMillis + ".zip", GeneriertRechnung, fileStoreIds)
+              }
+            }
+          }
+        }
+      } ~
       path("rechnungen" / "berichte" / "rechnungen") {
         (post)(rechnungBerichte())
       } ~
@@ -218,6 +231,10 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   def rechnungBerichte()(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
     implicit val personId = subject.personId
     generateReport[RechnungId](None, generateRechnungReports _)(RechnungId.apply)
+  }
+
+  def rechnungenHerunterladen()(implicit subject: Subject) = {
+
   }
 }
 
