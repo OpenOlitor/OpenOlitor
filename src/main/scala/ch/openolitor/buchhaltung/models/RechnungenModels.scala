@@ -29,6 +29,7 @@ import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.scalax.Tuple24
 import java.text.DecimalFormat
+import ch.openolitor.core.JSONSerializable
 
 /**
  *        +
@@ -227,3 +228,5 @@ case class RechnungModifyBezahlt(
   einbezahlterBetrag: BigDecimal,
   eingangsDatum: DateTime
 ) extends JSONSerializable
+
+case class RechnungenContainer(ids: Seq[RechnungId]) extends JSONSerializable
