@@ -64,14 +64,6 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
     }.map(rechnungMapping(rechnung)).list
   }
 
-  protected def getRechnungenByIdsQuery(ids: Seq[RechnungId]) = {
-    withSQL {
-      select
-        .from(rechnungMapping as rechnung)
-        .where.in(rechnung.id, ids.map(parameter(_)))
-    }.map(rechnungMapping(rechnung)).list
-  }
-
   protected def getKundenRechnungenQuery(kundeId: KundeId) = {
     withSQL {
       select
@@ -140,11 +132,10 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
 /**
  * Asynchronous Repository
  */
-trait BuchhaltungReadRepository {
+trait BuchhaltungReadRepository extends BaseReadRepository {
   def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]]
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]
-  def getRechnungenByIds(ids: Seq[RechnungId])(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]]
 
   def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]]
@@ -169,10 +160,6 @@ trait BuchhaltungWriteRepository extends BaseWriteRepository with EventStream {
 class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyLogging with BuchhaltungRepositoryQueries {
   def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]] = {
     getRechnungenQuery(filter).future
-  }
-
-  def getRechnungenByIds(ids: Seq[RechnungId])(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]] = {
-    getRechnungenByIdsQuery(ids).future
   }
 
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]] = {
