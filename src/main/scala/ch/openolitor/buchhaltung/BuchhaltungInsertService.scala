@@ -63,7 +63,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   lazy val config = sysConfig.mandantConfiguration.config
   lazy val RechnungIdLength = config.getIntOption(s"buchhaltung.rechnung-id-length").getOrElse(6)
   lazy val KundeIdLength = config.getIntOption(s"buchhaltung.kunde-id-length").getOrElse(6)
-  lazy val Teilnehmernummer = config.getStringOption(s"buchhaltung.referenznummer-prefix").getOrElse("")
+  lazy val Teilnehmernummer = config.getStringOption(s"buchhaltung.teilnehmernummer").getOrElse("")
   lazy val ReferenznummerPrefix = config.getStringOption(s"buchhaltung.referenznummer-prefix").getOrElse("")
 
   val belegarten = Map[Waehrung, String](CHF -> "01", EUR -> "21")
@@ -106,9 +106,11 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
    * Generieren einer Referenznummer, die die Kundennummer und Rechnungsnummer enthält.
    */
   def generateReferenzNummer(rechnung: RechnungCreate, id: RechnungId): String = {
-    val zeroesLength = ReferenznummerLength - ReferenznummerPrefix.size
+    val kundeId = s"${rechnung.kundeId.id}"
+    val rechnungId = s"${id.id}"
+    val zeroesLength = ReferenznummerLength - ReferenznummerPrefix.size - kundeId.size - rechnungId.size
     val zeroes = s"%0${zeroesLength}d".format(0)
-    val filled = (s"$ReferenznummerPrefix$zeroes${rechnung.kundeId.id}${id.id}") takeRight (ReferenznummerLength)
+    val filled = (s"${ReferenznummerPrefix}${zeroes}${rechnung.kundeId.id}${id.id}") takeRight (ReferenznummerLength)
     val checksum = calculateChecksum(filled.toList map (_.asDigit))
 
     s"$filled$checksum"

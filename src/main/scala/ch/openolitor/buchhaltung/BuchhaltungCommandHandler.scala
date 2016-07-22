@@ -50,6 +50,7 @@ import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 
 object BuchhaltungCommandHandler {
   case class RechnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
+  case class RechnungenVerschickenCommand(originator: PersonId, ids: Seq[RechnungId]) extends UserCommand
   case class RechnungMahnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
   case class RechnungBezahlenCommand(originator: PersonId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
   case class RechnungStornierenCommand(originator: PersonId, id: RechnungId) extends UserCommand
@@ -87,6 +88,15 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
               Failure(new InvalidStateException("Eine Rechnung kann nur im Status 'Erstellt' verschickt werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
+      }
+
+    case RechnungenVerschickenCommand(personId, ids: Seq[RechnungId]) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        buchhaltungWriteRepository.getByIds(rechnungMapping, ids) filter (_.status == Erstellt) match {
+          case Seq() => Failure(new InvalidStateException("Keine Rechnung im Status 'Erstellt' selektiert"))
+          case validatedRechnungen =>
+            Success(validatedRechnungen.map(r => RechnungVerschicktEvent(meta, r.id)))
+        }
       }
 
     case RechnungMahnungVerschickenCommand(personId, id: RechnungId) => idFactory => meta =>

@@ -93,7 +93,7 @@ trait SystemEventStore extends AggregateRoot {
     case systemEvent: SystemEvent =>
       persist(PersistentSystemEvent(metadata, systemEvent))(afterEventPersisted)
     case other =>
-      log.error(s"Received unknown command:$other")
+      log.warning(s"Received unknown command:$other")
   }
 
   def metadata = {

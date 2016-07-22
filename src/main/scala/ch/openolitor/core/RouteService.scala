@@ -256,6 +256,16 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
+  protected def downloadAll(zipFileName: String, fileType: FileType, ids: Seq[FileStoreFileId]) = {
+    ids match {
+      case Seq() => complete(StatusCodes.BadRequest)
+      case Seq(fileStoreId) => download(fileType, fileStoreId.id)
+      case list =>
+        val refs = ids.map(id => FileStoreFileReference(fileType, id))
+        downloadAsZip(zipFileName, refs)
+    }
+  }
+
   protected def download(fileType: FileType, id: String) = {
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
       case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found.")
@@ -274,7 +284,9 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
         case Left(e) =>
           logger.warn(s"Couldn't download file from fileStore '${ref.fileType.bucket}-${ref.id.id}':$e")
         case Right(file) =>
-          builder.addZipEntry(file.metaData.name, file.file)
+          val name = if (file.metaData.name.isEmpty) ref.id.id else file.metaData.name
+          logger.debug(s"Add zip entry:${ref.id.id} => $name")
+          builder.addZipEntry(name, file.file)
       }
     }
     builder.close().map(result => streamZip(zipFileName, result)) getOrElse complete(StatusCodes.NotFound)
