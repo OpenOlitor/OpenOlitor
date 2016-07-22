@@ -273,7 +273,7 @@ trait EntityStore extends AggregateRoot
     case ReadSeedsFromDB =>
       readDBSeeds()
     case other =>
-      log.error(s"received unknown command:$other")
+      log.warning(s"received unknown command:$other")
   }
 
   def metadata(personId: PersonId) = {

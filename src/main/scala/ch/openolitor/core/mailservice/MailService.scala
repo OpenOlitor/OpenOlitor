@@ -110,7 +110,7 @@ trait MailService extends AggregateRoot
             state = incState
             persist(event)(afterEventPersisted)
           case Failure(e) =>
-            log.error(s"Failed to send mail ${e} ${e.getMessage}. Trying again later.")
+            log.warning(s"Failed to send mail ${e} ${e.getMessage}. Trying again later.")
 
             calculateRetryEnqueued(enqueued).fold(
               _ => {
@@ -234,7 +234,7 @@ trait MailService extends AggregateRoot
         sender ! result
       }
     case other =>
-      log.error(s"Received unknown command:$other")
+      log.warning(s"Received unknown command:$other")
   }
 
   val removed: Receive = {
