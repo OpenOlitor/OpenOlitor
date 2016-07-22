@@ -85,10 +85,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleAboDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) if entity.tourId != orig.tourId =>
       handleHeimlieferungAboDepotChanged(orig.tourId, entity.tourId)(personId)
+      handleHeimlieferungAboModified(orig, entity)(personId)
       handleAboModified(orig, entity)(personId)
     case e @ EntityModified(personId, entity: PostlieferungAbo, orig: PostlieferungAbo) if entity.vertriebId != orig.vertriebId =>
       handleAboModified(orig, entity)(personId)
-    case e @ EntityCreated(personId, entity: HeimlieferungAbo) => handleHeimlieferungAboCreated(entity)(personId)
+    case e @ EntityCreated(personId, entity: HeimlieferungAbo) =>
+      handleHeimlieferungAboCreated(entity)(personId)
+      handleAboCreated(entity)(personId)
+    case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) => handleHeimlieferungAboModified(entity, orig)(personId)
     case e @ EntityCreated(personId, entity: Abo) => handleAboCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Abo) => handleAboDeleted(entity)(personId)
     case e @ EntityCreated(personId, entity: Abwesenheit) => handleAbwesenheitCreated(entity)(personId)
@@ -159,13 +163,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleHeimlieferungAboCreated(abo: HeimlieferungAbo)(implicit personId: PersonId) = {
+  def handleHeimlieferungAboModified(entity: HeimlieferungAbo, orig: HeimlieferungAbo)(implicit personId: PersonId) = {
+    insertOrUpdateTourlieferung(entity)
+  }
+
+  def handleHeimlieferungAboCreated(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      modifyEntity[Tour, TourId](abo.tourId, { tour =>
+      modifyEntity[Tour, TourId](entity.tourId, { tour =>
         log.debug(s"Add abonnent to tour:${tour.id}")
         tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1)
       })
     }
+    insertOrUpdateTourlieferung(entity)
   }
 
   def handleHeimlieferungAboDeleted(abo: HeimlieferungAbo)(implicit personId: PersonId) = {
@@ -174,6 +183,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Remove abonnent from tour:${tour.id}")
         tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1)
       })
+
+      stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](abo.id)
     }
   }
 

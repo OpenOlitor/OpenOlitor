@@ -63,7 +63,7 @@ object ReportDocumentProcessorApp extends App with DocumentProcessor {
   // process report
   println(s"Process report...")
   processDocument(doc, jsonData, Locale.GERMAN) match {
-    case Success(true) =>
+    case Success(_) =>
       val outFile = if (args.length > 2) {
         new File(args(2))
       } else {

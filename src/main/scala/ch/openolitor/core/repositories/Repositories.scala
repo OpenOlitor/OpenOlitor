@@ -25,11 +25,16 @@ package ch.openolitor.core.repositories
 import ch.openolitor.core.models._
 import java.util.UUID
 import scalikejdbc._
+import scalikejdbc.async._
+import scalikejdbc.async.FutureImplicits._
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
 import scala.util._
 import ch.openolitor.core.scalax._
+import scala.concurrent.Future
+import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
+import ch.openolitor.core.db.OOAsyncDB._
 
 case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
 
@@ -72,7 +77,43 @@ trait SqlBinder[-T] extends (T => Any) {
 object BaseRepository extends LazyLogging {
 }
 
-trait BaseWriteRepository extends DBMappings with LazyLogging {
+trait BaseRepositoryQueries extends DBMappings with LazyLogging {
+  protected def getByIdsQuery[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], ids: Seq[I])(implicit binder: SqlBinder[I]) = {
+    val alias = syntax.syntax("x")
+    val idx = alias.id
+    withSQL {
+      select
+        .from(syntax as alias)
+        .where.in(alias.id, ids.map(parameter(_)))
+    }.map(syntax.apply(alias)).list
+  }
+
+  protected def getByIdQuery[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit binder: SqlBinder[I]) = {
+    val alias = syntax.syntax("x")
+    val idx = alias.id
+    withSQL {
+      select
+        .from(syntax as alias)
+        .where.eq(alias.id, parameter(id))
+    }.map(syntax.apply(alias)).single
+  }
+}
+
+trait BaseReadRepository extends BaseRepositoryQueries {
+  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
+    asyncCpContext: MultipleAsyncConnectionPoolContext,
+    binder: SqlBinder[I]): Future[Option[E]] = {
+    getByIdQuery(syntax, id).future
+  }
+
+  def getByIds[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], ids: Seq[I])(implicit
+    asyncCpContext: MultipleAsyncConnectionPoolContext,
+    binder: SqlBinder[I]): Future[List[E]] = {
+    getByIdsQuery(syntax, ids).future
+  }
+}
+
+trait BaseWriteRepository extends BaseRepositoryQueries {
   self: EventStream =>
 
   type Validator[E] = E => Boolean
@@ -81,13 +122,13 @@ trait BaseWriteRepository extends DBMappings with LazyLogging {
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
     session: DBSession,
     binder: SqlBinder[I]): Option[E] = {
-    val alias = syntax.syntax("x")
-    val idx = alias.id
-    withSQL {
-      select
-        .from(syntax as alias)
-        .where.eq(alias.id, parameter(id))
-    }.map(syntax.apply(alias)).single.apply()
+    getByIdQuery(syntax, id).apply()
+  }
+
+  def getByIds[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], ids: Seq[I])(implicit
+    session: DBSession,
+    binder: SqlBinder[I]): List[E] = {
+    getByIdsQuery(syntax, ids).apply()
   }
 
   def insertEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit

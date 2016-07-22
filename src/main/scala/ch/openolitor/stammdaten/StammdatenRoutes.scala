@@ -336,7 +336,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   def tourenRoute(implicit subject: Subject) =
     path("touren") {
       get(list(stammdatenReadRepository.getTouren)) ~
-        post(create[TourModify, TourId](TourId.apply _))
+        post(create[TourCreate, TourId](TourId.apply _))
     } ~
       path("touren" / tourIdPath) { id =>
         get(detail(stammdatenReadRepository.getTourDetail(id))) ~

@@ -157,6 +157,10 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityModified(userId, entity: ZahlungsEingang, _) => send(userId, e.asInstanceOf[DBEvent[ZahlungsEingang]])
     case e @ EntityDeleted(userId, entity: ZahlungsEingang) => send(userId, e.asInstanceOf[DBEvent[ZahlungsEingang]])
 
+    case e @ EntityModified(userId, entity: DepotAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[DepotAuslieferung]])
+    case e @ EntityModified(userId, entity: TourAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[TourAuslieferung]])
+    case e @ EntityModified(userId, entity: PostAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[PostAuslieferung]])
+
     case x => log.debug(s"receive unknown event $x")
   }
 }
