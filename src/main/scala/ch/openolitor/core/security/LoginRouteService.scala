@@ -276,7 +276,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     //generate token
     val token = generateToken
     EitherT {
-      loginTokenCache(token)(Subject(token, person.id, person.rolle)) map { _ =>
+      loginTokenCache(token)(Subject(token, person.id, person.kundeId, person.rolle)) map { _ =>
         val personSummary = copyTo[Person, PersonSummary](person)
 
         eventStore ! PersonLoggedIn(person.id, org.joda.time.DateTime.now)
@@ -367,7 +367,7 @@ trait LoginRouteService extends HttpService with ActorReferences
       pwdValid <- validatePassword(up.pass, person)
       personValid <- validatePerson(person)
       result <- doLogin(person)
-    } yield Subject(result.token, person.id, person.rolle)).run.map(_.toOption)
+    } yield Subject(result.token, person.id, person.kundeId, person.rolle)).run.map(_.toOption)
   }
 
   private def validateUserPass(userPass: Option[UserPass]): EitherFuture[UserPass] = EitherT {

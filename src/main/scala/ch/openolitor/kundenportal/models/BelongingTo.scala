@@ -20,31 +20,12 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.security
+package ch.openolitor.kundenportal.models
 
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.models.PersonId
-import ch.openolitor.stammdaten.models.PersonSummary
-import ch.openolitor.stammdaten.models.Rolle
 import ch.openolitor.stammdaten.models.KundeId
+import ch.openolitor.core.models.PersonId
+import ch.openolitor.core.security.Subject
 
-case class LoginForm(email: String, passwort: String) extends JSONSerializable
-case class SecondFactorLoginForm(token: String, code: String) extends JSONSerializable
-case class SecondFactor(token: String, code: String, personId: PersonId)
-case class ChangePasswordForm(alt: String, neu: String) extends JSONSerializable
-
-sealed trait LoginStatus extends Product
-case object LoginOk extends LoginStatus
-case object LoginSecondFactorRequired extends LoginStatus
-
-object LoginStatus {
-  def apply(value: String): Option[LoginStatus] = {
-    Vector(LoginOk, LoginSecondFactorRequired).find(_.toString == value)
-  }
+trait BelongsToKunde {
+  def kundeId: KundeId
 }
-
-case class LoginResult(status: LoginStatus, token: String, person: PersonSummary) extends JSONSerializable
-
-case class RequestFailed(msg: String)
-
-case class Subject(token: String, personId: PersonId, kundeId: KundeId, rolle: Option[Rolle])
