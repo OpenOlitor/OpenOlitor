@@ -65,13 +65,15 @@ import com.typesafe.scalalogging.LazyLogging
 import spray.routing.RequestContext
 import java.io.InputStream
 import ch.openolitor.core.security._
-import ch.openolitor.stammdaten.models.AdministratorZugang
+import ch.openolitor.stammdaten.models.{ AdministratorZugang, KundenZugang }
 import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.util.InputStreamUtil._
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 import ch.openolitor.util.ZipBuilder
+import ch.openolitor.kundenportal.KundenportalRoutes
+import ch.openolitor.kundenportal.DefaultKundenportalRoutes
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -89,6 +91,7 @@ trait RouteServiceComponent extends ActorReferences {
 
   val stammdatenRouteService: StammdatenRoutes
   val buchhaltungRouteService: BuchhaltungRoutes
+  val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
   val loginRouteService: LoginRouteService
 }
@@ -96,6 +99,7 @@ trait RouteServiceComponent extends ActorReferences {
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
 }
@@ -143,6 +147,9 @@ trait RouteServiceActor
             stammdatenRouteService.stammdatenRoute ~
               buchhaltungRouteService.buchhaltungRoute ~
               fileStoreRoute
+          } ~
+          authorize(hasRole(KundenZugang)) {
+            kundenportalRouteService.kundenportalRoute
           }
       } ~
 

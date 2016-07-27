@@ -30,10 +30,11 @@ import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.kundenportal.models.BelongsToKunde
 
 case class AboId(id: Long) extends BaseId
 
-sealed trait Abo extends BaseEntity[AboId] {
+sealed trait Abo extends BaseEntity[AboId] with BelongsToKunde {
   val id: AboId
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
