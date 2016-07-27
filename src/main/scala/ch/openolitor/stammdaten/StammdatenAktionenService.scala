@@ -78,6 +78,10 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       auslieferungAusgeliefert(meta, id)
     case PasswortGewechseltEvent(meta, personId, pwd) =>
       updatePasswort(meta, personId, pwd)
+    case LoginDeaktiviertEvent(meta, kundeId, personId) =>
+      disableLogin(meta, kundeId, personId)
+    case LoginAktiviertEvent(meta, kundeId, personId) =>
+      enableLogin(meta, kundeId, personId)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -160,6 +164,24 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
     DB localTx { implicit session =>
       stammdatenWriteRepository.getById(personMapping, id) map { person =>
         val updated = person.copy(passwort = Some(pwd))
+        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
+      }
+    }
+  }
+
+  def disableLogin(meta: EventMetadata, kundeId: KundeId, personId: PersonId)(implicit originator: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        val updated = person.copy(loginAktiv = false)
+        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
+      }
+    }
+  }
+
+  def enableLogin(meta: EventMetadata, kundeId: KundeId, personId: PersonId)(implicit originator: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        val updated = person.copy(loginAktiv = true)
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
       }
     }
