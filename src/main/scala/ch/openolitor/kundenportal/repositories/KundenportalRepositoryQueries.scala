@@ -49,9 +49,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
-        .join(kundeMapping as kunde).on(kunde.id, heimlieferungAbo.kundeId)
-        .join(personMapping as person).on(kunde.id, person.kundeId)
-        .where.eq(person.id, parameter(owner.personId))
+        .where.eq(heimlieferungAbo.kundeId, parameter(owner.kundeId))
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, heimlieferungAbo))
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
@@ -60,9 +58,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
-        .join(kundeMapping as kunde).on(kunde.id, postlieferungAbo.kundeId)
-        .join(personMapping as person).on(kunde.id, person.kundeId)
-        .where.eq(person.id, parameter(owner.personId))
+        .where.eq(postlieferungAbo.kundeId, parameter(owner.kundeId))
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
