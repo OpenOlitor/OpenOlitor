@@ -118,6 +118,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
+    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) if (orig.lieferplanungId.isEmpty && entity.lieferplanungId.isDefined) => handleLieferplanungLieferungenChanged(entity.lieferplanungId.get)(personId)
+    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) if (orig.lieferplanungId.isDefined && entity.lieferplanungId.isEmpty) => handleLieferplanungLieferungenChanged(orig.lieferplanungId.get)(personId)
+
     case e @ EntityModified(personId, entity: Vertriebsart, orig: Vertriebsart) => handleVertriebsartModified(entity, orig)(personId)
 
     case e @ EntityModified(personId, entity: Auslieferung, orig: Auslieferung) if (orig.status == Erfasst && entity.status == Ausgeliefert) =>
@@ -725,6 +728,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         implicit val pid = SystemEvents.SystemPersonId
         val updated = person.copy(letzteAnmeldung = Some(timestamp))
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
+      }
+    }
+  }
+
+  def handleLieferplanungLieferungenChanged(lieferplanungId: LieferplanungId)(implicit personId: PersonId) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
+        val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanungId)
+        val abotypMapping = lieferungen.map(_.abotypBeschrieb).filter(_.nonEmpty).toSet.mkString(", ")
+        logger.debug(s"handleLieferplanungLieferungenChanged: $lieferplanungId => abotypDepotTour=$abotypMapping. $lieferungen")
+        val copy = lp.copy(abotypDepotTour = abotypMapping)
+        stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
       }
     }
   }
