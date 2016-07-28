@@ -72,7 +72,6 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     case EntityDeletedEvent(meta, id: VertriebId) => deleteVertrieb(meta, id)
     case EntityDeletedEvent(meta, id: LieferplanungId) => deleteLieferplanung(meta, id)
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def deleteAbotyp(meta: EventMetadata, id: AbotypId)(implicit personId: PersonId = meta.originator) = {

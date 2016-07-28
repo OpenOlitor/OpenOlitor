@@ -105,10 +105,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createLieferplanung(meta, id, lieferplanungCreateData)
     case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungenCreate) =>
       createBestellungen(meta, id, bestellungCreateData)
-    case EntityInsertedEvent(meta, id, entity) =>
-      logger.warn(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def createAbotyp(meta: EventMetadata, id: AbotypId, abotyp: AbotypModify)(implicit personId: PersonId = meta.originator) = {

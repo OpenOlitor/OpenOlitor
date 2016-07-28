@@ -111,7 +111,6 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
     case x: HttpRequest => // do something
       log.debug(s"Got http request:$x")
     case x =>
-      log.debug(s"Got another message:$x")
   }
 
   def businessLogicNoUpgrade: Receive = {

@@ -86,11 +86,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
       updateLieferpositionen(meta, id, lieferpositionen)
-
-    case EntityUpdatedEvent(meta, id, entity) =>
-      logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def updateVertrieb(meta: EventMetadata, id: VertriebId, update: VertriebModify)(implicit personId: PersonId = meta.originator) = {
