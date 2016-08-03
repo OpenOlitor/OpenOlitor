@@ -33,6 +33,17 @@ a {
   text-decoration: none;
   background-color: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3); }
+  
+.btn.bright {
+    color: rgba(88, 88, 88, 0.9);
+    background-color: rgba(255, 255, 255, 0.48);
+}
+
+.btn.right {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+}
 
 @media screen and (min-width: 64em) {
   .btn {
@@ -48,10 +59,16 @@ a {
     display: block;
     width: 100%;
     padding: 0.75rem;
-    font-size: 0.9rem; }
-    .btn + .btn {
+    font-size: 0.9rem; 
+  }
+  .btn + .btn {
       margin-top: 1rem;
-      margin-left: 0; } }
+      margin-left: 0; 
+  } 
+  .btn.right {
+    width: initial;
+  }
+}
 
 .page-header {
   color: #fff;
