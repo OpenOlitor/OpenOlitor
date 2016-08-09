@@ -105,10 +105,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createLieferplanung(meta, id, lieferplanungCreateData)
     case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungenCreate) =>
       createBestellungen(meta, id, bestellungCreateData)
-    case EntityInsertedEvent(meta, id, entity) =>
-      logger.warn(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def createAbotyp(meta: EventMetadata, id: AbotypId, abotyp: AbotypModify)(implicit personId: PersonId = meta.originator) = {
@@ -187,7 +184,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getAbotypDetail(lieferung.abotypId) match {
         case Some(abotyp) =>
           stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) map {
@@ -503,7 +500,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       val defaultAbotypDepotTour = ""
       val insert = copyTo[LieferplanungCreate, Lieferplanung](
         lieferplanung,
@@ -594,7 +591,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungenCreate)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
       stammdatenWriteRepository.getBestellpositionenByLieferplan(create.lieferplanungId) foreach {
         position => stammdatenWriteRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)

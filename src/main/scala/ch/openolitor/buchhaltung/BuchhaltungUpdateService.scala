@@ -54,10 +54,7 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: RechnungId, entity: RechnungModify) => updateRechnung(meta, id, entity)
-    case EntityUpdatedEvent(meta, id, entity) =>
-      logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit personId: PersonId = meta.originator) = {

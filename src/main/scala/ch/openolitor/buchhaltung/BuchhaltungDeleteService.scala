@@ -55,7 +55,6 @@ class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends Eve
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: RechnungId) => deleteRechnung(meta, id)
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def deleteRechnung(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {

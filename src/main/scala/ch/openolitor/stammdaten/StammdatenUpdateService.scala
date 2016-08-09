@@ -86,11 +86,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
       updateLieferpositionen(meta, id, lieferpositionen)
-
-    case EntityUpdatedEvent(meta, id, entity) =>
-      logger.debug(s"Receive unmatched update event for id:$id, entity:$entity")
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def updateVertrieb(meta: EventMetadata, id: VertriebId, update: VertriebModify)(implicit personId: PersonId = meta.originator) = {
@@ -104,7 +100,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateAbotyp(meta: EventMetadata, id: AbotypId, update: AbotypModify)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(abotypMapping, id) map { abotyp =>
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
@@ -159,7 +155,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     if (update.ansprechpersonen.isEmpty) {
       logger.error(s"Update kunde without ansprechperson:$kundeId, update:$update")
     } else {
-      DB localTx { implicit session =>
+      DB autoCommit { implicit session =>
         updateKundendaten(meta, kundeId, update)
         updatePersonen(meta, kundeId, update)
         updatePendenzen(meta, kundeId, update)
@@ -370,7 +366,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateProdukt(meta: EventMetadata, id: ProduktId, update: ProduktModify)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(produktMapping, id) map { produkt =>
         //map all updatable fields
         val copy = copyFrom(produkt, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
@@ -412,7 +408,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateProduktekategorie(meta: EventMetadata, id: ProduktekategorieId, update: ProduktekategorieModify)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(produktekategorieMapping, id) map { produktekategorie =>
 
         stammdatenWriteRepository.getProdukteByProduktekategorieBezeichnung(produktekategorie.beschreibung) map {
@@ -445,7 +441,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateTour(meta: EventMetadata, id: TourId, update: TourModify)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(tourMapping, id) map { tour =>
         //map all updatable fields
         val copy = copyFrom(tour, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
@@ -509,7 +505,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.deleteLieferpositionen(id)
       stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
         //map all updatable fields
@@ -526,7 +522,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateLieferpositionen(meta: EventMetadata, lieferungId: LieferungId, positionen: LieferpositionenModify)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
         //save Lieferpositionen

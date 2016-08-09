@@ -142,7 +142,7 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current)
       case (script, index) =>
         try {
           logger.debug(s"evolve script:$script [$index]")
-          DB localTx { implicit session =>
+          DB autoCommit { implicit session =>
             script.execute(sysConfig) match {
               case Success(x) =>
                 val rev = currentRevision + index + 1

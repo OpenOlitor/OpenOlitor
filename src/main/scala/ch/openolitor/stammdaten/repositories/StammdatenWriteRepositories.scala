@@ -81,7 +81,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with AkkaEventStream with StammdatenRepositoryQueries {
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       sql"truncate table ${postlieferungMapping.table}".execute.apply()
       sql"truncate table ${depotlieferungMapping.table}".execute.apply()
       sql"truncate table ${heimlieferungMapping.table}".execute.apply()
