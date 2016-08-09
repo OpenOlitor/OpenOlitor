@@ -265,13 +265,29 @@ case class Korb(
   aboId: AboId,
   status: KorbStatus,
   guthabenVorLieferung: Int,
-  auslieferungId: Option[AuslieferungId],
+  auslieferungId: Option[AuslieferungId],  
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[KorbId]
+
+case class KorbDetail(
+  id: KorbId,
+  lieferungId: LieferungId,
+  abo: Abo,
+  status: KorbStatus,
+  guthabenVorLieferung: Int,
+  auslieferungId: Option[AuslieferungId],
+  kunde: Kunde,
+  abotyp: Abotyp,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
 
 case class KorbReport(
   id: KorbId,
