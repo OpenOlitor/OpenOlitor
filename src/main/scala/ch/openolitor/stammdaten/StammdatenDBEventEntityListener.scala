@@ -723,7 +723,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handlePersonLoggedIn(personId: PersonId, timestamp: DateTime) = {
-    DB autoCommit { implicit session =>
+    DB localTx { implicit session =>
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         implicit val pid = SystemEvents.SystemPersonId
         val updated = person.copy(letzteAnmeldung = Some(timestamp))
@@ -733,7 +733,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleLieferplanungLieferungenChanged(lieferplanungId: LieferplanungId)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
         val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanungId)
         val abotypMapping = lieferungen.map(_.abotypBeschrieb).filter(_.nonEmpty).toSet.mkString(", ")

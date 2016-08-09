@@ -505,7 +505,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.deleteLieferpositionen(id)
       stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
         //map all updatable fields
