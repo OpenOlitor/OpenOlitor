@@ -50,6 +50,10 @@ trait Auslieferung extends BaseEntity[AuslieferungId] {
   val anzahlKoerbe: Int
 }
 
+trait AuslieferungDetail extends Auslieferung {
+  val koerbe: Seq[KorbDetail]
+}
+
 trait AuslieferungReport extends Auslieferung {
   val koerbe: Seq[KorbReport]
   val projekt: ProjektReport
@@ -72,6 +76,21 @@ case class DepotAuslieferung(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Auslieferung
+
+case class DepotAuslieferungDetail(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  koerbe: Seq[KorbDetail],
+  depot: Depot,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends AuslieferungDetail with JSONSerializable
 
 case class DepotAuslieferungReport(
   id: AuslieferungId,
@@ -107,6 +126,21 @@ case class TourAuslieferung(
   modifikator: PersonId
 ) extends Auslieferung
 
+case class TourAuslieferungDetail(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  koerbe: Seq[KorbDetail],
+  tour: Tour,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends AuslieferungDetail with JSONSerializable
+
 case class TourAuslieferungReport(
   id: AuslieferungId,
   lieferungId: LieferungId,
@@ -138,6 +172,20 @@ case class PostAuslieferung(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Auslieferung
+
+case class PostAuslieferungDetail(
+  id: AuslieferungId,
+  lieferungId: LieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  koerbe: Seq[KorbDetail],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends AuslieferungDetail with JSONSerializable
 
 case class PostAuslieferungReport(
   id: AuslieferungId,
