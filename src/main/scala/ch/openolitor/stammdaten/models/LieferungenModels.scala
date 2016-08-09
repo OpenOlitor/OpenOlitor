@@ -265,7 +265,7 @@ case class Korb(
   aboId: AboId,
   status: KorbStatus,
   guthabenVorLieferung: Int,
-  auslieferungId: Option[AuslieferungId],  
+  auslieferungId: Option[AuslieferungId],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -303,12 +303,6 @@ case class KorbReport(
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends JSONSerializable
-
-case class KorbModify(
-  status: KorbStatus,
-  guthabenVorLieferung: Int,
-  auslieferungId: Option[AuslieferungId]
 ) extends JSONSerializable
 
 case class KorbCreate(

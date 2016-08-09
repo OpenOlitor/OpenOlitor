@@ -416,7 +416,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
 
   implicit val korbCreateFormat = autoProductFormat[KorbCreate]
-  implicit val korbModifyFormat = autoProductFormat[KorbModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 
