@@ -184,18 +184,21 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
         column.aktivVon -> parameter(abotyp.aktivVon),
         column.aktivBis -> parameter(abotyp.aktivBis),
-        column.laufzeit -> parameter(abotyp.laufzeit),
-        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
-        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
-        column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
         column.preis -> parameter(abotyp.preis),
         column.preiseinheit -> parameter(abotyp.preiseinheit),
+        column.laufzeit -> parameter(abotyp.laufzeit),
+        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
+        column.vertragslaufzeit -> parameter(abotyp.vertragslaufzeit),
+        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
+        column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
         column.farbCode -> parameter(abotyp.farbCode),
         column.zielpreis -> parameter(abotyp.zielpreis),
+        column.guthabenMindestbestand -> parameter(abotyp.guthabenMindestbestand),
+        column.adminProzente -> parameter(abotyp.adminProzente),
+        column.wirdGeplant -> parameter(abotyp.wirdGeplant),
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-        column.waehrung -> parameter(abotyp.waehrung),
-        column.guthabenMindestbestand -> parameter(abotyp.guthabenMindestbestand)
+        column.waehrung -> parameter(abotyp.waehrung)
       )
     }
   }
