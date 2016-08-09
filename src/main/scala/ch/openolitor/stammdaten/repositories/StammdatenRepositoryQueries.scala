@@ -98,7 +98,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       )
       .map({ (kunde, pl, hl, dl, personen, pendenzen) =>
         val abos = pl ++ hl ++ dl
-        val personenWihoutPwd = personen.map(p => copyTo[Person, PersonDetail](p))
+        val personenWihoutPwd = personen.toSet[Person].map(p => copyTo[Person, PersonDetail](p)).toSeq
 
         copyTo[Kunde, KundeDetail](kunde, "abos" -> abos, "pendenzen" -> pendenzen, "ansprechpersonen" -> personenWihoutPwd)
       }).single
