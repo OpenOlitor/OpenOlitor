@@ -184,7 +184,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getAbotypDetail(lieferung.abotypId) match {
         case Some(abotyp) =>
           stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) map {
@@ -500,7 +500,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       val defaultAbotypDepotTour = ""
       val insert = copyTo[LieferplanungCreate, Lieferplanung](
         lieferplanung,
@@ -591,7 +591,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungenCreate)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
       stammdatenWriteRepository.getBestellpositionenByLieferplan(create.lieferplanungId) foreach {
         position => stammdatenWriteRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)

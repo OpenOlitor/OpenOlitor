@@ -289,7 +289,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     handleKundentypenChanged(removed, added)
 
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getPendenzen(kunde.id) map { pendenz =>
         val copy = pendenz.copy(kundeBezeichnung = kunde.bezeichnung)
         log.debug(s"Modify Kundenbezeichnung on Pendenz to : ${copy.kundeBezeichnung}.")
@@ -309,7 +309,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getProjekt map { projekt =>
         val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
@@ -359,7 +359,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleAbwesenheitCreated(abw: Abwesenheit)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getProjekt map { projekt =>
         val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
@@ -454,7 +454,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       val kundetypen = stammdatenWriteRepository.getKundentypen
       removed.map { kundetypId =>
         kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
@@ -547,7 +547,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
         stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
 
@@ -635,7 +635,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleAuslieferungAusgeliefert(entity: Auslieferung)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, entity.lieferungId) map { lieferung =>
         stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
           val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.id, vertriebsart.id, WirdGeliefert)
@@ -663,7 +663,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     logger.debug(s"handleDepotModified: depot:\depot\norig:$orig")
     if (depot.name != orig.name) {
       //Depot name was changed. Replace it in Abos
-      DB localTx { implicit session =>
+      DB autoCommit { implicit session =>
         stammdatenWriteRepository.getDepotlieferungAbosByDepot(depot.id) map { abo =>
           val copy = abo.copy(
             depotName = depot.name
@@ -675,7 +675,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def insertOrUpdateTourlieferung(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(kundeMapping, entity.kundeId) map { kunde =>
         val updated = Tourlieferung(
           entity.id,
@@ -708,7 +708,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def insertOrUpdateTourlieferungenByKunde(kunde: Kunde)(implicit personId: PersonId) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getTourlieferungenByKunde(kunde.id) map { tourlieferung =>
         stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](tourlieferung.copy(
           kundeBezeichnung = kunde.bezeichnungLieferung getOrElse kunde.bezeichnung,
@@ -723,7 +723,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handlePersonLoggedIn(personId: PersonId, timestamp: DateTime) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         implicit val pid = SystemEvents.SystemPersonId
         val updated = person.copy(letzteAnmeldung = Some(timestamp))

@@ -83,7 +83,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Offen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
@@ -103,7 +103,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Abgeschlossen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Verrechnet))
@@ -125,7 +125,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
     val format = DateTimeFormat.forPattern("dd.MM.yyyy")
 
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       //send mails to Produzenten
       stammdatenWriteRepository.getProjekt map { projekt =>
         stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
@@ -157,7 +157,7 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
   }
 
   def updatePasswort(meta: EventMetadata, id: PersonId, pwd: Array[Char])(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(personMapping, id) map { person =>
         val updated = person.copy(passwort = Some(pwd))
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
@@ -166,7 +166,7 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
   }
 
   def auslieferungAusgeliefert(meta: EventMetadata, id: AuslieferungId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(depotAuslieferungMapping, id) map { auslieferung =>
         if (Erfasst == auslieferung.status) {
           stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
