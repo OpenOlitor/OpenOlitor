@@ -54,6 +54,10 @@ trait AuslieferungDetail extends Auslieferung {
   val koerbe: Seq[KorbDetail]
 }
 
+trait AuslieferungModify extends JSONSerializable {
+  val koerbe: Seq[KorbModify]
+}
+
 trait AuslieferungReport extends Auslieferung {
   val koerbe: Seq[KorbReport]
   val projekt: ProjektReport
@@ -140,6 +144,8 @@ case class TourAuslieferungDetail(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends AuslieferungDetail with JSONSerializable
+
+case class TourAuslieferungModify(koerbe: Seq[KorbModify]) extends AuslieferungModify with JSONSerializable
 
 case class TourAuslieferungReport(
   id: AuslieferungId,

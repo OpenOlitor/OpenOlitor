@@ -454,7 +454,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(stammdatenReadRepository.getTourAuslieferungen))
       } ~
       path("tourauslieferungen" / auslieferungIdPath) { auslieferungId =>
-        get(detail(stammdatenReadRepository.getTourAuslieferungDetail(auslieferungId)))
+        get(detail(stammdatenReadRepository.getTourAuslieferungDetail(auslieferungId))) ~
+          (put | post)(update[TourAuslieferungModify, AuslieferungId](auslieferungId))
       } ~
       path("postauslieferungen") {
         get(list(stammdatenReadRepository.getPostAuslieferungen))
