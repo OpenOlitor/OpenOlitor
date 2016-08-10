@@ -485,6 +485,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(tourlieferungMapping as tourlieferung)
         .where.eq(tourlieferung.tourId, parameter(tourId))
+        .orderBy(tourlieferung.sort)
     }.map(tourlieferungMapping(tourlieferung)).list
   }
 

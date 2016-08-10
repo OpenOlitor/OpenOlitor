@@ -616,6 +616,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           personId
         )
         stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
+
+        createTourKorbauslieferung(result, h)
+
         result
       case p: PostlieferungDetail =>
         val result = PostAuslieferung(
@@ -631,6 +634,19 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         )
         stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
         result
+    }
+  }
+
+  private def createTourKorbauslieferung(auslieferung: TourAuslieferung, h: HeimlieferungDetail)(implicit personId: PersonId, session: DBSession) = {
+    val tourlieferungen = stammdatenWriteRepository.getTourlieferungen(h.tourId)
+    val koerbe = stammdatenWriteRepository.getKoerbe(auslieferung.lieferungId, h.id, WirdGeliefert)
+    val aboIds = koerbe map (_.aboId)
+    tourlieferungen.filter(l => aboIds.contains(l.id)).sortBy(_.sort).zipWithIndex.map {
+      case (tl, index) =>
+        koerbe.find(_.aboId == tl.id) map { korb =>
+          val copy = korb.copy(sort = Some(index))
+          stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+        }
     }
   }
 

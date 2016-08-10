@@ -79,6 +79,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: ProduktId, entity: ProduktModify) => updateProdukt(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProduktekategorieId, entity: ProduktekategorieModify) => updateProduktekategorie(meta, id, entity)
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify) => updateTour(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: AuslieferungId, entity: TourAuslieferungModify) => updateAuslieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: Lieferung) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
@@ -437,6 +438,17 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     update.tourlieferungen.map { tourLieferung =>
       val copy = tourLieferung.copy(modifidat = meta.timestamp, modifikator = meta.originator)
       stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](copy)
+    }
+  }
+
+  private def updateAuslieferung(meta: EventMetadata, auslieferungId: AuslieferungId, update: TourAuslieferungModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      update.koerbe.map { korbModify =>
+        stammdatenWriteRepository.getById(korbMapping, korbModify.id) map { korb =>
+          val copy = korb.copy(sort = korbModify.sort, modifidat = meta.timestamp, modifikator = meta.originator)
+          stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+        }
+      }
     }
   }
 
