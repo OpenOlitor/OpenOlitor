@@ -45,6 +45,7 @@ import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.stammdaten.models.Verrechnet
 import ch.openolitor.stammdaten.models.Abgeschlossen
 import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import org.joda.time.DateTime
 import ch.openolitor.core.mailservice.Mail
 import ch.openolitor.core.mailservice.MailService._
@@ -62,7 +63,7 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
  * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
  */
 class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
-    with StammdatenDBMappings with MailServiceReference {
+    with StammdatenDBMappings with MailServiceReference with StammdatenEventStoreSerializer {
   self: StammdatenWriteRepositoryComponent =>
 
   implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
@@ -128,13 +129,15 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
     DB autoCommit { implicit session =>
       //send mails to Produzenten
       stammdatenWriteRepository.getProjekt map { projekt =>
-        stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
-          stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
-            val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
-              bestellposition =>
-                s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.get} = ${bestellposition.preis.get} ${projekt.waehrung}"""
-            }
-            val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.get}:
+        stammdatenWriteRepository.getById(bestellungMapping, id) map {
+          //send mails only if current event timestamp is past the timestamp of last delivered mail
+          case bestellung if (bestellung.datumVersendet.isEmpty || bestellung.datumVersendet.get.isBefore(meta.timestamp)) =>
+            stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
+              val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
+                bestellposition =>
+                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.get} = ${bestellposition.preis.get} ${projekt.waehrung}"""
+              }
+              val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.get}:
               
 Lieferung: ${format.print(bestellung.datum)}
 
@@ -142,15 +145,17 @@ Bestellpositionen:
 ${bestellpositionen.mkString("\n")}
 
 Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
-            val mail = Mail(1, produzent.email, None, None, "Bestellung " + format.print(bestellung.datum), text)
+              val mail = Mail(1, produzent.email, None, None, "Bestellung " + format.print(bestellung.datum), text)
 
-            mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
-              case _: SendMailEvent =>
-              // ok
-              case other =>
-                logger.debug(s"Sending Mail failed resulting in $other")
+              mailService ? SendMailCommandWithCallback(SystemEvents.SystemPersonId, mail, Some(5 minutes), id) map {
+                case _: SendMailEvent =>
+                // ok
+                case other =>
+                  logger.debug(s"Sending Mail failed resulting in $other")
+              }
             }
-          }
+          case _ => //ignore
+            logger.debug(s"Don't resend Bestellung, already delivered")
         }
       }
     }
