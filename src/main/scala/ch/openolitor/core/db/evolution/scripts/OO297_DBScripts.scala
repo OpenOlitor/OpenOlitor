@@ -22,14 +22,30 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts ++
-      OO297_DBScripts.scripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+
+object OO297_DBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Add column vertrieb_beschrieb to abo tables")
+      alterTableAddColumnIfNotExists(depotlieferungAboMapping, "vertrieb_beschrieb", "varchar(2000)", "vertrieb_id")
+      alterTableAddColumnIfNotExists(heimlieferungAboMapping, "vertrieb_beschrieb", "varchar(2000)", "vertrieb_id")
+      alterTableAddColumnIfNotExists(postlieferungAboMapping, "vertrieb_beschrieb", "varchar(2000)", "vertrieb_id")
+
+      //update vertrieb beschrieb
+      sql"""UPDATE ${depotlieferungAboMapping.table} as a JOIN ${vertriebMapping.table} as v ON a.vertrieb_id=v.id SET a.vertrieb_beschrieb=v.beschrieb""".execute.apply()
+      sql"""UPDATE ${heimlieferungAboMapping.table} as a JOIN ${vertriebMapping.table} as v ON a.vertrieb_id=v.id SET a.vertrieb_beschrieb=v.beschrieb""".execute.apply()
+      sql"""UPDATE ${postlieferungAboMapping.table} as a JOIN ${vertriebMapping.table} as v ON a.vertrieb_id=v.id SET a.vertrieb_beschrieb=v.beschrieb""".execute.apply()
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts)
 }
