@@ -31,7 +31,11 @@ object Scripts {
       OO228_DBScripts.scripts ++
       OO219_DBScripts_FilestoreReference.scripts ++
       OO220_DBScripts.scripts ++
+<<<<<<< 47d33d5b8faa6709d8bb642827426e9ce3244d8b
       OO314_DBScripts.scripts ++
       OO326_DBScripts.scripts ++
       OO325_DBScripts.scripts
+=======
+      OO311_DBScripts.scripts
+>>>>>>> OO-311: added scripts to synchronize counts, fixed evaluation of korbstatus, fixed parameter binding in queries
 }
