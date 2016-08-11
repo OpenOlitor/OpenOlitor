@@ -65,6 +65,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getKoerbe(lieferungId: LieferungId, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb]
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo]
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
+  def countAbwesend(aboId: AboId, datum: DateTime)(implicit session: DBSession): Option[Int]
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getBestellungen(id: LieferplanungId)(implicit session: DBSession): List[Bestellung]
   def getBestellpositionen(id: BestellungId)(implicit session: DBSession): List[Bestellposition]
@@ -263,6 +264,10 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
 
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int] = {
     countAbwesendQuery(lieferungId, aboId).apply()
+  }
+
+  def countAbwesend(aboId: AboId, datum: DateTime)(implicit session: DBSession): Option[Int] = {
+    countAbwesendQuery(aboId, datum).apply()
   }
 
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung] = {
