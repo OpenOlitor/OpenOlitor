@@ -112,8 +112,6 @@ case class LieferungDetail(
   vertriebBeschrieb: Option[String],
   status: LieferungStatus,
   datum: DateTime,
-  durchschnittspreis: BigDecimal,
-  anzahlLieferungen: Int,
   anzahlKoerbeZuLiefern: Int,
   anzahlAbwesenheiten: Int,
   anzahlSaldoZuTief: Int,
@@ -122,6 +120,9 @@ case class LieferungDetail(
   lieferplanungId: Option[LieferplanungId],
   abotyp: Option[Abotyp],
   lieferpositionen: Seq[Lieferposition],
+  //value for actual geschaeftsjahr
+  durchschnittspreis: BigDecimal,
+  anzahlLieferungen: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

@@ -114,7 +114,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleRechnungGuthabenModified(entity, orig)(personId)
 
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
-    case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) => handleLieferplanungAbgeschlossen(entity)(personId)
+    case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) =>
+      handleLieferplanungAbgeschlossen(entity)(personId)
+    case e @ EntityModified(userId, entity: Vertrieb, orig: Vertrieb) if (orig.anzahlLieferungen != entity.anzahlLieferungen || orig.durchschnittspreis != entity.durchschnittspreis) =>
+      handleVertriebDurchschnittsberechnungenModified(entity, orig)(userId)
     case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
@@ -549,6 +552,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
+
+        //create auslieferungen
         stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
 
           if (!isAuslieferungExisting(lieferung.id, vertriebsart)) {
@@ -565,6 +570,49 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
               }
             }
           }
+        }
+
+        //calculate total of lieferung
+        val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
+        val lieferungCopy = lieferung.copy(preisTotal = total)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy)
+
+        //update durchschnittspreis
+        stammdatenWriteRepository.getProjekt map { projekt =>
+          stammdatenWriteRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
+            val gjKey = projekt.geschaftsjahr.key(lieferung.datum)
+
+            val lieferungen = vertrieb.anzahlLieferungen.get(gjKey).getOrElse(0)
+            val durchschnittspreis: BigDecimal = vertrieb.durchschnittspreis.get(gjKey).getOrElse(0)
+
+            val neuerDurchschnittspreis = calcDurchschnittspreis(durchschnittspreis, lieferungen, total)
+            val copy = vertrieb.copy(
+              anzahlLieferungen = vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
+              durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
+            )
+
+            stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
+          }
+        }
+      }
+    }
+  }
+
+  protected def calcDurchschnittspreis(durchschnittspreis: BigDecimal, anzahlLieferungen: Int, neuerPreis: BigDecimal) =
+    ((durchschnittspreis * anzahlLieferungen) + neuerPreis) / (anzahlLieferungen + 1)
+
+  protected def handleVertriebDurchschnittsberechnungenModified(aktuell: Vertrieb, alt: Vertrieb)(implicit personId: PersonId) = {
+    //update all attached lieferungen with new stats
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getProjekt map { projekt =>
+        stammdatenWriteRepository.getLieferungen(aktuell.id) map { lieferung =>
+          val gjKey = projekt.geschaftsjahr.key(lieferung.datum)
+
+          val anzahlLieferungen = aktuell.anzahlLieferungen.get(gjKey).getOrElse(0)
+          val durchschnittspreis: BigDecimal = aktuell.durchschnittspreis.get(gjKey).getOrElse(0)
+
+          val copy = lieferung.copy(anzahlLieferungen = anzahlLieferungen, durchschnittspreis = durchschnittspreis)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
         }
       }
     }
