@@ -109,7 +109,7 @@ trait ReportService extends LazyLogging {
   }
 
   def generateReport[I, E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])(implicit personId: PersonId): ServiceResult[ReportResult] = EitherT {
-    implicit val timeout = Timeout(60 seconds)
+    implicit val timeout = Timeout(600 seconds)
     val collector =
       if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem)
       else if (pdfAblage.isDefined) FileStoreReportResultCollector.props(reportSystem)
