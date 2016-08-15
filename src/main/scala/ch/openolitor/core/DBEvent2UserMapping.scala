@@ -132,6 +132,8 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityModified(personId, entity: Postlieferung, _) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
     case e @ EntityDeleted(personId, entity: Postlieferung) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
 
+    case e @ EntityModified(personId, entity: TourAuslieferung, _) => send(personId, e.asInstanceOf[DBEvent[TourAuslieferung]])
+
     case e @ EntityCreated(personId, entity: Produkt) => send(personId, e.asInstanceOf[DBEvent[Produkt]])
     case e @ EntityModified(personId, entity: Produkt, _) => send(personId, e.asInstanceOf[DBEvent[Produkt]])
     case e @ EntityDeleted(personId, entity: Produkt) => send(personId, e.asInstanceOf[DBEvent[Produkt]])

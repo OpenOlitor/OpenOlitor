@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten
 import ch.openolitor.core._
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
+import ch.openolitor.core.models._
 import ch.openolitor.core.domain._
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
@@ -443,11 +444,17 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   private def updateAuslieferung(meta: EventMetadata, auslieferungId: AuslieferungId, update: TourAuslieferungModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      update.koerbe.map { korbModify =>
-        stammdatenWriteRepository.getById(korbMapping, korbModify.id) map { korb =>
-          val copy = korb.copy(sort = korbModify.sort, modifidat = meta.timestamp, modifikator = meta.originator)
-          stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+      stammdatenWriteRepository.getById(tourAuslieferungMapping, auslieferungId) map { tourAuslieferung =>
+        update.koerbe.zipWithIndex.map {
+          case (korbModify, index) =>
+            stammdatenWriteRepository.getById(korbMapping, korbModify.id) map { korb =>
+              val copy = korb.copy(sort = Some(index), modifidat = meta.timestamp, modifikator = meta.originator)
+              stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+            }
         }
+
+        // update modifydat
+        stammdatenWriteRepository.updateEntity[TourAuslieferung, AuslieferungId](tourAuslieferung)
       }
     }
   }
