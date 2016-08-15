@@ -206,6 +206,7 @@ case class Bestellung(
   datum: DateTime,
   datumAbrechnung: Option[DateTime],
   preisTotal: BigDecimal,
+  datumVersendet: Option[DateTime],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
