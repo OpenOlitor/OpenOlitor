@@ -33,8 +33,11 @@
         <appender-ref ref="STDOUT"/>
     </logger>
     
-    
     <logger name="ch.openolitor" level="DEBUG">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    
+    <logger name="ch.openolitor.core.reporting.SingleDocumentReportProcessorActor" level="INFO">
         <appender-ref ref="STDOUT"/>
     </logger>
 

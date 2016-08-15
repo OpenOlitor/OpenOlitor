@@ -37,6 +37,9 @@ import spray.can.Http
 import spray.can.websocket._
 import spray.can.websocket.WebSocketServerWorker
 import com.typesafe.scalalogging.LazyLogging
+import akka.util.Timeout
+import scala.concurrent.duration._
+import spray.io.CommandWrapper
 
 /**
  * Borrowed from:
@@ -96,6 +99,8 @@ class ProxyServiceActor(mandanten: NonEmptyList[MandantSystem])
 
       val conn = context.actorOf(ProxyWorker.props(serverConnection, routeMap, websocketHandler))
       serverConnection ! Http.Register(conn)
+      //set request timeout to infinite, proxy doesn't read request-timeout property from application.conf correctly
+      serverConnection ! SetRequestTimeout(Duration.Inf)
   }
 }
 

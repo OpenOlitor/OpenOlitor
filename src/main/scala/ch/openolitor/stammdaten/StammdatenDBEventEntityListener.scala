@@ -52,7 +52,7 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
  */
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with StammdatenDBMappings
-    with AsyncConnectionPoolContextAware
+    with ConnectionPoolContextAware
     with KorbStatusHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._

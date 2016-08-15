@@ -617,6 +617,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                       lieferung.datum,
                       None,
                       0,
+                      None,
                       DateTime.now,
                       personId,
                       DateTime.now,
