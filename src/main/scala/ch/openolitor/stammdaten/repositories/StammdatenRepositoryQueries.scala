@@ -846,6 +846,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(kundeMapping as kunde).on(heimlieferungAbo.kundeId, kunde.id)
         .where.eq(tourAuslieferung.id, parameter(auslieferungId))
+        .orderBy(korb.sort)
     }.one(tourAuslieferungMapping(tourAuslieferung))
       .toManies(
         rs => tourMapping.opt(tour)(rs),
@@ -897,23 +898,26 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   }
 
   private def getKorbDetails(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], kunden: Seq[Kunde]): Seq[KorbDetail] = {
-    koerbe map { korb =>
-      val korbAbo = abos.filter(_.id == korb.aboId).head
-      val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
-      val kunde = kunden.filter(_.id == korbAbo.kundeId).head
-
-      copyTo[Korb, KorbDetail](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
-    }
+    koerbe.map { korb =>
+      for {
+        korbAbo <- abos.filter(_.id == korb.aboId).headOption
+        abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
+        kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
+      } yield copyTo[Korb, KorbDetail](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+    }.flatten
   }
 
   private def getKorbReports(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], kunden: Seq[Kunde]): Seq[KorbReport] = {
-    koerbe map { korb =>
-      val korbAbo = abos.filter(_.id == korb.aboId).head
-      val abotyp = abotypen.filter(_.id == korbAbo.abotypId).head
-      val kunde = copyTo[Kunde, KundeReport](kunden.filter(_.id == korbAbo.kundeId).head)
-
-      copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
-    }
+    koerbe.map { korb =>
+      for {
+        korbAbo <- abos.filter(_.id == korb.aboId).headOption
+        abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
+        kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
+      } yield {
+        val kundeReport = copyTo[Kunde, KundeReport](kunde)
+        copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kundeReport)
+      }
+    }.flatten
   }
 
   protected def getDepotAuslieferungQuery(lieferungId: LieferungId) = {

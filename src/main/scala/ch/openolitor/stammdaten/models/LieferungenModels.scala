@@ -307,8 +307,7 @@ case class KorbReport(
 ) extends JSONSerializable
 
 case class KorbModify(
-  id: KorbId,
-  sort: Option[Int]
+  id: KorbId
 ) extends JSONSerializable
 
 case class KorbCreate(
