@@ -836,7 +836,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferungId -> parameter(entity.lieferungId),
         column.aboId -> parameter(entity.aboId),
         column.status -> parameter(entity.status),
-        column.auslieferungId -> parameter(entity.auslieferungId)
+        column.auslieferungId -> parameter(entity.auslieferungId),
+        column.sort -> parameter(entity.sort)
       )
     }
   }

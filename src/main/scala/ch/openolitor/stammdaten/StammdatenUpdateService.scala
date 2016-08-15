@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten
 import ch.openolitor.core._
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
+import ch.openolitor.core.models._
 import ch.openolitor.core.domain._
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
@@ -79,6 +80,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: ProduktId, entity: ProduktModify) => updateProdukt(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProduktekategorieId, entity: ProduktekategorieModify) => updateProduktekategorie(meta, id, entity)
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify) => updateTour(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: AuslieferungId, entity: TourAuslieferungModify) => updateAuslieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: Lieferung) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
@@ -437,6 +439,23 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     update.tourlieferungen.map { tourLieferung =>
       val copy = tourLieferung.copy(modifidat = meta.timestamp, modifikator = meta.originator)
       stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](copy)
+    }
+  }
+
+  private def updateAuslieferung(meta: EventMetadata, auslieferungId: AuslieferungId, update: TourAuslieferungModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(tourAuslieferungMapping, auslieferungId) map { tourAuslieferung =>
+        update.koerbe.zipWithIndex.map {
+          case (korbModify, index) =>
+            stammdatenWriteRepository.getById(korbMapping, korbModify.id) map { korb =>
+              val copy = korb.copy(sort = Some(index), modifidat = meta.timestamp, modifikator = meta.originator)
+              stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+            }
+        }
+
+        // update modifydat
+        stammdatenWriteRepository.updateEntity[TourAuslieferung, AuslieferungId](tourAuslieferung)
+      }
     }
   }
 
