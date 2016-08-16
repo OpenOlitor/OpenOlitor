@@ -63,7 +63,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit session: DBSession): Option[Produktekategorie]
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit session: DBSession): List[Produkt]
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Korb]
-  def getKoerbe(lieferungId: LieferungId, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb]
+  def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb]
+  def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb]
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo]
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
   def countAbwesend(aboId: AboId, datum: DateTime)(implicit session: DBSession): Option[Int]
@@ -76,9 +77,9 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
 
   def getTourlieferungenByKunde(id: KundeId)(implicit session: DBSession): List[Tourlieferung]
 
-  def getDepotAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[DepotAuslieferung]
-  def getTourAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[TourAuslieferung]
-  def getPostAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[PostAuslieferung]
+  def getDepotAuslieferung(depotId: DepotId, datum: DateTime)(implicit session: DBSession): Option[DepotAuslieferung]
+  def getTourAuslieferung(tourId: TourId, datum: DateTime)(implicit session: DBSession): Option[TourAuslieferung]
+  def getPostAuslieferung(datum: DateTime)(implicit session: DBSession): Option[PostAuslieferung]
   def getDepotlieferungAbosByDepot(id: DepotId)(implicit session: DBSession): List[DepotlieferungAbo]
 
   def getTourlieferungen(id: TourId)(implicit session: DBSession): List[Tourlieferung]
@@ -249,8 +250,12 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     getKorbQuery(lieferungId, aboId).apply()
   }
 
-  def getKoerbe(lieferungId: LieferungId, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb] = {
-    getKoerbeQuery(lieferungId, vertriebsartId, status).apply()
+  def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb] = {
+    getKoerbeQuery(datum, vertriebsartId, status).apply()
+  }
+
+  def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb] = {
+    getKoerbeQuery(auslieferungId).apply()
   }
 
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo] = {
@@ -319,16 +324,16 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     getPostlieferungQuery(vertriebId).apply()
   }
 
-  def getDepotAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[DepotAuslieferung] = {
-    getDepotAuslieferungQuery(lieferungId).apply()
+  def getDepotAuslieferung(depotId: DepotId, datum: DateTime)(implicit session: DBSession): Option[DepotAuslieferung] = {
+    getDepotAuslieferungQuery(depotId, datum).apply()
   }
 
-  def getTourAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[TourAuslieferung] = {
-    getTourAuslieferungQuery(lieferungId).apply()
+  def getTourAuslieferung(tourId: TourId, datum: DateTime)(implicit session: DBSession): Option[TourAuslieferung] = {
+    getTourAuslieferungQuery(tourId, datum).apply()
   }
 
-  def getPostAuslieferung(lieferungId: LieferungId)(implicit session: DBSession): Option[PostAuslieferung] = {
-    getPostAuslieferungQuery(lieferungId).apply()
+  def getPostAuslieferung(datum: DateTime)(implicit session: DBSession): Option[PostAuslieferung] = {
+    getPostAuslieferungQuery(datum).apply()
   }
 
   def getDepotlieferungAbosByDepot(id: DepotId)(implicit session: DBSession): List[DepotlieferungAbo] = {
