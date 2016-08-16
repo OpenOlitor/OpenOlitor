@@ -780,9 +780,9 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseBestellungen(produzenten: List[Produzent], lieferplanungen: List[Lieferplanung]) = {
-    parse[Bestellung, BestellungId]("id", Seq("produzent_id", "lieferplanung_id", "datum", "datum_abrechnung", "preis_total", "datum_versendet") ++ modifyColumns) { id => indexes => row =>
+    parse[Bestellung, BestellungId]("id", Seq("produzent_id", "lieferplanung_id", "datum", "datum_abrechnung", "preis_total", "steuer_satz", "steuer", "total_steuer", "datum_versendet") ++ modifyColumns) { id => indexes => row =>
       //match column indexes
-      val Seq(indexProduzentId, indexLieferplanungId, indexDatum, indexDatumAbrechnung, indexPreisTotal, indexDatumVersendet) = indexes take (6)
+      val Seq(indexProduzentId, indexLieferplanungId, indexDatum, indexDatumAbrechnung, indexPreisTotal, indexSteuerSatz, indexSteuer, indexTotalSteuer, indexDatumVersendet) = indexes take (6)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       val produzentId = ProduzentId(row.value[Long](indexProduzentId))
@@ -799,6 +799,9 @@ class DataImportParser extends Actor with ActorLogging {
         datum = row.value[DateTime](indexDatum),
         datumAbrechnung = row.value[Option[DateTime]](indexDatumAbrechnung),
         preisTotal = row.value[BigDecimal](indexPreisTotal),
+        steuerSatz = row.value[Option[BigDecimal]](indexSteuerSatz),
+        steuer = row.value[BigDecimal](indexSteuer),
+        totalSteuer = row.value[BigDecimal](indexTotalSteuer),
         datumVersendet = row.value[Option[DateTime]](indexDatumVersendet),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
