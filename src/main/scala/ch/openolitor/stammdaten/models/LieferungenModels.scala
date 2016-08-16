@@ -223,8 +223,15 @@ case class BestellungModify(
   preisTotal: BigDecimal
 ) extends JSONSerializable
 
+@Deprecated
 case class BestellungenCreate(
   lieferplanungId: LieferplanungId
+) extends JSONSerializable
+
+case class BestellungCreate(
+  produzentId: ProduzentId,
+  lieferplanungId: LieferplanungId,
+  datum: DateTime
 ) extends JSONSerializable
 
 case class BestellpositionId(id: Long) extends BaseId

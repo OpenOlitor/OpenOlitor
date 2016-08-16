@@ -702,15 +702,6 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(bestellpositionMapping(bestellposition)).list
   }
 
-  protected def getBestellpositionenByLieferplanQuery(id: LieferplanungId) = {
-    withSQL {
-      select
-        .from(bestellpositionMapping as bestellposition)
-        .leftJoin(bestellungMapping as bestellung).on(bestellposition.bestellungId, bestellung.id)
-        .where.eq(bestellung.lieferplanungId, parameter(id))
-    }.map(bestellpositionMapping(bestellposition)).list
-  }
-
   protected def getLieferpositionenQuery(id: LieferungId) = {
     withSQL {
       select
@@ -742,6 +733,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(lieferpositionMapping as lieferposition)
         .leftJoin(lieferungMapping as lieferung).on(lieferposition.lieferungId, lieferung.id)
         .where.eq(lieferung.lieferplanungId, parameter(id))
+    }.map(lieferpositionMapping(lieferposition)).list
+  }
+
+  protected def getLieferpositionenByLieferplanAndProduzentQuery(id: LieferplanungId, produzentId: ProduzentId) = {
+    withSQL {
+      select
+        .from(lieferpositionMapping as lieferposition)
+        .leftJoin(lieferungMapping as lieferung).on(lieferposition.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(id)).and.eq(lieferposition.produzentId, parameter(produzentId))
     }.map(lieferpositionMapping(lieferposition)).list
   }
 

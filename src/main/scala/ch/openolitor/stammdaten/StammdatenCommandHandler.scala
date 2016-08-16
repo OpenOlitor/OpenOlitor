@@ -63,11 +63,25 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Offen =>
-              val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
-              val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungenCreate(id))
+              val distinctLieferpositionen = stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id).map { lieferposition =>
+                stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+                  (lieferposition.produzentId, lieferplanung.id, lieferung.datum)
+                }
+              }.flatten.toSet
+
+              val bestellEvents = distinctLieferpositionen.map {
+                case (produzentId, lieferplanungId, datum) =>
+                  val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
+                  val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungCreate(produzentId, lieferplanungId, datum))
+
+                  val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
+
+                  Seq(insertEvent, bestellungVersendenEvent)
+              }.toSeq.flatten
+
               val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
-              val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
-              Success(Seq(insertEvent, lpAbschliessenEvent, bestellungVersendenEvent))
+
+              Success(lpAbschliessenEvent +: bestellEvents)
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }

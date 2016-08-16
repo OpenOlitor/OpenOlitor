@@ -103,7 +103,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createAbwesenheit(meta, id, abw)
     case EntityInsertedEvent(meta, id: LieferplanungId, lieferplanungCreateData: LieferplanungCreate) =>
       createLieferplanung(meta, id, lieferplanungCreateData)
-    case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungenCreate) =>
+    case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungCreate) =>
       createBestellungen(meta, id, bestellungCreateData)
     case e =>
   }
@@ -594,100 +594,64 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     } getOrElse (lieferung)
   }
 
-  def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungenCreate)(implicit personId: PersonId = meta.originator) = {
+  def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungCreate)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
-      stammdatenWriteRepository.getBestellpositionenByLieferplan(create.lieferplanungId) foreach {
-        position => stammdatenWriteRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)
-      }
-      //fetch corresponding Lieferungen and generate Bestellungen
-      val newBs = collection.mutable.Map[Tuple3[ProduzentId, LieferplanungId, DateTime], Bestellung]()
-      val newBPs = collection.mutable.Map[Tuple2[BestellungId, Option[ProduktId]], Bestellposition]()
-      stammdatenWriteRepository.getLieferplanung(create.lieferplanungId) match {
-        case Some(lieferplanung) =>
-          stammdatenWriteRepository.getLieferpositionenByLieferplan(create.lieferplanungId) map {
-            lieferposition =>
-              {
-                stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId) map { lieferung =>
-                  // enhance or create bestellung by produzentT
-                  if (!newBs.isDefinedAt((lieferposition.produzentId, create.lieferplanungId, lieferung.datum))) {
-                    val bestellung = Bestellung(
-                      BestellungId(IdUtil.positiveRandomId),
-                      lieferposition.produzentId,
-                      lieferposition.produzentKurzzeichen,
-                      lieferplanung.id,
-                      Abgeschlossen,
-                      lieferung.datum,
-                      None,
-                      0,
-                      None,
-                      DateTime.now,
-                      personId,
-                      DateTime.now,
-                      personId
-                    )
-                    newBs += (lieferposition.produzentId, create.lieferplanungId, lieferung.datum) -> bestellung
-                  }
-
-                  val modBestellung = newBs.get((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) map { bestellung =>
-                    //fetch or create bestellposition by produkt
-                    val bp = newBPs.get((bestellung.id, lieferposition.produktId)) match {
-                      case Some(existingBP) => {
-                        val newMenge = existingBP.menge + lieferposition.menge.get
-                        val newPreis = existingBP.preis |+| lieferposition.preis
-                        val newAnzahl = existingBP.anzahl + lieferposition.anzahl
-                        val copyBP = copyTo[Bestellposition, Bestellposition](
-                          existingBP,
-                          "menge" -> newMenge,
-                          "preis" -> newPreis,
-                          "anzahl" -> newAnzahl
-                        )
-                        copyBP
-                      }
-                      case None => {
-                        //create bestellposition
-                        val bestellposition = Bestellposition(
-                          BestellpositionId(IdUtil.positiveRandomId),
-                          bestellung.id,
-                          lieferposition.produktId,
-                          lieferposition.produktBeschrieb,
-                          lieferposition.preisEinheit,
-                          lieferposition.einheit,
-                          lieferposition.menge.get,
-                          lieferposition.preis,
-                          lieferposition.anzahl,
-                          DateTime.now,
-                          personId,
-                          DateTime.now,
-                          personId
-                        )
-                        bestellposition
-                      }
-                    }
-                    newBPs += (bestellung.id, lieferposition.produktId) -> bp
-                    val newPreisTotal = bp.preis.get |+| bestellung.preisTotal
-                    val copyB = copyTo[Bestellung, Bestellung](
-                      bestellung,
-                      "preisTotal" -> newPreisTotal
-                    )
-                    newBs += ((lieferposition.produzentId, create.lieferplanungId, lieferung.datum)) -> copyB
-                  }
+      stammdatenWriteRepository.getById(produzentMapping, create.produzentId) map { produzent =>
+        val bestellung = Bestellung(
+          id,
+          create.produzentId,
+          produzent.kurzzeichen,
+          create.lieferplanungId,
+          Abgeschlossen,
+          create.datum,
+          None,
+          0,
+          None,
+          DateTime.now,
+          personId,
+          DateTime.now,
+          personId
+        )
+        stammdatenWriteRepository.insertEntity[Bestellung, BestellungId](bestellung) map { bestellung =>
+          val positionen = stammdatenWriteRepository.getLieferpositionenByLieferplanAndProduzent(create.lieferplanungId, create.produzentId).
+            //group by same produkt, menge and preis
+            groupBy(x => (x.produktId, x.menge, x.preis)).map {
+              case ((produktId, menge, preis), positionen) =>
+                val anzahl = positionen.map(_.anzahl).sum
+                positionen.headOption map { lieferposition =>
+                  Bestellposition(
+                    BestellpositionId(IdUtil.positiveRandomId),
+                    bestellung.id,
+                    lieferposition.produktId,
+                    lieferposition.produktBeschrieb,
+                    lieferposition.preisEinheit,
+                    lieferposition.einheit,
+                    menge.getOrElse(0),
+                    preis.map(_ * anzahl),
+                    anzahl,
+                    DateTime.now,
+                    personId,
+                    DateTime.now,
+                    personId
+                  )
                 }
-              }
+            }.flatten
 
+          //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
+          stammdatenWriteRepository.getBestellpositionen(id) foreach {
+            position => stammdatenWriteRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)
           }
 
-          //jetzt die neuen objekte kreieren
-          newBs foreach {
-            case (_, bestellung) =>
-              stammdatenWriteRepository.insertEntity[Bestellung, BestellungId](bestellung)
+          positionen.map { bestellposition =>
+            stammdatenWriteRepository.insertEntity[Bestellposition, BestellpositionId](bestellposition)
           }
-          newBPs foreach {
-            case (_, bestellposition) =>
-              stammdatenWriteRepository.insertEntity[Bestellposition, BestellpositionId](bestellposition)
-          }
-        case _ =>
-          logger.error(s"Lieferplanung with id ${create.lieferplanungId} not found.")
+
+          val total = positionen.map(_.preis).flatten.sum
+
+          //update total on bestellung
+          val copy = bestellung.copy(preisTotal = total)
+          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
+        }
       }
     }
   }
