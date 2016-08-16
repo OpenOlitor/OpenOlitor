@@ -443,7 +443,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   def lieferantenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
     path("lieferanten" / "bestellungen") {
       get(list(stammdatenReadRepository.getBestellungen))
-    }
+    } ~
+      path("lieferanten" / "bestellungen" / bestellungIdPath) { (bestellungId) =>
+        get(list(stammdatenReadRepository.getBestellungDetail(bestellungId)))
+      }
 
   def auslieferungenRoute(implicit subject: Subject) =
     path("depotauslieferungen") {
