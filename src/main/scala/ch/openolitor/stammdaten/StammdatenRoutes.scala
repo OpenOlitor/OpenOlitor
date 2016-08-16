@@ -463,13 +463,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("postauslieferungen" / auslieferungIdPath) { auslieferungId =>
         get(detail(stammdatenReadRepository.getPostAuslieferungDetail(auslieferungId)))
       } ~
-      path("tourauslieferungen" / "aktionen" / "ausliefern") {
-        auslieferungenAlsAusgeliefertMarkierenRoute
-      } ~
-      path("tourauslieferungen" / "aktionen" / "ausliefern") {
-        auslieferungenAlsAusgeliefertMarkierenRoute
-      } ~
-      path("postauslieferungen" / "aktionen" / "ausliefern") {
+      path("(depot|tour|post)auslieferungen".r / "aktionen" / "ausliefern") { _ =>
         auslieferungenAlsAusgeliefertMarkierenRoute
       } ~
       path("(depot|tour|post)auslieferungen".r / auslieferungIdPath / "aktionen" / "ausliefern") { (prefix, auslieferungId) =>
