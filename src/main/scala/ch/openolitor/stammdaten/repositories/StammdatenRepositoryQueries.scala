@@ -684,6 +684,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(bestellungMapping(bestellung)).list
   }
 
+  protected def getBestellungenQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(bestellungMapping as bestellung)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, bestellung))
+    }.map(bestellungMapping(bestellung)).list
+  }
+
   protected def getBestellungByProduzentLieferplanungDatumQuery(produzentId: ProduzentId, lieferplanungId: LieferplanungId, datum: DateTime) = {
     withSQL {
       select

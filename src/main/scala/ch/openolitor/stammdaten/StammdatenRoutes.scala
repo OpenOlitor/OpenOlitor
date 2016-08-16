@@ -104,7 +104,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
       aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
         kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute
+        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ lieferantenRoute
     }
 
   def kundenRoute(implicit subject: Subject) =
@@ -439,6 +439,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         complete("")
     }
   }
+
+  def lieferantenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+    path("lieferanten" / "bestellungen") {
+      get(list(stammdatenReadRepository.getBestellungen))
+    }
 
   def auslieferungenRoute(implicit subject: Subject) =
     path("depotauslieferungen") {
