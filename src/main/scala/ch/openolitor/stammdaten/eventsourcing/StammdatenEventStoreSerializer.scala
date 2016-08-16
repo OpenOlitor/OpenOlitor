@@ -92,6 +92,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferpositionenCreatePersister = persister[LieferpositionenModify]("lieferpositionen-create")
   implicit val lieferpositionIdPersister = persister[LieferpositionId]("lieferposition-id")
   implicit val bestellungenCreatePersister = persister[BestellungenCreate]("bestellungen-create")
+  implicit val bestellungCreatePersister = persister[BestellungCreate]("bestellung-create")
   implicit val bestellungModifyPersister = persister[BestellungModify]("bestellung-modify")
   implicit val bestellungIdPersister = persister[BestellungId]("bestellung-id")
   implicit val bestellpositionModifyPersister = persister[BestellpositionModify]("bestellposition-modify")
@@ -122,7 +123,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent]("passwort-gewechselt")
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
-  implicit val korbModifyPersister = persister[KorbModify]("korb-modify")
+  implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
 
   implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
 
@@ -168,6 +169,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferpositionenCreatePersister,
     lieferpositionIdPersister,
     bestellungenCreatePersister,
+    bestellungCreatePersister,
     bestellungModifyPersister,
     bestellungIdPersister,
     bestellpositionModifyPersister,
@@ -186,7 +188,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     abwesenheitCreatePersister,
     abwesenheitIdPersister,
     korbCreatePersister,
-    korbModifyPersister,
+    tourAuslieferungModifyPersister,
     auslieferungIdPersister,
 
     //event persisters

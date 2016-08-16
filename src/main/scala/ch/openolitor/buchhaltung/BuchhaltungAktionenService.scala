@@ -161,7 +161,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       "modifikator" -> meta.originator
     )
 
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       entity.zahlungsEingaenge map { eingang =>
         buchhaltungWriteRepository.getRechnungByReferenznummer(eingang.referenzNummer) match {
           case Some(rechnung) =>
@@ -182,7 +182,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
   }
 
   def zahlungsEingangErledigen(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
         if (eingang.status == Ok) {
           eingang.rechnungId map { rechnungId =>

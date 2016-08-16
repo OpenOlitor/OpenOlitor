@@ -74,10 +74,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   val handle: Handle = {
     case EntityInsertedEvent(meta, id: RechnungId, entity: RechnungCreate) =>
       createRechnung(meta, id, entity)
-    case EntityInsertedEvent(meta, id, entity) =>
-      logger.debug(s"Receive unmatched insert event for entity:$entity with id:$id")
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungCreate)(implicit personId: PersonId = meta.originator) = {

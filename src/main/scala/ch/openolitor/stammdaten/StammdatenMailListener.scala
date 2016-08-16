@@ -20,49 +20,53 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.stammdaten
 
-import ch.openolitor.core._
-import ch.openolitor.core.Macros._
-import ch.openolitor.core.db._
+import akka.actor._
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.mailservice.MailService._
+import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.domain._
-import scala.concurrent.duration._
-import ch.openolitor.buchhaltung._
-import ch.openolitor.buchhaltung.models._
-import scalikejdbc.DB
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.domain.EntityStore._
-import akka.actor.ActorSystem
-import shapeless.LabelledGeneric
-import scala.concurrent.ExecutionContext.Implicits.global
-import java.util.UUID
+import ch.openolitor.core.db._
 import ch.openolitor.core.models.PersonId
+import scalikejdbc._
 
-object BuchhaltungUpdateService {
-  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungUpdateService = new DefaultBuchhaltungUpdateService(sysConfig, system)
+object StammdatenMailListener {
+  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenMailListener], sysConfig, system)
 }
 
-class DefaultBuchhaltungUpdateService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungUpdateService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent {
-}
+class DefaultStammdatenMailListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenMailListener(sysConfig) with DefaultStammdatenWriteRepositoryComponent
 
 /**
- * Actor zum Verarbeiten der Update Anweisungen innerhalb des Buchhaltung Moduls
+ * Listens to succesful sent mails
  */
-class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware with BuchhaltungDBMappings {
-  self: BuchhaltungWriteRepositoryComponent =>
+class StammdatenMailListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
+    with StammdatenDBMappings
+    with ConnectionPoolContextAware {
+  this: StammdatenWriteRepositoryComponent =>
+  import StammdatenMailListener._
 
-  val handle: Handle = {
-    case EntityUpdatedEvent(meta, id: RechnungId, entity: RechnungModify) => updateRechnung(meta, id, entity)
-    case e =>
+  override def preStart() {
+    super.preStart()
+    context.system.eventStream.subscribe(self, classOf[MailSentEvent])
   }
 
-  def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit personId: PersonId = meta.originator) = {
+  override def postStop() {
+    context.system.eventStream.unsubscribe(self, classOf[MailSentEvent])
+    super.postStop()
+  }
+
+  def receive: Receive = {
+    case MailSentEvent(meta, uid, Some(id: BestellungId)) => handleBestellungMailSent(meta, id)
+    case x => log.debug(s"Received unknown mailsentevent:$x")
+  }
+
+  protected def handleBestellungMailSent(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
+    log.debug(s"handleBestellungMailSent:$id")
     DB autoCommit { implicit session =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { entity =>
-        //map all updatable fields
-        val copy = copyFrom(entity, update)
-        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](copy)
+      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+        val copy = bestellung.copy(datumVersendet = Some(meta.timestamp))
+        stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
       }
     }
   }
