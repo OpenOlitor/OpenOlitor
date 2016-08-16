@@ -128,10 +128,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createVertrieb(meta: EventMetadata, id: VertriebId, vertrieb: VertriebModify)(implicit personId: PersonId = meta.originator) = {
+    val emptyIntMap: TreeMap[String, Int] = TreeMap()
+    val emptyDecimalMap: TreeMap[String, BigDecimal] = TreeMap()
     val vertriebCreate = copyTo[VertriebModify, Vertrieb](
       vertrieb,
       "id" -> id,
       "anzahlAbos" -> ZERO,
+      "durchschnittspreis" -> emptyDecimalMap,
+      "anzahlLieferungen" -> emptyIntMap,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -337,6 +341,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     create,
                     "id" -> id,
                     "vertriebId" -> vertrieb.id,
+                    "vertriebBeschrieb" -> vertrieb.beschrieb,
                     "abotypId" -> abotyp.id,
                     "abotypName" -> abotyp.name,
                     "depotName" -> depotName,
@@ -359,6 +364,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     create,
                     "id" -> id,
                     "vertriebId" -> vertrieb.id,
+                    "vertriebBeschrieb" -> vertrieb.beschrieb,
                     "abotypId" -> abotyp.id,
                     "abotypName" -> abotyp.name,
                     "tourName" -> tourName,
@@ -379,6 +385,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     create,
                     "id" -> id,
                     "vertriebId" -> vertrieb.id,
+                    "vertriebBeschrieb" -> vertrieb.beschrieb,
                     "abotypId" -> abotyp.id,
                     "abotypName" -> abotyp.name,
                     "ende" -> ende,
@@ -506,6 +513,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         lieferplanung,
         "id" -> lieferplanungId,
         "status" -> Offen,
+        "total" -> ZERO,
         "abotypDepotTour" -> defaultAbotypDepotTour,
         "erstelldat" -> meta.timestamp,
         "ersteller" -> meta.originator,
@@ -517,10 +525,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
         val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map { lieferung =>
           //TODO use StammdatenUpdateSerivce.addLieferungPlanung
-          val anzahlLieferungen = stammdatenWriteRepository.getLastGeplanteLieferung(lieferung.abotypId) match {
-            case Some(l) => l.anzahlLieferungen + 1
-            case None => 1
-          }
           logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
 
           val lpId = Some(lieferplanung.id)
@@ -528,7 +532,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           val updatedLieferung = lieferung.copy(
             lieferplanungId = lpId,
             status = Offen,
-            anzahlLieferungen = anzahlLieferungen,
             modifidat = lieferplanung.modifidat,
             modifikator = personId
           )
@@ -568,6 +571,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           abo.id,
           status,
           abo.guthaben,
+          None,
           None,
           DateTime.now,
           personId,

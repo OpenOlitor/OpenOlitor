@@ -27,11 +27,14 @@ import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
+import scala.collection.immutable.TreeMap
 
 case class VertriebId(id: Long) extends BaseId
 
 case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
+  durchschnittspreis: TreeMap[String, BigDecimal],
+  anzahlLieferungen: TreeMap[String, Int],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
