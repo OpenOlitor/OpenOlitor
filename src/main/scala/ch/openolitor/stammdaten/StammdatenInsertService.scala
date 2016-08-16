@@ -606,6 +606,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           create.datum,
           None,
           0,
+          produzent.mwstSatz,
+          0,
+          0,
           None,
           DateTime.now,
           personId,
@@ -613,11 +616,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           personId
         )
         stammdatenWriteRepository.insertEntity[Bestellung, BestellungId](bestellung) map { bestellung =>
+          val anzahlKoerbeZuLiefern = stammdatenWriteRepository.getLieferungen(create.lieferplanungId).map(l => (l.id, l.anzahlKoerbeZuLiefern)).toMap
           val positionen = stammdatenWriteRepository.getLieferpositionenByLieferplanAndProduzent(create.lieferplanungId, create.produzentId).
             //group by same produkt, menge and preis
             groupBy(x => (x.produktId, x.menge, x.preis)).map {
               case ((produktId, menge, preis), positionen) =>
-                val anzahl = positionen.map(_.anzahl).sum
+                val anzahl = positionen.map(lp => anzahlKoerbeZuLiefern.get(lp.lieferungId).getOrElse(0)).sum
                 positionen.headOption map { lieferposition =>
                   Bestellposition(
                     BestellpositionId(IdUtil.positiveRandomId),
@@ -647,9 +651,11 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           }
 
           val total = positionen.map(_.preis).flatten.sum
+          val mwst = bestellung.steuerSatz.map(_ / 100 * total).getOrElse(BigDecimal(0))
+          val totalInkl = total + mwst
 
-          //update total on bestellung
-          val copy = bestellung.copy(preisTotal = total)
+          //update total on bestellung, steuer and totalSteuer
+          val copy = bestellung.copy(preisTotal = total, steuer = mwst, totalSteuer = totalInkl)
           stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
         }
       }

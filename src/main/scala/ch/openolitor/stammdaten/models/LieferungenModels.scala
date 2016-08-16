@@ -206,6 +206,9 @@ case class Bestellung(
   datum: DateTime,
   datumAbrechnung: Option[DateTime],
   preisTotal: BigDecimal,
+  steuerSatz: Option[BigDecimal],
+  steuer: BigDecimal,
+  totalSteuer: BigDecimal,
   datumVersendet: Option[DateTime],
   //modification flags
   erstelldat: DateTime,
