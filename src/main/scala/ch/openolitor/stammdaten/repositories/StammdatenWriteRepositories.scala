@@ -51,9 +51,9 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getLatestLieferplanung(implicit session: DBSession): Option[Lieferplanung]
   def getLieferungenNext()(implicit session: DBSession): List[Lieferung]
   def getLastGeplanteLieferung(abotypId: AbotypId)(implicit session: DBSession): Option[Lieferung]
-  def getBestellpositionenByLieferplan(id: LieferplanungId)(implicit session: DBSession): List[Bestellposition]
   def getLieferplanung(id: LieferplanungId)(implicit session: DBSession): Option[Lieferplanung]
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit session: DBSession): List[Lieferposition]
+  def getLieferpositionenByLieferplanAndProduzent(id: LieferplanungId, produzentId: ProduzentId)(implicit session: DBSession): List[Lieferposition]
   def getLieferpositionenByLieferung(id: LieferungId)(implicit session: DBSession): List[Lieferposition]
   def getUngeplanteLieferungen(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung]
   def getProduktProduzenten(id: ProduktId)(implicit session: DBSession): List[ProduktProduzent]
@@ -202,16 +202,16 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
     getLastGeplanteLieferungQuery(abotypId).apply()
   }
 
-  def getBestellpositionenByLieferplan(id: LieferplanungId)(implicit session: DBSession): List[Bestellposition] = {
-    getBestellpositionenByLieferplanQuery(id).apply()
-  }
-
   def getLieferplanung(id: LieferplanungId)(implicit session: DBSession): Option[Lieferplanung] = {
     getLieferplanungQuery(id).apply()
   }
 
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit session: DBSession): List[Lieferposition] = {
     getLieferpositionenByLieferplanQuery(id).apply()
+  }
+
+  def getLieferpositionenByLieferplanAndProduzent(id: LieferplanungId, produzentId: ProduzentId)(implicit session: DBSession): List[Lieferposition] = {
+    getLieferpositionenByLieferplanAndProduzentQuery(id, produzentId).apply()
   }
 
   def getLieferpositionenByLieferung(id: LieferungId)(implicit session: DBSession): List[Lieferposition] = {

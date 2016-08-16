@@ -410,6 +410,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.datum -> parameter(bestellung.datum),
         column.datumAbrechnung -> parameter(bestellung.datumAbrechnung),
         column.preisTotal -> parameter(bestellung.preisTotal),
+        column.steuerSatz -> parameter(bestellung.steuerSatz),
+        column.steuer -> parameter(bestellung.steuer),
+        column.totalSteuer -> parameter(bestellung.totalSteuer),
         column.datumVersendet -> parameter(bestellung.datumVersendet)
       )
     }
