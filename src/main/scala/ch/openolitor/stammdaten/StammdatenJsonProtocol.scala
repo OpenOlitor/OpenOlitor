@@ -291,7 +291,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
-  implicit val treeMapFormat = new JsonFormat[TreeMap[String, Int]] {
+  implicit val treeMapIntFormat = new JsonFormat[TreeMap[String, Int]] {
     def write(obj: TreeMap[String, Int]): JsValue = {
       val elems = obj.toTraversable.map {
         case (key, value) => JsObject("key" -> JsString(key), "value" -> JsNumber(value))
@@ -312,6 +312,31 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         case pt => sys.error(s"Unknown treemap:$pt")
       }
   }
+  implicit val treeMapBigDecimalFormat = new JsonFormat[TreeMap[String, BigDecimal]] {
+    def write(obj: TreeMap[String, BigDecimal]): JsValue = {
+      val elems = obj.toTraversable.map {
+        case (key, value) => JsObject("key" -> JsString(key), "value" -> JsNumber(value))
+      }.toVector
+      JsArray(elems)
+    }
+
+    def read(json: JsValue): TreeMap[String, BigDecimal] =
+      json match {
+        case JsArray(elems) =>
+          val entries = elems.map { elem =>
+            elem.asJsObject.getFields("key", "value") match {
+              case Seq(JsString(key), JsNumber(value)) =>
+                (key -> value.asInstanceOf[BigDecimal])
+              case Seq(JsString(key), JsString(value)) =>
+                (key -> BigDecimal(value))
+            }
+          }.toSeq
+          (TreeMap.empty[String, BigDecimal] /: entries) { (tree, c) => tree + c }
+        case pt => sys.error(s"Unknown treemap:$pt")
+      }
+  }
+
+  implicit val vertriebFormat = autoProductFormat[Vertrieb]
   implicit val depotaboFormat = autoProductFormat[DepotlieferungAbo]
   implicit val depotaboDetailFormat = autoProductFormat[DepotlieferungAboDetail]
   implicit val depotaboModifyFormat = autoProductFormat[DepotlieferungAboModify]
@@ -391,7 +416,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
 
   implicit val korbCreateFormat = autoProductFormat[KorbCreate]
-  implicit val korbModifyFormat = autoProductFormat[KorbModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
 

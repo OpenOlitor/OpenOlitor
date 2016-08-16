@@ -37,6 +37,7 @@ sealed trait Abo extends BaseEntity[AboId] {
   val id: AboId
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
+  val vertriebBeschrieb: Option[String]
   val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
@@ -60,6 +61,7 @@ sealed trait Abo extends BaseEntity[AboId] {
 sealed trait AboDetail extends JSONSerializable {
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
+  val vertriebBeschrieb: Option[String]
   val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
@@ -91,6 +93,7 @@ case class DepotlieferungAbo(
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
@@ -117,6 +120,7 @@ case class DepotlieferungAboDetail(
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
   abotypId: AbotypId,
   abotypName: String,
   depotId: DepotId,
@@ -156,6 +160,7 @@ case class HeimlieferungAbo(
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
@@ -182,6 +187,7 @@ case class HeimlieferungAboDetail(
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
   abotypId: AbotypId,
   abotypName: String,
   tourId: TourId,
@@ -221,6 +227,7 @@ case class PostlieferungAbo(
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
   abotypId: AbotypId,
   abotypName: String,
   start: DateTime,
@@ -245,6 +252,7 @@ case class PostlieferungAboDetail(
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
   abotypId: AbotypId,
   abotypName: String,
   start: DateTime,

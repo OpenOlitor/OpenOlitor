@@ -66,7 +66,7 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
     case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) => handleRechnungModified(entity, orig)(personId)
     case e @ EntityModified(personId, entity: ZahlungsEingang, orig: ZahlungsEingang) => handleZahlungsEingangModified(entity, orig)(personId)
 
-    case x => //log.debug(s"receive unused event $x")
+    case x =>
   }
 
   def handleRechnungModified(rechnung: Rechnung, orig: Rechnung)(implicit personId: PersonId) = {

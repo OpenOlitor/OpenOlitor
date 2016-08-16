@@ -63,11 +63,25 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Offen =>
-              val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
-              val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungenCreate(id))
+              val distinctLieferpositionen = stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id).map { lieferposition =>
+                stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+                  (lieferposition.produzentId, lieferplanung.id, lieferung.datum)
+                }
+              }.flatten.toSet
+
+              val bestellEvents = distinctLieferpositionen.map {
+                case (produzentId, lieferplanungId, datum) =>
+                  val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
+                  val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungCreate(produzentId, lieferplanungId, datum))
+
+                  val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
+
+                  Seq(insertEvent, bestellungVersendenEvent)
+              }.toSeq.flatten
+
               val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
-              val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
-              Success(Seq(insertEvent, lpAbschliessenEvent, bestellungVersendenEvent))
+
+              Success(lpAbschliessenEvent +: bestellEvents)
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
@@ -146,8 +160,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[LieferplanungCreate, LieferplanungId](idFactory, meta, entity, LieferplanungId.apply)
     case e @ InsertEntityCommand(personId, entity: LieferpositionenModify) => idFactory => meta =>
       handleEntityInsert[LieferpositionenModify, LieferpositionId](idFactory, meta, entity, LieferpositionId.apply)
-    case e @ InsertEntityCommand(personId, entity: BestellungenCreate) => idFactory => meta =>
-      handleEntityInsert[BestellungenCreate, BestellungId](idFactory, meta, entity, BestellungId.apply)
     case e @ InsertEntityCommand(personId, entity: PendenzModify) => idFactory => meta =>
       handleEntityInsert[PendenzModify, PendenzId](idFactory, meta, entity, PendenzId.apply)
     case e @ InsertEntityCommand(personId, entity: PersonCreate) => idFactory => meta =>

@@ -93,6 +93,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val tourIdPath = long2BaseIdPathMatcher(TourId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
+  implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
 
   import EntityStore._
 
@@ -394,9 +395,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
         get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / "create") { lieferplanungId =>
-        post(create[BestellungenCreate, BestellungId](BestellungId.apply _))
-      } ~
       path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
         get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
       } ~
@@ -446,44 +444,77 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     path("depotauslieferungen") {
       get(list(stammdatenReadRepository.getDepotAuslieferungen))
     } ~
+      path("depotauslieferungen" / auslieferungIdPath) { auslieferungId =>
+        get(detail(stammdatenReadRepository.getDepotAuslieferungDetail(auslieferungId)))
+      } ~
       path("tourauslieferungen") {
         get(list(stammdatenReadRepository.getTourAuslieferungen))
+      } ~
+      path("tourauslieferungen" / auslieferungIdPath) { auslieferungId =>
+        get(detail(stammdatenReadRepository.getTourAuslieferungDetail(auslieferungId))) ~
+          (put | post)(update[TourAuslieferungModify, AuslieferungId](auslieferungId))
       } ~
       path("postauslieferungen") {
         get(list(stammdatenReadRepository.getPostAuslieferungen))
       } ~
-      path("depotauslieferungen" / "aktionen" / "ausliefern") {
+      path("postauslieferungen" / auslieferungIdPath) { auslieferungId =>
+        get(detail(stammdatenReadRepository.getPostAuslieferungDetail(auslieferungId)))
+      } ~
+      path("(depot|tour|post)auslieferungen".r / "aktionen" / "ausliefern") { _ =>
         auslieferungenAlsAusgeliefertMarkierenRoute
       } ~
-      path("tourauslieferungen" / "aktionen" / "ausliefern") {
-        auslieferungenAlsAusgeliefertMarkierenRoute
-      } ~
-      path("postauslieferungen" / "aktionen" / "ausliefern") {
-        auslieferungenAlsAusgeliefertMarkierenRoute
+      path("(depot|tour|post)auslieferungen".r / auslieferungIdPath / "aktionen" / "ausliefern") { (prefix, auslieferungId) =>
+        post {
+          auslieferungenAlsAusgeliefertMarkieren(Seq(auslieferungId))
+        }
       } ~
       path("depotauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageDepotLieferschein) _)(AuslieferungId.apply)
       } ~
-      path("tourauslieferungen" / "berichte" / "lieferschein") {
-        implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferschein) _)(AuslieferungId.apply)
-      } ~
-      path("postauslieferungen" / "berichte" / "lieferschein") {
-        implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferschein) _)(AuslieferungId.apply)
-      } ~
       path("depotauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("depotauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageDepotLieferschein) _)(AuslieferungId.apply)
+      } ~
+      path("depotauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("tourauslieferungen" / "berichte" / "lieferschein") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferschein) _)(AuslieferungId.apply)
       } ~
       path("tourauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
       } ~
+      path("tourauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageTourLieferschein) _)(AuslieferungId.apply)
+      } ~
+      path("tourauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / "berichte" / "lieferschein") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferschein) _)(AuslieferungId.apply)
+      } ~
       path("postauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlagePostLieferschein) _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
       }
 
   def auslieferungenAlsAusgeliefertMarkierenRoute(implicit subject: Subject) =

@@ -97,6 +97,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
   implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
   implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = treeMapTypeBinder(identity, _.toInt)
+  implicit val stringBigDecimalTreeMapTypeBinder: TypeBinder[TreeMap[String, BigDecimal]] = treeMapTypeBinder(identity, BigDecimal(_))
   implicit val rolleMapTypeBinder: TypeBinder[Map[Rolle, Boolean]] = mapTypeBinder(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean)
   implicit val rolleTypeBinder: TypeBinder[Option[Rolle]] = string.map(Rolle.apply)
 
@@ -151,6 +152,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
   implicit val lieferplanungIdOptionBinder = optionSqlBinder[LieferplanungId]
   implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
+  implicit val stringBigDecimalTreeMapSqlBinder = treeMapSqlBinder[String, BigDecimal]
   implicit val rolleSqlBinder = toStringSqlBinder[Rolle]
   implicit val optionRolleSqlBinder = optionSqlBinder[Rolle]
   implicit val rolleMapSqlBinder = mapSqlBinder[Rolle, Boolean]
@@ -184,18 +186,21 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
         column.aktivVon -> parameter(abotyp.aktivVon),
         column.aktivBis -> parameter(abotyp.aktivBis),
-        column.laufzeit -> parameter(abotyp.laufzeit),
-        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
-        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
-        column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
         column.preis -> parameter(abotyp.preis),
         column.preiseinheit -> parameter(abotyp.preiseinheit),
+        column.laufzeit -> parameter(abotyp.laufzeit),
+        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
+        column.vertragslaufzeit -> parameter(abotyp.vertragslaufzeit),
+        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
+        column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
         column.farbCode -> parameter(abotyp.farbCode),
         column.zielpreis -> parameter(abotyp.zielpreis),
+        column.guthabenMindestbestand -> parameter(abotyp.guthabenMindestbestand),
+        column.adminProzente -> parameter(abotyp.adminProzente),
+        column.wirdGeplant -> parameter(abotyp.wirdGeplant),
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-        column.waehrung -> parameter(abotyp.waehrung),
-        column.guthabenMindestbestand -> parameter(abotyp.guthabenMindestbestand)
+        column.waehrung -> parameter(abotyp.waehrung)
       )
     }
   }
@@ -404,7 +409,11 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.status -> parameter(bestellung.status),
         column.datum -> parameter(bestellung.datum),
         column.datumAbrechnung -> parameter(bestellung.datumAbrechnung),
-        column.preisTotal -> parameter(bestellung.preisTotal)
+        column.preisTotal -> parameter(bestellung.preisTotal),
+        column.steuerSatz -> parameter(bestellung.steuerSatz),
+        column.steuer -> parameter(bestellung.steuer),
+        column.totalSteuer -> parameter(bestellung.totalSteuer),
+        column.datumVersendet -> parameter(bestellung.datumVersendet)
       )
     }
   }
@@ -504,7 +513,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.abotypId -> parameter(vertrieb.abotypId),
         column.liefertag -> parameter(vertrieb.liefertag),
         column.beschrieb -> parameter(vertrieb.beschrieb),
-        column.anzahlAbos -> parameter(vertrieb.anzahlAbos)
+        column.anzahlAbos -> parameter(vertrieb.anzahlAbos),
+        column.durchschnittspreis -> parameter(vertrieb.durchschnittspreis),
+        column.anzahlLieferungen -> parameter(vertrieb.anzahlLieferungen)
       )
     }
   }
@@ -832,7 +843,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.lieferungId -> parameter(entity.lieferungId),
         column.aboId -> parameter(entity.aboId),
         column.status -> parameter(entity.status),
-        column.auslieferungId -> parameter(entity.auslieferungId)
+        column.auslieferungId -> parameter(entity.auslieferungId),
+        column.guthabenVorLieferung -> parameter(entity.guthabenVorLieferung),
+        column.sort -> parameter(entity.sort)
       )
     }
   }
