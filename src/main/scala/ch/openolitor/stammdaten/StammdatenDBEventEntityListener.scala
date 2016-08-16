@@ -127,6 +127,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleAuslieferungAusgeliefert(entity)(personId)
 
     case e @ EntityModified(userId, entity: Depot, orig: Depot) => handleDepotModified(entity, orig)(userId)
+    case e @ EntityModified(userId, entity: Korb, orig: Korb) if entity.status != orig.status => handleKorbStatusChanged(entity, orig.status)(userId)
 
     case x => //log.debug(s"receive unused event $x")
   }
@@ -340,14 +341,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
             case Some(korb) => {
               stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
-                val status = calculateKorbStatus(Some(0), abo.guthaben, abotyp.guthabenMindestbestand)
+                //re count because the might be another abwesenheit for the same date
+                val newAbwesenheitCount = stammdatenWriteRepository.countAbwesend(abw.aboId, abw.datum)
+                val status = calculateKorbStatus(newAbwesenheitCount, abo.guthaben, abotyp.guthabenMindestbestand)
                 val statusAlt = korb.status
                 val copy = korb.copy(status = status)
-                log.debug(s"Modify Korb-Status as Abwesenheit was deleted : ${copy.status}.")
+                log.debug(s"Modify Korb-Status as Abwesenheit was deleted ${abw.id}, newCount:$newAbwesenheitCount, newStatus:${copy.status}.")
                 stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
-                stammdatenWriteRepository.getById(lieferungMapping, abw.lieferungId) map { lieferung =>
-                  updateLieferungCounts(lieferung, status, statusAlt)
-                }
               }
             }
             case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
@@ -388,35 +388,51 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
         case Some(korb) => {
           val statusAlt = korb.status
-          val copy = korb.copy(status = FaelltAusAbwesend)
-          log.debug(s"Modify Korb-Status as Abwesenheit was created : ${copy.status}.")
+          val status = FaelltAusAbwesend
+          val copy = korb.copy(status = status)
+          log.debug(s"Modify Korb-Status as Abwesenheit was created : ${copy}.")
           stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
-          stammdatenWriteRepository.getById(lieferungMapping, abw.lieferungId) map { lieferung =>
-            updateLieferungCounts(lieferung, FaelltAusAbwesend, statusAlt)
-          }
+
         }
         case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
       }
     }
   }
 
-  def updateLieferungCounts(lieferung: Lieferung, korbStatusNeu: KorbStatus, korbStatusAlt: KorbStatus)(implicit personId: PersonId) = {
-    val zuLiefenDec = if (korbStatusAlt == WirdGeliefert && korbStatusNeu != WirdGeliefert) 1 else 0
-    val abwDec = if (korbStatusAlt == FaelltAusAbwesend && korbStatusNeu != FaelltAusAbwesend) 1 else 0
-    val saldoDec = if (korbStatusAlt == FaelltAusSaldoZuTief && korbStatusNeu != FaelltAusSaldoZuTief) 1 else 0
-
-    val zuLiefenAdd = if (korbStatusNeu == WirdGeliefert && korbStatusAlt != WirdGeliefert) 1 else 0
-    val abwAdd = if (korbStatusNeu == FaelltAusAbwesend && korbStatusNeu != FaelltAusAbwesend) 1 else 0
-    val saldoAdd = if (korbStatusNeu == FaelltAusSaldoZuTief && korbStatusAlt != FaelltAusSaldoZuTief) 1 else 0
-    val lCopy = lieferung.copy(
-      anzahlKoerbeZuLiefern = lieferung.anzahlKoerbeZuLiefern - zuLiefenDec + zuLiefenAdd,
-      anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten - abwDec + abwAdd,
-      anzahlSaldoZuTief = lieferung.anzahlSaldoZuTief - saldoDec + saldoAdd
-    )
-    log.debug(s"Modify Lieferung as Korb-Status was modified : ${lieferung.id} status form ${korbStatusNeu} to ${korbStatusAlt}.")
+  def handleKorbStatusChanged(korb: Korb, statusAlt: KorbStatus)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lCopy)
+      stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
+        log.debug(s"Korb Status changed:${korb.aboId}/${korb.lieferungId}")
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](recalculateLieferungCounts(lieferung, korb.status, statusAlt))
+      }
     }
+  }
+
+  private def recalculateLieferungCounts(lieferung: Lieferung, korbStatusNeu: KorbStatus, korbStatusAlt: KorbStatus)(implicit personId: PersonId, session: DBSession) = {
+    val zuLiefernDiff = korbStatusNeu match {
+      case WirdGeliefert => 1
+      case _ if korbStatusAlt == WirdGeliefert => -1
+      case _ => 0
+    }
+    val abwDiff = korbStatusNeu match {
+      case FaelltAusAbwesend => 1
+      case _ if korbStatusAlt == FaelltAusAbwesend => -1
+      case _ => 0
+    }
+    val saldoDiff = korbStatusNeu match {
+      case FaelltAusSaldoZuTief => 1
+      case _ if korbStatusAlt == FaelltAusSaldoZuTief => -1
+      case _ => 0
+    }
+
+    val copy = lieferung.copy(
+      anzahlKoerbeZuLiefern = lieferung.anzahlKoerbeZuLiefern + zuLiefernDiff,
+      anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + abwDiff,
+      anzahlSaldoZuTief = lieferung.anzahlSaldoZuTief + saldoDiff
+    )
+    log.debug(s"Recalculate Lieferung as Korb-Status: was modified : ${lieferung.id} status form ${korbStatusAlt} to ${korbStatusNeu}. zu lieferung:$zuLiefernDiff, Abw: $abwDiff, Saldo: $saldoDiff\nfrom:$lieferung\nto:$copy")
+    copy
+
   }
 
   def handlePendenzCreated(pendenz: Pendenz)(implicit personId: PersonId) = {

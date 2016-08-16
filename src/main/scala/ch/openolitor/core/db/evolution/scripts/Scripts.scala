@@ -31,6 +31,7 @@ object Scripts {
       OO228_DBScripts.scripts ++
       OO219_DBScripts_FilestoreReference.scripts ++
       OO220_DBScripts.scripts ++
+      OO311_DBScripts.scripts ++
       OO325_DBScripts.scripts ++
       OO326_DBScripts.scripts
 }
