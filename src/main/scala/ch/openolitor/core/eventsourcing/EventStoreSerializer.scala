@@ -68,9 +68,9 @@ object EventStoreSerializer extends EntityStoreJsonProtocol
   val systemEventPersister = new SystemEventPersister[V1](eventPersisters)
 
   // mail event serialization
-  val sendMailEventPersister = new SendMailEventPersister[V1](eventPersisters)
-  val mailSentEventPersister = new MailSentEventPersister[V1](eventPersisters)
-  val sendMailFailedEventPersister = new SendMailFailedEventPersister[V1](eventPersisters)
+  val sendMailEventPersister = new SendMailEventPersister[V1](entityPersisters ++ eventPersisters)
+  val mailSentEventPersister = new MailSentEventPersister[V1](entityPersisters ++ eventPersisters)
+  val sendMailFailedEventPersister = new SendMailFailedEventPersister[V1](entityPersisters ++ eventPersisters)
 
   val eventStorePersisters = List(
     entityStoreInitializedPersister,

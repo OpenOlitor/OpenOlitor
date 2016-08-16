@@ -639,8 +639,8 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseVertriebe(vertriebsarten: List[Vertriebsart]) = {
-    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "liefertag", "anzahl_abos") ++ modifyColumns) { id => indexes => row =>
-      val Seq(indexAbotypId, indexBeschrieb, indexLiefertag, indexAnzahlAbos) = indexes take (4)
+    parse[Vertrieb, VertriebId]("id", Seq("abotyp_id", "beschrieb", "liefertag", "anzahl_abos", "durchschnittspreis", "anzahl_lieferungen") ++ modifyColumns) { id => indexes => row =>
+      val Seq(indexAbotypId, indexBeschrieb, indexLiefertag, indexAnzahlAbos, indexDurchschnittspreis, indexLieferungen) = indexes take (6)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       val vertriebId = VertriebId(id)
@@ -649,8 +649,11 @@ class DataImportParser extends Actor with ActorLogging {
       val liefertag = Lieferzeitpunkt(row.value[String](indexLiefertag))
       val anzahlAbos = row.value[Int](indexAnzahlAbos)
 
+      val anzahlLieferungen = parseTreeMap(row.value[String](indexLieferungen))(identity, _.toInt)
+      val durchschnittspreis = parseTreeMap(row.value[String](indexDurchschnittspreis))(identity, BigDecimal(_))
+
       Vertrieb(vertriebId, abotypId, liefertag, beschrieb,
-        anzahlAbos,
+        anzahlAbos, durchschnittspreis, anzahlLieferungen,
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),
@@ -777,9 +780,9 @@ class DataImportParser extends Actor with ActorLogging {
   }
 
   def parseBestellungen(produzenten: List[Produzent], lieferplanungen: List[Lieferplanung]) = {
-    parse[Bestellung, BestellungId]("id", Seq("produzent_id", "lieferplanung_id", "datum", "datum_abrechnung", "preis_total") ++ modifyColumns) { id => indexes => row =>
+    parse[Bestellung, BestellungId]("id", Seq("produzent_id", "lieferplanung_id", "datum", "datum_abrechnung", "preis_total", "datum_versendet") ++ modifyColumns) { id => indexes => row =>
       //match column indexes
-      val Seq(indexProduzentId, indexLieferplanungId, indexDatum, indexDatumAbrechnung, indexPreisTotal) = indexes take (5)
+      val Seq(indexProduzentId, indexLieferplanungId, indexDatum, indexDatumAbrechnung, indexPreisTotal, indexDatumVersendet) = indexes take (6)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       val produzentId = ProduzentId(row.value[Long](indexProduzentId))
@@ -796,6 +799,7 @@ class DataImportParser extends Actor with ActorLogging {
         datum = row.value[DateTime](indexDatum),
         datumAbrechnung = row.value[Option[DateTime]](indexDatumAbrechnung),
         preisTotal = row.value[BigDecimal](indexPreisTotal),
+        datumVersendet = row.value[Option[DateTime]](indexDatumVersendet),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),

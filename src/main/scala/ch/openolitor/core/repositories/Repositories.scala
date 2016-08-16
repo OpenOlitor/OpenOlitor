@@ -159,12 +159,17 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
       val alias = syntaxSupport.syntax("x")
       val id = alias.id
       val updateParams = syntaxSupport.updateParameters(entity)
+
+      logger.debug(s"update entity:${entity.id} with values:$updateParams")
+
       withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(id, parameter(entity.id))).update.apply()
 
       //publish event to stream
       publish(EntityModified(user, entity, orig))
 
       entity
+    } getOrElse {
+      logger.debug(s"Entity with id:${entity.id} not found, ignore update")
     }
   }
 
