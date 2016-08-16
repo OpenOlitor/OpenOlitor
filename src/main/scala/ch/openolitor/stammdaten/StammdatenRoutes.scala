@@ -22,6 +22,7 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
+import org.joda.time.DateTime
 import spray.routing._
 import spray.http._
 import spray.http.MediaTypes._
@@ -444,9 +445,30 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     path("lieferanten" / "bestellungen") {
       get(list(stammdatenReadRepository.getBestellungen))
     } ~
+      path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") { _ =>
+        bestellungenAlsAbgerechnetMarkierenRoute
+      } ~
       path("lieferanten" / "bestellungen" / bestellungIdPath) { (bestellungId) =>
         get(list(stammdatenReadRepository.getBestellungDetail(bestellungId)))
       }
+
+  def bestellungenAlsAbgerechnetMarkierenRoute(implicit subject: Subject) =
+    post {
+      requestInstance { request =>
+        entity(as[BestellungAusgeliefert]) { entity =>
+          bestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
+        }
+      }
+    }
+
+  def bestellungenAlsAbgerechnetMarkieren(datum: DateTime, ids: Seq[BestellungId])(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungenAlsAbgerechnetMarkierenCommand(subject.personId, datum, ids)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Bestellungen konnten nicht als abgerechnet markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
 
   def auslieferungenRoute(implicit subject: Subject) =
     path("depotauslieferungen") {

@@ -239,6 +239,11 @@ case class BestellungDetail(
   modifikator: PersonId
 ) extends BaseEntity[BestellungId]
 
+case class BestellungAusgeliefert(
+  datum: DateTime,
+  ids: Seq[BestellungId]
+) extends JSONSerializable
+
 case class BestellungModify(
   produzentId: ProduzentId,
   produzentKurzzeichen: String,

@@ -35,6 +35,7 @@ import ch.openolitor.core.Macros._
 import com.fasterxml.jackson.databind.JsonSerializable
 import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
+import org.joda.time.DateTime
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
@@ -44,12 +45,14 @@ object StammdatenCommandHandler {
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
   case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
   case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
+  case class BestellungenAlsAbgerechnetMarkierenCommand(originator: PersonId, datum: DateTime, ids: Seq[BestellungId]) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
+  case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -129,6 +132,26 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
         if (events.isEmpty) {
           Failure(new InvalidStateException(s"Keine der Auslieferungen konnte abgearbeitet werden"))
+        } else {
+          Success(events map (_.get))
+        }
+      }
+
+    case BestellungenAlsAbgerechnetMarkierenCommand(personId, datum, ids: Seq[BestellungId]) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        val (events, failures) = ids map { id =>
+          stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+            bestellung.status match {
+              case Abgeschlossen =>
+                Success(BestellungAlsAbgerechnetMarkierenEvent(meta, datum, id))
+              case _ =>
+                Failure(new InvalidStateException(s"Eine Bestellung kann nur im Status 'Abgeschlossen' als abgerechnet markiert werden. Nr. $id"))
+            }
+          } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
+        } partition (_.isSuccess)
+
+        if (events.isEmpty) {
+          Failure(new InvalidStateException(s"Keine der Bestellung konnte abgearbeitet werden"))
         } else {
           Success(events map (_.get))
         }
