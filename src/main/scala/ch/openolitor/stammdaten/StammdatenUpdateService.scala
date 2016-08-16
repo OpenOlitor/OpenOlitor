@@ -246,7 +246,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
               abo,
               "depotId" -> va.depotId,
               "depotName" -> depot.name,
-              "vertriebId" -> va.vertriebId
+              "vertriebId" -> va.vertriebId,
+              "vertriebsartId" -> update.vertriebsartIdNeu
             )
             abo match {
               case abo: HeimlieferungAbo => stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
@@ -266,7 +267,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
           case abo: Abo =>
             // wechsel
-            val aboNeu = copyTo[Abo, HeimlieferungAbo](abo, "vertriebId" -> va.vertriebId, "tourId" -> va.tourId, "tourName" -> tour.name)
+            val aboNeu = copyTo[Abo, HeimlieferungAbo](abo, "vertriebId" -> va.vertriebId, "tourId" -> va.tourId, "tourName" -> tour.name, "vertriebsartId" -> update.vertriebsartIdNeu)
             abo match {
               case abo: DepotlieferungAbo => stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](abo.id)
               case abo: PostlieferungAbo => stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](abo.id)
@@ -282,7 +283,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         // nothing to do
         case abo: Abo =>
           // wechsel
-          val aboNeu = copyTo[Abo, PostlieferungAbo](abo, "vertriebId" -> va.vertriebId)
+          val aboNeu = copyTo[Abo, PostlieferungAbo](abo, "vertriebId" -> va.vertriebId, "vertriebsartId" -> update.vertriebsartIdNeu)
           abo match {
             case abo: HeimlieferungAbo => stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
             case abo: DepotlieferungAbo => stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](abo.id)

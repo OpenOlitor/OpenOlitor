@@ -44,7 +44,6 @@ object AuslieferungStatus {
  * Die Auslieferung repräsentiert eine Sammlung von Körben zu einem Bestimmten Lieferzeitpunkt mit einem Ziel.
  */
 trait Auslieferung extends BaseEntity[AuslieferungId] {
-  val lieferungId: LieferungId
   val status: AuslieferungStatus
   val datum: DateTime
   val anzahlKoerbe: Int
@@ -68,7 +67,6 @@ trait AuslieferungReport extends Auslieferung {
  */
 case class DepotAuslieferung(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   depotId: DepotId,
   depotName: String,
@@ -83,7 +81,6 @@ case class DepotAuslieferung(
 
 case class DepotAuslieferungDetail(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -98,7 +95,6 @@ case class DepotAuslieferungDetail(
 
 case class DepotAuslieferungReport(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -117,7 +113,6 @@ case class DepotAuslieferungReport(
  */
 case class TourAuslieferung(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   tourId: TourId,
   tourName: String,
@@ -132,7 +127,6 @@ case class TourAuslieferung(
 
 case class TourAuslieferungDetail(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -149,7 +143,6 @@ case class TourAuslieferungModify(koerbe: Seq[KorbModify]) extends AuslieferungM
 
 case class TourAuslieferungReport(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -168,7 +161,6 @@ case class TourAuslieferungReport(
  */
 case class PostAuslieferung(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -181,7 +173,6 @@ case class PostAuslieferung(
 
 case class PostAuslieferungDetail(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,
@@ -195,7 +186,6 @@ case class PostAuslieferungDetail(
 
 case class PostAuslieferungReport(
   id: AuslieferungId,
-  lieferungId: LieferungId,
   status: AuslieferungStatus,
   datum: DateTime,
   anzahlKoerbe: Int,

@@ -572,8 +572,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         //create auslieferungen
         stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
 
-          if (!isAuslieferungExisting(lieferung.id, vertriebsart)) {
-            val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.id, vertriebsart.id, WirdGeliefert)
+          if (!isAuslieferungExisting(lieferung.datum, vertriebsart)) {
+            val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.datum, vertriebsart.id, WirdGeliefert)
 
             if (!koerbe.isEmpty) {
               val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
@@ -634,14 +634,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  private def isAuslieferungExisting(lieferungId: LieferungId, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Boolean = {
+  private def isAuslieferungExisting(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Boolean = {
     vertriebsart match {
-      case _: DepotlieferungDetail =>
-        stammdatenWriteRepository.getDepotAuslieferung(lieferungId).isDefined
-      case _: HeimlieferungDetail =>
-        stammdatenWriteRepository.getTourAuslieferung(lieferungId).isDefined
+      case d: DepotlieferungDetail =>
+        stammdatenWriteRepository.getDepotAuslieferung(d.depotId, datum).isDefined
+      case t: HeimlieferungDetail =>
+        stammdatenWriteRepository.getTourAuslieferung(t.tourId, datum).isDefined
       case _: PostlieferungDetail =>
-        stammdatenWriteRepository.getPostAuslieferung(lieferungId).isDefined
+        stammdatenWriteRepository.getPostAuslieferung(datum).isDefined
     }
   }
 
@@ -652,7 +652,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       case d: DepotlieferungDetail =>
         val result = DepotAuslieferung(
           auslieferungId,
-          lieferung.id,
           Erfasst,
           d.depotId,
           d.depot.name,
@@ -668,7 +667,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       case h: HeimlieferungDetail =>
         val result = TourAuslieferung(
           auslieferungId,
-          lieferung.id,
           Erfasst,
           h.tourId,
           h.tour.name,
@@ -687,7 +685,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       case p: PostlieferungDetail =>
         val result = PostAuslieferung(
           auslieferungId,
-          lieferung.id,
           Erfasst,
           lieferung.datum,
           anzahlKoerbe,
@@ -703,7 +700,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   private def createTourKorbauslieferung(auslieferung: TourAuslieferung, h: HeimlieferungDetail)(implicit personId: PersonId, session: DBSession) = {
     val tourlieferungen = stammdatenWriteRepository.getTourlieferungen(h.tourId)
-    val koerbe = stammdatenWriteRepository.getKoerbe(auslieferung.lieferungId, h.id, WirdGeliefert)
+    val koerbe = stammdatenWriteRepository.getKoerbe(auslieferung.id)
     val aboIds = koerbe map (_.aboId)
     tourlieferungen.filter(l => aboIds.contains(l.id)).sortBy(_.sort).zipWithIndex.map {
       case (tl, index) =>
@@ -716,31 +713,25 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleAuslieferungAusgeliefert(entity: Auslieferung)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(lieferungMapping, entity.lieferungId) map { lieferung =>
-        stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
-          val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.id, vertriebsart.id, WirdGeliefert)
+      stammdatenWriteRepository.getKoerbe(entity.id) map { korb =>
+        val copy = korb.copy(status = Geliefert)
+        stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
 
-          koerbe map { korb =>
-            val copy = korb.copy(status = Geliefert)
-            stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
-
-            modifyEntity[DepotlieferungAbo, AboId](korb.aboId, { abo =>
-              abo.copy(guthaben = korb.guthabenVorLieferung - 1)
-            })
-            modifyEntity[HeimlieferungAbo, AboId](korb.aboId, { abo =>
-              abo.copy(guthaben = korb.guthabenVorLieferung - 1)
-            })
-            modifyEntity[PostlieferungAbo, AboId](korb.aboId, { abo =>
-              abo.copy(guthaben = korb.guthabenVorLieferung - 1)
-            })
-          }
-        }
+        modifyEntity[DepotlieferungAbo, AboId](korb.aboId, { abo =>
+          abo.copy(guthaben = korb.guthabenVorLieferung - 1)
+        })
+        modifyEntity[HeimlieferungAbo, AboId](korb.aboId, { abo =>
+          abo.copy(guthaben = korb.guthabenVorLieferung - 1)
+        })
+        modifyEntity[PostlieferungAbo, AboId](korb.aboId, { abo =>
+          abo.copy(guthaben = korb.guthabenVorLieferung - 1)
+        })
       }
     }
   }
 
   def handleDepotModified(depot: Depot, orig: Depot)(implicit personId: PersonId) = {
-    logger.debug(s"handleDepotModified: depot:\depot\norig:$orig")
+    logger.debug(s"handleDepotModified: depot:$depot  orig:$orig")
     if (depot.name != orig.name) {
       //Depot name was changed. Replace it in Abos
       DB autoCommit { implicit session =>
