@@ -88,6 +88,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
       updateLieferpositionen(meta, id, lieferpositionen)
+    case EntityUpdatedEvent(meta, id: VorlageId, entity: VorlageModify) => updateVorlage(meta, id, entity)
     case e =>
   }
 
@@ -563,4 +564,15 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  def updateVorlage(meta: EventMetadata, vorlageId: VorlageId, update: VorlageModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(vorlageMapping, vorlageId) map { vorlage =>        
+          val copy = copyFrom(vorlage, update,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> personId)
+          stammdatenWriteRepository.updateEntity[Vorlage, VorlageId](copy)
+        }
+      }
+    }
+  }
 }

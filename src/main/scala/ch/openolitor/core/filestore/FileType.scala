@@ -26,15 +26,17 @@ sealed trait FileType extends Product {
   val bucket: FileStoreBucket
 }
 
-case object VorlageRechnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageDepotLieferschein extends FileType { val bucket = VorlagenBucket }
-case object VorlageTourLieferschein extends FileType { val bucket = VorlagenBucket }
-case object VorlagePostLieferschein extends FileType { val bucket = VorlagenBucket }
-case object VorlageDepotLieferetiketten extends FileType { val bucket = VorlagenBucket }
-case object VorlageTourLieferetiketten extends FileType { val bucket = VorlagenBucket }
-case object VorlagePostLieferetiketten extends FileType { val bucket = VorlagenBucket }
-case object VorlageMahnung extends FileType { val bucket = VorlagenBucket }
-case object VorlageBestellung extends FileType { val bucket = VorlagenBucket }
+sealed trait VorlageType extends Product
+
+case object VorlageRechnung extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlageDepotLieferschein extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlageTourLieferschein extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlagePostLieferschein extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlageDepotLieferetiketten extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlageTourLieferetiketten extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlagePostLieferetiketten extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlageMahnung extends FileType with VorlageType { val bucket = VorlagenBucket }
+case object VorlageBestellung extends FileType with VorlageType { val bucket = VorlagenBucket }
 case object GeneriertRechnung extends FileType { val bucket = GeneriertBucket }
 case object GeneriertAuslieferung extends FileType { val bucket = GeneriertBucket }
 case object GeneriertMahnung extends FileType { val bucket = GeneriertBucket }
@@ -43,8 +45,8 @@ case object ProjektStammdaten extends FileType { val bucket = StammdatenBucket }
 case object ZahlungsImportDaten extends FileType { val bucket = ZahlungsImportBucket }
 case object UnknownFileType extends FileType { lazy val bucket = sys.error("This FileType has no bucket") }
 
-object FileType {
-  val AllFileTypes = List(
+object VorlageType {
+  val AllVorlageTypes = List(
     VorlageRechnung,
     VorlageDepotLieferschein,
     VorlageTourLieferschein,
@@ -53,7 +55,11 @@ object FileType {
     VorlageTourLieferetiketten,
     VorlageTourLieferetiketten,
     VorlageMahnung,
-    VorlageBestellung,
+    VorlageBestellung)
+}
+
+object FileType {
+  val AllFileTypes = VorlageType ++ List(    
     GeneriertRechnung,
     GeneriertAuslieferung,
     GeneriertMahnung,

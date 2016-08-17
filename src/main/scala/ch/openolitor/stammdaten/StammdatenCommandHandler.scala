@@ -44,12 +44,14 @@ object StammdatenCommandHandler {
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
   case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
   case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
+  case class SetDefaultVorlageCommand(originator: PersonId, id: VorlageId) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
+  case class SetDefaultVorlageEvent(meta: EventMetadata, id: VorlageId) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -131,6 +133,15 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           Failure(new InvalidStateException(s"Keine der Auslieferungen konnte abgearbeitet werden"))
         } else {
           Success(events map (_.get))
+        }
+      }
+      
+    case SetDefaultVorlageCommand(originator, vorlageId) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        stammdatenWriteRepository.getById(vorlageMapping, vorlageId) map { _ =>
+          Success(Seq(SetDefaultVorlageEvent(meta, vorlageId))
+        } getOrElse {
+          Failure(new InvalidStateException(s"Vorlage nicht gefunden: $vorlageId"))
         }
       }
 

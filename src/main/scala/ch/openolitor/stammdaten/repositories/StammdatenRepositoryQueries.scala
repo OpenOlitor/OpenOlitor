@@ -1020,6 +1020,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         copyTo[Vertrieb, VertriebVertriebsarten](vertrieb, "depotlieferungen" -> dl, "heimlieferungen" -> hl, "postlieferungen" -> pl)
       }).list
   }
+  
+  protected def getVorlagenQuery(vorlageType: VorlageType) = {
+    withSQL {
+      select
+        .from(vorlageMapping as vorlage)
+        .where.eq(vorlage.vorlageType, parameter(vorlageType))
+    }.map(vorlageMapping(vorlage)).single
+  }
 
   // MODIFY and DELETE Queries
 
