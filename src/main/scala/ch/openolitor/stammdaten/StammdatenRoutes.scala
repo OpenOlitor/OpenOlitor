@@ -445,23 +445,22 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     path("lieferanten" / "bestellungen") {
       get(list(stammdatenReadRepository.getBestellungen))
     } ~
-      path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") { _ =>
-        bestellungenAlsAbgerechnetMarkierenRoute
+      path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") {
+        post {
+          requestInstance { request =>
+            logger.error(s"XXXXXX Bestellungen als abgerechnet markieren $request")
+            entity(as[BestellungAusgeliefert]) { entity =>
+              bestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
+            }
+          }
+        }
       } ~
       path("lieferanten" / "bestellungen" / bestellungIdPath) { (bestellungId) =>
         get(list(stammdatenReadRepository.getBestellungDetail(bestellungId)))
       }
 
-  def bestellungenAlsAbgerechnetMarkierenRoute(implicit subject: Subject) =
-    post {
-      requestInstance { request =>
-        entity(as[BestellungAusgeliefert]) { entity =>
-          bestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
-        }
-      }
-    }
-
   def bestellungenAlsAbgerechnetMarkieren(datum: DateTime, ids: Seq[BestellungId])(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
+    logger.debug(s"Bestellungen als abgerechnet markieren:$datum:$ids")
     onSuccess(entityStore ? StammdatenCommandHandler.BestellungenAlsAbgerechnetMarkierenCommand(subject.personId, datum, ids)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Bestellungen konnten nicht als abgerechnet markiert werden.")
