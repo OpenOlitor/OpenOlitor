@@ -23,30 +23,33 @@
 package ch.openolitor.stammdaten.models
 
 import ch.openolitor.core.models._
-import ch.openolitor.core.filestore.VorlageType
+import ch.openolitor.core.models.VorlageType
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
 case class VorlageId(id: Long) extends BaseId
 
 case class Vorlage(
-    id: VorlageId, 
-    vorlageType: VorlageType, 
-    name: String, 
-    beschreibung: Option[String], 
-    default: Boolean,
-    //modification flags
-    erstelldat: DateTime,
-    ersteller: PersonId,
-    modifidat: DateTime,
-    modifikator: PersonId) 
-    extends BaseEntity[VorlageId] extends JSONSerializable
+  id: VorlageId,
+  vorlageType: VorlageType,
+  name: String,
+  beschreibung: Option[String],
+  default: Boolean,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+)
+    extends BaseEntity[VorlageId] with JSONSerializable
 
 case class VorlageModify(
-     name: String, 
-    beschreibung: Option[String]) extends JSONSerializable
-    
+  name: String,
+  beschreibung: Option[String]
+) extends JSONSerializable
+
 case class VorlageCreate(
-    vorlageType: VorlageType,
-    name: String, 
-    beschreibung: Option[String]) extends JSONSerializable    
+  vorlageType: VorlageType,
+  name: String,
+  beschreibung: Option[String]
+) extends JSONSerializable

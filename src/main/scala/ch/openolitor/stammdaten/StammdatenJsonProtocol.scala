@@ -135,6 +135,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val bestellpositionIdFormat = baseIdFormat(BestellpositionId)
   implicit val customKundentypIdFormat = baseIdFormat(CustomKundentypId.apply)
   implicit val abwesenheitIdFormat = baseIdFormat(AbwesenheitId.apply)
+  implicit val vorlageIdFormat = baseIdFormat(VorlageId.apply)
   implicit val kundentypIdFormat = new RootJsonFormat[KundentypId] {
     def write(obj: KundentypId): JsValue =
       JsString(obj.id)
@@ -491,5 +492,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
     }
   }
+
+  implicit val vorlageCreateFormat = autoProductFormat[VorlageCreate]
 
 }

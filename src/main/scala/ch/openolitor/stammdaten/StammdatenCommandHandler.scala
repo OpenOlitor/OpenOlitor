@@ -135,11 +135,11 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           Success(events map (_.get))
         }
       }
-      
+
     case SetDefaultVorlageCommand(originator, vorlageId) => idFactory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(vorlageMapping, vorlageId) map { _ =>
-          Success(Seq(SetDefaultVorlageEvent(meta, vorlageId))
+          Success(Seq(SetDefaultVorlageEvent(meta, vorlageId)))
         } getOrElse {
           Failure(new InvalidStateException(s"Vorlage nicht gefunden: $vorlageId"))
         }

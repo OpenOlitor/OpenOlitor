@@ -663,20 +663,19 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       }
     }
   }
-  
+
   def createVorlage(meta: EventMetadata, id: VorlageId, create: VorlageCreate)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getVorlagen(create.vorlageType) map { vorlagen =>
-        
-        val vorlage = copyTo[VorlageCreate, Vorlage](create, "id" -> id,
-          "default" -> vorlagen.isEmpty,
-          "erstelldat" -> meta.timestamp,
-          "ersteller" -> meta.originator,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> meta.originator)
+      val vorlagen = stammdatenWriteRepository.getVorlagen(create.vorlageType)
 
-        stammdatenWriteRepository.insertEntity[Vorlage, VorlageId](vorlage)
-      }
+      val vorlage = copyTo[VorlageCreate, Vorlage](create, "id" -> id,
+        "default" -> vorlagen.isEmpty,
+        "erstelldat" -> meta.timestamp,
+        "ersteller" -> meta.originator,
+        "modifidat" -> meta.timestamp,
+        "modifikator" -> meta.originator)
+
+      stammdatenWriteRepository.insertEntity[Vorlage, VorlageId](vorlage)
     }
   }
 }

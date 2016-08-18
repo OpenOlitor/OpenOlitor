@@ -23,7 +23,6 @@
 package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
-import ch.openolitor.core.filestore.VorlageType
 import scalikejdbc._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import ch.openolitor.stammdaten.models._
@@ -345,7 +344,7 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
   def getTourlieferungen(id: TourId)(implicit session: DBSession): List[Tourlieferung] = {
     getTourlieferungenQuery(id).apply()
   }
-  
+
   def getVorlagen(vorlageType: VorlageType)(implicit session: DBSession): List[Vorlage] = {
     getVorlagenQuery(vorlageType).apply()
   }

@@ -34,7 +34,7 @@ object OO254_DBScripts {
   val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       logger.debug(s"Create table Vorlage")
-      
+
       sql"""create table ${vorlageMapping.table} (
         id BIGINT not null,
         vorlageType varchar(50) not null,
@@ -46,7 +46,6 @@ object OO254_DBScripts {
         modifidat datetime not null,
         modifikator BIGINT not null)""".execute.apply()
 
-      
       Success(true)
     }
   }
