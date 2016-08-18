@@ -94,7 +94,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
-  implicit val vorlageIdPath = long2BaseIdPathMatcher(VorlageId.apply)
+  implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
 
   import EntityStore._
 
@@ -561,38 +561,43 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
     } ~
       path("vorlagen") {
-        get(list(stammdatenReadRepository.getVorlagen)) ~
-          post(create[VorlageCreate, VorlageId](VorlageId.apply _))
+        get {
+          onSuccess(stammdatenReadRepository.getProjektVorlagen) { vorlagen =>
+            val result = vorlagen.groupBy(_.vorlageType)
+            complete(result)
+          }
+        } ~
+          post(create[ProjektVorlageCreate, ProjektVorlageId](ProjektVorlageId.apply _))
       } ~
-      path("vorlagen" / vorlageIdPath) { id =>
-        (put | post)(update[VorlageModify, VorlageId](id)) ~
+      path("vorlagen" / projektVorlageIdPath) { id =>
+        (put | post)(update[ProjektVorlageModify, ProjektVorlageId](id)) ~
           delete(remove(id))
       } ~
-      path("vorlagen" / vorlageIdPath / "dokument") { id =>
+      path("vorlagen" / projektVorlageIdPath / "dokument") { id =>
         get {
-          onSuccess(stammdatenReadRepository.getVorlage(id)) {
+          onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
             case Some(vorlage) if vorlage.fileStoreId.isDefined =>
               download(vorlage.vorlageType, vorlage.fileStoreId.get)
             case Some(vorlage) =>
-              complete(StatusCodes.BadRequest, s"Bei dieser Vorlage ist kein Dokument hinterlegt: $id")
+              complete(StatusCodes.BadRequest, s"Bei dieser Projekt-Vorlage ist kein Dokument hinterlegt: $id")
             case None =>
-              complete(StatusCodes.NotFound, s"Vorlage nicht gefunden: $id")
+              complete(StatusCodes.NotFound, s"Projekt-Vorlage nicht gefunden: $id")
           }
         } ~
           (put | post) {
-            onSuccess(stammdatenReadRepository.getVorlage(id)) {
+            onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
               case Some(vorlage) =>
                 val fileStoreId = vorlage.fileStoreId.getOrElse(generateFileStoreId(vorlage))
                 uploadStored(vorlage.vorlageType, Some(fileStoreId)) { (storeFileStoreId, metadata) =>
-                  updated(id, VorlageUpload(storeFileStoreId))
+                  updated(id, ProjektVorlageUpload(storeFileStoreId))
                 }
               case None =>
-                complete(StatusCodes.NotFound, s"Vorlage nicht gefunden: $id")
+                complete(StatusCodes.NotFound, s"Projekt-Vorlage nicht gefunden: $id")
             }
           }
       }
 
-  private def generateFileStoreId(vorlage: Vorlage) = {
+  private def generateFileStoreId(vorlage: ProjektVorlage) = {
     vorlage.name.replace(" ", "_") + ".odt"
   }
 }

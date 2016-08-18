@@ -83,7 +83,6 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getDepotlieferungAbosByDepot(id: DepotId)(implicit session: DBSession): List[DepotlieferungAbo]
 
   def getTourlieferungen(id: TourId)(implicit session: DBSession): List[Tourlieferung]
-  def getVorlagen(vorlageType: VorlageType)(implicit session: DBSession): List[Vorlage]
 }
 
 class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with AkkaEventStream with StammdatenRepositoryQueries {
@@ -343,9 +342,5 @@ class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenW
 
   def getTourlieferungen(id: TourId)(implicit session: DBSession): List[Tourlieferung] = {
     getTourlieferungenQuery(id).apply()
-  }
-
-  def getVorlagen(vorlageType: VorlageType)(implicit session: DBSession): List[Vorlage] = {
-    getVorlagenQuery(vorlageType).apply()
   }
 }

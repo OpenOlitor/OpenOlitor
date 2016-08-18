@@ -43,10 +43,14 @@ import scala.concurrent.duration._
 import ch.openolitor.util.InputStreamUtil._
 import java.util.Locale
 import ch.openolitor.core.models.PersonId
+import ch.openolitor.stammdaten.models.ProjektVorlageId
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 
 sealed trait BerichtsVorlage extends Product
 case object StandardBerichtsVorlage extends BerichtsVorlage
-//case class Berichtsvorlage(id: BerichtsVorlageId) extends BerichtsVorlage
+case class ProjektBerichtsVorlage(id: ProjektVorlageId) extends BerichtsVorlage
 case class EinzelBerichtsVorlage(file: Array[Byte]) extends BerichtsVorlage
 case class ServiceFailed(msg: String, e: Throwable = null) extends Exception(msg, e)
 
@@ -61,8 +65,8 @@ case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[Validation
   val hasErrors = !validationErrors.isEmpty
 }
 
-trait ReportService extends LazyLogging {
-  self: ActorReferences with FileStoreComponent =>
+trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware {
+  self: ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   implicit val actorSystem = system
 
@@ -123,6 +127,7 @@ trait ReportService extends LazyLogging {
     vorlage match {
       case EinzelBerichtsVorlage(file) => EitherT { Future { file.right } }
       case StandardBerichtsVorlage => resolveStandardBerichtsVorlage(fileType, id)
+      case ProjektBerichtsVorlage(vorlageId) => resolveProjektBerichtsVorlage(fileType, vorlageId)
     }
   }
 
@@ -131,6 +136,26 @@ trait ReportService extends LazyLogging {
    */
   def resolveStandardBerichtsVorlage(fileType: FileType, id: Option[String] = None): ServiceResult[Array[Byte]] = {
     resolveBerichtsVorlageFromFileStore(fileType, id) ||| resolveBerichtsVorlageFromResources(fileType, id)
+  }
+
+  def resolveProjektBerichtsVorlage(fileType: FileType, id: ProjektVorlageId): ServiceResult[Array[Byte]] = {
+    for {
+      fileStoreId <- resolveBerichtsVorlageFileStoreId(fileType, id)
+      vorlage <- resolveBerichtsVorlageFromFileStore(fileType, Some(fileStoreId))
+    } yield vorlage
+  }
+
+  def resolveBerichtsVorlageFileStoreId(fileType: FileType, id: ProjektVorlageId): ServiceResult[String] = EitherT {
+    stammdatenReadRepository.getProjektVorlage(id) map {
+      case Some(vorlage) if (vorlage.vorlageType != fileType) =>
+        ServiceFailed(s"Projekt-Vorlage kann für diesen Bericht nicht verwendet werden").left
+      case Some(vorlage) if (vorlage.fileStoreId.isDefined) =>
+        vorlage.fileStoreId.get.right
+      case Some(vorlage) =>
+        ServiceFailed(s"Bei dieser Projekt-Vorlage ist kein Dokument hinterlegt").left
+      case None =>
+        ServiceFailed(s"Projekt-Vorlage konnte nicht gefunden werden:$id").left
+    }
   }
 
   def resolveBerichtsVorlageFromFileStore(fileType: FileType, id: Option[String]): ServiceResult[Array[Byte]] = EitherT {

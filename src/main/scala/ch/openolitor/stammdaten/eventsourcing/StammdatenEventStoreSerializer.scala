@@ -112,10 +112,10 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
   implicit val tourIdPersister = persister[TourId]("tour-id")
 
-  implicit val vorlageCreatePersister = persister[VorlageCreate]("vorlage-create")
-  implicit val vorlageModifyPersister = persister[VorlageModify]("vorlage-modify")
-  implicit val vorlageUploadPersister = persister[VorlageUpload]("vorlage-uppload")
-  implicit val vorlageIdPersister = persister[VorlageId]("vorlage-id")
+  implicit val vorlageCreatePersister = persister[ProjektVorlageCreate]("projekt-vorlage-create")
+  implicit val vorlageModifyPersister = persister[ProjektVorlageModify]("projekt-vorlage-modify")
+  implicit val vorlageUploadPersister = persister[ProjektVorlageUpload]("projekt-vorlage-upload")
+  implicit val vorlageIdPersister = persister[ProjektVorlageId]("projekt-vorlage-id")
 
   val projektModifyPersister = persister[ProjektModify]("projekt-modify")
   implicit val projektModifyV2Persister = persister[ProjektModify, V2]("projekt-modify", from[V1]
@@ -131,7 +131,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
 
   implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
-  implicit val setDefaultVorlageEventPersister = persister[SetDefaultVorlageEvent]("set-default-vorlage")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -206,7 +205,6 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferplanungAbrechnenEventPersister,
     bestellungVersendenEventPersister,
     passwortGewechseltEventPersister,
-    auslieferungAlsAusgeliefertMarkierenEventPersister,
-    setDefaultVorlageEventPersister
+    auslieferungAlsAusgeliefertMarkierenEventPersister
   )
 }

@@ -74,7 +74,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val abwesenheitIdBinder: TypeBinder[AbwesenheitId] = baseIdTypeBinder(AbwesenheitId.apply _)
   implicit val korbIdBinder: TypeBinder[KorbId] = baseIdTypeBinder(KorbId.apply _)
   implicit val auslieferungIdBinder: TypeBinder[AuslieferungId] = baseIdTypeBinder(AuslieferungId.apply _)
-  implicit val vorlageIdBinder: TypeBinder[VorlageId] = baseIdTypeBinder(VorlageId.apply _)
+  implicit val projektVorlageIdBinder: TypeBinder[ProjektVorlageId] = baseIdTypeBinder(ProjektVorlageId.apply _)
   implicit val optionAuslieferungIdBinder: TypeBinder[Option[AuslieferungId]] = optionBaseIdTypeBinder(AuslieferungId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
@@ -142,7 +142,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
   implicit val korbIdSqlBinder = baseIdSqlBinder[KorbId]
   implicit val auslieferungIdSqlBinder = baseIdSqlBinder[AuslieferungId]
-  implicit val vorlageIdSqlBinder = baseIdSqlBinder[VorlageId]
+  implicit val projektVorlageIdSqlBinder = baseIdSqlBinder[ProjektVorlageId]
   implicit val auslieferungIdOptionSqlBinder = optionSqlBinder[AuslieferungId]
   implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
   implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
@@ -916,22 +916,21 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(PostAuslieferung.unapply(entity).get)
   }
 
-  implicit val vorlageMapping = new BaseEntitySQLSyntaxSupport[Vorlage] {
-    override val tableName = "Vorlage"
+  implicit val projektVorlageMapping = new BaseEntitySQLSyntaxSupport[ProjektVorlage] {
+    override val tableName = "ProjektVorlage"
 
-    override lazy val columns = autoColumns[Vorlage]()
+    override lazy val columns = autoColumns[ProjektVorlage]()
 
-    def apply(rn: ResultName[Vorlage])(rs: WrappedResultSet): Vorlage =
+    def apply(rn: ResultName[ProjektVorlage])(rs: WrappedResultSet): ProjektVorlage =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Vorlage): Seq[Any] =
-      parameters(Vorlage.unapply(entity).get)
+    def parameterMappings(entity: ProjektVorlage): Seq[Any] =
+      parameters(ProjektVorlage.unapply(entity).get)
 
-    override def updateParameters(entity: Vorlage) = {
+    override def updateParameters(entity: ProjektVorlage) = {
       super.updateParameters(entity) ++ Seq(
         column.name -> parameter(entity.name),
         column.beschreibung -> parameter(entity.beschreibung),
-        column.default -> parameter(entity.default),
         column.fileStoreId -> parameter(entity.fileStoreId)
       )
     }

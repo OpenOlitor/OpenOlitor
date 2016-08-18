@@ -49,7 +49,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val depotAuslieferung = depotAuslieferungMapping.syntax("depotAuslieferung")
   lazy val tourAuslieferung = tourAuslieferungMapping.syntax("tourAuslieferung")
   lazy val postAuslieferung = postAuslieferungMapping.syntax("postAuslieferung")
-  lazy val vorlage = vorlageMapping.syntax("vorlage")
+  lazy val projektVorlage = projektVorlageMapping.syntax("projektVorlage")
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
@@ -1022,19 +1022,12 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).list
   }
 
-  protected def getVorlagenQuery() = {
+  protected def getProjektVorlagenQuery() = {
     withSQL {
       select
-        .from(vorlageMapping as vorlage)
-    }.map(vorlageMapping(vorlage)).list
-  }
-
-  protected def getVorlagenQuery(vorlageType: VorlageType) = {
-    withSQL {
-      select
-        .from(vorlageMapping as vorlage)
-        .where.eq(vorlage.vorlageType, parameter(vorlageType))
-    }.map(vorlageMapping(vorlage)).list
+        .from(projektVorlageMapping as projektVorlage)
+        .orderBy(projektVorlage.name)
+    }.map(projektVorlageMapping(projektVorlage)).list
   }
 
   // MODIFY and DELETE Queries

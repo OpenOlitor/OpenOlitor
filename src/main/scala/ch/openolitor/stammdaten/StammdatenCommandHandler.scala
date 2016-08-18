@@ -44,14 +44,12 @@ object StammdatenCommandHandler {
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
   case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
   case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
-  case class SetDefaultVorlageCommand(originator: PersonId, id: VorlageId) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
-  case class SetDefaultVorlageEvent(meta: EventMetadata, id: VorlageId) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -136,15 +134,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    case SetDefaultVorlageCommand(originator, vorlageId) => idFactory => meta =>
-      DB readOnly { implicit session =>
-        stammdatenWriteRepository.getById(vorlageMapping, vorlageId) map { _ =>
-          Success(Seq(SetDefaultVorlageEvent(meta, vorlageId)))
-        } getOrElse {
-          Failure(new InvalidStateException(s"Vorlage nicht gefunden: $vorlageId"))
-        }
-      }
-
     case CreateAnzahlLieferungenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
       createAboRechnungen(idFactory, meta, rechnungCreate)
 
@@ -217,8 +206,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[PendenzCreate, PendenzId](idFactory, meta, entity, PendenzId.apply)
     case e @ InsertEntityCommand(personId, entity: VertriebModify) => idFactory => meta =>
       handleEntityInsert[VertriebModify, VertriebId](idFactory, meta, entity, VertriebId.apply)
-    case e @ InsertEntityCommand(personId, entity: VorlageCreate) => idFactory => meta =>
-      handleEntityInsert[VorlageCreate, VorlageId](idFactory, meta, entity, VorlageId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProjektVorlageCreate) => idFactory => meta =>
+      handleEntityInsert[ProjektVorlageCreate, ProjektVorlageId](idFactory, meta, entity, ProjektVorlageId.apply)
     case e @ InsertEntityCommand(personId, entity: KundeModify) => idFactory => meta =>
       if (entity.ansprechpersonen.isEmpty) {
         Failure(new InvalidStateException(s"Zum Erstellen eines Kunden muss mindestens ein Ansprechpartner angegeben werden"))

@@ -27,33 +27,31 @@ import ch.openolitor.core.models.VorlageType
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
-case class VorlageId(id: Long) extends BaseId
+case class ProjektVorlageId(id: Long) extends BaseId
 
-case class Vorlage(
-  id: VorlageId,
+case class ProjektVorlage(
+  id: ProjektVorlageId,
   vorlageType: VorlageType,
   name: String,
   beschreibung: Option[String],
-  default: Boolean,
   fileStoreId: Option[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-)
-    extends BaseEntity[VorlageId] with JSONSerializable
+) extends BaseEntity[ProjektVorlageId] with JSONSerializable
 
-case class VorlageModify(
+case class ProjektVorlageModify(
   name: String,
   beschreibung: Option[String]
 ) extends JSONSerializable
 
-case class VorlageUpload(
+case class ProjektVorlageUpload(
   fileStoreId: String
 ) extends JSONSerializable
 
-case class VorlageCreate(
+case class ProjektVorlageCreate(
   vorlageType: VorlageType,
   name: String,
   beschreibung: Option[String]

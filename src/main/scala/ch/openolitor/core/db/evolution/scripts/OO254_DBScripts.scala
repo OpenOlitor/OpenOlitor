@@ -33,14 +33,13 @@ import scala.util.Success
 object OO254_DBScripts {
   val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      logger.debug(s"Create table Vorlage")
+      logger.debug(s"Create table ProjektVorlage")
 
-      sql"""create table ${vorlageMapping.table} (
+      sql"""create table ${projektVorlageMapping.table} (
         id BIGINT not null,
         vorlageType varchar(50) not null,
         name varchar(50) not null,
-        beschreibung varchar(256),
-        default varchar(1) not null default 0,
+        beschreibung varchar(256),        
       	file_store_id varchar(200),
         erstelldat datetime not null,
         ersteller BIGINT not null,
