@@ -22,7 +22,10 @@
 \*                                                                           */
 package ch.openolitor.core.filestore
 
-trait FileTypeFilenameMapping {
+import com.typesafe.scalalogging.LazyLogging
+import java.io.InputStream
+
+trait FileTypeFilenameMapping extends LazyLogging {
   def defaultFileTypeId(fileType: FileType) = {
     fileType match {
       case VorlageRechnung => "Rechnung.odt"
@@ -35,6 +38,17 @@ trait FileTypeFilenameMapping {
       case VorlageMahnung => "Mahnung.odt"
       case VorlageBestellung => "Bestellung.odt"
       case _ => "undefined.odt"
+    }
+  }
+
+  def fileTypeResourceAsStream(fileType: FileType, id: Option[String]): Either[String, InputStream] = {
+    val resourcePath = "/vorlagen/" + defaultFileTypeId(fileType)
+    val idString = id.map(i => s"/$i").getOrElse("")
+    val resource = s"$resourcePath$idString"
+    logger.debug(s"Resolve template from resources:$resource")
+    getClass.getResourceAsStream(resource) match {
+      case is: InputStream => Right(is)
+      case _ => Left(resource)
     }
   }
 }

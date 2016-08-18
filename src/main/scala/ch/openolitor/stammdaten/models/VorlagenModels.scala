@@ -23,7 +23,7 @@
 package ch.openolitor.stammdaten.models
 
 import ch.openolitor.core.models._
-import ch.openolitor.core.models.VorlageType
+import ch.openolitor.core.models.VorlageTyp
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
@@ -31,7 +31,7 @@ case class ProjektVorlageId(id: Long) extends BaseId
 
 case class ProjektVorlage(
   id: ProjektVorlageId,
-  vorlageType: VorlageType,
+  typ: VorlageTyp,
   name: String,
   beschreibung: Option[String],
   fileStoreId: Option[String],
@@ -52,7 +52,7 @@ case class ProjektVorlageUpload(
 ) extends JSONSerializable
 
 case class ProjektVorlageCreate(
-  vorlageType: VorlageType,
+  typ: VorlageTyp,
   name: String,
   beschreibung: Option[String]
 ) extends JSONSerializable

@@ -110,7 +110,7 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
 
   implicit val optionDateTimeFormat = new OptionFormat[DateTime]
   implicit val personIdFormat = baseIdFormat(PersonId.apply)
-  implicit val vorlageTypeFormat = enumFormat(VorlageType.apply)
+  implicit val vorlageTypeFormat = enumFormat(VorlageTyp.apply)
 
   implicit val idResponseFormat = jsonFormat1(BaseJsonProtocol.IdResponse)
 }

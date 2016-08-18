@@ -37,7 +37,7 @@ object OO254_DBScripts {
 
       sql"""create table ${projektVorlageMapping.table} (
         id BIGINT not null,
-        vorlageType varchar(50) not null,
+        typ varchar(50) not null,
         name varchar(50) not null,
         beschreibung varchar(256),        
       	file_store_id varchar(200),

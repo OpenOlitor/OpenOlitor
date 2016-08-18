@@ -96,7 +96,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
   implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
-  implicit val vorlageTypePath = enumPathMatcher(VorlageType.apply)
+  implicit val vorlageTypePath = enumPathMatcher(VorlageTyp.apply(_) match {
+    case UnknownFileType => None
+    case x => Some(x)
+  })
 
   import EntityStore._
 
@@ -107,7 +110,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
       aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
         kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute
+        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ vorlagenRoute
     }
 
   def kundenRoute(implicit subject: Subject) =
@@ -559,33 +562,41 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   def vorlagenRoute(implicit subject: Subject) =
     path("vorlagetypen") {
       get {
-        complete(VorlageType.AllVorlageTypes.map(_.asInstanceOf[VorlageType]))
+        complete(VorlageTyp.AlleVorlageTypen.map(_.asInstanceOf[VorlageTyp]))
       }
     } ~
       path("vorlagen") {
-        get {
-          onSuccess(stammdatenReadRepository.getProjektVorlagen) { vorlagen =>
-            val result = vorlagen.groupBy(_.vorlageType)
-            complete(result)
-          }
-        } ~
+        get(list(stammdatenReadRepository.getProjektVorlagen)) ~
           post(create[ProjektVorlageCreate, ProjektVorlageId](ProjektVorlageId.apply _))
       } ~
-      path("vorlagen" / vorlageTypePath / "standard") { vorlageType =>
-        get(download(vorlageType, defaultFileTypeId(vorlageType))) ~
+      //Standardvorlagen
+      path("vorlagen" / vorlageTypePath / "dokument") { vorlageType =>
+        get(tryDownload(vorlageType, defaultFileTypeId(vorlageType)) { _ =>
+          //Return vorlage from resources
+          fileTypeResourceAsStream(vorlageType, None) match {
+            case Left(resource) =>
+              complete(StatusCodes.BadRequest, s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource")
+            case Right(is) => {
+              val name = vorlageType.toString
+              respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name))))(stream(is))
+            }
+          }
+        }) ~
           (put | post)(uploadStored(vorlageType, Some(defaultFileTypeId(vorlageType))) { (id, metadata) =>
             complete("Standardvorlage gespeichert")
           })
       } ~
+      //Projektvorlagen
       path("vorlagen" / projektVorlageIdPath) { id =>
         (put | post)(update[ProjektVorlageModify, ProjektVorlageId](id)) ~
+          //TODO: remove from filestore as well
           delete(remove(id))
       } ~
       path("vorlagen" / projektVorlageIdPath / "dokument") { id =>
         get {
           onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
             case Some(vorlage) if vorlage.fileStoreId.isDefined =>
-              download(vorlage.vorlageType, vorlage.fileStoreId.get)
+              download(vorlage.typ, vorlage.fileStoreId.get)
             case Some(vorlage) =>
               complete(StatusCodes.BadRequest, s"Bei dieser Projekt-Vorlage ist kein Dokument hinterlegt: $id")
             case None =>
@@ -596,7 +607,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
               case Some(vorlage) =>
                 val fileStoreId = vorlage.fileStoreId.getOrElse(generateFileStoreId(vorlage))
-                uploadStored(vorlage.vorlageType, Some(fileStoreId)) { (storeFileStoreId, metadata) =>
+                uploadStored(vorlage.typ, Some(fileStoreId)) { (storeFileStoreId, metadata) =>
                   updated(id, ProjektVorlageUpload(storeFileStoreId))
                 }
               case None =>

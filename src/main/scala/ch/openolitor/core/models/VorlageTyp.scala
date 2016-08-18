@@ -23,23 +23,23 @@
 package ch.openolitor.core.models
 
 import ch.openolitor.core.filestore._
+import com.typesafe.scalalogging.LazyLogging
 
-trait VorlageType extends FileType
+trait VorlageTyp extends FileType
 
-object VorlageType {
-  val AllVorlageTypes = List(
+object VorlageTyp extends LazyLogging {
+  val AlleVorlageTypen = List(
     VorlageRechnung,
     VorlageDepotLieferschein,
     VorlageTourLieferschein,
     VorlagePostLieferschein,
     VorlageDepotLieferetiketten,
     VorlageTourLieferetiketten,
-    VorlageTourLieferetiketten,
-    VorlageMahnung,
-    VorlageBestellung
+    VorlagePostLieferetiketten
   )
 
-  def apply(value: String): VorlageType = {
-    AllVorlageTypes.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
+  def apply(value: String): VorlageTyp = {
+    logger.debug(s"Vorlagetyp.apply:$value")
+    AlleVorlageTypen.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
   }
 }

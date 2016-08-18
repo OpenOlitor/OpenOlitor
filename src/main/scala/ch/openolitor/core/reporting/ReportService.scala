@@ -147,7 +147,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
 
   def resolveBerichtsVorlageFileStoreId(fileType: FileType, id: ProjektVorlageId): ServiceResult[String] = EitherT {
     stammdatenReadRepository.getProjektVorlage(id) map {
-      case Some(vorlage) if (vorlage.vorlageType != fileType) =>
+      case Some(vorlage) if (vorlage.typ != fileType) =>
         ServiceFailed(s"Projekt-Vorlage kann für diesen Bericht nicht verwendet werden").left
       case Some(vorlage) if (vorlage.fileStoreId.isDefined) =>
         vorlage.fileStoreId.get.right
@@ -171,14 +171,9 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
   def resolveBerichtsVorlageFromResources(fileType: FileType, id: Option[String]): ServiceResult[Array[Byte]] = EitherT {
     logger.debug(s"Resolve template from resources:$fileType:$id")
     Future {
-      val resourcePath = "/vorlagen/" + defaultFileTypeId(fileType)
-      val idString = id.map(i => s"/$i").getOrElse("")
-      val resource = s"$resourcePath$idString"
-      logger.debug(s"Resolve template from resources:$resource")
-      val is = getClass.getResourceAsStream(resource)
-      is match {
-        case null => ServiceFailed(s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource").left
-        case is =>
+      fileTypeResourceAsStream(fileType, id) match {
+        case Left(resource) => ServiceFailed(s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource").left
+        case Right(is) =>
           is.toByteArray match {
             case TrySuccess(result) => result.right
             case TryFailure(error) =>

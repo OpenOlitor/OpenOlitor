@@ -24,7 +24,7 @@ package ch.openolitor.stammdaten
 
 import java.util.UUID
 import ch.openolitor.core.models._
-import ch.openolitor.core.models.VorlageType
+import ch.openolitor.core.models.VorlageTyp
 import ch.openolitor.core.repositories.BaseRepository
 import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.repositories.ParameterBinderMapping
@@ -90,7 +90,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
   implicit val liefereinheitypeBinder: TypeBinder[Liefereinheit] = string.map(Liefereinheit.apply)
   implicit val liefersaisonTypeBinder: TypeBinder[Liefersaison] = string.map(Liefersaison.apply)
-  implicit val vorlageTypeTypeBinder: TypeBinder[VorlageType] = string.map(VorlageType.apply)
+  implicit val vorlageTypeTypeBinder: TypeBinder[VorlageTyp] = string.map(VorlageTyp.apply)
   implicit val anredeTypeBinder: TypeBinder[Option[Anrede]] = string.map(Anrede.apply)
   implicit val fristOptionTypeBinder: TypeBinder[Option[Frist]] = string.map {
     case fristeinheitPattern(wert, "W") => Some(Frist(wert.toInt, Wochenfrist))
@@ -122,7 +122,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val liefersaisonSqlBinder = toStringSqlBinder[Liefersaison]
   implicit val anredeSqlBinder = toStringSqlBinder[Anrede]
   implicit val optionAnredeSqlBinder = optionSqlBinder[Anrede]
-  implicit val vorlageTypeSqlBinder = toStringSqlBinder[VorlageType]
+  implicit val vorlageTypeSqlBinder = toStringSqlBinder[VorlageTyp]
 
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
