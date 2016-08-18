@@ -670,6 +670,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
       val vorlage = copyTo[VorlageCreate, Vorlage](create, "id" -> id,
         "default" -> vorlagen.isEmpty,
+        "fileStoreId" -> None,
         "erstelldat" -> meta.timestamp,
         "ersteller" -> meta.originator,
         "modifidat" -> meta.timestamp,

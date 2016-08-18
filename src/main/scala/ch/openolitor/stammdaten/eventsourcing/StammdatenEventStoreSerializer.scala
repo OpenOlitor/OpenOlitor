@@ -112,8 +112,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
   implicit val tourIdPersister = persister[TourId]("tour-id")
 
-  implicit val vorlageModifyPersister = persister[VorlageModify]("vorlage-modify")
   implicit val vorlageCreatePersister = persister[VorlageCreate]("vorlage-create")
+  implicit val vorlageModifyPersister = persister[VorlageModify]("vorlage-modify")
+  implicit val vorlageUploadPersister = persister[VorlageUpload]("vorlage-uppload")
   implicit val vorlageIdPersister = persister[VorlageId]("vorlage-id")
 
   val projektModifyPersister = persister[ProjektModify]("projekt-modify")
@@ -197,6 +198,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     auslieferungIdPersister,
     vorlageCreatePersister,
     vorlageModifyPersister,
+    vorlageUploadPersister,
     vorlageIdPersister,
 
     //event persisters

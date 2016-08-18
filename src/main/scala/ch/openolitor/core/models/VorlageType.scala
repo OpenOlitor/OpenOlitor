@@ -24,7 +24,7 @@ package ch.openolitor.core.models
 
 import ch.openolitor.core.filestore._
 
-trait VorlageType extends Product
+trait VorlageType extends FileType
 
 object VorlageType {
   val AllVorlageTypes = List(

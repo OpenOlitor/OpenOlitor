@@ -35,6 +35,7 @@ case class Vorlage(
   name: String,
   beschreibung: Option[String],
   default: Boolean,
+  fileStoreId: Option[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -46,6 +47,10 @@ case class Vorlage(
 case class VorlageModify(
   name: String,
   beschreibung: Option[String]
+) extends JSONSerializable
+
+case class VorlageUpload(
+  fileStoreId: String
 ) extends JSONSerializable
 
 case class VorlageCreate(

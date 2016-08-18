@@ -931,7 +931,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(entity) ++ Seq(
         column.name -> parameter(entity.name),
         column.beschreibung -> parameter(entity.beschreibung),
-        column.default -> parameter(entity.default)
+        column.default -> parameter(entity.default),
+        column.fileStoreId -> parameter(entity.fileStoreId)
       )
     }
   }

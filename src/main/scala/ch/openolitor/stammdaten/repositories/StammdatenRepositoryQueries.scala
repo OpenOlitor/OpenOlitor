@@ -1022,6 +1022,13 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).list
   }
 
+  protected def getVorlagenQuery() = {
+    withSQL {
+      select
+        .from(vorlageMapping as vorlage)
+    }.map(vorlageMapping(vorlage)).list
+  }
+
   protected def getVorlagenQuery(vorlageType: VorlageType) = {
     withSQL {
       select

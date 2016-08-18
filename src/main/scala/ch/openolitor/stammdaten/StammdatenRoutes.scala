@@ -94,6 +94,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
+  implicit val vorlageIdPath = long2BaseIdPathMatcher(VorlageId.apply)
 
   import EntityStore._
 
@@ -551,6 +552,48 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       case _ =>
         complete("")
     }
+  }
+
+  def vorlagenRoute(implicit subject: Subject) =
+    path("vorlagetypen") {
+      get {
+        complete(VorlageType.AllVorlageTypes.map(_.asInstanceOf[VorlageType]))
+      }
+    } ~
+      path("vorlagen") {
+        get(list(stammdatenReadRepository.getVorlagen)) ~
+          post(create[VorlageCreate, VorlageId](VorlageId.apply _))
+      } ~
+      path("vorlagen" / vorlageIdPath) { id =>
+        (put | post)(update[VorlageModify, VorlageId](id)) ~
+          delete(remove(id))
+      } ~
+      path("vorlagen" / vorlageIdPath / "dokument") { id =>
+        get {
+          onSuccess(stammdatenReadRepository.getVorlage(id)) {
+            case Some(vorlage) if vorlage.fileStoreId.isDefined =>
+              download(vorlage.vorlageType, vorlage.fileStoreId.get)
+            case Some(vorlage) =>
+              complete(StatusCodes.BadRequest, s"Bei dieser Vorlage ist kein Dokument hinterlegt: $id")
+            case None =>
+              complete(StatusCodes.NotFound, s"Vorlage nicht gefunden: $id")
+          }
+        } ~
+          (put | post) {
+            onSuccess(stammdatenReadRepository.getVorlage(id)) {
+              case Some(vorlage) =>
+                val fileStoreId = vorlage.fileStoreId.getOrElse(generateFileStoreId(vorlage))
+                uploadStored(vorlage.vorlageType, Some(fileStoreId)) { (storeFileStoreId, metadata) =>
+                  updated(id, VorlageUpload(storeFileStoreId))
+                }
+              case None =>
+                complete(StatusCodes.NotFound, s"Vorlage nicht gefunden: $id")
+            }
+          }
+      }
+
+  private def generateFileStoreId(vorlage: Vorlage) = {
+    vorlage.name.replace(" ", "_") + ".odt"
   }
 }
 
