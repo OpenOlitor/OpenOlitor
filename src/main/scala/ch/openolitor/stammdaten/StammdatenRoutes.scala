@@ -70,7 +70,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with StammdatenEventStoreSerializer
     with BuchhaltungJsonProtocol
     with Defaults
-    with AuslieferungLieferscheinReportService {
+    with AuslieferungLieferscheinReportService
+    with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
@@ -95,6 +96,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
   implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
+  implicit val vorlageTypePath = enumPathMatcher(VorlageType.apply)
 
   import EntityStore._
 
@@ -568,6 +570,12 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           }
         } ~
           post(create[ProjektVorlageCreate, ProjektVorlageId](ProjektVorlageId.apply _))
+      } ~
+      path("vorlagen" / vorlageTypePath / "standard") { vorlageType =>
+        get(download(vorlageType, defaultFileTypeId(vorlageType))) ~
+          (put | post)(uploadStored(vorlageType, Some(defaultFileTypeId(vorlageType))) { (id, metadata) =>
+            complete("Standardvorlage gespeichert")
+          })
       } ~
       path("vorlagen" / projektVorlageIdPath) { id =>
         (put | post)(update[ProjektVorlageModify, ProjektVorlageId](id)) ~

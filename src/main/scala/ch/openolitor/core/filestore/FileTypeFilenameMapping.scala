@@ -20,41 +20,21 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core
+package ch.openolitor.core.filestore
 
-import spray.httpx.unmarshalling._
-import ch.openolitor.core.models.BaseId
-import java.util.UUID
-import spray.routing._
-import shapeless.HNil
-import spray.http.Uri.Path
-
-trait SprayDeserializers {
-  implicit val string2BooleanConverter = new Deserializer[String, Boolean] {
-    def apply(value: String) = value.toLowerCase match {
-      case "true" | "yes" | "on" => Right(true)
-      case "false" | "no" | "off" => Right(false)
-      case x => Left(MalformedContent("'" + x + "' is not a valid Boolean value"))
+trait FileTypeFilenameMapping {
+  def defaultFileTypeId(fileType: FileType) = {
+    fileType match {
+      case VorlageRechnung => "Rechnung.odt"
+      case VorlageDepotLieferschein => "DepotLieferschein.odt"
+      case VorlageTourLieferschein => "TourLieferschein.odt"
+      case VorlagePostLieferschein => "PostLieferschein.odt"
+      case VorlageDepotLieferetiketten => "DepotLieferetiketten.odt"
+      case VorlageTourLieferetiketten => "TourLieferetiketten.odt"
+      case VorlagePostLieferetiketten => "PostLieferetiketten.odt"
+      case VorlageMahnung => "Mahnung.odt"
+      case VorlageBestellung => "Bestellung.odt"
+      case _ => "undefined.odt"
     }
-  }
-
-  def long2BaseIdPathMatcher[T <: BaseId](implicit f: Long => T): spray.routing.PathMatcher1[T] = {
-    PathMatchers.LongNumber.flatMap(id => Some(f(id)))
-  }
-
-  def enumPathMatcher[T](implicit f: String => T): spray.routing.PathMatcher1[T] = {
-    PathMatchers.Segment.flatMap(id => Some(f(id)))
-  }
-
-  def long2BaseIdConverter[T <: BaseId](implicit f: Long => T) = new Deserializer[Long, T] {
-    def apply(value: Long) = {
-      try {
-        Right(f(value))
-      } catch {
-        case e: Exception =>
-          Left(MalformedContent(s"'$value' is not a valid id:$e"))
-      }
-    }
-
   }
 }

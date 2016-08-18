@@ -65,7 +65,7 @@ case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[Validation
   val hasErrors = !validationErrors.isEmpty
 }
 
-trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware {
+trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware with FileTypeFilenameMapping {
   self: ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   implicit val actorSystem = system
@@ -165,21 +165,6 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware {
         case TrySuccess(result) => result.right
         case TryFailure(error) => ServiceFailed(s"Vorlage konnte im FileStore nicht geladen: $error").left
       }
-    }
-  }
-
-  def defaultFileTypeId(fileType: FileType) = {
-    fileType match {
-      case VorlageRechnung => "Rechnung.odt"
-      case VorlageDepotLieferschein => "DepotLieferschein.odt"
-      case VorlageTourLieferschein => "TourLieferschein.odt"
-      case VorlagePostLieferschein => "PostLieferschein.odt"
-      case VorlageDepotLieferetiketten => "DepotLieferetiketten.odt"
-      case VorlageTourLieferetiketten => "TourLieferetiketten.odt"
-      case VorlagePostLieferetiketten => "PostLieferetiketten.odt"
-      case VorlageMahnung => "Mahnung.odt"
-      case VorlageBestellung => "Bestellung.odt"
-      case _ => "undefined.odt"
     }
   }
 
