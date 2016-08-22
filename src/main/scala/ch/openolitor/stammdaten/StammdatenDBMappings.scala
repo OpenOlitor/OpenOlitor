@@ -24,6 +24,7 @@ package ch.openolitor.stammdaten
 
 import java.util.UUID
 import ch.openolitor.core.models._
+import ch.openolitor.core.models.VorlageTyp
 import ch.openolitor.core.repositories.BaseRepository
 import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.repositories.ParameterBinderMapping
@@ -37,6 +38,7 @@ import ch.openolitor.stammdaten.models.PendenzStatus
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.scalax._
 import scala.collection.immutable.TreeMap
+import ch.openolitor.core.filestore.VorlageRechnung
 
 //DB Model bindig
 trait StammdatenDBMappings extends DBMappings with LazyLogging {
@@ -72,6 +74,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val abwesenheitIdBinder: TypeBinder[AbwesenheitId] = baseIdTypeBinder(AbwesenheitId.apply _)
   implicit val korbIdBinder: TypeBinder[KorbId] = baseIdTypeBinder(KorbId.apply _)
   implicit val auslieferungIdBinder: TypeBinder[AuslieferungId] = baseIdTypeBinder(AuslieferungId.apply _)
+  implicit val projektVorlageIdBinder: TypeBinder[ProjektVorlageId] = baseIdTypeBinder(ProjektVorlageId.apply _)
   implicit val optionAuslieferungIdBinder: TypeBinder[Option[AuslieferungId]] = optionBaseIdTypeBinder(AuslieferungId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
@@ -87,6 +90,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
   implicit val liefereinheitypeBinder: TypeBinder[Liefereinheit] = string.map(Liefereinheit.apply)
   implicit val liefersaisonTypeBinder: TypeBinder[Liefersaison] = string.map(Liefersaison.apply)
+  implicit val vorlageTypeTypeBinder: TypeBinder[VorlageTyp] = string.map(VorlageTyp.apply)
   implicit val anredeTypeBinder: TypeBinder[Option[Anrede]] = string.map(Anrede.apply)
   implicit val fristOptionTypeBinder: TypeBinder[Option[Frist]] = string.map {
     case fristeinheitPattern(wert, "W") => Some(Frist(wert.toInt, Wochenfrist))
@@ -118,6 +122,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val liefersaisonSqlBinder = toStringSqlBinder[Liefersaison]
   implicit val anredeSqlBinder = toStringSqlBinder[Anrede]
   implicit val optionAnredeSqlBinder = optionSqlBinder[Anrede]
+  implicit val vorlageTypeSqlBinder = toStringSqlBinder[VorlageTyp]
 
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
@@ -137,6 +142,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
   implicit val korbIdSqlBinder = baseIdSqlBinder[KorbId]
   implicit val auslieferungIdSqlBinder = baseIdSqlBinder[AuslieferungId]
+  implicit val projektVorlageIdSqlBinder = baseIdSqlBinder[ProjektVorlageId]
   implicit val auslieferungIdOptionSqlBinder = optionSqlBinder[AuslieferungId]
   implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
   implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
@@ -908,5 +914,25 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     def parameterMappings(entity: PostAuslieferung): Seq[Any] =
       parameters(PostAuslieferung.unapply(entity).get)
+  }
+
+  implicit val projektVorlageMapping = new BaseEntitySQLSyntaxSupport[ProjektVorlage] {
+    override val tableName = "ProjektVorlage"
+
+    override lazy val columns = autoColumns[ProjektVorlage]()
+
+    def apply(rn: ResultName[ProjektVorlage])(rs: WrappedResultSet): ProjektVorlage =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ProjektVorlage): Seq[Any] =
+      parameters(ProjektVorlage.unapply(entity).get)
+
+    override def updateParameters(entity: ProjektVorlage) = {
+      super.updateParameters(entity) ++ Seq(
+        column.name -> parameter(entity.name),
+        column.beschreibung -> parameter(entity.beschreibung),
+        column.fileStoreId -> parameter(entity.fileStoreId)
+      )
+    }
   }
 }

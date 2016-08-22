@@ -120,9 +120,12 @@ trait StammdatenReadRepository {
   def getDepotAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotAuslieferungDetail]]
   def getTourAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourAuslieferungDetail]]
   def getPostAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostAuslieferungDetail]]
+
+  def getProjektVorlagen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProjektVorlage]]
+  def getProjektVorlage(id: ProjektVorlageId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektVorlage]]
 }
 
-class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
+class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Abotyp]] = {
     getAbotypenQuery.future
   }
@@ -454,5 +457,13 @@ class StammdatenReadRepositoryImpl extends StammdatenReadRepository with LazyLog
 
   def getPostAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
     getPostAuslieferungReportQuery(auslieferungId, projekt).future
+  }
+
+  def getProjektVorlagen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProjektVorlage]] = {
+    getProjektVorlagenQuery.future
+  }
+
+  def getProjektVorlage(id: ProjektVorlageId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektVorlage]] = {
+    getByIdQuery(projektVorlageMapping, id).future
   }
 }
