@@ -112,6 +112,11 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
   implicit val tourIdPersister = persister[TourId]("tour-id")
 
+  implicit val vorlageCreatePersister = persister[ProjektVorlageCreate]("projekt-vorlage-create")
+  implicit val vorlageModifyPersister = persister[ProjektVorlageModify]("projekt-vorlage-modify")
+  implicit val vorlageUploadPersister = persister[ProjektVorlageUpload]("projekt-vorlage-upload")
+  implicit val vorlageIdPersister = persister[ProjektVorlageId]("projekt-vorlage-id")
+
   val projektModifyPersister = persister[ProjektModify]("projekt-modify")
   implicit val projektModifyV2Persister = persister[ProjektModify, V2]("projekt-modify", from[V1]
     .to[V2](_.update('sprache ! set[Locale](Locale.GERMAN))))
@@ -190,6 +195,10 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     korbCreatePersister,
     tourAuslieferungModifyPersister,
     auslieferungIdPersister,
+    vorlageCreatePersister,
+    vorlageModifyPersister,
+    vorlageUploadPersister,
+    vorlageIdPersister,
 
     //event persisters
     lieferplanungAbschliessenEventPersister,

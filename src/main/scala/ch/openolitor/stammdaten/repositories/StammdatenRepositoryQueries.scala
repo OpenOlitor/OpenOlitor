@@ -49,6 +49,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val depotAuslieferung = depotAuslieferungMapping.syntax("depotAuslieferung")
   lazy val tourAuslieferung = tourAuslieferungMapping.syntax("tourAuslieferung")
   lazy val postAuslieferung = postAuslieferungMapping.syntax("postAuslieferung")
+  lazy val projektVorlage = projektVorlageMapping.syntax("projektVorlage")
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
@@ -1019,6 +1020,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
         copyTo[Vertrieb, VertriebVertriebsarten](vertrieb, "depotlieferungen" -> dl, "heimlieferungen" -> hl, "postlieferungen" -> pl)
       }).list
+  }
+
+  protected def getProjektVorlagenQuery() = {
+    withSQL {
+      select
+        .from(projektVorlageMapping as projektVorlage)
+        .orderBy(projektVorlage.name)
+    }.map(projektVorlageMapping(projektVorlage)).list
   }
 
   // MODIFY and DELETE Queries

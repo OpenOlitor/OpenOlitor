@@ -74,6 +74,8 @@ import java.util.zip.ZipInputStream
 import ch.openolitor.util.ZipBuilder
 import ch.openolitor.kundenportal.KundenportalRoutes
 import ch.openolitor.kundenportal.DefaultKundenportalRoutes
+import ch.openolitor.stammdaten.models.ProjektVorlageId
+import spray.can.server.Response
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -274,8 +276,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   protected def download(fileType: FileType, id: String) = {
+    tryDownload(fileType, id)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
+  }
+
+  protected def tryDownload(fileType: FileType, id: String)(errorFunction: FileStoreError => RequestContext => Unit) = {
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
-      case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found.")
+      case Left(e) => errorFunction(e)
       case Right(file) =>
         val name = if (file.metaData.name.isEmpty) id else file.metaData.name
         respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
@@ -383,7 +389,11 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     uploadOpt("vorlage") { formData => file =>
       //use custom or default template whether content was delivered or not
       (for {
-        vorlage <- loadVorlage(file)
+        vorlageId <- Try(formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("projektVorlageId") =>
+            Some(ProjektVorlageId(entity.asString.toLong))
+        }.getOrElse(None))
+        vorlage <- loadVorlage(file, vorlageId)
         pdfGenerieren <- Try(formData.fields.collectFirst {
           case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
             entity.asString.toBoolean
@@ -442,10 +452,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  private def loadVorlage(file: Option[(InputStream, String)]): Try[BerichtsVorlage] = {
-    file map {
-      case (is, name) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
-    } getOrElse Success(StandardBerichtsVorlage)
+  private def loadVorlage(file: Option[(InputStream, String)], vorlageId: Option[ProjektVorlageId]): Try[BerichtsVorlage] = {
+    (file, vorlageId) match {
+      case (Some((is, name)), _) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
+      case (None, Some(vorlageId)) => Success(ProjektBerichtsVorlage(vorlageId))
+      case _ => Success(StandardBerichtsVorlage)
+    }
   }
 }
 
