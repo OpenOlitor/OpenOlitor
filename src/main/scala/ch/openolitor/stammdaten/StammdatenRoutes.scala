@@ -22,6 +22,7 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
+import org.joda.time.DateTime
 import spray.routing._
 import spray.http._
 import spray.http.MediaTypes._
@@ -110,7 +111,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
       aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
         kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ vorlagenRoute
+        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ lieferantenRoute ~ vorlagenRoute
     }
 
   def kundenRoute(implicit subject: Subject) =
@@ -441,6 +442,34 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess(entityStore ? StammdatenCommandHandler.BestellungAnProduzentenVersenden(subject.personId, bestellungId)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def lieferantenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+    path("lieferanten" / "bestellungen") {
+      get(list(stammdatenReadRepository.getBestellungen))
+    } ~
+      path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") {
+        post {
+          requestInstance { request =>
+            logger.error(s"XXXXXX Bestellungen als abgerechnet markieren $request")
+            entity(as[BestellungAusgeliefert]) { entity =>
+              bestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
+            }
+          }
+        }
+      } ~
+      path("lieferanten" / "bestellungen" / bestellungIdPath) { (bestellungId) =>
+        get(list(stammdatenReadRepository.getBestellungDetail(bestellungId)))
+      }
+
+  def bestellungenAlsAbgerechnetMarkieren(datum: DateTime, ids: Seq[BestellungId])(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
+    logger.debug(s"Bestellungen als abgerechnet markieren:$datum:$ids")
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungenAlsAbgerechnetMarkierenCommand(subject.personId, datum, ids)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Bestellungen konnten nicht als abgerechnet markiert werden.")
       case _ =>
         complete("")
     }

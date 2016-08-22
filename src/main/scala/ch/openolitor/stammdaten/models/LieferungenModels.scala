@@ -217,6 +217,33 @@ case class Bestellung(
   modifikator: PersonId
 ) extends BaseEntity[BestellungId]
 
+case class BestellungDetail(
+  id: BestellungId,
+  produzentId: ProduzentId,
+  produzentKurzzeichen: String,
+  lieferplanungId: LieferplanungId,
+  status: LieferungStatus,
+  datum: DateTime,
+  datumAbrechnung: Option[DateTime],
+  preisTotal: BigDecimal,
+  steuerSatz: Option[BigDecimal],
+  steuer: BigDecimal,
+  totalSteuer: BigDecimal,
+  datumVersendet: Option[DateTime],
+  positionen: Seq[Bestellposition],
+  produzent: Produzent,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[BestellungId]
+
+case class BestellungAusgeliefert(
+  datum: DateTime,
+  ids: Seq[BestellungId]
+) extends JSONSerializable
+
 case class BestellungModify(
   produzentId: ProduzentId,
   produzentKurzzeichen: String,

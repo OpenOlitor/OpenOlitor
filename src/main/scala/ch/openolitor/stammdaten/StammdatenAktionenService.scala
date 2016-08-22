@@ -77,6 +77,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       bestellungVersenden(meta, id)
     case AuslieferungAlsAusgeliefertMarkierenEvent(meta, id: AuslieferungId) =>
       auslieferungAusgeliefert(meta, id)
+    case BestellungAlsAbgerechnetMarkierenEvent(meta, datum, id: BestellungId) =>
+      bestellungAbgerechnet(meta, datum, id)
     case PasswortGewechseltEvent(meta, personId, pwd) =>
       updatePasswort(meta, personId, pwd)
     case e =>
@@ -187,6 +189,16 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
           if (Erfasst == auslieferung.status) {
             stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
           }
+        }
+      }
+    }
+  }
+
+  def bestellungAbgerechnet(meta: EventMetadata, datum: DateTime, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+        if (Abgeschlossen == bestellung.status) {
+          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Verrechnet, datumAbrechnung = Some(datum)))
         }
       }
     }
