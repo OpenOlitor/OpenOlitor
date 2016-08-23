@@ -85,7 +85,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getTourlieferungen(id: TourId)(implicit session: DBSession): List[Tourlieferung]
 }
 
-class StammdatenWriteRepositoryImpl(val system: ActorSystem) extends StammdatenWriteRepository with LazyLogging with AkkaEventStream with StammdatenRepositoryQueries {
+trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging with StammdatenRepositoryQueries {
 
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB autoCommit { implicit session =>
