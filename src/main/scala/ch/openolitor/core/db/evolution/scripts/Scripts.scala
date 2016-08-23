@@ -37,5 +37,6 @@ object Scripts {
       OO325_DBScripts.scripts ++
       OO326_DBScripts.scripts ++
       OO328_DBScripts.scripts ++
-      OO327_DBScripts.scripts
+      OO327_DBScripts.scripts ++
+      OO330_DBScripts.scripts
 }
