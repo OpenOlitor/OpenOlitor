@@ -29,12 +29,49 @@ import ch.openolitor.core.SystemConfig
 import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
+import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
+import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.stammdaten.models.Abwesenheit
+import scala.collection.immutable.TreeMap
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.Boot
 
 object OO337_DBScripts {
-  val RecalculateAbwesenheiten = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+  val RecalculateAbwesenheiten = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
+
+    def buildAbwesenheitMap(projekt: Projekt, abwesenheiten: Seq[Abwesenheit]): TreeMap[String, Int] = {
+      TreeMap(abwesenheiten.groupBy(a => projekt.geschaftsjahr.key(a.datum)).map {
+        case (key, set) => (key, set.length)
+      }.toSeq: _*)
+    }
+
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       // recalculate abwesenheiten
-      
+
+      val abw = abwesenheitMapping.syntax("abw")
+      implicit val personId = Boot.systemPersonId
+
+      getProjekt map { projekt =>
+        withSQL {
+          select.from(abwesenheitMapping as abw)
+        }.map(abwesenheitMapping(abw)).list.apply().groupBy(_.aboId) map {
+          case (aboId, abwesenheiten) =>
+            val abwMap = buildAbwesenheitMap(projekt, abwesenheiten)
+            getAboDetail(aboId) map {
+              case a: DepotlieferungAboDetail =>
+                val copy = a.copy(anzahlAbwesenheiten = abwMap)
+                updateEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboDetail, DepotlieferungAbo](copy))
+              case a: HeimlieferungAboDetail =>
+                val copy = a.copy(anzahlAbwesenheiten = abwMap)
+                updateEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboDetail, HeimlieferungAbo](copy))
+              case a: PostlieferungAboDetail =>
+                val copy = a.copy(anzahlAbwesenheiten = abwMap)
+                updateEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboDetail, PostlieferungAbo](copy))
+            }
+        }
+      }
+
       Success(true)
     }
   }
