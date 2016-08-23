@@ -88,6 +88,7 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current)
           adjustSeed[Tour, TourId](seeds, tourMapping),
           adjustSeed[Lieferplanung, LieferplanungId](seeds, lieferplanungMapping),
           adjustSeed[Lieferposition, LieferpositionId](seeds, lieferpositionMapping),
+          adjustSeed[Bestellung, BestellungId](seeds, bestellungMapping),
           adjustSeed[Bestellposition, BestellpositionId](seeds, bestellpositionMapping),
           adjustSeed[Abwesenheit, AbwesenheitId](seeds, abwesenheitMapping),
           adjustSeed[Rechnung, RechnungId](seeds, rechnungMapping),
