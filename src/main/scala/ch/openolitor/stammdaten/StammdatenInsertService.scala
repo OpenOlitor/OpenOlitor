@@ -552,6 +552,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
       }
     }
+
+    logger.debug(s"Lieferplanung created, notify clients:$lieferplanungId")
+    stammdatenWriteRepository.publish(DataEvent(personId, LieferplanungCreated(lieferplanungId)))
   }
 
   def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession) = {
