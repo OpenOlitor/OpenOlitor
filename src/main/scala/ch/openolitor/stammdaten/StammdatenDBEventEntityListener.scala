@@ -30,6 +30,7 @@ import ch.openolitor.core.models._
 import ch.openolitor.core.domain._
 import ch.openolitor.core.ws._
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.db._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.Boot

@@ -28,6 +28,7 @@ import ch.openolitor.core.db.ConnectionPoolContextAware
 import akka.actor.Props
 import akka.actor.ActorSystem
 import akka.actor.ActorRef
+import ch.openolitor.stammdaten.repositories._
 
 object StammdatenEntityStoreView {
   def props(mailService: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenEntityStoreView], mailService, sysConfig, system)

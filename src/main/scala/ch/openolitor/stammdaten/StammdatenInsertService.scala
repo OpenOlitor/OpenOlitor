@@ -27,6 +27,7 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
 import java.util.UUID
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging

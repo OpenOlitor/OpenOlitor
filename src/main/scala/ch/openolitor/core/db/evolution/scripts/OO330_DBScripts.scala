@@ -20,55 +20,49 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.core.db.evolution.scripts
 
-import akka.actor._
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.mailservice.MailService._
-import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.repositories._
-import ch.openolitor.core.domain._
-import ch.openolitor.core.db._
-import ch.openolitor.core.models.PersonId
 import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.stammdaten.StammdatenInsertService
+import ch.openolitor.core.Boot
+import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.core.NoPublishEventStream
 
-object StammdatenMailListener {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenMailListener], sysConfig, system)
-}
+object OO330_DBScripts {
 
-class DefaultStammdatenMailListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenMailListener(sysConfig) with DefaultStammdatenWriteRepositoryComponent
+  trait ScriptStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {
 
-/**
- * Listens to succesful sent mails
- */
-class StammdatenMailListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
-    with StammdatenDBMappings
-    with ConnectionPoolContextAware {
-  this: StammdatenWriteRepositoryComponent =>
-  import StammdatenMailListener._
-
-  override def preStart() {
-    super.preStart()
-    context.system.eventStream.subscribe(self, classOf[MailSentEvent])
+    override val stammdatenWriteRepository: StammdatenWriteRepository = new StammdatenWriteRepositoryImpl with NoPublishEventStream
   }
 
-  override def postStop() {
-    context.system.eventStream.unsubscribe(self, classOf[MailSentEvent])
-    super.postStop()
-  }
+  class ScriptStammdatenInsertService(sysConfig: SystemConfig)
+    extends StammdatenInsertService(sysConfig) with ScriptStammdatenWriteRepositoryComponent
 
-  def receive: Receive = {
-    case MailSentEvent(meta, uid, Some(id: BestellungId)) => handleBestellungMailSent(meta, id)
-    case x => log.debug(s"Received unknown mailsentevent:$x")
-  }
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      //create missing koerbe due to older releases
+      implicit val personId = Boot.systemPersonId
+      lazy val lieferung = lieferungMapping.syntax("lieferung")
+      lazy val korb = korbMapping.syntax("korb")
 
-  protected def handleBestellungMailSent(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
-    log.debug(s"handleBestellungMailSent:$id")
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
-        val copy = bestellung.copy(datumVersendet = Some(meta.timestamp))
-        stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
+      val insertService = new ScriptStammdatenInsertService(sysConfig)
+
+      withSQL {
+        select.from(lieferungMapping as lieferung).
+          where.not.eq(lieferung.lieferplanungId, None).and.notIn(lieferung.id, (select(korb.lieferungId).from(korbMapping as korb)))
+      }.map(lieferungMapping(lieferung)).list.apply() map { lieferung =>
+        insertService.createKoerbe(lieferung)
       }
+
+      Success(true)
     }
   }
+
+  val scripts = Seq(StammdatenScripts, OO311_DBScripts.RecalulateLieferungCounter)
 }

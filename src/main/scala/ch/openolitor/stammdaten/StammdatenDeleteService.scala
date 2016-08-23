@@ -23,7 +23,6 @@
 package ch.openolitor.stammdaten
 
 import akka.persistence.PersistentView
-
 import akka.actor._
 import ch.openolitor.core._
 import ch.openolitor.core.models._
@@ -31,10 +30,11 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
-import ch.openolitor.stammdaten.models._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object StammdatenDeleteService {
