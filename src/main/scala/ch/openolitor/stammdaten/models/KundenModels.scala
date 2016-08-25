@@ -29,8 +29,33 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple24
 import ch.openolitor.core.JSONSerializable
+import scala.collection.immutable.TreeMap
 
 case class KundeId(id: Long) extends BaseId
+
+trait IKunde extends BaseEntity[KundeId] {
+  val id: KundeId
+  val bezeichnung: String
+  val strasse: String
+  val hausNummer: Option[String]
+  val adressZusatz: Option[String]
+  val plz: String
+  val ort: String
+  val bemerkungen: Option[String]
+  val abweichendeLieferadresse: Boolean
+  val bezeichnungLieferung: Option[String]
+  val strasseLieferung: Option[String]
+  val hausNummerLieferung: Option[String]
+  val adressZusatzLieferung: Option[String]
+  val plzLieferung: Option[String]
+  val ortLieferung: Option[String]
+  val zusatzinfoLieferung: Option[String]
+  val typen: Set[KundentypId]
+  //Zusatzinformationen
+  val anzahlAbos: Int
+  val anzahlPendenzen: Int
+  val anzahlPersonen: Int
+}
 
 case class Kunde(
   id: KundeId,
@@ -61,34 +86,7 @@ case class Kunde(
   modifikator: PersonId
 ) extends BaseEntity[KundeId]
 
-case class KundeReport(
-    id: KundeId,
-    bezeichnung: String,
-    strasse: String,
-    hausNummer: Option[String],
-    adressZusatz: Option[String],
-    plz: String,
-    ort: String,
-    bemerkungen: Option[String],
-    abweichendeLieferadresse: Boolean,
-    bezeichnungLieferung: Option[String],
-    strasseLieferung: Option[String],
-    hausNummerLieferung: Option[String],
-    adressZusatzLieferung: Option[String],
-    plzLieferung: Option[String],
-    ortLieferung: Option[String],
-    zusatzinfoLieferung: Option[String],
-    typen: Set[KundentypId],
-    //Zusatzinformationen
-    anzahlAbos: Int,
-    anzahlPendenzen: Int,
-    anzahlPersonen: Int,
-    //modification flags
-    erstelldat: DateTime,
-    ersteller: PersonId,
-    modifidat: DateTime,
-    modifikator: PersonId
-) extends BaseEntity[KundeId] {
+trait IKundeReport extends IKunde {
   lazy val strasseUndNummer: String = strasse + hausNummer.map(" " + _).getOrElse("")
   lazy val plzOrt: String = plz + " " + ort
 
@@ -113,6 +111,70 @@ case class KundeReport(
     case false => adresszeilen
   }
 }
+
+case class KundeReport(
+  id: KundeId,
+  bezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  abweichendeLieferadresse: Boolean,
+  bezeichnungLieferung: Option[String],
+  strasseLieferung: Option[String],
+  hausNummerLieferung: Option[String],
+  adressZusatzLieferung: Option[String],
+  plzLieferung: Option[String],
+  ortLieferung: Option[String],
+  zusatzinfoLieferung: Option[String],
+  typen: Set[KundentypId],
+  //Zusatzinformationen
+  anzahlAbos: Int,
+  anzahlPendenzen: Int,
+  anzahlPersonen: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[KundeId] with IKundeReport
+
+case class KundeDetailReport(
+  id: KundeId,
+  bezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  abweichendeLieferadresse: Boolean,
+  bezeichnungLieferung: Option[String],
+  strasseLieferung: Option[String],
+  hausNummerLieferung: Option[String],
+  adressZusatzLieferung: Option[String],
+  plzLieferung: Option[String],
+  ortLieferung: Option[String],
+  zusatzinfoLieferung: Option[String],
+  typen: Set[KundentypId],
+  //Zusatzinformationen
+  anzahlAbos: Int,
+  anzahlPendenzen: Int,
+  anzahlPersonen: Int,
+  //Report infos
+  personen: Seq[PersonDetail],
+  abos: Seq[Abo],
+  pendenzen: Seq[Pendenz],
+  abwesenheiten: Seq[Abwesenheit],
+  projekt: ProjektReport,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[KundeId] with IKundeReport
 
 object Kunde {
   def unapply(k: Kunde) = Some(Tuple24(

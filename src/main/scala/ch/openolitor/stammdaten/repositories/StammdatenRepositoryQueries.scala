@@ -105,6 +105,41 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
+  protected def getKundeDetailReportQuery(kundeId: KundeId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(kundeMapping as kunde)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(kunde.id, depotlieferungAbo.kundeId)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(kunde.id, heimlieferungAbo.kundeId)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(kunde.id, postlieferungAbo.kundeId)
+        .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
+        .leftJoin(pendenzMapping as pendenz).on(kunde.id, pendenz.kundeId)
+        .leftJoin(abwesenheitMapping as abwesenheit).on(abwesenheit.aboId, depotlieferungAbo.id)
+        .leftJoin(abwesenheitMapping as abwesenheit).on(abwesenheit.aboId, heimlieferungAbo.id)
+        .leftJoin(abwesenheitMapping as abwesenheit).on(abwesenheit.aboId, postlieferungAbo.id)
+        .where.eq(kunde.id, parameter(kundeId))
+        .orderBy(person.sort)
+    }.one(kundeMapping(kunde))
+      .toManies(
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => personMapping.opt(person)(rs),
+        rs => pendenzMapping.opt(pendenz)(rs),
+        rs => abwesenheitMapping.opt(abwesenheit)(rs),
+        rs => abwesenheitMapping.opt(abwesenheit)(rs),
+        rs => abwesenheitMapping.opt(abwesenheit)(rs)
+      )
+      .map({ (kunde, pl, hl, dl, personen, pendenzen, abw1, abw2, abw3) =>
+        val abos = pl ++ hl ++ dl
+        val personenWihoutPwd = personen.toSet[Person].map(p => copyTo[Person, PersonDetail](p)).toSeq
+        val abwesenheiten = abw1 ++ abw2 ++ abw3
+
+        copyTo[Kunde, KundeDetailReport](kunde, "abos" -> abos, "pendenzen" -> pendenzen,
+          "personen" -> personenWihoutPwd, "projekt" -> projekt, "abwesenheiten" -> abwesenheiten)
+      }).single
+  }
+
   protected def getPersonenQuery(kundeId: KundeId) = {
     withSQL {
       select
