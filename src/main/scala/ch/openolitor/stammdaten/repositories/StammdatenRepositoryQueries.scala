@@ -1008,14 +1008,16 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       )
       .map({ (vertrieb, pl, hls, dls, depots, touren) =>
         val dl = dls.map { lieferung =>
-          val depot = depots.find(_.id == lieferung.depotId).head
-          val summary = copyTo[Depot, DepotSummary](depot)
-          copyTo[Depotlieferung, DepotlieferungDetail](lieferung, "depot" -> summary)
-        }
+          depots.find(_.id == lieferung.depotId).headOption map { depot =>
+            val summary = copyTo[Depot, DepotSummary](depot)
+            copyTo[Depotlieferung, DepotlieferungDetail](lieferung, "depot" -> summary)
+          }
+        }.flatten
         val hl = hls.map { lieferung =>
-          val tour = touren.find(_.id == lieferung.tourId).head
-          copyTo[Heimlieferung, HeimlieferungDetail](lieferung, "tour" -> tour)
-        }
+          touren.find(_.id == lieferung.tourId).headOption map { tour =>
+            copyTo[Heimlieferung, HeimlieferungDetail](lieferung, "tour" -> tour)
+          }
+        }.flatten
 
         copyTo[Vertrieb, VertriebVertriebsarten](vertrieb, "depotlieferungen" -> dl, "heimlieferungen" -> hl, "postlieferungen" -> pl)
       }).list
