@@ -133,6 +133,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.list
   }
 
+  protected def getDepotlieferungQuery(depotId: DepotId) = {
+    withSQL {
+      select
+        .from(depotlieferungMapping as depotlieferung)
+        .where.eq(depotlieferung.depotId, parameter(depotId))
+    }.map(depotlieferungMapping(depotlieferung)).list
+  }
+
   protected def getHeimlieferungQuery(vertriebId: VertriebId) = {
     withSQL {
       select
@@ -142,6 +150,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.one(heimlieferungMapping(heimlieferung)).toOne(tourMapping.opt(tour)).map { (vertriebsart, tour) =>
       copyTo[Heimlieferung, HeimlieferungDetail](vertriebsart, "tour" -> tour.get)
     }.list
+  }
+
+  protected def getHeimlieferungQuery(tourId: TourId) = {
+    withSQL {
+      select
+        .from(heimlieferungMapping as heimlieferung)
+        .where.eq(heimlieferung.tourId, parameter(tourId))
+    }.map(heimlieferungMapping(heimlieferung)).list
   }
 
   protected def getPostlieferungQuery(vertriebId: VertriebId) = {
