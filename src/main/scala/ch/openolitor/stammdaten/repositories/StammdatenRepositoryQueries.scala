@@ -105,7 +105,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
-  protected def getKundeDetailReportQuery(kundeId: KundeId, projekt: ProjektReport) = {
+  protected def getKundeDetailReportQuery(kundeId: KundeId, projekt: ProjektReport): OneToManies8SQLToOption[Kunde, PostlieferungAbo, HeimlieferungAbo, DepotlieferungAbo, Person, Pendenz, Abwesenheit, Abwesenheit, Abwesenheit, HasExtractor, KundeDetailReport] = {
+    lazy val abwesenheit2 = abwesenheitMapping.syntax("abwesenheit2")
+    lazy val abwesenheit3 = abwesenheitMapping.syntax("abwesenheit3")
     withSQL {
       select
         .from(kundeMapping as kunde)
@@ -115,8 +117,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
         .leftJoin(pendenzMapping as pendenz).on(kunde.id, pendenz.kundeId)
         .leftJoin(abwesenheitMapping as abwesenheit).on(abwesenheit.aboId, depotlieferungAbo.id)
-        .leftJoin(abwesenheitMapping as abwesenheit).on(abwesenheit.aboId, heimlieferungAbo.id)
-        .leftJoin(abwesenheitMapping as abwesenheit).on(abwesenheit.aboId, postlieferungAbo.id)
+        .leftJoin(abwesenheitMapping as abwesenheit2).on(abwesenheit2.aboId, heimlieferungAbo.id)
+        .leftJoin(abwesenheitMapping as abwesenheit3).on(abwesenheit3.aboId, postlieferungAbo.id)
         .where.eq(kunde.id, parameter(kundeId))
         .orderBy(person.sort)
     }.one(kundeMapping(kunde))
@@ -127,8 +129,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         rs => personMapping.opt(person)(rs),
         rs => pendenzMapping.opt(pendenz)(rs),
         rs => abwesenheitMapping.opt(abwesenheit)(rs),
-        rs => abwesenheitMapping.opt(abwesenheit)(rs),
-        rs => abwesenheitMapping.opt(abwesenheit)(rs)
+        rs => abwesenheitMapping.opt(abwesenheit2)(rs),
+        rs => abwesenheitMapping.opt(abwesenheit3)(rs)
       )
       .map({ (kunde, pl, hl, dl, personen, pendenzen, abw1, abw2, abw3) =>
         val abos = pl ++ hl ++ dl
