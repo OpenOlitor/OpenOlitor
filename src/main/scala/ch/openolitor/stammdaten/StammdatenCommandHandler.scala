@@ -35,6 +35,7 @@ import ch.openolitor.core.Macros._
 import com.fasterxml.jackson.databind.JsonSerializable
 import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
+import org.joda.time.DateTime
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
@@ -46,6 +47,7 @@ object StammdatenCommandHandler {
   case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
   case class LoginDeaktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class LoginAktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
+  case class BestellungenAlsAbgerechnetMarkierenCommand(originator: PersonId, datum: DateTime, ids: Seq[BestellungId]) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
@@ -54,6 +56,7 @@ object StammdatenCommandHandler {
   case class LoginDeaktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
   case class LoginAktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
+  case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -67,11 +70,25 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Offen =>
-              val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
-              val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungenCreate(id))
+              val distinctLieferpositionen = stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id).map { lieferposition =>
+                stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+                  (lieferposition.produzentId, lieferplanung.id, lieferung.datum)
+                }
+              }.flatten.toSet
+
+              val bestellEvents = distinctLieferpositionen.map {
+                case (produzentId, lieferplanungId, datum) =>
+                  val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
+                  val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungCreate(produzentId, lieferplanungId, datum))
+
+                  val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
+
+                  Seq(insertEvent, bestellungVersendenEvent)
+              }.toSeq.flatten
+
               val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
-              val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
-              Success(Seq(insertEvent, lpAbschliessenEvent, bestellungVersendenEvent))
+
+              Success(lpAbschliessenEvent +: bestellEvents)
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
@@ -124,6 +141,26 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
+    case BestellungenAlsAbgerechnetMarkierenCommand(personId, datum, ids: Seq[BestellungId]) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        val (events, failures) = ids map { id =>
+          stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+            bestellung.status match {
+              case Abgeschlossen =>
+                Success(BestellungAlsAbgerechnetMarkierenEvent(meta, datum, id))
+              case _ =>
+                Failure(new InvalidStateException(s"Eine Bestellung kann nur im Status 'Abgeschlossen' als abgerechnet markiert werden. Nr. $id"))
+            }
+          } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
+        } partition (_.isSuccess)
+
+        if (events.isEmpty) {
+          Failure(new InvalidStateException(s"Keine der Bestellung konnte abgearbeitet werden"))
+        } else {
+          Success(events map (_.get))
+        }
+      }
+
     case CreateAnzahlLieferungenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
       createAboRechnungen(idFactory, meta, rechnungCreate)
 
@@ -156,8 +193,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[LieferplanungCreate, LieferplanungId](idFactory, meta, entity, LieferplanungId.apply)
     case e @ InsertEntityCommand(personId, entity: LieferpositionenModify) => idFactory => meta =>
       handleEntityInsert[LieferpositionenModify, LieferpositionId](idFactory, meta, entity, LieferpositionId.apply)
-    case e @ InsertEntityCommand(personId, entity: BestellungenCreate) => idFactory => meta =>
-      handleEntityInsert[BestellungenCreate, BestellungId](idFactory, meta, entity, BestellungId.apply)
     case e @ InsertEntityCommand(personId, entity: PendenzModify) => idFactory => meta =>
       handleEntityInsert[PendenzModify, PendenzId](idFactory, meta, entity, PendenzId.apply)
     case e @ InsertEntityCommand(personId, entity: PersonCreate) => idFactory => meta =>
@@ -204,6 +239,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[PendenzCreate, PendenzId](idFactory, meta, entity, PendenzId.apply)
     case e @ InsertEntityCommand(personId, entity: VertriebModify) => idFactory => meta =>
       handleEntityInsert[VertriebModify, VertriebId](idFactory, meta, entity, VertriebId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProjektVorlageCreate) => idFactory => meta =>
+      handleEntityInsert[ProjektVorlageCreate, ProjektVorlageId](idFactory, meta, entity, ProjektVorlageId.apply)
     case e @ InsertEntityCommand(personId, entity: KundeModify) => idFactory => meta =>
       if (entity.ansprechpersonen.isEmpty) {
         Failure(new InvalidStateException(s"Zum Erstellen eines Kunden muss mindestens ein Ansprechpartner angegeben werden"))

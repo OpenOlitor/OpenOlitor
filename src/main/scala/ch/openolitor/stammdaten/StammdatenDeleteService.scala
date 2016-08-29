@@ -71,8 +71,8 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     case EntityDeletedEvent(meta, id: TourId) => deleteTour(meta, id)
     case EntityDeletedEvent(meta, id: VertriebId) => deleteVertrieb(meta, id)
     case EntityDeletedEvent(meta, id: LieferplanungId) => deleteLieferplanung(meta, id)
+    case EntityDeletedEvent(meta, id: ProjektVorlageId) => deleteProjektVorlage(meta, id)
     case e =>
-      logger.warn(s"Unknown event:$e")
   }
 
   def deleteAbotyp(meta: EventMetadata, id: AbotypId)(implicit personId: PersonId = meta.originator) = {
@@ -156,7 +156,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteLieferplanung(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       val lieferungenOld = stammdatenWriteRepository.getLieferungen(id)
       stammdatenWriteRepository.deleteEntity[Lieferplanung, LieferplanungId](id, { lieferplanung: Lieferplanung => lieferplanung.status == Offen }) map {
         lieferplanung =>
@@ -215,4 +215,9 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  def deleteProjektVorlage(meta: EventMetadata, id: ProjektVorlageId)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.deleteEntity[ProjektVorlage, ProjektVorlageId](id)
+    }
+  }
 }

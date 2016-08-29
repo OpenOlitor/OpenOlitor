@@ -54,7 +54,7 @@ object MailService {
 
   case class MailServiceState(startTime: DateTime, seqNr: Long, mailQueue: TreeSet[MailEnqueued]) extends State
 
-  case class SendMailCommandWithCallback[M <: AnyRef <% Persister[M, _]](originator: PersonId, entity: Mail, retryDuration: Option[Duration], commandMeta: M) extends UserCommand
+  case class SendMailCommandWithCallback[M <: AnyRef](originator: PersonId, entity: Mail, retryDuration: Option[Duration], commandMeta: M)(implicit p: Persister[M, _]) extends UserCommand
   case class SendMailCommand(originator: PersonId, entity: Mail, retryDuration: Option[Duration]) extends UserCommand
 
   //events raised by this aggregateroot

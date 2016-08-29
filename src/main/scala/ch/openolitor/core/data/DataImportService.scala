@@ -97,7 +97,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
       produzenten, produktProduzenten, bestellungen, bestellpositionen, tourlieferungen) =>
       log.debug(s"Received parse result, start importing...")
       try {
-        DB localTx { implicit session =>
+        DB autoCommit { implicit session =>
           //clear database
           if (clearBeforeImport) {
             log.debug(s"Clear database before importing...")

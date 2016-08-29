@@ -45,6 +45,7 @@ import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.stammdaten.models.Verrechnet
 import ch.openolitor.stammdaten.models.Abgeschlossen
 import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import org.joda.time.DateTime
 import ch.openolitor.core.mailservice.Mail
 import ch.openolitor.core.mailservice.MailService._
@@ -62,7 +63,7 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
  * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
  */
 class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
-    with StammdatenDBMappings with MailServiceReference {
+    with StammdatenDBMappings with MailServiceReference with StammdatenEventStoreSerializer {
   self: StammdatenWriteRepositoryComponent =>
 
   implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
@@ -76,6 +77,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       bestellungVersenden(meta, id)
     case AuslieferungAlsAusgeliefertMarkierenEvent(meta, id: AuslieferungId) =>
       auslieferungAusgeliefert(meta, id)
+    case BestellungAlsAbgerechnetMarkierenEvent(meta, datum, id: BestellungId) =>
+      bestellungAbgerechnet(meta, datum, id)
     case PasswortGewechseltEvent(meta, personId, pwd) =>
       updatePasswort(meta, personId, pwd)
     case LoginDeaktiviertEvent(meta, kundeId, personId) =>
@@ -87,7 +90,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Offen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
@@ -107,7 +110,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Abgeschlossen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Verrechnet))
@@ -129,16 +132,18 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
     val format = DateTimeFormat.forPattern("dd.MM.yyyy")
 
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       //send mails to Produzenten
       stammdatenWriteRepository.getProjekt map { projekt =>
-        stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
-          stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
-            val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
-              bestellposition =>
-                s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.get} = ${bestellposition.preis.get} ${projekt.waehrung}"""
-            }
-            val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.get}:
+        stammdatenWriteRepository.getById(bestellungMapping, id) map {
+          //send mails only if current event timestamp is past the timestamp of last delivered mail
+          case bestellung if (bestellung.datumVersendet.isEmpty || bestellung.datumVersendet.get.isBefore(meta.timestamp)) =>
+            stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
+              val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
+                bestellposition =>
+                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.get} = ${bestellposition.preis.get} ${projekt.waehrung}"""
+              }
+              val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.get}:
               
 Lieferung: ${format.print(bestellung.datum)}
 
@@ -146,22 +151,24 @@ Bestellpositionen:
 ${bestellpositionen.mkString("\n")}
 
 Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
-            val mail = Mail(1, produzent.email, None, None, "Bestellung " + format.print(bestellung.datum), text)
+              val mail = Mail(1, produzent.email, None, None, "Bestellung " + format.print(bestellung.datum), text)
 
-            mailService ? SendMailCommand(SystemEvents.SystemPersonId, mail, Some(5 minutes)) map {
-              case _: SendMailEvent =>
-              // ok
-              case other =>
-                logger.debug(s"Sending Mail failed resulting in $other")
+              mailService ? SendMailCommandWithCallback(SystemEvents.SystemPersonId, mail, Some(5 minutes), id) map {
+                case _: SendMailEvent =>
+                // ok
+                case other =>
+                  logger.debug(s"Sending Mail failed resulting in $other")
+              }
             }
-          }
+          case _ => //ignore
+            logger.debug(s"Don't resend Bestellung, already delivered")
         }
       }
     }
   }
 
   def updatePasswort(meta: EventMetadata, id: PersonId, pwd: Array[Char])(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(personMapping, id) map { person =>
         val updated = person.copy(passwort = Some(pwd))
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
@@ -188,7 +195,7 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
   }
 
   def auslieferungAusgeliefert(meta: EventMetadata, id: AuslieferungId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(depotAuslieferungMapping, id) map { auslieferung =>
         if (Erfasst == auslieferung.status) {
           stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
@@ -204,6 +211,16 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
           if (Erfasst == auslieferung.status) {
             stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
           }
+        }
+      }
+    }
+  }
+
+  def bestellungAbgerechnet(meta: EventMetadata, datum: DateTime, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+        if (Abgeschlossen == bestellung.status) {
+          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Verrechnet, datumAbrechnung = Some(datum)))
         }
       }
     }

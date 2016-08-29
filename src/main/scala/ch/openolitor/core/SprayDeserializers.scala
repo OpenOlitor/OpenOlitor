@@ -42,6 +42,10 @@ trait SprayDeserializers {
     PathMatchers.LongNumber.flatMap(id => Some(f(id)))
   }
 
+  def enumPathMatcher[T](implicit f: String => Option[T]): spray.routing.PathMatcher1[T] = {
+    PathMatchers.Segment.flatMap(id => f(id))
+  }
+
   def long2BaseIdConverter[T <: BaseId](implicit f: Long => T) = new Deserializer[Long, T] {
     def apply(value: Long) = {
       try {

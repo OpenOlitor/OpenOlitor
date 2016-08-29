@@ -185,7 +185,7 @@ class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyL
 
 class BuchhaltungWriteRepositoryImpl(val system: ActorSystem) extends BuchhaltungWriteRepository with LazyLogging with AkkaEventStream with BuchhaltungRepositoryQueries {
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB localTx { implicit session =>
+    DB autoCommit { implicit session =>
       sql"truncate table ${rechnungMapping.table}".execute.apply()
       sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
       sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()

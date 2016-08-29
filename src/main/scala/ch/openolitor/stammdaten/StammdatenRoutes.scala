@@ -22,6 +22,7 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
+import org.joda.time.DateTime
 import spray.routing._
 import spray.http._
 import spray.http.MediaTypes._
@@ -70,7 +71,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with StammdatenEventStoreSerializer
     with BuchhaltungJsonProtocol
     with Defaults
-    with AuslieferungLieferscheinReportService {
+    with AuslieferungLieferscheinReportService
+    with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
@@ -93,6 +95,12 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val tourIdPath = long2BaseIdPathMatcher(TourId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
+  implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
+  implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
+  implicit val vorlageTypePath = enumPathMatcher(VorlageTyp.apply(_) match {
+    case UnknownFileType => None
+    case x => Some(x)
+  })
 
   import EntityStore._
 
@@ -103,7 +111,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
       aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
         kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute
+        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ lieferantenRoute ~ vorlagenRoute
     }
 
   def kundenRoute(implicit subject: Subject) =
@@ -400,9 +408,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
         get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / "create") { lieferplanungId =>
-        post(create[BestellungenCreate, BestellungId](BestellungId.apply _))
-      } ~
       path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
         get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
       } ~
@@ -448,48 +453,109 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
+  def lieferantenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+    path("lieferanten" / "bestellungen") {
+      get(list(stammdatenReadRepository.getBestellungen))
+    } ~
+      path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") {
+        post {
+          requestInstance { request =>
+            logger.error(s"XXXXXX Bestellungen als abgerechnet markieren $request")
+            entity(as[BestellungAusgeliefert]) { entity =>
+              bestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
+            }
+          }
+        }
+      } ~
+      path("lieferanten" / "bestellungen" / bestellungIdPath) { (bestellungId) =>
+        get(list(stammdatenReadRepository.getBestellungDetail(bestellungId)))
+      }
+
+  def bestellungenAlsAbgerechnetMarkieren(datum: DateTime, ids: Seq[BestellungId])(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
+    logger.debug(s"Bestellungen als abgerechnet markieren:$datum:$ids")
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungenAlsAbgerechnetMarkierenCommand(subject.personId, datum, ids)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Bestellungen konnten nicht als abgerechnet markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
   def auslieferungenRoute(implicit subject: Subject) =
     path("depotauslieferungen") {
       get(list(stammdatenReadRepository.getDepotAuslieferungen))
     } ~
+      path("depotauslieferungen" / auslieferungIdPath) { auslieferungId =>
+        get(detail(stammdatenReadRepository.getDepotAuslieferungDetail(auslieferungId)))
+      } ~
       path("tourauslieferungen") {
         get(list(stammdatenReadRepository.getTourAuslieferungen))
+      } ~
+      path("tourauslieferungen" / auslieferungIdPath) { auslieferungId =>
+        get(detail(stammdatenReadRepository.getTourAuslieferungDetail(auslieferungId))) ~
+          (put | post)(update[TourAuslieferungModify, AuslieferungId](auslieferungId))
       } ~
       path("postauslieferungen") {
         get(list(stammdatenReadRepository.getPostAuslieferungen))
       } ~
-      path("depotauslieferungen" / "aktionen" / "ausliefern") {
+      path("postauslieferungen" / auslieferungIdPath) { auslieferungId =>
+        get(detail(stammdatenReadRepository.getPostAuslieferungDetail(auslieferungId)))
+      } ~
+      path("(depot|tour|post)auslieferungen".r / "aktionen" / "ausliefern") { _ =>
         auslieferungenAlsAusgeliefertMarkierenRoute
       } ~
-      path("tourauslieferungen" / "aktionen" / "ausliefern") {
-        auslieferungenAlsAusgeliefertMarkierenRoute
-      } ~
-      path("postauslieferungen" / "aktionen" / "ausliefern") {
-        auslieferungenAlsAusgeliefertMarkierenRoute
+      path("(depot|tour|post)auslieferungen".r / auslieferungIdPath / "aktionen" / "ausliefern") { (prefix, auslieferungId) =>
+        post {
+          auslieferungenAlsAusgeliefertMarkieren(Seq(auslieferungId))
+        }
       } ~
       path("depotauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageDepotLieferschein) _)(AuslieferungId.apply)
       } ~
-      path("tourauslieferungen" / "berichte" / "lieferschein") {
-        implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferschein) _)(AuslieferungId.apply)
-      } ~
-      path("postauslieferungen" / "berichte" / "lieferschein") {
-        implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferschein) _)(AuslieferungId.apply)
-      } ~
       path("depotauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("depotauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageDepotLieferschein) _)(AuslieferungId.apply)
+      } ~
+      path("depotauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("tourauslieferungen" / "berichte" / "lieferschein") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferschein) _)(AuslieferungId.apply)
       } ~
       path("tourauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
       } ~
+      path("tourauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageTourLieferschein) _)(AuslieferungId.apply)
+      } ~
+      path("tourauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / "berichte" / "lieferschein") {
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferschein) _)(AuslieferungId.apply)
+      } ~
       path("postauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
         generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlagePostLieferschein) _)(AuslieferungId.apply)
+      } ~
+      path("postauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
       }
 
   def auslieferungenAlsAusgeliefertMarkierenRoute(implicit subject: Subject) =
@@ -544,6 +610,67 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       case _ =>
         complete("")
     }
+  }
+
+  def vorlagenRoute(implicit subject: Subject) =
+    path("vorlagetypen") {
+      get {
+        complete(VorlageTyp.AlleVorlageTypen.map(_.asInstanceOf[VorlageTyp]))
+      }
+    } ~
+      path("vorlagen") {
+        get(list(stammdatenReadRepository.getProjektVorlagen)) ~
+          post(create[ProjektVorlageCreate, ProjektVorlageId](ProjektVorlageId.apply _))
+      } ~
+      //Standardvorlagen
+      path("vorlagen" / vorlageTypePath / "dokument") { vorlageType =>
+        get(tryDownload(vorlageType, defaultFileTypeId(vorlageType)) { _ =>
+          //Return vorlage from resources
+          fileTypeResourceAsStream(vorlageType, None) match {
+            case Left(resource) =>
+              complete(StatusCodes.BadRequest, s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource")
+            case Right(is) => {
+              val name = vorlageType.toString
+              respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name))))(stream(is))
+            }
+          }
+        }) ~
+          (put | post)(uploadStored(vorlageType, Some(defaultFileTypeId(vorlageType))) { (id, metadata) =>
+            complete("Standardvorlage gespeichert")
+          })
+      } ~
+      //Projektvorlagen
+      path("vorlagen" / projektVorlageIdPath) { id =>
+        (put | post)(update[ProjektVorlageModify, ProjektVorlageId](id)) ~
+          //TODO: remove from filestore as well
+          delete(remove(id))
+      } ~
+      path("vorlagen" / projektVorlageIdPath / "dokument") { id =>
+        get {
+          onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
+            case Some(vorlage) if vorlage.fileStoreId.isDefined =>
+              download(vorlage.typ, vorlage.fileStoreId.get)
+            case Some(vorlage) =>
+              complete(StatusCodes.BadRequest, s"Bei dieser Projekt-Vorlage ist kein Dokument hinterlegt: $id")
+            case None =>
+              complete(StatusCodes.NotFound, s"Projekt-Vorlage nicht gefunden: $id")
+          }
+        } ~
+          (put | post) {
+            onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
+              case Some(vorlage) =>
+                val fileStoreId = vorlage.fileStoreId.getOrElse(generateFileStoreId(vorlage))
+                uploadStored(vorlage.typ, Some(fileStoreId)) { (storeFileStoreId, metadata) =>
+                  updated(id, ProjektVorlageUpload(storeFileStoreId))
+                }
+              case None =>
+                complete(StatusCodes.NotFound, s"Projekt-Vorlage nicht gefunden: $id")
+            }
+          }
+      }
+
+  private def generateFileStoreId(vorlage: ProjektVorlage) = {
+    vorlage.name.replace(" ", "_") + ".odt"
   }
 }
 

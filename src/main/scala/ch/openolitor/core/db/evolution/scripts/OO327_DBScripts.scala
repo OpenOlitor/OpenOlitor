@@ -22,21 +22,24 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts ++
-      OO297_DBScripts.scripts ++
-      OO311_DBScripts.scripts ++
-      OO314_DBScripts.scripts ++
-      OO325_DBScripts.scripts ++
-      OO326_DBScripts.scripts ++
-      OO328_DBScripts.scripts ++
-      OO327_DBScripts.scripts ++
-      OO254_DBScripts.scripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+
+object OO327_DBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      alterTableAddColumnIfNotExists(bestellungMapping, "steuer_satz", "DECIMAL(4,2)", "preis_total")
+      alterTableAddColumnIfNotExists(bestellungMapping, "steuer", "DECIMAL(7,2) not null default 0", "steuer_satz")
+      alterTableAddColumnIfNotExists(bestellungMapping, "total_steuer", "DECIMAL(7,2) not null default 0", "steuer")
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts)
 }
