@@ -76,6 +76,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val auslieferungIdBinder: TypeBinder[AuslieferungId] = baseIdTypeBinder(AuslieferungId.apply _)
   implicit val projektVorlageIdBinder: TypeBinder[ProjektVorlageId] = baseIdTypeBinder(ProjektVorlageId.apply _)
   implicit val optionAuslieferungIdBinder: TypeBinder[Option[AuslieferungId]] = optionBaseIdTypeBinder(AuslieferungId.apply _)
+  implicit val einladungIdBinder: TypeBinder[EinladungId] = baseIdTypeBinder(EinladungId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
@@ -157,6 +158,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduzentIdIdSqlBinder = baseIdSqlBinder[ProduktProduzentId]
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
   implicit val lieferplanungIdOptionBinder = optionSqlBinder[LieferplanungId]
+  implicit val einladungIdSqlBinder = baseIdSqlBinder[EinladungId]
+
   implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
   implicit val stringBigDecimalTreeMapSqlBinder = treeMapSqlBinder[String, BigDecimal]
   implicit val rolleSqlBinder = toStringSqlBinder[Rolle]
@@ -934,5 +937,17 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.fileStoreId -> parameter(entity.fileStoreId)
       )
     }
+  }
+
+  implicit val einladungMapping = new BaseEntitySQLSyntaxSupport[Einladung] {
+    override val tableName = "Einladung"
+
+    override lazy val columns = autoColumns[Einladung]()
+
+    def apply(rn: ResultName[Einladung])(rs: WrappedResultSet): Einladung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Einladung): Seq[Any] =
+      parameters(Einladung.unapply(entity).get)
   }
 }

@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.JsonSerializable
 import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
 import org.joda.time.DateTime
+import java.util.UUID
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
@@ -47,6 +48,7 @@ object StammdatenCommandHandler {
   case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
   case class LoginDeaktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class LoginAktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
+  case class EinladungSendenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class BestellungenAlsAbgerechnetMarkierenCommand(originator: PersonId, datum: DateTime, ids: Seq[BestellungId]) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
@@ -55,6 +57,7 @@ object StammdatenCommandHandler {
   case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
   case class LoginDeaktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
   case class LoginAktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
+  case class EinladungGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
   case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
 }
@@ -175,6 +178,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
     case LoginAktivierenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
       Success(Seq(LoginAktiviertEvent(meta, kundeId, personId)))
+
+    case EinladungSendenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
+      sendEinladung(idFactory, meta, kundeId, personId)
 
     /*
        * Insert command handling
@@ -372,6 +378,29 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         Failure(new InvalidStateException(s"Keine der Rechnungen konnte erstellt werden"))
       } else {
         Success(events map (_.get))
+      }
+    }
+  }
+
+  def sendEinladung(idFactory: IdFactory, meta: EventMetadata, kundeId: KundeId, personId: PersonId) = {
+    DB readOnly { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        person.email map { email =>
+          val id = EinladungId(idFactory(classOf[EinladungId]))
+
+          val einladung = EinladungCreate(
+            id,
+            personId,
+            UUID.randomUUID.toString,
+            DateTime.now.plusDays(3)
+          )
+
+          Success(Seq(EinladungGesendetEvent(meta, einladung)))
+        } getOrElse {
+          Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
+        }
+      } getOrElse {
+        Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
       }
     }
   }

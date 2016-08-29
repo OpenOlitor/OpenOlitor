@@ -29,6 +29,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple24
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 case class KundeId(id: Long) extends BaseId
 
@@ -352,4 +353,26 @@ case class PendenzCreate(
   bemerkung: Option[String],
   status: PendenzStatus,
   generiert: Boolean
+) extends JSONSerializable
+
+case class EinladungId(id: Long) extends BaseId
+
+case class Einladung(
+  id: EinladungId,
+  personId: PersonId,
+  uid: String,
+  expires: DateTime,
+  // modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+)
+    extends BaseEntity[EinladungId]
+
+case class EinladungCreate(
+  id: EinladungId,
+  personId: PersonId,
+  uid: String,
+  expires: DateTime
 ) extends JSONSerializable

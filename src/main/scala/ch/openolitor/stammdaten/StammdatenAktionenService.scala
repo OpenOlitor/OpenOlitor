@@ -50,6 +50,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.mailservice.Mail
 import ch.openolitor.core.mailservice.MailService._
 import org.joda.time.format.DateTimeFormat
+import ch.openolitor.util.ConfigUtil._
 
 object StammdatenAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem, mailService: ActorRef): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system, mailService)
@@ -68,6 +69,9 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
 
   implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
 
+  lazy val config = sysConfig.mandantConfiguration.config
+  lazy val BaseLink = config.getStringOption(s"kundenportal.zugang-base-url").getOrElse("")
+
   val handle: Handle = {
     case LieferplanungAbschliessenEvent(meta, id: LieferplanungId) =>
       lieferplanungAbschliessen(meta, id)
@@ -85,6 +89,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       disableLogin(meta, kundeId, personId)
     case LoginAktiviertEvent(meta, kundeId, personId) =>
       enableLogin(meta, kundeId, personId)
+    case EinladungGesendetEvent(meta, einladung) =>
+      sendEinladung(meta, einladung)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -190,6 +196,42 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         val updated = person.copy(loginAktiv = true)
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
+      }
+    }
+  }
+
+  def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      // TODO bereits hängige Einladungen expires auf jetzt setzen
+      stammdatenWriteRepository.getById(personMapping, einladungCreate.personId) map { person =>
+
+        val einladung = copyTo[EinladungCreate, Einladung](
+          einladungCreate,
+          "erstelldat" -> meta.timestamp,
+          "ersteller" -> meta.originator,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> meta.originator
+        )
+
+        stammdatenWriteRepository.insertEntity[Einladung, EinladungId](einladung)
+
+        val text = s"""
+	        ${person.vorname} ${person.name},
+	        
+	        Aktivieren Sie ihren Zugang mit folgendem Link: ${BaseLink}/${einladung.uid}
+	        
+	        """
+
+        // email wurde bereits im CommandHandler überprüft
+        val mail = Mail(1, person.email.get, None, None, "OpenOlitor Zugang", text)
+
+        mailService ? SendMailCommandWithCallback(originator, mail, Some(5 minutes), einladung.id) map {
+          case _: SendMailEvent =>
+          // ok
+          case other =>
+            logger.debug(s"Sending Mail failed resulting in $other")
+        }
+
       }
     }
   }
