@@ -124,6 +124,8 @@ trait StammdatenReadRepository {
 
   def getProjektVorlagen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProjektVorlage]]
   def getProjektVorlage(id: ProjektVorlageId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektVorlage]]
+
+  def getEinladung(token: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Einladung]]
 }
 
 class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
@@ -470,5 +472,9 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
 
   def getProjektVorlage(id: ProjektVorlageId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektVorlage]] = {
     getByIdQuery(projektVorlageMapping, id).future
+  }
+
+  def getEinladung(token: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Einladung]] = {
+    getEinladungQuery(token).future
   }
 }

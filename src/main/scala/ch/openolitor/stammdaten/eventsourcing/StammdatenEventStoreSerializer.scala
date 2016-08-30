@@ -126,12 +126,18 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
   implicit val bestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
   implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent]("passwort-gewechselt")
+  implicit val loginDeaktiviertEventPersister = persister[LoginDeaktiviertEvent]("login-deaktiviert")
+  implicit val loginAktiviertEventPersister = persister[LoginAktiviertEvent]("login-aktiviert")
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
 
   implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
   implicit val bestellungAlsAbgerechnetMarkierenEventPersister = persister[BestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event")
+
+  implicit val einladungIdPersister = persister[EinladungId]("einladung-id")
+  implicit val einladungCreatePersister = persister[EinladungCreate]("einladung-create")
+  implicit val einladungGesendetEventPersister = persister[EinladungGesendetEvent]("einladung-gesendet")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -200,13 +206,18 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     vorlageModifyPersister,
     vorlageUploadPersister,
     vorlageIdPersister,
+    einladungIdPersister,
+    einladungCreatePersister,
 
     //event persisters
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
     bestellungVersendenEventPersister,
     passwortGewechseltEventPersister,
+    loginDeaktiviertEventPersister,
+    loginAktiviertEventPersister,
     auslieferungAlsAusgeliefertMarkierenEventPersister,
-    bestellungAlsAbgerechnetMarkierenEventPersister
+    bestellungAlsAbgerechnetMarkierenEventPersister,
+    einladungGesendetEventPersister
   )
 }

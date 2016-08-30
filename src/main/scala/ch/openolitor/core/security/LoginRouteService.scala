@@ -62,6 +62,9 @@ import akka.actor.ActorSystem
 import ch.openolitor.core.mailservice.MailService._
 import ch.openolitor.core.mailservice.Mail
 import scala.concurrent.duration._
+import ch.openolitor.stammdaten.models.Einladung
+import org.joda.time.DateTime
+import ch.openolitor.stammdaten.models.EinladungId
 
 trait LoginRouteService extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware
@@ -129,7 +132,7 @@ trait LoginRouteService extends HttpService with ActorReferences
       person <- personById(personId)
       pwdValid <- validatePassword(form.alt, person)
       newPwdValid <- validateNewPassword(form.neu)
-      result <- changePassword(person, form.neu)
+      result <- changePassword(person, form.neu, None)
     } yield result
   }
 
@@ -156,11 +159,14 @@ trait LoginRouteService extends HttpService with ActorReferences
     }
   }
 
-  private def changePassword(person: Person, newPassword: String)(implicit subject: Subject): EitherFuture[Boolean] = EitherT {
+  private def changePassword(person: Person, newPassword: String, einladung: Option[EinladungId])(implicit subject: Subject): EitherFuture[Boolean] =
+    changePassword(subject.personId, person.id, newPassword, einladung)
+
+  private def changePassword(subjectPersonId: PersonId, targetPersonId: PersonId, newPassword: String, einladung: Option[EinladungId] = None): EitherFuture[Boolean] = EitherT {
     //hash password
     val hash = BCrypt.hashpw(newPassword, BCrypt.gensalt())
 
-    (entityStore ? PasswortWechselCommand(subject.personId, person.id, hash.toCharArray)).map {
+    (entityStore ? PasswortWechselCommand(subjectPersonId, targetPersonId, hash.toCharArray, einladung)).map {
       case p: PasswortGewechseltEvent => true.right
       case _ => RequestFailed(s"Das Passwort konnte nicht gewechselt werden").left
     }
@@ -209,6 +215,20 @@ trait LoginRouteService extends HttpService with ActorReferences
               complete(StatusCodes.Unauthorized)
             case \/-(person) =>
               complete(person)
+          }
+        }
+      } ~
+      path("zugangaktivieren") {
+        post {
+          requestInstance { request =>
+            entity(as[SetPasswordForm]) { form =>
+              onSuccess(validateSetPasswordForm(form).run) {
+                case -\/(error) =>
+                  complete(StatusCodes.BadRequest, error.msg)
+                case \/-(result) =>
+                  complete("Ok")
+              }
+            }
           }
         }
       }
@@ -349,6 +369,30 @@ trait LoginRouteService extends HttpService with ActorReferences
         case true => true.right
         case false => errorPersonLoginNotActive.left
       }
+    }
+  }
+
+  private def validateSetPasswordForm(form: SetPasswordForm): EitherFuture[Boolean] = {
+    for {
+      einladung <- validateEinladung(form.token)
+      person <- personById(einladung.personId)
+      newPwdValid <- validateNewPassword(form.neu)
+      result <- changePassword(person.id, person.id, form.neu, Some(einladung.id))
+    } yield result
+  }
+
+  private def validateEinladung(token: String): EitherFuture[Einladung] = {
+    EitherT {
+      stammdatenReadRepository.getEinladung(token) map (_ map { einladung =>
+        if (einladung.expires.isAfter(DateTime.now)) {
+          einladung.right
+        } else {
+          RequestFailed("Die Einladung mit diesem Token ist abgelaufen").left
+        }
+      } getOrElse {
+        logger.debug(s"Token not found in Einladung")
+        RequestFailed("Keine Einladung mit diesem Token gefunden").left
+      })
     }
   }
 

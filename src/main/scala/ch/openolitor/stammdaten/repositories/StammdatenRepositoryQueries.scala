@@ -50,6 +50,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val tourAuslieferung = tourAuslieferungMapping.syntax("tourAuslieferung")
   lazy val postAuslieferung = postAuslieferungMapping.syntax("postAuslieferung")
   lazy val projektVorlage = projektVorlageMapping.syntax("projektVorlage")
+  lazy val einladung = einladungMapping.syntax("einladung")
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
@@ -1082,6 +1083,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(projektVorlageMapping as projektVorlage)
         .orderBy(projektVorlage.name)
     }.map(projektVorlageMapping(projektVorlage)).list
+  }
+
+  protected def getEinladungQuery(token: String) = {
+    withSQL {
+      select
+        .from(einladungMapping as einladung)
+        .where.eq(einladung.uid, parameter(token))
+    }.map(einladungMapping(einladung)).single
   }
 
   // MODIFY and DELETE Queries
