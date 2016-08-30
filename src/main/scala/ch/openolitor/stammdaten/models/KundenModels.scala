@@ -167,7 +167,6 @@ case class KundeDetailReport(
   personen: Seq[PersonDetail],
   abos: Seq[Abo],
   pendenzen: Seq[Pendenz],
-  abwesenheiten: Seq[Abwesenheit],
   projekt: ProjektReport,
   //modification flags
   erstelldat: DateTime,
