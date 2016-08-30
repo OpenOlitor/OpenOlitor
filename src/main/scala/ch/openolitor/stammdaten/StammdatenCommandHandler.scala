@@ -42,7 +42,7 @@ object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class BestellungAnProduzentenVersenden(originator: PersonId, id: BestellungId) extends UserCommand
-  case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char]) extends UserCommand
+  case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char], einladung: Option[EinladungId]) extends UserCommand
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
   case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
   case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
@@ -54,7 +54,7 @@ object StammdatenCommandHandler {
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
-  case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
+  case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char], einladungId: Option[EinladungId]) extends PersistentEvent with JSONSerializable
   case class LoginDeaktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
   case class LoginAktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
   case class EinladungGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
@@ -170,8 +170,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     case CreateBisGuthabenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
       createAboRechnungen(idFactory, meta, rechnungCreate)
 
-    case PasswortWechselCommand(originator, personId, pwd) => idFactory => meta =>
-      Success(Seq(PasswortGewechseltEvent(meta, personId, pwd)))
+    case PasswortWechselCommand(originator, personId, pwd, einladungId) => idFactory => meta =>
+      Success(Seq(PasswortGewechseltEvent(meta, personId, pwd, einladungId)))
 
     case LoginDeaktivierenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
       Success(Seq(LoginDeaktiviertEvent(meta, kundeId, personId)))
@@ -392,7 +392,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             id,
             personId,
             UUID.randomUUID.toString,
-            DateTime.now.plusDays(3)
+            DateTime.now.plusDays(3),
+            None
           )
 
           Success(Seq(EinladungGesendetEvent(meta, einladung)))

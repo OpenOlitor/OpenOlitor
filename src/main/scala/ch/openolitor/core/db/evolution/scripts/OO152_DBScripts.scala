@@ -40,6 +40,7 @@ object OO152_DBScripts {
         person_id BIGINT not null,
         uid varchar(36) not null,
         expires datetime not null,
+        datum_versendet datetime,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,

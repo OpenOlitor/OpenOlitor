@@ -362,6 +362,7 @@ case class Einladung(
   personId: PersonId,
   uid: String,
   expires: DateTime,
+  datumVersendet: Option[DateTime],
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -374,5 +375,6 @@ case class EinladungCreate(
   id: EinladungId,
   personId: PersonId,
   uid: String,
-  expires: DateTime
+  expires: DateTime,
+  datumVersendet: Option[DateTime]
 ) extends JSONSerializable
