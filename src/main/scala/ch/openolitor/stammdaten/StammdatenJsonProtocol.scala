@@ -172,6 +172,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   }
   implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
   implicit val korbIdFormat = baseIdFormat(KorbId.apply)
+  implicit val einladungIdFormat = baseIdFormat(EinladungId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =

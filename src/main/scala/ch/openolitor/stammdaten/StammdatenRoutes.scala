@@ -188,6 +188,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("kunden" / kundeIdPath / "personen" / personIdPath) { (kundeId, personId) =>
         delete(remove(personId))
       } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "logindeaktivieren") { (kundeId, personId) =>
+        (post)(disableLogin(kundeId, personId))
+      } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "loginaktivieren") { (kundeId, personId) =>
+        (post)(enableLogin(kundeId, personId))
+      } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "einladungsenden") { (kundeId, personId) =>
+        (post)(sendEinladung(kundeId, personId))
+      } ~
       path("kunden" / kundeIdPath / "rechnungen") { (kundeId) =>
         get(list(buchhaltungReadRepository.getKundenRechnungen(kundeId)))
       }
@@ -583,6 +592,33 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess((entityStore ? StammdatenCommandHandler.CreateBisGuthabenRechnungenCommand(subject.personId, rechnungCreate))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen AboIds erstellt werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def disableLogin(kundeId: KundeId, personId: PersonId)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.LoginDeaktivierenCommand(subject.personId, kundeId, personId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Das Login konnte nicht deaktiviert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def enableLogin(kundeId: KundeId, personId: PersonId)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.LoginAktivierenCommand(subject.personId, kundeId, personId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Das Login konnte nicht aktiviert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def sendEinladung(kundeId: KundeId, personId: PersonId)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.EinladungSendenCommand(subject.personId, kundeId, personId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Einladung konnte nicht gesendet werden.")
       case _ =>
         complete("")
     }

@@ -150,6 +150,7 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
         Some(entity)
     }
   }
+
   def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
