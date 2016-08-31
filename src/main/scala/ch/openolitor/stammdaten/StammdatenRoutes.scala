@@ -49,7 +49,8 @@ import scala.concurrent.Future
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import stamina.Persister
-import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.stammdaten.reporting._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
 import akka.actor._
@@ -57,13 +58,9 @@ import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.models.AboGuthabenModify
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.core.security.RequestFailed
-import ch.openolitor.stammdaten.reporting.AuslieferungLieferscheinReportService
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -72,6 +69,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with BuchhaltungJsonProtocol
     with Defaults
     with AuslieferungLieferscheinReportService
+    with KundenBriefReportService
     with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
@@ -123,6 +121,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(detail(stammdatenReadRepository.getKundeDetail(id))) ~
           (put | post)(update[KundeModify, KundeId](id)) ~
           delete(remove(id))
+      } ~
+      path("kunden" / "berichte" / "kundenbrief") {
+        implicit val personId = subject.personId
+        generateReport[KundeId](None, generateKundenBriefReports(VorlageKundenbrief) _)(KundeId.apply)
       } ~
       path("kunden" / kundeIdPath / "abos") { kundeId =>
         post {

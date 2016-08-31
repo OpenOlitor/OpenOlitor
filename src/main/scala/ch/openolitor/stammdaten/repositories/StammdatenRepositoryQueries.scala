@@ -98,12 +98,41 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         rs => personMapping.opt(person)(rs),
         rs => pendenzMapping.opt(pendenz)(rs)
       )
-      .map({ (kunde, pl, hl, dl, personen, pendenzen) =>
+      .map((kunde, pl, hl, dl, personen, pendenzen) => {
         val abos = pl ++ hl ++ dl
         val personenWihoutPwd = personen.toSet[Person].map(p => copyTo[Person, PersonDetail](p)).toSeq
 
         copyTo[Kunde, KundeDetail](kunde, "abos" -> abos, "pendenzen" -> pendenzen, "ansprechpersonen" -> personenWihoutPwd)
       }).single
+  }
+
+  protected def getKundeDetailReportQuery(kundeId: KundeId, projekt: ProjektReport) = {
+    val x = SubQuery.syntax("x").include(abwesenheit)
+    withSQL {
+      select
+        .from(kundeMapping as kunde)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(kunde.id, depotlieferungAbo.kundeId)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(kunde.id, heimlieferungAbo.kundeId)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(kunde.id, postlieferungAbo.kundeId)
+        .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
+        .leftJoin(pendenzMapping as pendenz).on(kunde.id, pendenz.kundeId)
+        .where.eq(kunde.id, parameter(kundeId))
+        .orderBy(person.sort)
+    }.one(kundeMapping(kunde))
+      .toManies(
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => personMapping.opt(person)(rs),
+        rs => pendenzMapping.opt(pendenz)(rs)
+      )
+      .map { (kunde, pl, hl, dl, personen, pendenzen) =>
+        val abos = pl ++ hl ++ dl
+        val personenWihoutPwd = personen.toSet[Person].map(p => copyTo[Person, PersonDetail](p)).toSeq
+
+        copyTo[Kunde, KundeDetailReport](kunde, "abos" -> abos, "pendenzen" -> pendenzen,
+          "personen" -> personenWihoutPwd, "projekt" -> projekt)
+      }.single
   }
 
   protected def getPersonenQuery(kundeId: KundeId) = {

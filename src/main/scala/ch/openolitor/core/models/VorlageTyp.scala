@@ -35,7 +35,8 @@ object VorlageTyp extends LazyLogging {
     VorlagePostLieferschein,
     VorlageDepotLieferetiketten,
     VorlageTourLieferetiketten,
-    VorlagePostLieferetiketten
+    VorlagePostLieferetiketten,
+    VorlageKundenbrief
   )
 
   def apply(value: String): VorlageTyp = {
