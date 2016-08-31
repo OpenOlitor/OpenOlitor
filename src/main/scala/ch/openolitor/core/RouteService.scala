@@ -393,7 +393,11 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
           case b @ BodyPart(entity, headers) if b.name == Some("projektVorlageId") =>
             Some(ProjektVorlageId(entity.asString.toLong))
         }.getOrElse(None))
-        vorlage <- loadVorlage(file, vorlageId)
+        datenExtrakt <- Try(formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("datenExtrakt") =>
+            entity.asString.toBoolean
+        }.getOrElse(false))
+        vorlage <- loadVorlage(datenExtrakt, file, vorlageId)
         pdfGenerieren <- Try(formData.fields.collectFirst {
           case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
             entity.asString.toBoolean
@@ -421,6 +425,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
             complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
           case Right(result) =>
             result.result match {
+              case ReportDataResult(_, json) => complete(json)
               case SingleReportResult(_, _, Left(ReportError(_, error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
               case SingleReportResult(_, _, Right(DocumentReportResult(_, result, name))) => streamOdt(name, result)
               case SingleReportResult(_, _, Right(PdfReportResult(_, result, name))) => streamPdf(name, result)
@@ -452,10 +457,11 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  private def loadVorlage(file: Option[(InputStream, String)], vorlageId: Option[ProjektVorlageId]): Try[BerichtsVorlage] = {
-    (file, vorlageId) match {
-      case (Some((is, name)), _) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
-      case (None, Some(vorlageId)) => Success(ProjektBerichtsVorlage(vorlageId))
+  private def loadVorlage(datenExtrakt: Boolean, file: Option[(InputStream, String)], vorlageId: Option[ProjektVorlageId]): Try[BerichtsVorlage] = {
+    (datenExtrakt, file, vorlageId) match {
+      case (true, _, _) => Success(DatenExtrakt)
+      case (false, Some((is, name)), _) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
+      case (false, None, Some(vorlageId)) => Success(ProjektBerichtsVorlage(vorlageId))
       case _ => Success(StandardBerichtsVorlage)
     }
   }
