@@ -97,7 +97,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
       case (errors, result) if (config.vorlage == DatenExtrakt) =>
         Future {
           val jsonData = JsArray(result.map(jsonFormat.write(_).asJsObject).toVector)
-          Right(ReportServiceResult(jobId, errors, ReportDataResult(jobId, jsonData)))
+          Right(ReportServiceResult(jobId, errors, ReportDataResult(jobId.id, jsonData)))
         }
       case (errors, result) =>
         logger.debug(s"Validation errors:$errors, process result records:${result.length}")

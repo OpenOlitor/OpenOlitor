@@ -425,7 +425,10 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
             complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
           case Right(result) =>
             result.result match {
-              case ReportDataResult(_, json) => complete(json)
+              case ReportDataResult(id, json) =>
+                respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", s"${id}.json")))) {
+                  complete(json)
+                }
               case SingleReportResult(_, _, Left(ReportError(_, error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
               case SingleReportResult(_, _, Right(DocumentReportResult(_, result, name))) => streamOdt(name, result)
               case SingleReportResult(_, _, Right(PdfReportResult(_, result, name))) => streamPdf(name, result)
