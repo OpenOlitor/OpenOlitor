@@ -83,6 +83,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getDepotlieferungAbosByDepot(id: DepotId)(implicit session: DBSession): List[DepotlieferungAbo]
 
   def getTourlieferungen(id: TourId)(implicit session: DBSession): List[Tourlieferung]
+  def getHeimlieferung(tourId: TourId)(implicit session: DBSession): List[Heimlieferung]
+  def getDepotlieferung(depotId: DepotId)(implicit session: DBSession): List[Depotlieferung]
 }
 
 trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging with StammdatenRepositoryQueries {
@@ -316,8 +318,16 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getDepotlieferungQuery(vertriebId).apply()
   }
 
+  def getDepotlieferung(depotId: DepotId)(implicit session: DBSession): List[Depotlieferung] = {
+    getDepotlieferungQuery(depotId).apply()
+  }
+
   def getHeimlieferung(vertriebId: VertriebId)(implicit session: DBSession): List[HeimlieferungDetail] = {
     getHeimlieferungQuery(vertriebId).apply()
+  }
+
+  def getHeimlieferung(tourId: TourId)(implicit session: DBSession): List[Heimlieferung] = {
+    getHeimlieferungQuery(tourId).apply()
   }
 
   def getPostlieferung(vertriebId: VertriebId)(implicit session: DBSession): List[PostlieferungDetail] = {

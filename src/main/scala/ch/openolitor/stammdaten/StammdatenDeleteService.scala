@@ -112,7 +112,11 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteDepot(meta: EventMetadata, id: DepotId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Depot, DepotId](id, { depot: Depot => depot.anzahlAbonnenten == 0 })
+      stammdatenWriteRepository.deleteEntity[Depot, DepotId](id, { depot: Depot => depot.anzahlAbonnenten == 0 }) map { depot =>
+        stammdatenWriteRepository.getDepotlieferung(depot.id) map { dl =>
+          stammdatenWriteRepository.deleteEntity[Depotlieferung, VertriebsartId](dl.id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
+        }
+      }
     }
   }
 
@@ -204,7 +208,11 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteTour(meta: EventMetadata, id: TourId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Tour, TourId](id)
+      stammdatenWriteRepository.deleteEntity[Tour, TourId](id, { tour: Tour => tour.anzahlAbonnenten == 0 }) map { tour =>
+        stammdatenWriteRepository.getHeimlieferung(tour.id) map { hl =>
+          stammdatenWriteRepository.deleteEntity[Heimlieferung, VertriebsartId](hl.id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 })
+        }
+      }
     }
   }
 
