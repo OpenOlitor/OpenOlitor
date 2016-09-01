@@ -50,6 +50,7 @@ object ReportSystem {
     val document: Array[Byte]
   }
   trait ReportSuccess extends ReportResultWithId
+  case class ReportDataResult(id: Any, data: JsArray) extends ReportSuccess
   case class DocumentReportResult(id: Any, document: Array[Byte], name: String) extends ReportSuccess with ReportResultWithDocument
   case class PdfReportResult(id: Any, document: Array[Byte], name: String) extends ReportSuccess with ReportResultWithDocument
   case class StoredPdfReportResult(id: Any, fileType: FileType, fileStoreId: FileStoreFileId) extends ReportSuccess with JSONSerializable

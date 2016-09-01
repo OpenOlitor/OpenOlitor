@@ -47,8 +47,10 @@ import ch.openolitor.stammdaten.models.ProjektVorlageId
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
+import spray.json.JsArray
 
 sealed trait BerichtsVorlage extends Product
+case object DatenExtrakt extends BerichtsVorlage
 case object StandardBerichtsVorlage extends BerichtsVorlage
 case class ProjektBerichtsVorlage(id: ProjektVorlageId) extends BerichtsVorlage
 case class EinzelBerichtsVorlage(file: Array[Byte]) extends BerichtsVorlage
@@ -76,7 +78,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
   /**
    *
    */
-  def generateReports[I, E: JsonFormat](
+  def generateReports[I, E](
     config: ReportConfig[I],
     validationFunction: Seq[I] => Future[(Seq[ValidationError[I]], Seq[E])],
     vorlageType: FileType,
@@ -87,11 +89,16 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
     nameFactory: E => String,
     localeFactory: E => Locale,
     jobId: JobId = JobId()
-  )(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
+  )(implicit personId: PersonId, jsonFormat: JsonFormat[E]): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
     logger.debug(s"Validate ids:${config.ids}")
     validationFunction(config.ids) flatMap {
       case (errors, Seq()) =>
         Future { Right(ReportServiceResult(jobId, errors, ReportError(None, errors.mkString(",")))) }
+      case (errors, result) if (config.vorlage == DatenExtrakt) =>
+        Future {
+          val jsonData = JsArray(result.map(jsonFormat.write(_).asJsObject).toVector)
+          Right(ReportServiceResult(jobId, errors, ReportDataResult(jobId.id, jsonData)))
+        }
       case (errors, result) =>
         logger.debug(s"Validation errors:$errors, process result records:${result.length}")
         val ablageParams = if (config.pdfAblegen) Some(FileStoreParameters[E](ablageType)) else None
@@ -128,6 +135,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
       case EinzelBerichtsVorlage(file) => EitherT { Future { file.right } }
       case StandardBerichtsVorlage => resolveStandardBerichtsVorlage(fileType, id)
       case ProjektBerichtsVorlage(vorlageId) => resolveProjektBerichtsVorlage(fileType, vorlageId)
+      case _ => EitherT { Future { ServiceFailed(s"Berichtsvorlage nicht unterstützt").left } }
     }
   }
 
