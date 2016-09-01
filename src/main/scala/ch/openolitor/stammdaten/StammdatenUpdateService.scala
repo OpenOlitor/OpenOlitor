@@ -30,6 +30,7 @@ import ch.openolitor.core.domain._
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
@@ -39,8 +40,6 @@ import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.UUID
 import ch.openolitor.core.models.PersonId
-import ch.openolitor.stammdaten.models.LieferungPlanungAdd
-import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import scala.concurrent.Future
 import scalikejdbc.DBSession
 import ch.openolitor.util.IdUtil

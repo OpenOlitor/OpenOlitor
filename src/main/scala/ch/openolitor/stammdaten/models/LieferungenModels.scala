@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import java.util.UUID
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus
 
@@ -80,6 +81,8 @@ case class LieferplanungCreate(
 ) extends JSONSerializable
 
 case class LieferungId(id: Long) extends BaseId
+
+case class LieferplanungCreated(id: LieferplanungId) extends Product with JSONSerializable
 
 case class Lieferung(
   id: LieferungId,

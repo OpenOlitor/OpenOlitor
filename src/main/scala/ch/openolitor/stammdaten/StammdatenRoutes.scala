@@ -58,6 +58,8 @@ import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
+import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.stammdaten.models.AboGuthabenModify
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.core.security.RequestFailed

@@ -20,11 +20,10 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.stammdaten.repositories
 
 import akka.actor.ActorSystem
-import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
-import ch.openolitor.stammdaten.repositories.StammdatenWriteRepository
+import ch.openolitor.core._
 
 trait StammdatenWriteRepositoryComponent {
   val stammdatenWriteRepository: StammdatenWriteRepository
@@ -32,6 +31,5 @@ trait StammdatenWriteRepositoryComponent {
 
 trait DefaultStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {
   val system: ActorSystem
-
-  override val stammdatenWriteRepository: StammdatenWriteRepository = new StammdatenWriteRepositoryImpl(system)
+  override val stammdatenWriteRepository: StammdatenWriteRepository = new DefaultActorSystemReference(system) with StammdatenWriteRepositoryImpl with AkkaEventStream
 }

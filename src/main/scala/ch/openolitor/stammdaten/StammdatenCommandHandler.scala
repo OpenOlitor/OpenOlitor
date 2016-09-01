@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import scala.util._
 import scalikejdbc.DB
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.exceptions._
 import akka.actor.ActorSystem
 import ch.openolitor.core._

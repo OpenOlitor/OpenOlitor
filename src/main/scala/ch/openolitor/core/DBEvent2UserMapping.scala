@@ -36,7 +36,7 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 object DBEvent2UserMapping extends DefaultJsonProtocol {
   def props(): Props = Props(classOf[DBEvent2UserMapping])
 
-  implicit def dbEventCreateWriter[E <: BaseEntity[_ <: BaseId]](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
+  implicit def dbEventCreateWriter[E <: Product](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
     def write(obj: DBEvent[E]): JsValue =
       JsObject(
         "type" -> JsString(obj.productPrefix),
@@ -122,6 +122,7 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityCreated(personId, entity: Lieferplanung) => send(personId, e.asInstanceOf[DBEvent[Lieferplanung]])
     case e @ EntityModified(personId, entity: Lieferplanung, _) => send(personId, e.asInstanceOf[DBEvent[Lieferplanung]])
     case e @ EntityDeleted(userId, entity: Lieferplanung) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
+    case e @ DataEvent(userId, entity: LieferplanungCreated) => send(userId, e.asInstanceOf[DBEvent[LieferplanungCreated]])
 
     case e @ EntityCreated(personId, entity: Bestellung) => send(personId, e.asInstanceOf[DBEvent[Bestellung]])
     case e @ EntityModified(personId, entity: Bestellung, _) => send(personId, e.asInstanceOf[DBEvent[Bestellung]])

@@ -46,6 +46,7 @@ import ch.openolitor.buchhaltung.BuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.core.domain.EntityStore
 import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.stammdaten.repositories._
 
 object DataImportService {
   case class ImportData(clearDatabaseBeforeImport: Boolean, document: InputStream)

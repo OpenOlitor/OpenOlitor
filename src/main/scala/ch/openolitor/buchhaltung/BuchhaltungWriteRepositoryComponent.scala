@@ -23,6 +23,7 @@
 package ch.openolitor.buchhaltung
 
 import akka.actor.ActorSystem
+import ch.openolitor.core._
 
 trait BuchhaltungWriteRepositoryComponent {
   val buchhaltungWriteRepository: BuchhaltungWriteRepository
@@ -31,5 +32,5 @@ trait BuchhaltungWriteRepositoryComponent {
 trait DefaultBuchhaltungWriteRepositoryComponent extends BuchhaltungWriteRepositoryComponent {
   val system: ActorSystem
 
-  override val buchhaltungWriteRepository: BuchhaltungWriteRepository = new BuchhaltungWriteRepositoryImpl(system)
+  override val buchhaltungWriteRepository: BuchhaltungWriteRepository = new DefaultActorSystemReference(system) with BuchhaltungWriteRepositoryImpl with AkkaEventStream
 }

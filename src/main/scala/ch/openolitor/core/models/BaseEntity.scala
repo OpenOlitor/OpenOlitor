@@ -44,11 +44,15 @@ trait BaseEntity[T <: BaseId] extends Product with JSONSerializable {
   val modifikator: PersonId
 }
 
-sealed trait DBEvent[E <: BaseEntity[_ <: BaseId]] extends Product {
+sealed trait DBEvent[E <: Product] extends Product {
   val originator: PersonId
   val entity: E
 }
+sealed trait CRUDEvent[E <: BaseEntity[_ <: BaseId]] extends DBEvent[E] {
+}
 //events raised by this aggregateroot
-case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends DBEvent[E]
-case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E, orig: E) extends DBEvent[E]
-case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends DBEvent[E]
+case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends CRUDEvent[E]
+case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E, orig: E) extends CRUDEvent[E]
+case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends CRUDEvent[E]
+
+case class DataEvent[E <: Product](originator: PersonId, entity: E) extends DBEvent[E]
