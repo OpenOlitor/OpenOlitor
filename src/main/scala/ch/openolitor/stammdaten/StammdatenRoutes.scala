@@ -70,6 +70,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with Defaults
     with AuslieferungLieferscheinReportService
     with KundenBriefReportService
+    with DepotBriefReportService
     with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
@@ -289,6 +290,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getDepots)) ~
         post(create[DepotModify, DepotId](DepotId.apply _))
     } ~
+      path("depots" / "berichte" / "depotbrief") {
+        implicit val personId = subject.personId
+        generateReport[DepotId](None, generateDepotBriefReports(VorlageDepotbrief) _)(DepotId.apply)
+      } ~
       path("depots" / depotIdPath) { id =>
         get(detail(stammdatenReadRepository.getDepotDetail(id))) ~
           (put | post)(update[DepotModify, DepotId](id)) ~

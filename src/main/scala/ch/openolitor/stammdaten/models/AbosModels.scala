@@ -34,7 +34,7 @@ import ch.openolitor.kundenportal.models.BelongsToKunde
 
 case class AboId(id: Long) extends BaseId
 
-sealed trait Abo extends BaseEntity[AboId] with BelongsToKunde {
+trait IAbo extends BaseEntity[AboId] with BelongsToKunde {
   val id: AboId
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
@@ -52,11 +52,13 @@ sealed trait Abo extends BaseEntity[AboId] with BelongsToKunde {
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
   val anzahlLieferungen: TreeMap[String, Int]
+}
 
-  val erstelldat: DateTime
-  val ersteller: PersonId
-  val modifidat: DateTime
-  val modifikator: PersonId
+sealed trait Abo extends IAbo {
+}
+
+sealed trait AboReport extends IAbo {
+  val kundeReport: KundeReport
 }
 
 sealed trait AboDetail extends JSONSerializable {
@@ -114,6 +116,34 @@ case class DepotlieferungAbo(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Abo
+
+case class DepotlieferungAboReport(
+  id: AboId,
+  kundeId: KundeId,
+  kunde: String,
+  kundeReport: KundeReport,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
+  abotypId: AbotypId,
+  abotypName: String,
+  depotId: DepotId,
+  depotName: String,
+  start: DateTime,
+  ende: Option[DateTime],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends AboReport with JSONSerializable
 
 case class DepotlieferungAboDetail(
   id: AboId,

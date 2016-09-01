@@ -255,6 +255,30 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(depotMapping(depot)).single
   }
 
+  protected def getDepotDetailReportQuery(id: DepotId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(depotMapping as depot)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(depotlieferungAbo.depotId, depot.id)
+        .leftJoin(kundeMapping as kunde).on(depotlieferungAbo.kundeId, kunde.id)
+        .where.eq(depot.id, parameter(id))
+    }
+      .one(depotMapping(depot))
+      .toManies(
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => kundeMapping.opt(kunde)(rs)
+      )
+      .map((depot, abos, kunden) => {
+        val abosReport = abos.map { abo =>
+          kunden.filter(_.id == abo.kundeId).headOption map { kunde =>
+            val kundeReport = copyTo[Kunde, KundeReport](kunde)
+            copyTo[DepotlieferungAbo, DepotlieferungAboReport](abo, "kundeReport" -> kundeReport)
+          }
+        }.flatten
+        copyTo[Depot, DepotDetailReport](depot, "projekt" -> projekt, "abos" -> abosReport)
+      }).single
+  }
+
   protected def getDepotlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
