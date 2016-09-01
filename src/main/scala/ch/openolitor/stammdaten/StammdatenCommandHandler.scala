@@ -36,21 +36,31 @@ import ch.openolitor.core.Macros._
 import com.fasterxml.jackson.databind.JsonSerializable
 import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
+import org.joda.time.DateTime
+import java.util.UUID
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class BestellungAnProduzentenVersenden(originator: PersonId, id: BestellungId) extends UserCommand
-  case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char]) extends UserCommand
+  case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char], einladung: Option[EinladungId]) extends UserCommand
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
   case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
   case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
+  case class LoginDeaktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
+  case class LoginAktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
+  case class EinladungSendenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
+  case class BestellungenAlsAbgerechnetMarkierenCommand(originator: PersonId, datum: DateTime, ids: Seq[BestellungId]) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
-  case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char]) extends PersistentEvent with JSONSerializable
+  case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char], einladungId: Option[EinladungId]) extends PersistentEvent with JSONSerializable
+  case class LoginDeaktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
+  case class LoginAktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
+  case class EinladungGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
+  case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -135,14 +145,43 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
+    case BestellungenAlsAbgerechnetMarkierenCommand(personId, datum, ids: Seq[BestellungId]) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        val (events, failures) = ids map { id =>
+          stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
+            bestellung.status match {
+              case Abgeschlossen =>
+                Success(BestellungAlsAbgerechnetMarkierenEvent(meta, datum, id))
+              case _ =>
+                Failure(new InvalidStateException(s"Eine Bestellung kann nur im Status 'Abgeschlossen' als abgerechnet markiert werden. Nr. $id"))
+            }
+          } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
+        } partition (_.isSuccess)
+
+        if (events.isEmpty) {
+          Failure(new InvalidStateException(s"Keine der Bestellung konnte abgearbeitet werden"))
+        } else {
+          Success(events map (_.get))
+        }
+      }
+
     case CreateAnzahlLieferungenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
       createAboRechnungen(idFactory, meta, rechnungCreate)
 
     case CreateBisGuthabenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
       createAboRechnungen(idFactory, meta, rechnungCreate)
 
-    case PasswortWechselCommand(originator, personId, pwd) => idFactory => meta =>
-      Success(Seq(PasswortGewechseltEvent(meta, personId, pwd)))
+    case PasswortWechselCommand(originator, personId, pwd, einladungId) => idFactory => meta =>
+      Success(Seq(PasswortGewechseltEvent(meta, personId, pwd, einladungId)))
+
+    case LoginDeaktivierenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
+      Success(Seq(LoginDeaktiviertEvent(meta, kundeId, personId)))
+
+    case LoginAktivierenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
+      Success(Seq(LoginAktiviertEvent(meta, kundeId, personId)))
+
+    case EinladungSendenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
+      sendEinladung(idFactory, meta, kundeId, personId)
 
     /*
        * Insert command handling
@@ -207,6 +246,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[PendenzCreate, PendenzId](idFactory, meta, entity, PendenzId.apply)
     case e @ InsertEntityCommand(personId, entity: VertriebModify) => idFactory => meta =>
       handleEntityInsert[VertriebModify, VertriebId](idFactory, meta, entity, VertriebId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProjektVorlageCreate) => idFactory => meta =>
+      handleEntityInsert[ProjektVorlageCreate, ProjektVorlageId](idFactory, meta, entity, ProjektVorlageId.apply)
     case e @ InsertEntityCommand(personId, entity: KundeModify) => idFactory => meta =>
       if (entity.ansprechpersonen.isEmpty) {
         Failure(new InvalidStateException(s"Zum Erstellen eines Kunden muss mindestens ein Ansprechpartner angegeben werden"))
@@ -338,6 +379,30 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         Failure(new InvalidStateException(s"Keine der Rechnungen konnte erstellt werden"))
       } else {
         Success(events map (_.get))
+      }
+    }
+  }
+
+  def sendEinladung(idFactory: IdFactory, meta: EventMetadata, kundeId: KundeId, personId: PersonId) = {
+    DB readOnly { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        person.email map { email =>
+          val id = EinladungId(idFactory(classOf[EinladungId]))
+
+          val einladung = EinladungCreate(
+            id,
+            personId,
+            UUID.randomUUID.toString,
+            DateTime.now.plusDays(3),
+            None
+          )
+
+          Success(Seq(EinladungGesendetEvent(meta, einladung)))
+        } getOrElse {
+          Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
+        }
+      } getOrElse {
+        Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
       }
     }
   }

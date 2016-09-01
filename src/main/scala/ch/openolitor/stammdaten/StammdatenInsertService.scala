@@ -106,6 +106,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createLieferplanung(meta, id, lieferplanungCreateData)
     case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungCreate) =>
       createBestellungen(meta, id, bestellungCreateData)
+    case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
+      createProjektVorlage(meta, id, vorlage)
     case e =>
   }
 
@@ -667,6 +669,19 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
         }
       }
+    }
+  }
+
+  def createProjektVorlage(meta: EventMetadata, id: ProjektVorlageId, create: ProjektVorlageCreate)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      val vorlage = copyTo[ProjektVorlageCreate, ProjektVorlage](create, "id" -> id,
+        "fileStoreId" -> None,
+        "erstelldat" -> meta.timestamp,
+        "ersteller" -> meta.originator,
+        "modifidat" -> meta.timestamp,
+        "modifikator" -> meta.originator)
+
+      stammdatenWriteRepository.insertEntity[ProjektVorlage, ProjektVorlageId](vorlage)
     }
   }
 }

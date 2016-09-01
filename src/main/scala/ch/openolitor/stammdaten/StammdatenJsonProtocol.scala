@@ -135,6 +135,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val bestellpositionIdFormat = baseIdFormat(BestellpositionId)
   implicit val customKundentypIdFormat = baseIdFormat(CustomKundentypId.apply)
   implicit val abwesenheitIdFormat = baseIdFormat(AbwesenheitId.apply)
+  implicit val projektVorlageIdFormat = baseIdFormat(ProjektVorlageId.apply)
   implicit val kundentypIdFormat = new RootJsonFormat[KundentypId] {
     def write(obj: KundentypId): JsValue =
       JsString(obj.id)
@@ -171,6 +172,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   }
   implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
   implicit val korbIdFormat = baseIdFormat(KorbId.apply)
+  implicit val einladungIdFormat = baseIdFormat(EinladungId.apply)
 
   implicit val lieferzeitpunktFormat = new RootJsonFormat[Lieferzeitpunkt] {
     def write(obj: Lieferzeitpunkt): JsValue =
@@ -435,8 +437,8 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   }
   implicit val enhancedProjektReportFormat = enhancedProjektReportFormatDef(autoProductFormat[ProjektReport])
 
-  def enhancedKundeReportFormatDef(defaultFormat: JsonFormat[KundeReport]): RootJsonFormat[KundeReport] = new RootJsonFormat[KundeReport] {
-    def write(obj: KundeReport): JsValue = {
+  def enhancedKundeReportFormatDef[K <: IKundeReport](defaultFormat: JsonFormat[K]): RootJsonFormat[K] = new RootJsonFormat[K] {
+    def write(obj: K): JsValue = {
       JsObject(defaultFormat.write(obj)
         .asJsObject.fields +
         (
@@ -449,13 +451,14 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         ))
     }
 
-    def read(json: JsValue): KundeReport = defaultFormat.read(json)
+    def read(json: JsValue): K = defaultFormat.read(json)
   }
   implicit val enhancedKundeReportFormat: RootJsonFormat[KundeReport] = enhancedKundeReportFormatDef(autoProductFormat[KundeReport])
+  implicit val enhancedKundeDetailReportFormat: RootJsonFormat[KundeDetailReport] = enhancedKundeReportFormatDef(autoProductFormat[KundeDetailReport])
   implicit val korbReportFormat = autoProductFormat[KorbReport]
 
-  def enhancedDepotReportFormatDef(defaultFormat: JsonFormat[DepotReport]): RootJsonFormat[DepotReport] = new RootJsonFormat[DepotReport] {
-    def write(obj: DepotReport): JsValue = {
+  def enhancedDepotReportFormatDef[D <: IDepotReport](defaultFormat: JsonFormat[D]): RootJsonFormat[D] = new RootJsonFormat[D] {
+    def write(obj: D): JsValue = {
       JsObject(defaultFormat.write(obj)
         .asJsObject.fields +
         (
@@ -465,9 +468,12 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         ))
     }
 
-    def read(json: JsValue): DepotReport = defaultFormat.read(json)
+    def read(json: JsValue): D = defaultFormat.read(json)
   }
-  implicit val enhancedDepotReportFormat = enhancedDepotReportFormatDef(autoProductFormat[DepotReport])
+
+  implicit val depotlieferungAboReportFormat = autoProductFormat[DepotlieferungAboReport]
+  implicit val enhancedDepotReportFormat: RootJsonFormat[DepotReport] = enhancedDepotReportFormatDef(autoProductFormat[DepotReport])
+  implicit val enhancedDepotDetailReportFormat: RootJsonFormat[DepotDetailReport] = enhancedDepotReportFormatDef(autoProductFormat[DepotDetailReport])
 
   implicit val depotAuslieferungReportFormat = autoProductFormat[DepotAuslieferungReport]
   implicit val tourAuslieferungReportFormat = autoProductFormat[TourAuslieferungReport]
@@ -491,5 +497,4 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
     }
   }
-
 }

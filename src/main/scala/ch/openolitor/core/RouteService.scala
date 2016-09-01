@@ -65,13 +65,17 @@ import com.typesafe.scalalogging.LazyLogging
 import spray.routing.RequestContext
 import java.io.InputStream
 import ch.openolitor.core.security._
-import ch.openolitor.stammdaten.models.AdministratorZugang
+import ch.openolitor.stammdaten.models.{ AdministratorZugang, KundenZugang }
 import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.util.InputStreamUtil._
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 import ch.openolitor.util.ZipBuilder
+import ch.openolitor.kundenportal.KundenportalRoutes
+import ch.openolitor.kundenportal.DefaultKundenportalRoutes
+import ch.openolitor.stammdaten.models.ProjektVorlageId
+import spray.can.server.Response
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -89,6 +93,7 @@ trait RouteServiceComponent extends ActorReferences {
 
   val stammdatenRouteService: StammdatenRoutes
   val buchhaltungRouteService: BuchhaltungRoutes
+  val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
   val loginRouteService: LoginRouteService
 }
@@ -96,6 +101,7 @@ trait RouteServiceComponent extends ActorReferences {
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
+  override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
 }
@@ -143,6 +149,9 @@ trait RouteServiceActor
             stammdatenRouteService.stammdatenRoute ~
               buchhaltungRouteService.buchhaltungRoute ~
               fileStoreRoute
+          } ~
+          authorize(hasRole(KundenZugang)) {
+            kundenportalRouteService.kundenportalRoute
           }
       } ~
 
@@ -267,8 +276,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   protected def download(fileType: FileType, id: String) = {
+    tryDownload(fileType, id)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
+  }
+
+  protected def tryDownload(fileType: FileType, id: String)(errorFunction: FileStoreError => RequestContext => Unit) = {
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
-      case Left(e) => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found.")
+      case Left(e) => errorFunction(e)
       case Right(file) =>
         val name = if (file.metaData.name.isEmpty) id else file.metaData.name
         respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
@@ -376,7 +389,15 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     uploadOpt("vorlage") { formData => file =>
       //use custom or default template whether content was delivered or not
       (for {
-        vorlage <- loadVorlage(file)
+        vorlageId <- Try(formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("projektVorlageId") =>
+            Some(ProjektVorlageId(entity.asString.toLong))
+        }.getOrElse(None))
+        datenExtrakt <- Try(formData.fields.collectFirst {
+          case b @ BodyPart(entity, headers) if b.name == Some("datenExtrakt") =>
+            entity.asString.toBoolean
+        }.getOrElse(false))
+        vorlage <- loadVorlage(datenExtrakt, file, vorlageId)
         pdfGenerieren <- Try(formData.fields.collectFirst {
           case b @ BodyPart(entity, headers) if b.name == Some("pdfGenerieren") =>
             entity.asString.toBoolean
@@ -404,6 +425,10 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
             complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
           case Right(result) =>
             result.result match {
+              case ReportDataResult(id, json) =>
+                respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", s"${id}.json")))) {
+                  complete(json)
+                }
               case SingleReportResult(_, _, Left(ReportError(_, error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
               case SingleReportResult(_, _, Right(DocumentReportResult(_, result, name))) => streamOdt(name, result)
               case SingleReportResult(_, _, Right(PdfReportResult(_, result, name))) => streamPdf(name, result)
@@ -435,10 +460,13 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  private def loadVorlage(file: Option[(InputStream, String)]): Try[BerichtsVorlage] = {
-    file map {
-      case (is, name) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
-    } getOrElse Success(StandardBerichtsVorlage)
+  private def loadVorlage(datenExtrakt: Boolean, file: Option[(InputStream, String)], vorlageId: Option[ProjektVorlageId]): Try[BerichtsVorlage] = {
+    (datenExtrakt, file, vorlageId) match {
+      case (true, _, _) => Success(DatenExtrakt)
+      case (false, Some((is, name)), _) => is.toByteArray.map(result => EinzelBerichtsVorlage(result))
+      case (false, None, Some(vorlageId)) => Success(ProjektBerichtsVorlage(vorlageId))
+      case _ => Success(StandardBerichtsVorlage)
+    }
   }
 }
 

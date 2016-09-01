@@ -112,6 +112,11 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourModifyPersiter = persister[TourModify]("tour-modify")
   implicit val tourIdPersister = persister[TourId]("tour-id")
 
+  implicit val vorlageCreatePersister = persister[ProjektVorlageCreate]("projekt-vorlage-create")
+  implicit val vorlageModifyPersister = persister[ProjektVorlageModify]("projekt-vorlage-modify")
+  implicit val vorlageUploadPersister = persister[ProjektVorlageUpload]("projekt-vorlage-upload")
+  implicit val vorlageIdPersister = persister[ProjektVorlageId]("projekt-vorlage-id")
+
   val projektModifyPersister = persister[ProjektModify]("projekt-modify")
   implicit val projektModifyV2Persister = persister[ProjektModify, V2]("projekt-modify", from[V1]
     .to[V2](_.update('sprache ! set[Locale](Locale.GERMAN))))
@@ -121,11 +126,18 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
   implicit val bestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
   implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent]("passwort-gewechselt")
+  implicit val loginDeaktiviertEventPersister = persister[LoginDeaktiviertEvent]("login-deaktiviert")
+  implicit val loginAktiviertEventPersister = persister[LoginAktiviertEvent]("login-aktiviert")
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
 
   implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
+  implicit val bestellungAlsAbgerechnetMarkierenEventPersister = persister[BestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event")
+
+  implicit val einladungIdPersister = persister[EinladungId]("einladung-id")
+  implicit val einladungCreatePersister = persister[EinladungCreate]("einladung-create")
+  implicit val einladungGesendetEventPersister = persister[EinladungGesendetEvent]("einladung-gesendet")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -190,12 +202,22 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     korbCreatePersister,
     tourAuslieferungModifyPersister,
     auslieferungIdPersister,
+    vorlageCreatePersister,
+    vorlageModifyPersister,
+    vorlageUploadPersister,
+    vorlageIdPersister,
+    einladungIdPersister,
+    einladungCreatePersister,
 
     //event persisters
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
     bestellungVersendenEventPersister,
     passwortGewechseltEventPersister,
-    auslieferungAlsAusgeliefertMarkierenEventPersister
+    loginDeaktiviertEventPersister,
+    loginAktiviertEventPersister,
+    auslieferungAlsAusgeliefertMarkierenEventPersister,
+    bestellungAlsAbgerechnetMarkierenEventPersister,
+    einladungGesendetEventPersister
   )
 }

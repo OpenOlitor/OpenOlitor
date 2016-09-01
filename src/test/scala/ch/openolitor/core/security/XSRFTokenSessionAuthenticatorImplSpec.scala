@@ -32,6 +32,7 @@ import spray.http.{ DateTime => SprayDateTime, _ }
 import org.specs2.time.NoTimeConversions
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.DateTime
+import ch.openolitor.stammdaten.models.KundeId
 
 class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeConversions {
   import AuthCookies._
@@ -42,7 +43,8 @@ class XSRFTokenSessionAuthenticatorImplSpec extends Specification with NoTimeCon
   "Authenticate" should {
     val token = "asdasd"
     val personId = PersonId(123)
-    val subject = Subject(token, personId, None)
+    val kundeId = KundeId(321)
+    val subject = Subject(token, personId, kundeId, None)
 
     "Succeed without time limitation" in {
       val provider = new MockXSRFTokenSessionAuthenticatorProvider(None)

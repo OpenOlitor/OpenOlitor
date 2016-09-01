@@ -40,6 +40,33 @@ sealed trait VertriebskanalDetail extends Vertriebskanal with JSONSerializable {
 
 case class DepotId(id: Long) extends BaseId
 
+trait IDepot extends BaseEntity[DepotId] {
+  val id: DepotId
+  val name: String
+  val kurzzeichen: String
+  val apName: Option[String]
+  val apVorname: Option[String]
+  val apTelefon: Option[String]
+  val apEmail: Option[String]
+  val vName: Option[String]
+  val vVorname: Option[String]
+  val vTelefon: Option[String]
+  val vEmail: Option[String]
+  val strasse: Option[String]
+  val hausNummer: Option[String]
+  val plz: String
+  val ort: String
+  val aktiv: Boolean
+  val oeffnungszeiten: Option[String]
+  val farbCode: Option[String]
+  val iban: Option[String]
+  val bank: Option[String]
+  val beschreibung: Option[String]
+  val anzahlAbonnentenMax: Option[Int]
+  //Zusatzinformationen
+  val anzahlAbonnenten: Int
+}
+
 case class Depot(
   id: DepotId,
   name: String,
@@ -70,39 +97,9 @@ case class Depot(
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends BaseEntity[DepotId] with Vertriebskanal
+) extends IDepot with Vertriebskanal
 
-case class DepotReport(
-    id: DepotId,
-    name: String,
-    kurzzeichen: String,
-    apName: Option[String],
-    apVorname: Option[String],
-    apTelefon: Option[String],
-    apEmail: Option[String],
-    vName: Option[String],
-    vVorname: Option[String],
-    vTelefon: Option[String],
-    vEmail: Option[String],
-    strasse: Option[String],
-    hausNummer: Option[String],
-    plz: String,
-    ort: String,
-    aktiv: Boolean,
-    oeffnungszeiten: Option[String],
-    farbCode: Option[String],
-    iban: Option[String], //maybe use dedicated type
-    bank: Option[String],
-    beschreibung: Option[String],
-    anzahlAbonnentenMax: Option[Int],
-    //Zusatzinformationen
-    anzahlAbonnenten: Int,
-    //modification flags
-    erstelldat: DateTime,
-    ersteller: PersonId,
-    modifidat: DateTime,
-    modifikator: PersonId
-) extends BaseEntity[DepotId] {
+trait IDepotReport extends IDepot {
   lazy val strasseUndNummer = strasse.map(_ + hausNummer.map(" " + _).getOrElse(""))
   lazy val plzOrt = plz + " " + ort
 
@@ -112,6 +109,72 @@ case class DepotReport(
     Some(plzOrt)
   ).flatten.padTo(6, "")
 }
+
+case class DepotReport(
+  id: DepotId,
+  name: String,
+  kurzzeichen: String,
+  apName: Option[String],
+  apVorname: Option[String],
+  apTelefon: Option[String],
+  apEmail: Option[String],
+  vName: Option[String],
+  vVorname: Option[String],
+  vTelefon: Option[String],
+  vEmail: Option[String],
+  strasse: Option[String],
+  hausNummer: Option[String],
+  plz: String,
+  ort: String,
+  aktiv: Boolean,
+  oeffnungszeiten: Option[String],
+  farbCode: Option[String],
+  iban: Option[String], //maybe use dedicated type
+  bank: Option[String],
+  beschreibung: Option[String],
+  anzahlAbonnentenMax: Option[Int],
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[DepotId] with IDepotReport with JSONSerializable
+
+case class DepotDetailReport(
+  id: DepotId,
+  name: String,
+  kurzzeichen: String,
+  apName: Option[String],
+  apVorname: Option[String],
+  apTelefon: Option[String],
+  apEmail: Option[String],
+  vName: Option[String],
+  vVorname: Option[String],
+  vTelefon: Option[String],
+  vEmail: Option[String],
+  strasse: Option[String],
+  hausNummer: Option[String],
+  plz: String,
+  ort: String,
+  aktiv: Boolean,
+  oeffnungszeiten: Option[String],
+  farbCode: Option[String],
+  iban: Option[String], //maybe use dedicated type
+  bank: Option[String],
+  beschreibung: Option[String],
+  anzahlAbonnentenMax: Option[Int],
+  //Zusatzinformationen
+  anzahlAbonnenten: Int,
+  abos: Seq[DepotlieferungAboReport],
+  projekt: ProjektReport,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[DepotId] with IDepotReport with JSONSerializable
 
 object Depot {
   def unapply(d: Depot) = {
