@@ -66,6 +66,7 @@ trait StammdatenReadRepository {
 
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]]
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
+  def getDepotDetailReport(id: DepotId, projekt: ProjektReport)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotDetailReport]]
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abo]]
   def getAboDetail(id: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AboDetail]]
@@ -247,6 +248,10 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
 
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]] = {
     getDepotDetailQuery(id).future
+  }
+
+  def getDepotDetailReport(id: DepotId, projekt: ProjektReport)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotDetailReport]] = {
+    getDepotDetailReportQuery(id, projekt).future
   }
 
   def getDepotlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[DepotlieferungAbo]] = {

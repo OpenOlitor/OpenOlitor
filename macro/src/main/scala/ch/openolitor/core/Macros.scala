@@ -35,8 +35,8 @@ object Macros {
   ): c.Expr[S] = {
     import c.universe._
 
-    val fromTree = reify(from.splice).tree
-    val tree = reify(dest.splice).tree
+    val fromTree = from.tree
+    val tree = dest.tree
     val copy = dest.actualType.member(TermName("copy"))
 
     val params = copy match {
@@ -85,7 +85,7 @@ object Macros {
   ): c.Expr[D] = {
     import c.universe._
 
-    val sourceTree = reify(source.splice).tree
+    val sourceTree = source.tree
 
     val companioned = weakTypeOf[D].typeSymbol
     val companionObject = companioned.companion
@@ -121,8 +121,8 @@ object Macros {
         }.getOrElse {
           c.abort(c.enclosingPosition, s"No eligible param found $p!")
         }
-      case p if source.actualType.decl(p.name).isTerm => Select(sourceTree, p.name)
-      case p => c.abort(c.enclosingPosition, s"No eligible param found $p!")
+      case p if source.actualType.member(p.name).isTerm => Select(sourceTree, p.name)
+      case p => c.abort(c.enclosingPosition, s"No eligible param found $p in ${source.actualType}!")
     }
 
     c.Expr[D] { q"$companionObject(..$applyParams)" }
