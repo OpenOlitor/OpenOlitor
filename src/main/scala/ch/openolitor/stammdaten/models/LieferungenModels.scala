@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import java.util.UUID
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus
 
@@ -80,6 +81,8 @@ case class LieferplanungCreate(
 ) extends JSONSerializable
 
 case class LieferungId(id: Long) extends BaseId
+
+case class LieferplanungCreated(id: LieferplanungId) extends Product with JSONSerializable
 
 case class Lieferung(
   id: LieferungId,
@@ -216,6 +219,33 @@ case class Bestellung(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[BestellungId]
+
+case class BestellungDetail(
+  id: BestellungId,
+  produzentId: ProduzentId,
+  produzentKurzzeichen: String,
+  lieferplanungId: LieferplanungId,
+  status: LieferungStatus,
+  datum: DateTime,
+  datumAbrechnung: Option[DateTime],
+  preisTotal: BigDecimal,
+  steuerSatz: Option[BigDecimal],
+  steuer: BigDecimal,
+  totalSteuer: BigDecimal,
+  datumVersendet: Option[DateTime],
+  positionen: Seq[Bestellposition],
+  produzent: Produzent,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[BestellungId]
+
+case class BestellungAusgeliefert(
+  datum: DateTime,
+  ids: Seq[BestellungId]
+) extends JSONSerializable
 
 case class BestellungModify(
   produzentId: ProduzentId,

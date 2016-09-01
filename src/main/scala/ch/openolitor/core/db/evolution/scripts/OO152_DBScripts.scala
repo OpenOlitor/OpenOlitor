@@ -22,24 +22,33 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts ++
-      OO297_DBScripts.scripts ++
-      OO311_DBScripts.scripts ++
-      OO314_DBScripts.scripts ++
-      OO325_DBScripts.scripts ++
-      OO326_DBScripts.scripts ++
-      OO328_DBScripts.scripts ++
-      OO327_DBScripts.scripts ++
-      OO254_DBScripts.scripts ++
-      OO152_DBScripts.scripts ++
-      OO330_DBScripts.scripts ++
-      OO337_DBScripts.scripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+
+object OO152_DBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Create table Einladung")
+
+      sql"""create table ${einladungMapping.table} (
+        id BIGINT not null,
+        person_id BIGINT not null,
+        uid varchar(36) not null,
+        expires datetime not null,
+        datum_versendet datetime,
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts)
 }

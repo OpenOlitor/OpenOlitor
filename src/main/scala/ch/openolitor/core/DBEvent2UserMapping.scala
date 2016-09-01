@@ -23,9 +23,10 @@
 package ch.openolitor.core
 
 import akka.actor._
+import spray.json._
 import ch.openolitor.core.models._
 import ch.openolitor.core.ws._
-import spray.json._
+import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
@@ -35,7 +36,7 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 object DBEvent2UserMapping extends DefaultJsonProtocol {
   def props(): Props = Props(classOf[DBEvent2UserMapping])
 
-  implicit def dbEventCreateWriter[E <: BaseEntity[_ <: BaseId]](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
+  implicit def dbEventCreateWriter[E <: Product](implicit writer: JsonWriter[E]) = new RootJsonWriter[DBEvent[E]] {
     def write(obj: DBEvent[E]): JsValue =
       JsObject(
         "type" -> JsString(obj.productPrefix),
@@ -87,9 +88,13 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityCreated(personId, entity: Abwesenheit) => send(personId, e.asInstanceOf[DBEvent[Abwesenheit]])
     case e @ EntityDeleted(personId, entity: Abwesenheit) => send(personId, e.asInstanceOf[DBEvent[Abwesenheit]])
 
-    //    case e @ EntityModified(personId, entity: Person) => send(personId, e.asInstanceOf[DBEvent[Person]])
+    case e @ EntityModified(personId, entity: Person, _) =>
+      val personDetail = copyTo[Person, PersonDetail](e.asInstanceOf[DBEvent[Person]].entity)
+      send(personId, EntityModified[PersonDetail](personId, personDetail, personDetail).asInstanceOf[DBEvent[PersonDetail]])
     case e @ EntityCreated(personId, entity: Person) => send(personId, e.asInstanceOf[DBEvent[Person]])
-    case e @ EntityDeleted(personId, entity: Person) => send(personId, e.asInstanceOf[DBEvent[Person]])
+    case e @ EntityDeleted(personId, entity: Person) =>
+      val personDetail = copyTo[Person, PersonDetail](e.asInstanceOf[DBEvent[Person]].entity)
+      send(personId, EntityDeleted[PersonDetail](personId, personDetail).asInstanceOf[DBEvent[PersonDetail]])
 
     case e @ EntityModified(personId, entity: Kunde, _) => send(personId, e.asInstanceOf[DBEvent[Kunde]])
     case e @ EntityCreated(personId, entity: Kunde) => send(personId, e.asInstanceOf[DBEvent[Kunde]])
@@ -117,8 +122,10 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityCreated(personId, entity: Lieferplanung) => send(personId, e.asInstanceOf[DBEvent[Lieferplanung]])
     case e @ EntityModified(personId, entity: Lieferplanung, _) => send(personId, e.asInstanceOf[DBEvent[Lieferplanung]])
     case e @ EntityDeleted(userId, entity: Lieferplanung) => send(userId, e.asInstanceOf[DBEvent[Lieferplanung]])
+    case e @ DataEvent(userId, entity: LieferplanungCreated) => send(userId, e.asInstanceOf[DBEvent[LieferplanungCreated]])
 
     case e @ EntityCreated(personId, entity: Bestellung) => send(personId, e.asInstanceOf[DBEvent[Bestellung]])
+    case e @ EntityModified(personId, entity: Bestellung, _) => send(personId, e.asInstanceOf[DBEvent[Bestellung]])
 
     case e @ EntityCreated(personId, entity: Depotlieferung) => send(personId, e.asInstanceOf[DBEvent[Depotlieferung]])
     case e @ EntityModified(personId, entity: Depotlieferung, _) => send(personId, e.asInstanceOf[DBEvent[Depotlieferung]])
@@ -131,8 +138,6 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityCreated(personId, entity: Postlieferung) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
     case e @ EntityModified(personId, entity: Postlieferung, _) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
     case e @ EntityDeleted(personId, entity: Postlieferung) => send(personId, e.asInstanceOf[DBEvent[Postlieferung]])
-
-    case e @ EntityModified(personId, entity: TourAuslieferung, _) => send(personId, e.asInstanceOf[DBEvent[TourAuslieferung]])
 
     case e @ EntityCreated(personId, entity: Produkt) => send(personId, e.asInstanceOf[DBEvent[Produkt]])
     case e @ EntityModified(personId, entity: Produkt, _) => send(personId, e.asInstanceOf[DBEvent[Produkt]])
@@ -158,6 +163,10 @@ class DBEvent2UserMapping extends Actor
 
     case e @ EntityModified(userId, entity: ZahlungsEingang, _) => send(userId, e.asInstanceOf[DBEvent[ZahlungsEingang]])
     case e @ EntityDeleted(userId, entity: ZahlungsEingang) => send(userId, e.asInstanceOf[DBEvent[ZahlungsEingang]])
+
+    case e @ EntityCreated(userId, entity: ProjektVorlage) => send(userId, e.asInstanceOf[DBEvent[ProjektVorlage]])
+    case e @ EntityModified(userId, entity: ProjektVorlage, _) => send(userId, e.asInstanceOf[DBEvent[ProjektVorlage]])
+    case e @ EntityDeleted(userId, entity: ProjektVorlage) => send(userId, e.asInstanceOf[DBEvent[ProjektVorlage]])
 
     case e @ EntityModified(userId, entity: DepotAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[DepotAuslieferung]])
     case e @ EntityModified(userId, entity: TourAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[TourAuslieferung]])

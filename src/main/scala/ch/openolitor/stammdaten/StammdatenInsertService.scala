@@ -27,6 +27,7 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
 import java.util.UUID
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
@@ -105,6 +106,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createLieferplanung(meta, id, lieferplanungCreateData)
     case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungCreate) =>
       createBestellungen(meta, id, bestellungCreateData)
+    case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
+      createProjektVorlage(meta, id, vorlage)
     case e =>
   }
 
@@ -551,6 +554,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
       }
     }
+
+    logger.debug(s"Lieferplanung created, notify clients:$lieferplanungId")
+    stammdatenWriteRepository.publish(DataEvent(personId, LieferplanungCreated(lieferplanungId)))
   }
 
   def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession) = {
@@ -621,23 +627,27 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             //group by same produkt, menge and preis
             groupBy(x => (x.produktId, x.menge, x.preis)).map {
               case ((produktId, menge, preis), positionen) =>
-                val anzahl = positionen.map(lp => anzahlKoerbeZuLiefern.get(lp.lieferungId).getOrElse(0)).sum
-                positionen.headOption map { lieferposition =>
-                  Bestellposition(
-                    BestellpositionId(IdUtil.positiveRandomId),
-                    bestellung.id,
-                    lieferposition.produktId,
-                    lieferposition.produktBeschrieb,
-                    lieferposition.preisEinheit,
-                    lieferposition.einheit,
-                    menge.getOrElse(0),
-                    preis.map(_ * anzahl),
-                    anzahl,
-                    DateTime.now,
-                    personId,
-                    DateTime.now,
-                    personId
-                  )
+                positionen.map(lp => anzahlKoerbeZuLiefern.get(lp.lieferungId).getOrElse(0)).sum match {
+                  case 0 => //don't add position
+                    None
+                  case anzahl =>
+                    positionen.headOption map { lieferposition =>
+                      Bestellposition(
+                        BestellpositionId(IdUtil.positiveRandomId),
+                        bestellung.id,
+                        lieferposition.produktId,
+                        lieferposition.produktBeschrieb,
+                        lieferposition.preisEinheit,
+                        lieferposition.einheit,
+                        menge.getOrElse(0),
+                        preis.map(_ * anzahl),
+                        anzahl,
+                        DateTime.now,
+                        personId,
+                        DateTime.now,
+                        personId
+                      )
+                    }
                 }
             }.flatten
 
@@ -659,6 +669,19 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
         }
       }
+    }
+  }
+
+  def createProjektVorlage(meta: EventMetadata, id: ProjektVorlageId, create: ProjektVorlageCreate)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      val vorlage = copyTo[ProjektVorlageCreate, ProjektVorlage](create, "id" -> id,
+        "fileStoreId" -> None,
+        "erstelldat" -> meta.timestamp,
+        "ersteller" -> meta.originator,
+        "modifidat" -> meta.timestamp,
+        "modifikator" -> meta.originator)
+
+      stammdatenWriteRepository.insertEntity[ProjektVorlage, ProjektVorlageId](vorlage)
     }
   }
 }

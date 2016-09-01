@@ -26,11 +26,13 @@ import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.stammdaten.models.PersonSummary
 import ch.openolitor.stammdaten.models.Rolle
+import ch.openolitor.stammdaten.models.KundeId
 
 case class LoginForm(email: String, passwort: String) extends JSONSerializable
 case class SecondFactorLoginForm(token: String, code: String) extends JSONSerializable
 case class SecondFactor(token: String, code: String, personId: PersonId)
 case class ChangePasswordForm(alt: String, neu: String) extends JSONSerializable
+case class SetPasswordForm(token: String, neu: String) extends JSONSerializable
 
 sealed trait LoginStatus extends Product
 case object LoginOk extends LoginStatus
@@ -46,4 +48,4 @@ case class LoginResult(status: LoginStatus, token: String, person: PersonSummary
 
 case class RequestFailed(msg: String)
 
-case class Subject(token: String, personId: PersonId, rolle: Option[Rolle])
+case class Subject(token: String, personId: PersonId, kundeId: KundeId, rolle: Option[Rolle])

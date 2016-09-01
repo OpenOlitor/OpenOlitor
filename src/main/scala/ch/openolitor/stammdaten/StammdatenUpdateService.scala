@@ -30,6 +30,7 @@ import ch.openolitor.core.domain._
 import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
@@ -39,8 +40,6 @@ import shapeless.LabelledGeneric
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.UUID
 import ch.openolitor.core.models.PersonId
-import ch.openolitor.stammdaten.models.LieferungPlanungAdd
-import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import scala.concurrent.Future
 import scalikejdbc.DBSession
 import ch.openolitor.util.IdUtil
@@ -88,6 +87,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
       updateLieferpositionen(meta, id, lieferpositionen)
+    case EntityUpdatedEvent(meta, id: ProjektVorlageId, entity: ProjektVorlageModify) => updateProjektVorlage(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: ProjektVorlageId, entity: ProjektVorlageUpload) => updateProjektVorlageDocument(meta, id, entity)
     case e =>
   }
 
@@ -563,4 +564,23 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  def updateProjektVorlage(meta: EventMetadata, vorlageId: ProjektVorlageId, update: ProjektVorlageModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(projektVorlageMapping, vorlageId) map { vorlage =>
+        val copy = copyFrom(vorlage, update,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> personId)
+        stammdatenWriteRepository.updateEntity[ProjektVorlage, ProjektVorlageId](copy)
+      }
+    }
+  }
+
+  def updateProjektVorlageDocument(meta: EventMetadata, vorlageId: ProjektVorlageId, update: ProjektVorlageUpload)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(projektVorlageMapping, vorlageId) map { vorlage =>
+        val copy = vorlage.copy(fileStoreId = Some(update.fileStoreId), modifidat = meta.timestamp, modifikator = personId)
+        stammdatenWriteRepository.updateEntity[ProjektVorlage, ProjektVorlageId](copy)
+      }
+    }
+  }
 }

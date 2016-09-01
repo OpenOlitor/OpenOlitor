@@ -22,6 +22,7 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
+import org.joda.time.DateTime
 import spray.routing._
 import spray.http._
 import spray.http.MediaTypes._
@@ -48,7 +49,8 @@ import scala.concurrent.Future
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import stamina.Persister
-import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.stammdaten.reporting._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
 import akka.actor._
@@ -56,13 +58,11 @@ import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.stammdaten.models.AboGuthabenModify
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.core.security.RequestFailed
-import ch.openolitor.stammdaten.reporting.AuslieferungLieferscheinReportService
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -70,7 +70,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with StammdatenEventStoreSerializer
     with BuchhaltungJsonProtocol
     with Defaults
-    with AuslieferungLieferscheinReportService {
+    with AuslieferungLieferscheinReportService
+    with KundenBriefReportService
+    with DepotBriefReportService
+    with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
@@ -94,6 +97,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
+  implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
+  implicit val vorlageTypePath = enumPathMatcher(VorlageTyp.apply(_) match {
+    case UnknownFileType => None
+    case x => Some(x)
+  })
 
   import EntityStore._
 
@@ -104,7 +112,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
       aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~
         kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
-        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute
+        produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ lieferantenRoute ~ vorlagenRoute
     }
 
   def kundenRoute(implicit subject: Subject) =
@@ -116,6 +124,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(detail(stammdatenReadRepository.getKundeDetail(id))) ~
           (put | post)(update[KundeModify, KundeId](id)) ~
           delete(remove(id))
+      } ~
+      path("kunden" / "berichte" / "kundenbrief") {
+        implicit val personId = subject.personId
+        generateReport[KundeId](None, generateKundenBriefReports(VorlageKundenbrief) _)(KundeId.apply)
       } ~
       path("kunden" / kundeIdPath / "abos") { kundeId =>
         post {
@@ -180,6 +192,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "personen" / personIdPath) { (kundeId, personId) =>
         delete(remove(personId))
+      } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "logindeaktivieren") { (kundeId, personId) =>
+        (post)(disableLogin(kundeId, personId))
+      } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "loginaktivieren") { (kundeId, personId) =>
+        (post)(enableLogin(kundeId, personId))
+      } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "einladungsenden") { (kundeId, personId) =>
+        (post)(sendEinladung(kundeId, personId))
       } ~
       path("kunden" / kundeIdPath / "rechnungen") { (kundeId) =>
         get(list(buchhaltungReadRepository.getKundenRechnungen(kundeId)))
@@ -271,6 +292,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getDepots)) ~
         post(create[DepotModify, DepotId](DepotId.apply _))
     } ~
+      path("depots" / "berichte" / "depotbrief") {
+        implicit val personId = subject.personId
+        generateReport[DepotId](None, generateDepotBriefReports(VorlageDepotbrief) _)(DepotId.apply)
+      } ~
       path("depots" / depotIdPath) { id =>
         get(detail(stammdatenReadRepository.getDepotDetail(id))) ~
           (put | post)(update[DepotModify, DepotId](id)) ~
@@ -440,6 +465,34 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
+  def lieferantenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+    path("lieferanten" / "bestellungen") {
+      get(list(stammdatenReadRepository.getBestellungen))
+    } ~
+      path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") {
+        post {
+          requestInstance { request =>
+            logger.error(s"XXXXXX Bestellungen als abgerechnet markieren $request")
+            entity(as[BestellungAusgeliefert]) { entity =>
+              bestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
+            }
+          }
+        }
+      } ~
+      path("lieferanten" / "bestellungen" / bestellungIdPath) { (bestellungId) =>
+        get(list(stammdatenReadRepository.getBestellungDetail(bestellungId)))
+      }
+
+  def bestellungenAlsAbgerechnetMarkieren(datum: DateTime, ids: Seq[BestellungId])(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
+    logger.debug(s"Bestellungen als abgerechnet markieren:$datum:$ids")
+    onSuccess(entityStore ? StammdatenCommandHandler.BestellungenAlsAbgerechnetMarkierenCommand(subject.personId, datum, ids)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Bestellungen konnten nicht als abgerechnet markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
   def auslieferungenRoute(implicit subject: Subject) =
     path("depotauslieferungen") {
       get(list(stammdatenReadRepository.getDepotAuslieferungen))
@@ -551,6 +604,94 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       case _ =>
         complete("")
     }
+  }
+
+  def disableLogin(kundeId: KundeId, personId: PersonId)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.LoginDeaktivierenCommand(subject.personId, kundeId, personId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Das Login konnte nicht deaktiviert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def enableLogin(kundeId: KundeId, personId: PersonId)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.LoginAktivierenCommand(subject.personId, kundeId, personId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Das Login konnte nicht aktiviert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def sendEinladung(kundeId: KundeId, personId: PersonId)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.EinladungSendenCommand(subject.personId, kundeId, personId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Einladung konnte nicht gesendet werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def vorlagenRoute(implicit subject: Subject) =
+    path("vorlagetypen") {
+      get {
+        complete(VorlageTyp.AlleVorlageTypen.map(_.asInstanceOf[VorlageTyp]))
+      }
+    } ~
+      path("vorlagen") {
+        get(list(stammdatenReadRepository.getProjektVorlagen)) ~
+          post(create[ProjektVorlageCreate, ProjektVorlageId](ProjektVorlageId.apply _))
+      } ~
+      //Standardvorlagen
+      path("vorlagen" / vorlageTypePath / "dokument") { vorlageType =>
+        get(tryDownload(vorlageType, defaultFileTypeId(vorlageType)) { _ =>
+          //Return vorlage from resources
+          fileTypeResourceAsStream(vorlageType, None) match {
+            case Left(resource) =>
+              complete(StatusCodes.BadRequest, s"Vorlage konnte im folgenden Pfad nicht gefunden werden: $resource")
+            case Right(is) => {
+              val name = vorlageType.toString
+              respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name))))(stream(is))
+            }
+          }
+        }) ~
+          (put | post)(uploadStored(vorlageType, Some(defaultFileTypeId(vorlageType))) { (id, metadata) =>
+            complete("Standardvorlage gespeichert")
+          })
+      } ~
+      //Projektvorlagen
+      path("vorlagen" / projektVorlageIdPath) { id =>
+        (put | post)(update[ProjektVorlageModify, ProjektVorlageId](id)) ~
+          //TODO: remove from filestore as well
+          delete(remove(id))
+      } ~
+      path("vorlagen" / projektVorlageIdPath / "dokument") { id =>
+        get {
+          onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
+            case Some(vorlage) if vorlage.fileStoreId.isDefined =>
+              download(vorlage.typ, vorlage.fileStoreId.get)
+            case Some(vorlage) =>
+              complete(StatusCodes.BadRequest, s"Bei dieser Projekt-Vorlage ist kein Dokument hinterlegt: $id")
+            case None =>
+              complete(StatusCodes.NotFound, s"Projekt-Vorlage nicht gefunden: $id")
+          }
+        } ~
+          (put | post) {
+            onSuccess(stammdatenReadRepository.getProjektVorlage(id)) {
+              case Some(vorlage) =>
+                val fileStoreId = vorlage.fileStoreId.getOrElse(generateFileStoreId(vorlage))
+                uploadStored(vorlage.typ, Some(fileStoreId)) { (storeFileStoreId, metadata) =>
+                  updated(id, ProjektVorlageUpload(storeFileStoreId))
+                }
+              case None =>
+                complete(StatusCodes.NotFound, s"Projekt-Vorlage nicht gefunden: $id")
+            }
+          }
+      }
+
+  private def generateFileStoreId(vorlage: ProjektVorlage) = {
+    vorlage.name.replace(" ", "_") + ".odt"
   }
 }
 

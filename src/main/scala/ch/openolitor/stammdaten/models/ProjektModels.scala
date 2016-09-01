@@ -28,6 +28,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
 import java.util.Locale
+import ch.openolitor.core.JSONSerializable
 
 case class ProjektId(id: Long) extends BaseId
 
@@ -87,6 +88,16 @@ case class Projekt(
 ) extends BaseEntity[ProjektId] {
   lazy val geschaftsjahr = Geschaeftsjahr(geschaeftsjahrMonat, geschaeftsjahrTag)
 }
+
+case class ProjektPublik(
+  id: ProjektId,
+  bezeichnung: String,
+  strasse: Option[String],
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: Option[String],
+  ort: Option[String]
+) extends JSONSerializable
 
 case class ProjektReport(
     id: ProjektId,
