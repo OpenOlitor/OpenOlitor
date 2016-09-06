@@ -162,6 +162,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         updateKundendaten(meta, kundeId, update)
         updatePersonen(meta, kundeId, update)
         updatePendenzen(meta, kundeId, update)
+        updateAbos(meta, kundeId, update)
       }
     }
   }
@@ -203,6 +204,38 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
           }
         }
+    }
+  }
+
+  private def updateAbos(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
+    if (update.ansprechpersonen.length > 1) {
+      stammdatenWriteRepository.getKundeDetail(kundeId) map { kunde =>
+        kunde.abos.map { updateAbo =>
+          updateAbo match {
+            case dlAbo: DepotlieferungAbo =>
+              logger.debug(s"Update abo with data -> updateAbo")
+              val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
+                dlAbo,
+                "kunde" -> kunde.bezeichnung
+              )
+              stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+            case hlAbo: HeimlieferungAbo =>
+              logger.debug(s"Update abo with data -> updateAbo")
+              val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
+                hlAbo,
+                "kunde" -> kunde.bezeichnung
+              )
+              stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+            case plAbo: PostlieferungAbo =>
+              logger.debug(s"Update abo with data -> updateAbo")
+              val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
+                plAbo,
+                "kunde" -> kunde.bezeichnung
+              )
+              stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+          }
+        }
+      }
     }
   }
 
