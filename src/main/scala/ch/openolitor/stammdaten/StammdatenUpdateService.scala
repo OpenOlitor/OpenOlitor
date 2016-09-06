@@ -208,29 +208,34 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   private def updateAbos(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
-    if (update.ansprechpersonen.length > 1) {
+    val kundeBez = update.ansprechpersonen.size match {
+      case 1 => update.ansprechpersonen.head.fullName
+      case _ => update.bezeichnung.getOrElse("")
+    }
+
+    DB autoCommit { implicit session =>
       stammdatenWriteRepository.getKundeDetail(kundeId) map { kunde =>
         kunde.abos.map { updateAbo =>
           updateAbo match {
             case dlAbo: DepotlieferungAbo =>
-              logger.debug(s"Update abo with data -> updateAbo")
+              logger.debug(s"Update abo with data -> kundeBez")
               val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
                 dlAbo,
-                "kunde" -> kunde.bezeichnung
+                "kunde" -> kundeBez
               )
               stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
             case hlAbo: HeimlieferungAbo =>
-              logger.debug(s"Update abo with data -> updateAbo")
+              logger.debug(s"Update abo with data -> kundeBez")
               val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
                 hlAbo,
-                "kunde" -> kunde.bezeichnung
+                "kunde" -> kundeBez
               )
               stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
             case plAbo: PostlieferungAbo =>
-              logger.debug(s"Update abo with data -> updateAbo")
+              logger.debug(s"Update abo with data -> kundeBez")
               val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
                 plAbo,
-                "kunde" -> kunde.bezeichnung
+                "kunde" -> kundeBez
               )
               stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
           }
