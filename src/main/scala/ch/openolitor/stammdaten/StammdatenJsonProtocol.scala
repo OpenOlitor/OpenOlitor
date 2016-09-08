@@ -129,6 +129,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
   implicit val aboIdFormat = baseIdFormat(AboId)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId)
+  implicit val lieferungOnLieferplanungIdFormat = baseIdFormat(LieferungOnLieferplanungId)
   implicit val lieferplanungIdFormat = baseIdFormat(LieferplanungId)
   implicit val lieferpositionIdFormat = baseIdFormat(LieferpositionId)
   implicit val bestellungIdFormat = baseIdFormat(BestellungId)
