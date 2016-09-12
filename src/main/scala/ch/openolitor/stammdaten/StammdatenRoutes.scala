@@ -76,7 +76,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
-  implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
   implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
   implicit val kundeIdPath = long2BaseIdPathMatcher(KundeId.apply)
   implicit val pendenzIdPath = long2BaseIdPathMatcher(PendenzId.apply)
@@ -116,8 +115,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
 
   def kundenRoute(implicit subject: Subject) =
-    path("kunden") {
-      get(list(stammdatenReadRepository.getKunden)) ~
+    path("kunden" ~ exportFormatPath.?) { exportFormat =>
+      get(listTransformed(stammdatenReadRepository.getKunden, exportFormat)) ~
         post(create[KundeModify, KundeId](KundeId.apply _))
     } ~
       path("kunden" / kundeIdPath) { id =>

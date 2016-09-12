@@ -76,6 +76,14 @@ import ch.openolitor.kundenportal.KundenportalRoutes
 import ch.openolitor.kundenportal.DefaultKundenportalRoutes
 import ch.openolitor.stammdaten.models.ProjektVorlageId
 import spray.can.server.Response
+import ch.openolitor.core.ws.ExportFormat
+import ch.openolitor.core.ws.Json
+import ch.openolitor.core.ws.ODS
+import org.odftoolkit.simple._
+import org.odftoolkit.simple.table._
+import org.odftoolkit.simple.SpreadsheetDocument
+import java.io.ByteArrayOutputStream
+import java.util.Locale
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -195,9 +203,14 @@ trait RouteServiceActor
 trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport
     with FileStoreComponent
     with LazyLogging
+    with SprayDeserializers
     with ReportJsonProtocol {
 
   implicit val timeout = Timeout(5.seconds)
+
+  implicit val exportFormatPath = enumPathMatcher(ExportFormat.apply(_) match {
+    case x => Some(x)
+  })
 
   protected def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit
     um: FromRequestUnmarshaller[E],
@@ -247,6 +260,49 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     onSuccess(f) { result =>
       complete(result)
     }
+  }
+
+  //  def classAccessors[T: TypeTag]: List[MethodSymbol] = typeOf[T].members.collect {
+  //    case m: MethodSymbol if m.isCaseAccessor => m
+  //  }.toList
+
+  protected def listTransformed[R](f: => Future[R], exportFormat: Option[ExportFormat])(implicit tr: ToResponseMarshaller[R]) = {
+    //fetch list of something
+    onSuccess(f) { result =>
+      exportFormat match {
+        case Some(ODS) => {
+          //val exportCols = classAccessors[R]
+
+          val dataDocument = SpreadsheetDocument.newSpreadsheetDocument()
+          val table = dataDocument.appendSheet("OpenOlitor Export")
+
+          result match {
+            case list: List[Any] =>
+              list.zipWithIndex foreach {
+                case (entry, index) =>
+                  val row = table.getRowByIndex(index);
+
+                  //              row.getCellByIndex(0).setDoubleValue(entry.id.id)
+                  //              row.getCellByIndex(1).setDateTimeValue(entry.erstelldat.toCalendar(Locale.GERMAN))
+                  row.getCellByIndex(2).setStringValue(entry.toString)
+
+                //      		    exportCols map { colAttr =>
+                //      		      
+                //      		    }
+                case x: Any => table.getRowByIndex(0).getCellByIndex(0).setStringValue("Data of type" + x.toString() + " could not be transfered to ODS file.")
+              }
+          }
+
+          val outputStream = new ByteArrayOutputStream
+          dataDocument.save(outputStream)
+          streamOds("Daten_" + System.currentTimeMillis + ".ods", outputStream.toByteArray())
+        }
+        //matches "None" and "Some(Json)"
+        case None => complete(result)
+        case Some(x) => complete(result)
+      }
+    }
+
   }
 
   protected def detail[R](f: => Future[Option[R]])(implicit tr: ToResponseMarshaller[R]) = {
@@ -340,6 +396,14 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamOdt(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.text`) {
+        stream(result)
+      }
+    }
+  }
+
+  protected def streamOds(fileName: String, result: Array[Byte]) = {
+    respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
+      respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.spreadsheet`) {
         stream(result)
       }
     }
