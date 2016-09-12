@@ -6,9 +6,10 @@ Falls du Fragen hast oder dich mit uns über OpenOlitor austauschen möchtest: K
 
 # OpenOlitor
 Administrationsplattform für Vertragslandwirtschaftsprojekte
-Plateforme d'administration pour des projets d’agriculture contractuelle de proximité
 
-[Informations en français](#but-du-projet)
+Plateforme d'administration pour des projets d’agriculture contractuelle de proximité ⇨ [Informations en français](#but-du-projet)
+
+A software platform to help you administer your community supported agriculture–CSA, Solawi, RVL and other subscription based projects. ⇨ [Informations in English](http://openolitor.github.io/OpenOlitor/en.html)
 
 ## Ziel dieses Projektes
 Vertragslandwirtschaft gewinnt zunehmend an Popularität in der Schweizer Landwirtschaft. Sowohl Konsumentinnen und Konsumenten als auch Produzentinnen und Produzenten erkennen die Vorteile einer regionalen Vernetzung, schätzen den direkten Kontakt, die Qualität der Produkte sowie die Abnahmegarantien der RVL-Initativen. Gegenwärtig entstehen laufend neue Projekte unterschiedlichster Ausprägung.
@@ -87,4 +88,4 @@ Dieses Programm ist freie Software. Sie können es unter den Bedingungen der GNU
 
 Die Veröffentlichung dieses Programms erfolgt in der Hoffnung, daß es Ihnen von Nutzen sein wird, aber OHNE IRGENDEINE GARANTIE, sogar ohne die implizite Garantie der MARKTREIFE oder der VERWENDBARKEIT FÜR EINEN BESTIMMTEN ZWECK. Details finden Sie in der GNU General Public License.
 
-Sie sollten ein Exemplar der GNU General Public License zusammen mit diesem Programm erhalten haben. Falls nicht, siehe <http://www.gnu.org/licenses/>.
+Sie sollten ein Exemplar der GNU General Public License zusammen mit diesem Programm erhalten haben. Falls nicht, siehe [www.gnu.org/licenses/](http://www.gnu.org/licenses/).
