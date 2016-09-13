@@ -14,7 +14,6 @@ object ExportFormat extends LazyLogging {
   )
 
   def apply(value: String): ExportFormat = {
-    logger.debug(s"ExportFormat.apply:$value")
-    AlleExportFormat.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(Json)
+    AlleExportFormat.find(_.toString.toLowerCase == value.toLowerCase.replaceFirst(".", "")).getOrElse(Json)
   }
 }

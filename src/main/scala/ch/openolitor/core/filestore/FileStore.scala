@@ -47,13 +47,14 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.AmazonClientException
 import com.amazonaws.services.s3.S3ClientOptions
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.models.BaseStringId
 
 case class FileStoreError(message: String)
 case class FileStoreSuccess()
 
 case class FileStoreFileMetadata(name: String, fileType: FileType)
 case class FileStoreFile(metaData: FileStoreFileMetadata, file: InputStream)
-case class FileStoreFileId(id: String) extends JSONSerializable
+case class FileStoreFileId(id: String) extends BaseStringId
 case class FileStoreFileReference(fileType: FileType, id: FileStoreFileId) extends JSONSerializable
 
 trait FileStore {
