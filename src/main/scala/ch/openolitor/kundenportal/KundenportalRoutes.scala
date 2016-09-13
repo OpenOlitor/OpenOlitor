@@ -66,16 +66,20 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.kundenportal.repositories.KundenportalReadRepositoryComponent
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import ch.openolitor.kundenportal.repositories.DefaultKundenportalReadRepositoryComponent
 
 trait KundenportalRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
+    with StammdatenEventStoreSerializer
     with BuchhaltungJsonProtocol
     with StammdatenDBMappings {
   self: KundenportalReadRepositoryComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
+  implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
+  implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
 
   import EntityStore._
 
@@ -100,12 +104,25 @@ trait KundenportalRoutes extends HttpService with ActorReferences
       }
   }
 
-  def abosRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+  def abosRoute(implicit subject: Subject, filter: Option[FilterExpr]) = {
     path("abos") {
       get {
         list(kundenportalReadRepository.getAbos)
       }
-    }
+    } ~
+      path("abos" / aboIdPath / "abwesenheiten") { aboId =>
+        post {
+          requestInstance { request =>
+            entity(as[AbwesenheitModify]) { abw =>
+              created(request)(copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))
+            }
+          }
+        }
+      } ~
+      path("abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (aboId, abwesenheitId) =>
+        delete(remove(abwesenheitId))
+      }
+  }
 }
 
 class DefaultKundenportalRoutes(
