@@ -76,7 +76,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
-  implicit val abotypIdParamConverter = long2BaseIdConverter(AbotypId.apply)
   implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
   implicit val kundeIdPath = long2BaseIdPathMatcher(KundeId.apply)
   implicit val pendenzIdPath = long2BaseIdPathMatcher(PendenzId.apply)
@@ -116,8 +115,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
 
   def kundenRoute(implicit subject: Subject) =
-    path("kunden") {
-      get(list(stammdatenReadRepository.getKunden)) ~
+    path("kunden" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getKunden, exportFormat)) ~
         post(create[KundeModify, KundeId](KundeId.apply _))
     } ~
       path("kunden" / kundeIdPath) { id =>
@@ -303,10 +302,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def aboRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
-    path("abos") {
-      get {
-        list(stammdatenReadRepository.getAbos)
-      }
+    path("abos" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getAbos, exportFormat))
     } ~
       path("abos" / "aktionen" / "anzahllieferungenrechnungen") {
         post {
@@ -324,13 +321,13 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def pendenzenRoute(implicit subject: Subject) =
-    path("pendenzen") {
-      get(list(stammdatenReadRepository.getPendenzen))
+    path("pendenzen" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getPendenzen, exportFormat))
     }
 
   def produkteRoute(implicit subject: Subject) =
-    path("produkte") {
-      get(list(stammdatenReadRepository.getProdukte)) ~
+    path("produkte" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getProdukte, exportFormat)) ~
         post(create[ProduktModify, ProduktId](ProduktId.apply _))
     } ~
       path("produkte" / produktIdPath) { id =>
@@ -339,8 +336,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def produktekategorienRoute(implicit subject: Subject) =
-    path("produktekategorien") {
-      get(list(stammdatenReadRepository.getProduktekategorien)) ~
+    path("produktekategorien" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getProduktekategorien, exportFormat)) ~
         post(create[ProduktekategorieModify, ProduktekategorieId](ProduktekategorieId.apply _))
     } ~
       path("produktekategorien" / produktekategorieIdPath) { id =>
@@ -349,8 +346,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def produzentenRoute(implicit subject: Subject) =
-    path("produzenten") {
-      get(list(stammdatenReadRepository.getProduzenten)) ~
+    path("produzenten" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getProduzenten, exportFormat)) ~
         post(create[ProduzentModify, ProduzentId](ProduzentId.apply _))
     } ~
       path("produzenten" / produzentIdPath) { id =>
@@ -360,8 +357,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def tourenRoute(implicit subject: Subject) =
-    path("touren") {
-      get(list(stammdatenReadRepository.getTouren)) ~
+    path("touren" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getTouren, exportFormat)) ~
         post(create[TourCreate, TourId](TourId.apply _))
     } ~
       path("touren" / tourIdPath) { id =>
@@ -388,8 +385,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def lieferplanungRoute(implicit subject: Subject) =
-    path("lieferplanungen") {
-      get(list(stammdatenReadRepository.getLieferplanungen)) ~
+    path("lieferplanungen" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getLieferplanungen, exportFormat)) ~
         post(create[LieferplanungCreate, LieferplanungId](LieferplanungId.apply _))
     } ~
       path("lieferplanungen" / lieferplanungIdPath) { id =>
@@ -466,8 +463,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   }
 
   def lieferantenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
-    path("lieferanten" / "bestellungen") {
-      get(list(stammdatenReadRepository.getBestellungen))
+    path("lieferanten" / "bestellungen" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getBestellungen, exportFormat))
     } ~
       path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") {
         post {
@@ -494,21 +491,21 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   }
 
   def auslieferungenRoute(implicit subject: Subject) =
-    path("depotauslieferungen") {
-      get(list(stammdatenReadRepository.getDepotAuslieferungen))
+    path("depotauslieferungen" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getDepotAuslieferungen, exportFormat))
     } ~
       path("depotauslieferungen" / auslieferungIdPath) { auslieferungId =>
         get(detail(stammdatenReadRepository.getDepotAuslieferungDetail(auslieferungId)))
       } ~
-      path("tourauslieferungen") {
-        get(list(stammdatenReadRepository.getTourAuslieferungen))
+      path("tourauslieferungen" ~ exportFormatPath.?) { exportFormat =>
+        get(list(stammdatenReadRepository.getTourAuslieferungen, exportFormat))
       } ~
       path("tourauslieferungen" / auslieferungIdPath) { auslieferungId =>
         get(detail(stammdatenReadRepository.getTourAuslieferungDetail(auslieferungId))) ~
           (put | post)(update[TourAuslieferungModify, AuslieferungId](auslieferungId))
       } ~
-      path("postauslieferungen") {
-        get(list(stammdatenReadRepository.getPostAuslieferungen))
+      path("postauslieferungen" ~ exportFormatPath.?) { exportFormat =>
+        get(list(stammdatenReadRepository.getPostAuslieferungen, exportFormat))
       } ~
       path("postauslieferungen" / auslieferungIdPath) { auslieferungId =>
         get(detail(stammdatenReadRepository.getPostAuslieferungDetail(auslieferungId)))

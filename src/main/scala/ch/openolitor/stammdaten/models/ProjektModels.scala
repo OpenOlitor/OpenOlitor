@@ -150,7 +150,7 @@ case class ProjektModify(
   sprache: Locale
 ) extends JSONSerializable
 
-case class KundentypId(id: String)
+case class KundentypId(id: String) extends BaseStringId
 
 case class CustomKundentypId(id: Long) extends BaseId
 

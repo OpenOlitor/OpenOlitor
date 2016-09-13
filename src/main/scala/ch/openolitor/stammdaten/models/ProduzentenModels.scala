@@ -30,7 +30,7 @@ import ch.openolitor.core.scalax.Product23
 import ch.openolitor.core.scalax.Tuple23
 import ch.openolitor.core.JSONSerializable
 
-case class BaseProduzentId(id: String)
+case class BaseProduzentId(id: String) extends BaseStringId
 
 case class ProduzentId(id: Long) extends BaseId
 
