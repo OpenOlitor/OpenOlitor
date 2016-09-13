@@ -299,11 +299,11 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
                     case None =>
                     case ite: Iterable[Any] => ite map { item => writeToRow(row, item, cellIndex) }
                     case id: BaseId => row.getCellByIndex(cellIndex).setDoubleValue(id.id)
-                    case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue(row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id)
-                    case str: String => row.getCellByIndex(cellIndex).setStringValue(row.getCellByIndex(cellIndex).getStringValue + " " + str)
+                    case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id).trim)
+                    case str: String => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + str).trim)
                     case dat: org.joda.time.DateTime => row.getCellByIndex(cellIndex).setDateTimeValue(dat.toCalendar(Locale.GERMAN))
                     case nbr: Number => row.getCellByIndex(cellIndex).setDoubleValue(nbr.doubleValue())
-                    case x => row.getCellByIndex(cellIndex).setStringValue(row.getCellByIndex(cellIndex).getStringValue + " " + x.toString)
+                    case x => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + x.toString).trim)
                   }
                 }
 
