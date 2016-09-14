@@ -20,28 +20,17 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
-
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
+package ch.openolitor.kundenportal.repositories
 
 import akka.actor.ActorSystem
+import ch.openolitor.core._
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
+trait KundenportalWriteRepositoryComponent {
+  val kundenportalWriteRepository: KundenportalWriteRepository
 }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
+trait DefaultKundenportalWriteRepositoryComponent extends KundenportalWriteRepositoryComponent {
   val system: ActorSystem
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  override val kundenportalWriteRepository: KundenportalWriteRepository = new DefaultActorSystemReference(system) with KundenportalWriteRepositoryImpl with AkkaEventStream
 }

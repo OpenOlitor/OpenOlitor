@@ -25,51 +25,35 @@ package ch.openolitor.kundenportal.repositories
 import ch.openolitor.core.models._
 import scalikejdbc._
 import scalikejdbc.async._
+import scalikejdbc.async.FutureImplicits._
 import scala.concurrent.ExecutionContext
 import ch.openolitor.core.db._
 import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
 import ch.openolitor.core.repositories.BaseRepository._
+import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
+import akka.event.Logging
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.EventStream
+import ch.openolitor.core.Boot
+import akka.actor.ActorSystem
 import ch.openolitor.core.Macros._
-import ch.openolitor.util.DateTimeUtil._
-import org.joda.time.DateTime
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.AkkaEventStream
 import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.core.security.Subject
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 
-trait KundenportalReadRepository {
-  def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]]
-
-  def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[AboDetail]]
+/**
+ * Synchronous Repository
+ */
+trait KundenportalWriteRepository extends BaseWriteRepository with EventStream {
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
 }
 
-class KundenportalReadRepositoryImpl extends KundenportalReadRepository with LazyLogging with KundenportalRepositoryQueries {
-  def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]] = {
-    getProjektQuery.future map (_ map (projekt => copyTo[Projekt, ProjektPublik](projekt)))
-  }
-
-  def getDepotlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[DepotlieferungAboDetail]] = {
-    getDepotlieferungAbosQuery(filter).future
-  }
-
-  def getHeimlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[HeimlieferungAboDetail]] = {
-    getHeimlieferungAbosQuery(filter).future
-  }
-
-  def getPostlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[PostlieferungAboDetail]] = {
-    getPostlieferungAbosQuery(filter).future
-  }
-
-  def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[AboDetail]] = {
-    for {
-      d <- getDepotlieferungAbos
-      h <- getHeimlieferungAbos
-      p <- getPostlieferungAbos
-    } yield {
-      d ::: h ::: p
-    }
+trait KundenportalWriteRepositoryImpl extends KundenportalWriteRepository with LazyLogging with KundenportalRepositoryQueries {
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
+    getById(depotlieferungAboMapping, id) orElse getById(heimlieferungAboMapping, id) orElse getById(postlieferungAboMapping, id)
   }
 }
