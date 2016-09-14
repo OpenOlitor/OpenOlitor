@@ -139,6 +139,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val einladungIdPersister = persister[EinladungId]("einladung-id")
   implicit val einladungCreatePersister = persister[EinladungCreate]("einladung-create")
   implicit val einladungGesendetEventPersister = persister[EinladungGesendetEvent]("einladung-gesendet")
+  implicit val passwortResetGesendetEventPersister = persister[PasswortResetGesendetEvent]("passwort-reset-gesendet")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -220,6 +221,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     loginAktiviertEventPersister,
     auslieferungAlsAusgeliefertMarkierenEventPersister,
     bestellungAlsAbgerechnetMarkierenEventPersister,
-    einladungGesendetEventPersister
+    einladungGesendetEventPersister,
+    passwortResetGesendetEventPersister
   )
 }

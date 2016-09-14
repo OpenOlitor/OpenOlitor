@@ -33,6 +33,7 @@ case class SecondFactorLoginForm(token: String, code: String) extends JSONSerial
 case class SecondFactor(token: String, code: String, personId: PersonId)
 case class ChangePasswordForm(alt: String, neu: String) extends JSONSerializable
 case class SetPasswordForm(token: String, neu: String) extends JSONSerializable
+case class PasswordResetForm(email: String) extends JSONSerializable
 
 sealed trait LoginStatus extends Product
 case object LoginOk extends LoginStatus

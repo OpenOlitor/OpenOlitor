@@ -166,8 +166,15 @@ trait LoginRouteService extends HttpService with ActorReferences
     //hash password
     val hash = BCrypt.hashpw(newPassword, BCrypt.gensalt())
 
-    (entityStore ? PasswortWechselCommand(subjectPersonId, targetPersonId, hash.toCharArray, einladung)).map {
+    (entityStore ? PasswortWechselCommand(subjectPersonId, targetPersonId, hash.toCharArray, einladung)) map {
       case p: PasswortGewechseltEvent => true.right
+      case _ => RequestFailed(s"Das Passwort konnte nicht gewechselt werden").left
+    }
+  }
+
+  private def resetPassword(person: Person): EitherFuture[Boolean] = EitherT {
+    (entityStore ? PasswortResetCommand(person.id, person.id)) map {
+      case p: PasswortResetGesendetEvent => true.right
       case _ => RequestFailed(s"Das Passwort konnte nicht gewechselt werden").left
     }
   }
@@ -223,6 +230,20 @@ trait LoginRouteService extends HttpService with ActorReferences
           requestInstance { request =>
             entity(as[SetPasswordForm]) { form =>
               onSuccess(validateSetPasswordForm(form).run) {
+                case -\/(error) =>
+                  complete(StatusCodes.BadRequest, error.msg)
+                case \/-(result) =>
+                  complete("Ok")
+              }
+            }
+          }
+        }
+      } ~
+      path("passwordreset") {
+        post {
+          requestInstance { request =>
+            entity(as[PasswordResetForm]) { form =>
+              onSuccess(validatePasswordResetForm(form).run) {
                 case -\/(error) =>
                   complete(StatusCodes.BadRequest, error.msg)
                 case \/-(result) =>
@@ -378,6 +399,14 @@ trait LoginRouteService extends HttpService with ActorReferences
       person <- personById(einladung.personId)
       newPwdValid <- validateNewPassword(form.neu)
       result <- changePassword(person.id, person.id, form.neu, Some(einladung.id))
+    } yield result
+  }
+
+  private def validatePasswordResetForm(form: PasswordResetForm): EitherFuture[Boolean] = {
+    for {
+      person <- personByEmail(form.email)
+      personValid <- validatePerson(person)
+      result <- resetPassword(person)
     } yield result
   }
 
