@@ -39,7 +39,7 @@ import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.stammdaten.models.ProjektReport
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
-import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
 import scala.Left
 import scala.Right
 

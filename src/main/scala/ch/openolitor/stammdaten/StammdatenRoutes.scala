@@ -54,8 +54,8 @@ import ch.openolitor.stammdaten.reporting._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
 import akka.actor._
-import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
-import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
 import ch.openolitor.stammdaten.repositories._

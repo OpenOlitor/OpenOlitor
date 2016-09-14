@@ -27,6 +27,8 @@ import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import akka.actor.Props
 import akka.actor.ActorSystem
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 
 object BuchhaltungEntityStoreView {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)

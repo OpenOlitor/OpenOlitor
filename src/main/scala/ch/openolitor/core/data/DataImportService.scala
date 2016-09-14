@@ -42,8 +42,8 @@ import ch.openolitor.core.repositories.SqlBinder
 import java.io.InputStream
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.buchhaltung.BuchhaltungWriteRepositoryComponent
-import ch.openolitor.buchhaltung.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.core.domain.EntityStore
 import ch.openolitor.core.NoPublishEventStream
 import ch.openolitor.stammdaten.repositories._

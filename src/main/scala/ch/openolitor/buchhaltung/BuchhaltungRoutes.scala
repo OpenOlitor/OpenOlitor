@@ -61,6 +61,8 @@ import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComp
 import ch.openolitor.buchhaltung.reporting.RechnungReportService
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging

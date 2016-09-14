@@ -47,6 +47,8 @@ import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportTotalRecord
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import scala.concurrent.Future
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 
 object BuchhaltungCommandHandler {
   case class RechnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
