@@ -80,7 +80,19 @@ case class LieferplanungCreate(
   status: LieferungStatus
 ) extends JSONSerializable
 
-case class LieferungId(id: Long) extends BaseId
+trait BaseLieferungId extends BaseId
+
+case class LieferungId(id: Long) extends BaseLieferungId {
+  def getLieferungOnLieferplanungId(): LieferungOnLieferplanungId = {
+    LieferungOnLieferplanungId(id)
+  }
+}
+
+case class LieferungOnLieferplanungId(id: Long) extends BaseLieferungId {
+  def getLieferungId(): LieferungId = {
+    LieferungId(id)
+  }
+}
 
 case class LieferplanungCreated(id: LieferplanungId) extends Product with JSONSerializable
 
@@ -147,6 +159,7 @@ case class LieferungModify(
 ) extends JSONSerializable
 
 case class LieferungPlanungAdd(
+  id: LieferungId,
   lieferplanungId: LieferplanungId
 ) extends JSONSerializable
 
