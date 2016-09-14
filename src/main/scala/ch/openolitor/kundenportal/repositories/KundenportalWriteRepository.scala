@@ -20,28 +20,40 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.kundenportal.repositories
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-
+import ch.openolitor.core.models._
+import scalikejdbc._
+import scalikejdbc.async._
+import scalikejdbc.async.FutureImplicits._
+import scala.concurrent.ExecutionContext
+import ch.openolitor.core.db._
+import ch.openolitor.core.db.OOAsyncDB._
+import ch.openolitor.core.repositories._
+import ch.openolitor.core.repositories.BaseRepository._
+import ch.openolitor.core.repositories.BaseWriteRepository
+import scala.concurrent._
+import akka.event.Logging
+import ch.openolitor.stammdaten.models._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.EventStream
+import ch.openolitor.core.Boot
 import akka.actor.ActorSystem
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.AkkaEventStream
+import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
+/**
+ * Synchronous Repository
+ */
+trait KundenportalWriteRepository extends BaseWriteRepository with EventStream {
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
 }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
-
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+trait KundenportalWriteRepositoryImpl extends KundenportalWriteRepository with LazyLogging with KundenportalRepositoryQueries {
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
+    getById(depotlieferungAboMapping, id) orElse getById(heimlieferungAboMapping, id) orElse getById(postlieferungAboMapping, id)
+  }
 }

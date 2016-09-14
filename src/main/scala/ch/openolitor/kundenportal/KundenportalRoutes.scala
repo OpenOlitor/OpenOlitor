@@ -114,13 +114,23 @@ trait KundenportalRoutes extends HttpService with ActorReferences
         post {
           requestInstance { request =>
             entity(as[AbwesenheitModify]) { abw =>
-              created(request)(copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))
+              onSuccess(entityStore ? KundenportalCommandHandler.AbwesenheitErstellenCommand(subject.personId, subject, copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))) {
+                case UserCommandFailed =>
+                  complete(StatusCodes.BadRequest, s"Abwesenheit konnte nicht erstellt werden.")
+                case _ =>
+                  complete("")
+              }
             }
           }
         }
       } ~
       path("abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (aboId, abwesenheitId) =>
-        delete(remove(abwesenheitId))
+        onSuccess(entityStore ? KundenportalCommandHandler.AbwesenheitLoeschenCommand(subject.personId, subject, aboId, abwesenheitId)) {
+          case UserCommandFailed =>
+            complete(StatusCodes.BadRequest, s"Abwesenheit konnte nicht gelöscht werden.")
+          case _ =>
+            complete("")
+        }
       }
   }
 }

@@ -34,8 +34,8 @@ class BaseCommandHandler extends CommandHandler with LazyLogging {
     case UpdateEntityCommand(personId, id, entity) => idFactory => meta =>
       logger.debug(s"created => Update entity::$id, $entity")
       Success(Seq(EntityUpdatedEvent(meta, id, entity)))
-    case DeleteEntityCommand(personId, entity) => idFactory => meta =>
-      logger.debug(s"created => delete entity:$entity")
-      Success(Seq(EntityDeletedEvent(meta, entity)))
+    case DeleteEntityCommand(personId, id) => idFactory => meta =>
+      logger.debug(s"created => delete entity with id: $id")
+      Success(Seq(EntityDeletedEvent(meta, id)))
   }
 }
