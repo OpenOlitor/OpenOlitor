@@ -212,9 +212,13 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
   implicit val timeout = Timeout(5.seconds)
 
-  implicit val exportFormatPath = enumPathMatcher(ExportFormat.apply(_) match {
-    case x => Some(x)
-  })
+  implicit val exportFormatPath = enumPathMatcher(path =>
+    path.head match {
+      case '.' => ExportFormat.apply(path) match {
+        case x => Some(x)
+      }
+      case _ => None
+    })
 
   protected def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit
     um: FromRequestUnmarshaller[E],
