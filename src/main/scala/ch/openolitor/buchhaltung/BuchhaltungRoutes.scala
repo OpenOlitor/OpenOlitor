@@ -63,12 +63,14 @@ import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.reporting.MahnungReportService
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with BuchhaltungJsonProtocol
     with BuchhaltungEventStoreSerializer
     with RechnungReportService
+    with MahnungReportService
     with BuchhaltungDBMappings {
   self: BuchhaltungReadRepositoryComponent with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
@@ -116,6 +118,9 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       path("rechnungen" / "berichte" / "rechnungen") {
         (post)(rechnungBerichte())
       } ~
+      path("rechnungen" / "berichte" / "mahnungen") {
+        (post)(mahnungBerichte())
+      } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
           delete(remove(id)) ~
@@ -123,12 +128,12 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "download") { id =>
         (get)(
-          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { x =>
-            x.flatMap { rechnung =>
+          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { detail =>
+            detail flatMap { rechnung =>
               rechnung.fileStoreId.map { fileStoreId =>
                 download(GeneriertRechnung, fileStoreId)
               }
-            }.getOrElse(complete(StatusCodes.BadRequest))
+            } getOrElse (complete(StatusCodes.BadRequest))
           }
         )
       } ~
@@ -146,6 +151,9 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath / "berichte" / "rechnung") { id =>
         (post)(rechnungBericht(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "berichte" / "mahnung") { id =>
+        (post)(mahnungBericht(id))
       }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
@@ -254,8 +262,14 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     generateReport[RechnungId](None, generateRechnungReports _)(RechnungId.apply)
   }
 
-  def rechnungenHerunterladen()(implicit subject: Subject) = {
+  def mahnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
+    generateReport[RechnungId](Some(id), generateMahnungReports _)(RechnungId.apply)
+  }
 
+  def mahnungBerichte()(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
+    generateReport[RechnungId](None, generateMahnungReports _)(RechnungId.apply)
   }
 }
 

@@ -20,50 +20,48 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.reporting
 
-import akka.actor._
-import ch.openolitor.core.models._
-import ch.openolitor.core.ws._
-import spray.json._
+import ch.openolitor.buchhaltung.models.RechnungId
+import scalaz._
+import scalaz.Scalaz._
+import scala.concurrent.Future
 import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.db._
-import scalikejdbc._
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.Boot
-import ch.openolitor.core.repositories.SqlBinder
+import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import scala.concurrent.ExecutionContext.Implicits.global
-import ch.openolitor.core.EntityStoreReference
+import ch.openolitor.core.filestore._
+import ch.openolitor.core.ActorReferences
+import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.ReportSystem._
-import ch.openolitor.core.filestore.FileStoreFileId
-import ch.openolitor.core.filestore.GeneriertRechnung
-import ch.openolitor.core.filestore.GeneriertMahnung
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models.Projekt
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.models.ProjektReport
+import ch.openolitor.core.models.PersonId
+import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import scala.Left
+import scala.Right
 
-object BuchhaltungReportEventListener extends DefaultJsonProtocol {
-  def props(entityStore: ActorRef): Props = Props(classOf[DefaultBuchhaltungReportEventListener], entityStore)
-}
+trait MahnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol with RechnungReportData {
+  self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
-class DefaultBuchhaltungReportEventListener(override val entityStore: ActorRef) extends BuchhaltungReportEventListener
-
-/**
- * Listen on Report results to persist ids
- */
-abstract class BuchhaltungReportEventListener extends Actor with ActorLogging with BuchhaltungDBMappings with EntityStoreReference {
-  override def preStart() {
-    super.preStart()
-    context.system.eventStream.subscribe(self, classOf[SingleReportResult])
+  def generateMahnungReports(config: ReportConfig[RechnungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
+    generateReports[RechnungId, RechnungDetailReport](
+      config,
+      rechungenById,
+      VorlageRechnung,
+      None,
+      _.id,
+      GeneriertMahnung,
+      x => Some(x.id.id.toString),
+      name,
+      _.projekt.sprache
+    )
   }
 
-  override def postStop() {
-    context.system.eventStream.unsubscribe(self, classOf[SingleReportResult])
-    super.postStop()
-  }
-
-  val receive: Receive = {
-    case SingleReportResult(id: RechnungId, stats, Right(StoredPdfReportResult(_, fileType, fileStoreId))) if fileType == GeneriertRechnung =>
-      entityStore ! BuchhaltungCommandHandler.RechnungPDFStoredCommand(stats.originator, id, fileStoreId.id)
-    case SingleReportResult(id: RechnungId, stats, Right(StoredPdfReportResult(_, fileType, fileStoreId))) if fileType == GeneriertMahnung =>
-      entityStore ! BuchhaltungCommandHandler.MahnungPDFStoredCommand(stats.originator, id, fileStoreId.id)
-    case x =>
+  private def name(rechnung: RechnungDetailReport) = {
+    // die Anzahl der Mahnungen wird erst durch die Aktion "Mahnung verschickt" inkrementiert
+    s"rechnung_nr_${rechnung.id.id}_mahnung_${rechnung.anzahlMahnungen + 1}";
   }
 }
