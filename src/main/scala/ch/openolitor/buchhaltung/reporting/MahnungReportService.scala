@@ -50,7 +50,7 @@ trait MahnungReportService extends AsyncConnectionPoolContextAware with ReportSe
     generateReports[RechnungId, RechnungDetailReport](
       config,
       rechungenById,
-      VorlageRechnung,
+      VorlageMahnung,
       None,
       _.id,
       GeneriertMahnung,
