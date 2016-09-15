@@ -82,6 +82,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferungAbotypCreatePersister = persister[LieferungAbotypCreate]("lieferung-abotyp-create")
   implicit val lieferungenAbotypCreatePersister = persister[LieferungenAbotypCreate]("lieferungen-abotyp-create")
   implicit val lieferungIdPersister = persister[LieferungId]("lieferung-id")
+  implicit val lieferungOnLieferplanungIdPersister = persister[LieferungOnLieferplanungId]("lieferung-on-lieferplanung-id")
   implicit val lieferungModifyPersister = persister[LieferungModify]("lieferung-modify")
   implicit val lieferungPlanungAddPersister = persister[LieferungPlanungAdd]("lieferung-planungadd-modify")
   implicit val lieferungPlanungRemovePersister = persister[LieferungPlanungRemove]("lieferung-planungremove-modify")
@@ -138,6 +139,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val einladungIdPersister = persister[EinladungId]("einladung-id")
   implicit val einladungCreatePersister = persister[EinladungCreate]("einladung-create")
   implicit val einladungGesendetEventPersister = persister[EinladungGesendetEvent]("einladung-gesendet")
+  implicit val passwortResetGesendetEventPersister = persister[PasswortResetGesendetEvent]("passwort-reset-gesendet")
 
   val stammdatenPersisters = List(
     depotModifyPersister,
@@ -171,6 +173,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferungAbotypCreatePersister,
     lieferungenAbotypCreatePersister,
     lieferungIdPersister,
+    lieferungOnLieferplanungIdPersister,
     lieferungModifyPersister,
     lieferungPlanungAddPersister,
     lieferungPlanungRemovePersister,
@@ -218,6 +221,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     loginAktiviertEventPersister,
     auslieferungAlsAusgeliefertMarkierenEventPersister,
     bestellungAlsAbgerechnetMarkierenEventPersister,
-    einladungGesendetEventPersister
+    einladungGesendetEventPersister,
+    passwortResetGesendetEventPersister
   )
 }

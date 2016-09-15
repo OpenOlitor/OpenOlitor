@@ -25,6 +25,8 @@ package ch.openolitor.stammdaten
 import akka.persistence.PersistentView
 import akka.actor._
 import ch.openolitor.core._
+import ch.openolitor.core.Macros._
+import ch.openolitor.core._
 import ch.openolitor.core.models._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
@@ -72,6 +74,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     case EntityDeletedEvent(meta, id: VertriebId) => deleteVertrieb(meta, id)
     case EntityDeletedEvent(meta, id: LieferplanungId) => deleteLieferplanung(meta, id)
     case EntityDeletedEvent(meta, id: ProjektVorlageId) => deleteProjektVorlage(meta, id)
+    case EntityDeletedEvent(meta, id: LieferungOnLieferplanungId) => removeLieferungPlanung(meta, id)
     case e =>
   }
 
@@ -175,6 +178,25 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
           }
       }
     }
+  }
+
+  def removeLieferungPlanung(meta: EventMetadata, id: LieferungOnLieferplanungId)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.deleteLieferpositionen(id.getLieferungId())
+      stammdatenWriteRepository.getById(lieferungMapping, id.getLieferungId()) map { lieferung =>
+        //map all updatable fields
+        val copy = copyTo[Lieferung, Lieferung](
+          lieferung,
+          "lieferplanungId" -> None,
+          "status" -> Ungeplant,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> personId
+        )
+        logger.debug(s"Removed lieferung $id from lieferplanung: ${lieferung.lieferplanungId} => $copy")
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+      }
+    }
+
   }
 
   def deleteLieferung(meta: EventMetadata, id: LieferungId)(implicit personId: PersonId = meta.originator) = {

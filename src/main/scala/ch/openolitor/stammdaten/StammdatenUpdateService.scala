@@ -83,8 +83,6 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: Lieferung) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
-    case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungAdd) => addLieferungPlanung(meta, id, entity)
-    case EntityUpdatedEvent(meta, id: LieferungId, entity: LieferungPlanungRemove) => removeLieferungPlanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
       updateLieferpositionen(meta, id, lieferpositionen)
     case EntityUpdatedEvent(meta, id: ProjektVorlageId, entity: ProjektVorlageModify) => updateProjektVorlage(meta, id, entity)
@@ -162,6 +160,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         updateKundendaten(meta, kundeId, update)
         updatePersonen(meta, kundeId, update)
         updatePendenzen(meta, kundeId, update)
+        updateAbos(meta, kundeId, update)
       }
     }
   }
@@ -203,6 +202,43 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
           }
         }
+    }
+  }
+
+  private def updateAbos(meta: EventMetadata, kundeId: KundeId, update: KundeModify)(implicit session: DBSession, personId: PersonId = meta.originator) = {
+    val kundeBez = update.ansprechpersonen.size match {
+      case 1 => update.ansprechpersonen.head.fullName
+      case _ => update.bezeichnung.getOrElse("")
+    }
+
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getKundeDetail(kundeId) map { kunde =>
+        kunde.abos.map { updateAbo =>
+          updateAbo match {
+            case dlAbo: DepotlieferungAbo =>
+              logger.debug(s"Update abo with data -> kundeBez")
+              val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
+                dlAbo,
+                "kunde" -> kundeBez
+              )
+              stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+            case hlAbo: HeimlieferungAbo =>
+              logger.debug(s"Update abo with data -> kundeBez")
+              val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
+                hlAbo,
+                "kunde" -> kundeBez
+              )
+              stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+            case plAbo: PostlieferungAbo =>
+              logger.debug(s"Update abo with data -> kundeBez")
+              val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
+                plAbo,
+                "kunde" -> kundeBez
+              )
+              stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+          }
+        }
+      }
     }
   }
 
@@ -501,45 +537,6 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
       }
     }
-  }
-
-  def addLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(lieferplanungMapping, update.lieferplanungId) map { lieferplanung =>
-        stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-          val anzahlLieferungen = stammdatenWriteRepository.getLastGeplanteLieferung(lieferung.abotypId) match {
-            case Some(l) => l.anzahlLieferungen + 1
-            case None => 1
-          }
-          val lpId = Some(update.lieferplanungId)
-          //map lieferplanungId und Nr
-          val copy = copyFrom(lieferung, update,
-            "lieferplanungId" -> lpId,
-            "status" -> Offen,
-            "anzahlLieferungen" -> anzahlLieferungen,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> personId)
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-        }
-      }
-    }
-  }
-
-  def removeLieferungPlanung(meta: EventMetadata, id: LieferungId, update: LieferungPlanungRemove)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteLieferpositionen(id)
-      stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-        //map all updatable fields
-        val copy = copyFrom(lieferung, update,
-          "lieferplanungId" -> None,
-          "status" -> Ungeplant,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> personId)
-        logger.debug(s"Removed lieferung $id from lieferplanung: ${lieferung.lieferplanungId} => $copy")
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-      }
-    }
-
   }
 
   def updateLieferpositionen(meta: EventMetadata, lieferungId: LieferungId, positionen: LieferpositionenModify)(implicit personId: PersonId = meta.originator) = {

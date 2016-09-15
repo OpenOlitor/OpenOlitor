@@ -51,6 +51,7 @@ object StammdatenCommandHandler {
   case class LoginAktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class EinladungSendenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class BestellungenAlsAbgerechnetMarkierenCommand(originator: PersonId, datum: DateTime, ids: Seq[BestellungId]) extends UserCommand
+  case class PasswortResetCommand(originator: PersonId, personId: PersonId) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
@@ -61,6 +62,7 @@ object StammdatenCommandHandler {
   case class EinladungGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
   case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
+  case class PasswortResetGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -183,6 +185,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     case EinladungSendenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
       sendEinladung(idFactory, meta, kundeId, personId)
 
+    case PasswortResetCommand(originator, personId) => idFactory => meta =>
+      sendPasswortReset(idFactory, meta, personId)
+
     /*
        * Insert command handling
        */
@@ -198,6 +203,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[LieferungAbotypCreate, LieferungId](idFactory, meta, entity, LieferungId.apply)
     case e @ InsertEntityCommand(personId, entity: LieferplanungCreate) => idFactory => meta =>
       handleEntityInsert[LieferplanungCreate, LieferplanungId](idFactory, meta, entity, LieferplanungId.apply)
+    case e @ InsertEntityCommand(personId, entity: LieferungPlanungAdd) => idFactory => meta =>
+      handleEntityInsert[LieferungPlanungAdd, LieferungId](idFactory, meta, entity, LieferungId.apply)
     case e @ InsertEntityCommand(personId, entity: LieferpositionenModify) => idFactory => meta =>
       handleEntityInsert[LieferpositionenModify, LieferpositionId](idFactory, meta, entity, LieferpositionId.apply)
     case e @ InsertEntityCommand(personId, entity: PendenzModify) => idFactory => meta =>
@@ -398,6 +405,30 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           )
 
           Success(Seq(EinladungGesendetEvent(meta, einladung)))
+        } getOrElse {
+          Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
+        }
+      } getOrElse {
+        Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
+      }
+    }
+  }
+
+  def sendPasswortReset(idFactory: IdFactory, meta: EventMetadata, personId: PersonId) = {
+    DB readOnly { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        person.email map { email =>
+          val id = EinladungId(idFactory(classOf[EinladungId]))
+
+          val einladung = EinladungCreate(
+            id,
+            personId,
+            UUID.randomUUID.toString,
+            DateTime.now.plusMinutes(20),
+            None
+          )
+
+          Success(Seq(PasswortResetGesendetEvent(meta, einladung)))
         } getOrElse {
           Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
         }

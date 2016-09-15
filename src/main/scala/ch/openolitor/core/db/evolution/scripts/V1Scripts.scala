@@ -45,6 +45,8 @@ object V1Scripts {
       //drop all tables
       logger.debug(s"oo-system: cleanupDatabase - drop tables - stammdaten")
 
+      sql"ALTER DATABASE CHARACTER SET utf8 COLLATE = 'utf8_unicode_ci';".execute.apply()
+
       sql"drop table if exists ${vertriebMapping.table}".execute.apply()
       sql"drop table if exists ${postlieferungMapping.table}".execute.apply()
       sql"drop table if exists ${depotlieferungMapping.table}".execute.apply()

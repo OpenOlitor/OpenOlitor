@@ -33,6 +33,10 @@ trait BaseId extends AnyRef {
   val id: Long
 }
 
+trait BaseStringId extends AnyRef with JSONSerializable {
+  val id: String
+}
+
 case class PersonId(id: Long) extends BaseId
 
 trait BaseEntity[T <: BaseId] extends Product with JSONSerializable {

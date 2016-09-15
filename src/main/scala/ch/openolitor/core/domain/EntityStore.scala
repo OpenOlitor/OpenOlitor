@@ -109,7 +109,12 @@ trait EntityStore extends AggregateRoot
   type S = EntityStoreState
   override var state: EntityStoreState = EntityStoreState(0, 0, Map())
 
-  lazy val moduleCommandHandlers: List[CommandHandler] = List(stammdatenCommandHandler, buchhaltungCommandHandler, baseCommandHandler)
+  lazy val moduleCommandHandlers: List[CommandHandler] = List(
+    stammdatenCommandHandler,
+    buchhaltungCommandHandler,
+    kundenportalCommandHandler,
+    baseCommandHandler
+  )
 
   def newId(clOf: Class[_ <: BaseId]): Long = {
     val id: Long = state.dbSeeds.get(clOf).map { id =>

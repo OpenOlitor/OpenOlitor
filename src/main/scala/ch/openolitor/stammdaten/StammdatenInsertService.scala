@@ -104,6 +104,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createAbwesenheit(meta, id, abw)
     case EntityInsertedEvent(meta, id: LieferplanungId, lieferplanungCreateData: LieferplanungCreate) =>
       createLieferplanung(meta, id, lieferplanungCreateData)
+    case EntityInsertedEvent(meta, id: LieferungId, entity: LieferungPlanungAdd) =>
+      addLieferungToPlanung(meta, id, entity)
     case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungCreate) =>
       createBestellungen(meta, id, bestellungCreateData)
     case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
@@ -527,7 +529,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](insert) map { lieferplanung =>
         //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
         val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map { lieferung =>
-          //TODO use StammdatenUpdateSerivce.addLieferungPlanung
           logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
 
           val lpId = Some(lieferplanung.id)
@@ -598,6 +599,30 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       )
       copy
     } getOrElse (lieferung)
+  }
+
+  def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, data: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferplanungMapping, data.lieferplanungId) map { lieferplanung =>
+        stammdatenWriteRepository.getById(lieferungMapping, data.id) map { lieferung =>
+
+          val lpId = Some(data.lieferplanungId)
+
+          val updatedLieferung = lieferung.copy(
+            lieferplanungId = lpId,
+            status = Offen,
+            modifidat = meta.timestamp,
+            modifikator = personId
+          )
+
+          //create koerbe
+          val adjustedLieferung = createKoerbe(updatedLieferung)
+
+          //update Lieferung
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung)
+        }
+      }
+    }
   }
 
   def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungCreate)(implicit personId: PersonId = meta.originator) = {

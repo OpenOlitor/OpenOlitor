@@ -76,6 +76,18 @@ import ch.openolitor.kundenportal.KundenportalRoutes
 import ch.openolitor.kundenportal.DefaultKundenportalRoutes
 import ch.openolitor.stammdaten.models.ProjektVorlageId
 import spray.can.server.Response
+import ch.openolitor.core.ws.ExportFormat
+import ch.openolitor.core.ws.Json
+import ch.openolitor.core.ws.ODS
+import org.odftoolkit.simple._
+import org.odftoolkit.simple.table._
+import org.odftoolkit.simple.SpreadsheetDocument
+import java.io.ByteArrayOutputStream
+import java.util.Locale
+import org.odftoolkit.simple.style.StyleTypeDefinitions
+import scala.None
+import scala.collection.Iterable
+import collection.JavaConverters._
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -195,9 +207,14 @@ trait RouteServiceActor
 trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport
     with FileStoreComponent
     with LazyLogging
+    with SprayDeserializers
     with ReportJsonProtocol {
 
   implicit val timeout = Timeout(5.seconds)
+
+  implicit val exportFormatPath = enumPathMatcher(ExportFormat.apply(_) match {
+    case x => Some(x)
+  })
 
   protected def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit
     um: FromRequestUnmarshaller[E],
@@ -247,6 +264,74 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     onSuccess(f) { result =>
       complete(result)
     }
+  }
+
+  protected def list[R](f: => Future[R], exportFormat: Option[ExportFormat])(implicit tr: ToResponseMarshaller[R]) = {
+    //fetch list of something
+    onSuccess(f) { result =>
+      exportFormat match {
+        case Some(ODS) => {
+          val dataDocument = SpreadsheetDocument.newSpreadsheetDocument()
+          val sheet = dataDocument.getSheetByIndex(0)
+          sheet.setCellStyleInheritance(false)
+
+          result match {
+            case list: List[Product] =>
+              if (list.nonEmpty) {
+
+                val row = sheet.getRowByIndex(0);
+
+                def getCCParams(cc: Product) = cc.getClass.getDeclaredFields.map(_.getName) // all field names
+                  .zip(cc.productIterator.to).toMap // zipped with all values
+
+                getCCParams(list.head).zipWithIndex foreach {
+                  case ((fieldName, value), index) =>
+                    row.getCellByIndex(index).setStringValue(fieldName)
+                    val font = row.getCellByIndex(index).getFont
+                    font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
+                    font.setSize(10)
+                    row.getCellByIndex(index).setFont(font)
+                }
+
+                def writeToRow(row: Row, element: Any, cellIndex: Int): Unit = {
+                  element match {
+                    case some: Some[Any] => writeToRow(row, some.x, cellIndex)
+                    case None =>
+                    case ite: Iterable[Any] => ite map { item => writeToRow(row, item, cellIndex) }
+                    case id: BaseId => row.getCellByIndex(cellIndex).setDoubleValue(id.id)
+                    case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id).trim)
+                    case str: String => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + str).trim)
+                    case dat: org.joda.time.DateTime => row.getCellByIndex(cellIndex).setDateTimeValue(dat.toCalendar(Locale.GERMAN))
+                    case nbr: Number => row.getCellByIndex(cellIndex).setDoubleValue(nbr.doubleValue())
+                    case x => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + x.toString).trim)
+                  }
+                }
+
+                list.zipWithIndex foreach {
+                  case (entry, index) =>
+                    val row = sheet.getRowByIndex(index + 1);
+
+                    getCCParams(entry).zipWithIndex foreach {
+                      case ((fieldName, value), colIndex) =>
+                        writeToRow(row, value, colIndex)
+                    }
+                }
+              }
+            case x: Any => sheet.getRowByIndex(0).getCellByIndex(0).setStringValue("Data of type" + x.toString() + " could not be transfered to ODS file.")
+          }
+
+          sheet.getColumnList.asScala map { _.setUseOptimalWidth(true) }
+
+          val outputStream = new ByteArrayOutputStream
+          dataDocument.save(outputStream)
+          streamOds("Daten_" + System.currentTimeMillis + ".ods", outputStream.toByteArray())
+        }
+        //matches "None" and "Some(Json)"
+        case None => complete(result)
+        case Some(x) => complete(result)
+      }
+    }
+
   }
 
   protected def detail[R](f: => Future[Option[R]])(implicit tr: ToResponseMarshaller[R]) = {
@@ -340,6 +425,14 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamOdt(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.text`) {
+        stream(result)
+      }
+    }
+  }
+
+  protected def streamOds(fileName: String, result: Array[Byte]) = {
+    respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
+      respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.spreadsheet`) {
         stream(result)
       }
     }
