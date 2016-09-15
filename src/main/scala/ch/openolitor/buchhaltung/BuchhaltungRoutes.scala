@@ -93,7 +93,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungen, exportFormat)) ~
         post(create[RechnungCreate, RechnungId](RechnungId.apply _))
     } ~
-      path("rechnungen" / "aktionen" / "download") {
+      path("rechnungen" / "aktionen" / "downloadrechnungen") {
         post {
           requestInstance { request =>
             entity(as[RechnungenContainer]) { cont =>
@@ -101,6 +101,19 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
                 val fileStoreIds = rechnungen.map(_.fileStoreId.map(FileStoreFileId(_))).flatten
                 logger.debug(s"Download rechnungen with filestoreRefs:$fileStoreIds")
                 downloadAll("Rechnungen_" + System.currentTimeMillis + ".zip", GeneriertRechnung, fileStoreIds)
+              }
+            }
+          }
+        }
+      } ~
+      path("rechnungen" / "aktionen" / "downloadmahnungen") {
+        post {
+          requestInstance { request =>
+            entity(as[RechnungenContainer]) { cont =>
+              onSuccess(buchhaltungReadRepository.getByIds(rechnungMapping, cont.ids)) { rechnungen =>
+                val fileStoreIds = rechnungen.map(_.mahnungFileStoreIds.map(FileStoreFileId(_))).flatten
+                logger.debug(s"Download mahnungen with filestoreRefs:$fileStoreIds")
+                downloadAll("Mahnungen_" + System.currentTimeMillis + ".zip", GeneriertMahnung, fileStoreIds)
               }
             }
           }
@@ -126,13 +139,22 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
           delete(remove(id)) ~
           (put | post)(update[RechnungModify, RechnungId](id))
       } ~
-      path("rechnungen" / rechnungIdPath / "aktionen" / "download") { id =>
+      path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
         (get)(
           onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { detail =>
             detail flatMap { rechnung =>
-              rechnung.fileStoreId.map { fileStoreId =>
+              rechnung.fileStoreId map { fileStoreId =>
                 download(GeneriertRechnung, fileStoreId)
               }
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "download" / Segment) { (id, fileStoreId) =>
+        (get)(
+          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { detail =>
+            detail map { rechnung =>
+              download(GeneriertMahnung, fileStoreId)
             } getOrElse (complete(StatusCodes.BadRequest))
           }
         )

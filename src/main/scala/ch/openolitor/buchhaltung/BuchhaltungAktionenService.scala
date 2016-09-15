@@ -94,7 +94,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
   def mahnungPDFStored(meta: EventMetadata, id: RechnungId, fileStoreId: String)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(mahnungFileStoreIds = rechnung.mahnungFileStoreIds + fileStoreId))
+        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(mahnungFileStoreIds = (rechnung.mahnungFileStoreIds filterNot (_ == "")) + fileStoreId))
       }
     }
   }
