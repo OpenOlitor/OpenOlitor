@@ -15,14 +15,14 @@ object AbotypParser extends EntityParser {
   def parse(implicit loggingAdapter: LoggingAdapter) = {
     parseEntity[Abotyp, AbotypId]("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
       "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "guthaben_mindestbestand", "admin_prozente", "wird_geplant",
-      "kuendigungsfrist", "vertragslaufzeit", "anzahl_abonnenten", "letzte_lieferung", "waehrung") ++ modifyColumns) { id => indexes => row =>
+      "kuendigungsfrist", "vertragslaufzeit", "anzahl_abonnenten", "anzahl_abonnenten_aktiv", "letzte_lieferung", "waehrung") ++ modifyColumns) { id => indexes => row =>
       import DateTimeUtil._
 
       //match column indexes
       val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
         indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
         indexGuthabenMindestbestand, indexAdminProzente, indexWirdGeplant, indexKuendigungsfrist, indexVertrag,
-        indexAnzahlAbonnenten, indexLetzteLieferung, indexWaehrung) = indexes take (20)
+        indexAnzahlAbonnenten, indexAnzahlAbonnentenAktiv, indexLetzteLieferung, indexWaehrung) = indexes take (21)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       val fristeinheitPattern = """(\d+)(M|W)""".r
@@ -54,6 +54,7 @@ object AbotypParser extends EntityParser {
         wirdGeplant = row.value[Boolean](indexWirdGeplant),
         //Zusatzinformationen
         anzahlAbonnenten = row.value[Int](indexAnzahlAbonnenten),
+        anzahlAbonnentenAktiv = row.value[Int](indexAnzahlAbonnentenAktiv),
         letzteLieferung = row.value[Option[DateTime]](indexLetzteLieferung),
         waehrung = Waehrung(row.value[String](indexWaehrung)),
         //modification flags

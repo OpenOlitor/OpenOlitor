@@ -30,13 +30,15 @@ import ch.openolitor.core.models.PersonId
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.models.PersonId
 import java.util.Locale
+import ch.openolitor.core.scalax.Tuple23
 
 trait DBMappings extends BaseParameter
     with Parameters23
     with Parameters24
     with Parameters25
     with Parameters26
-    with Parameters27 {
+    with Parameters27
+    with Parameters28 {
   import TypeBinder._
 
   def baseIdTypeBinder[T <: BaseId](implicit f: Long => T): TypeBinder[T] = long.map(l => f(l))

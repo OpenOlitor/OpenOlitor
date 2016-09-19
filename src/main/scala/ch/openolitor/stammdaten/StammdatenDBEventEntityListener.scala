@@ -144,7 +144,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Depot, DepotId](abo.depotId, { depot =>
         log.debug(s"Add abonnent to depot:${depot.id}")
-        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1)
+        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = depot.anzahlAbonnentenAktiv + 1)
       })
     }
   }
@@ -153,7 +153,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Depot, DepotId](abo.depotId, { depot =>
         log.debug(s"Remove abonnent from depot:${depot.id}")
-        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten - 1)
+        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten - 1, anzahlAbonnentenAktiv = depot.anzahlAbonnentenAktiv - 1)
       })
     }
   }
@@ -162,11 +162,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Depot, DepotId](from, { depot =>
         log.debug(s"Remove abonnent from depot:${depot.id}")
-        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten - 1)
+        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten - 1, anzahlAbonnentenAktiv = depot.anzahlAbonnentenAktiv - 1)
       })
       modifyEntity[Depot, DepotId](to, { depot =>
         log.debug(s"Add abonnent to depot:${depot.id}")
-        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1)
+        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = depot.anzahlAbonnentenAktiv + 1)
       })
     }
   }
@@ -179,7 +179,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Tour, TourId](entity.tourId, { tour =>
         log.debug(s"Add abonnent to tour:${tour.id}")
-        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1)
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv + 1)
       })
     }
     insertOrUpdateTourlieferung(entity)
@@ -189,7 +189,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Tour, TourId](abo.tourId, { tour =>
         log.debug(s"Remove abonnent from tour:${tour.id}")
-        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1)
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv - 1)
       })
 
       stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](abo.id)
@@ -200,11 +200,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Tour, TourId](from, { tour =>
         log.debug(s"Remove abonnent from tour:${tour.id}")
-        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1)
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv - 1)
       })
       modifyEntity[Tour, TourId](to, { tour =>
         log.debug(s"Add abonnent to tour:${tour.id}")
-        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1)
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv + 1)
       })
     }
   }
@@ -213,27 +213,27 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Abotyp, AbotypId](abo.abotypId, { abotyp =>
         log.debug(s"Add abonnent to abotyp:${abotyp.id}")
-        abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten + 1)
+        abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = abotyp.anzahlAbonnentenAktiv + 1)
       })
       modifyEntity[Kunde, KundeId](abo.kundeId, { kunde =>
         log.debug(s"Add abonnent to kunde:${kunde.id}")
-        kunde.copy(anzahlAbos = kunde.anzahlAbos + 1)
+        kunde.copy(anzahlAbos = kunde.anzahlAbos + 1, anzahlAbosAktiv = kunde.anzahlAbosAktiv + 1)
       })
       modifyEntity[Vertrieb, VertriebId](abo.vertriebId, { vertrieb =>
         log.debug(s"Add abonnent to vertrieb:${vertrieb.id}")
-        vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1)
+        vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + 1)
       })
       modifyEntity[Depotlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + 1)
       })
       modifyEntity[Heimlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + 1)
       })
       modifyEntity[Postlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + 1)
       })
     }
   }
@@ -243,11 +243,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       if (from.vertriebId != to.vertriebId) {
         modifyEntity[Vertrieb, VertriebId](from.vertriebId, { vertrieb =>
           log.debug(s"Remove abonnent from vertrieb:${vertrieb.id}")
-          vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos - 1)
+          vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos - 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv - 1)
         })
         modifyEntity[Vertrieb, VertriebId](to.vertriebId, { vertrieb =>
           log.debug(s"Add abonnent to vertrieb:${vertrieb.id}")
-          vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1)
+          vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + 1)
         })
       }
     }
@@ -257,27 +257,27 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Abotyp, AbotypId](abo.abotypId, { abotyp =>
         log.debug(s"Remove abonnent from abotyp:${abotyp.id}")
-        abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten - 1)
+        abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten - 1, anzahlAbonnentenAktiv = abotyp.anzahlAbonnentenAktiv - 1)
       })
       modifyEntity[Kunde, KundeId](abo.kundeId, { kunde =>
         log.debug(s"Remove abonnent from kunde:${kunde.id}")
-        kunde.copy(anzahlAbos = kunde.anzahlAbos - 1)
+        kunde.copy(anzahlAbos = kunde.anzahlAbos - 1, anzahlAbosAktiv = kunde.anzahlAbosAktiv - 1)
       })
       modifyEntity[Vertrieb, VertriebId](abo.vertriebId, { vertrieb =>
         log.debug(s"Remove abonnent from vertrieb:${vertrieb.id}")
-        vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos - 1)
+        vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos - 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv - 1)
       })
       modifyEntity[Depotlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv - 1)
       })
       modifyEntity[Heimlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv - 1)
       })
       modifyEntity[Postlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv - 1)
       })
     }
   }

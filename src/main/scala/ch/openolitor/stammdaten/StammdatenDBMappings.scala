@@ -210,6 +210,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.adminProzente -> parameter(abotyp.adminProzente),
         column.wirdGeplant -> parameter(abotyp.wirdGeplant),
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(abotyp.anzahlAbonnentenAktiv),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
         column.waehrung -> parameter(abotyp.waehrung)
       )
@@ -266,6 +267,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.typen -> parameter(kunde.typen),
         column.bemerkungen -> parameter(kunde.bemerkungen),
         column.anzahlAbos -> parameter(kunde.anzahlAbos),
+        column.anzahlAbosAktiv -> parameter(kunde.anzahlAbosAktiv),
         column.anzahlPendenzen -> parameter(kunde.anzahlPendenzen),
         column.anzahlPersonen -> parameter(kunde.anzahlPersonen)
       )
@@ -466,7 +468,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(tour) ++ Seq(
         column.name -> parameter(tour.name),
         column.beschreibung -> parameter(tour.beschreibung),
-        column.anzahlAbonnenten -> parameter(tour.anzahlAbonnenten)
+        column.anzahlAbonnenten -> parameter(tour.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(tour.anzahlAbonnentenAktiv)
       )
     }
   }
@@ -504,6 +507,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.bank -> parameter(depot.bank),
         column.beschreibung -> parameter(depot.beschreibung),
         column.anzahlAbonnenten -> parameter(depot.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(depot.anzahlAbonnentenAktiv),
         column.anzahlAbonnentenMax -> parameter(depot.anzahlAbonnentenMax)
       )
     }
@@ -525,6 +529,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.liefertag -> parameter(vertrieb.liefertag),
         column.beschrieb -> parameter(vertrieb.beschrieb),
         column.anzahlAbos -> parameter(vertrieb.anzahlAbos),
+        column.anzahlAbosAktiv -> parameter(vertrieb.anzahlAbosAktiv),
         column.durchschnittspreis -> parameter(vertrieb.durchschnittspreis),
         column.anzahlLieferungen -> parameter(vertrieb.anzahlLieferungen)
       )
@@ -535,7 +540,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     override def updateParameters(lieferung: E) = {
       super.updateParameters(lieferung) ++ Seq(
         column.vertriebId -> parameter(lieferung.vertriebId),
-        column.anzahlAbos -> parameter(lieferung.anzahlAbos)
+        column.anzahlAbos -> parameter(lieferung.anzahlAbos),
+        column.anzahlAbosAktiv -> parameter(lieferung.anzahlAbosAktiv)
       )
     }
   }

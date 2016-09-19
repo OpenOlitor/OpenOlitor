@@ -14,12 +14,13 @@ object DepotParser extends EntityParser {
   def parse(implicit loggingAdapter: LoggingAdapter) = {
     parseEntity[Depot, DepotId]("id", Seq("name", "kurzzeichen", "ap_name", "ap_vorname", "ap_telefon", "ap_email", "v_name", "v_vorname",
       "v_telefon", "v_email", "strasse", "haus_nummer",
-      "plz", "ort", "aktiv", "oeffnungszeiten", "farb_code", "iban", "bank", "beschreibung", "max_abonnenten", "anzahl_abonnenten") ++ modifyColumns) { id => indexes => row =>
+      "plz", "ort", "aktiv", "oeffnungszeiten", "farb_code", "iban", "bank", "beschreibung", "max_abonnenten", "anzahl_abonnenten", "anzahl_abonnenten_aktiv") ++ modifyColumns) { id => indexes => row =>
       //match column indexes
       val Seq(indexName, indexKurzzeichen, indexApName, indexApVorname, indexApTelefon, indexApEmail,
         indexVName, indexVVorname, indexVTelefon, indexVEmail, indexStrasse, indexHausNummer, indexPLZ, indexOrt,
         indexAktiv, indexOeffnungszeiten, indexFarbCode, indexIBAN, indexBank, indexBeschreibung, indexMaxAbonnenten,
         indexAnzahlAbonnenten) = indexes take (22)
+      val indexAnzahlAbonnentenAktiv = indexes(22)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       Depot(
@@ -47,6 +48,7 @@ object DepotParser extends EntityParser {
         anzahlAbonnentenMax = row.value[Option[Int]](indexMaxAbonnenten),
         //Zusatzinformationen
         anzahlAbonnenten = row.value[Int](indexAnzahlAbonnenten),
+        anzahlAbonnentenAktiv = row.value[Int](indexAnzahlAbonnentenAktiv),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),

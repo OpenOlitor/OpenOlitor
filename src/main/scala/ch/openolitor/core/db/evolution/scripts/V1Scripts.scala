@@ -537,6 +537,7 @@ object V1Scripts {
         typen = Set(),
         //Zusatzinformationen
         anzahlAbos = 0,
+        anzahlAbosAktiv = 0,
         anzahlPendenzen = 0,
         anzahlPersonen = 1,
         //modification flags

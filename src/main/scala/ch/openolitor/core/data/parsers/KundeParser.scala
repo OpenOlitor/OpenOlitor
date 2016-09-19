@@ -20,16 +20,18 @@ object KundeParser extends EntityParser {
       val Seq(indexBezeichnung, indexStrasse, indexHausNummer, indexAdressZusatz, indexPlz, indexOrt, indexBemerkungen,
         indexAbweichendeLieferadresse, indexBezeichnungLieferung, indexStrasseLieferung, indexHausNummerLieferung,
         indexAdresseZusatzLieferung, indexPlzLieferung, indexOrtLieferung, indexZusatzinfoLieferung, indexKundentyp,
-        indexAnzahlAbos, indexAnzahlPendenzen, indexAnzahlPersonen) =
-        indexes take (19)
+        indexAnzahlAbos, indexAnzahlAbosAktiv, indexAnzahlPendenzen, indexAnzahlPersonen) = indexes take (20)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       val kundeId = KundeId(id)
       val personenByKundeId = personen filter (_.kundeId == kundeId)
+
       if (personenByKundeId.isEmpty) {
         throw ParseException(s"Kunde id $kundeId does not reference any person. At least one person is required")
       }
+
       val bez = row.value[Option[String]](indexBezeichnung) getOrElse (s"${personenByKundeId.head.vorname}  ${personenByKundeId.head.name}")
+
       Kunde(
         kundeId,
         bezeichnung = bez,
@@ -50,6 +52,7 @@ object KundeParser extends EntityParser {
         typen = (row.value[String](indexKundentyp).split(",") map (KundentypId)).toSet,
         //Zusatzinformationen
         anzahlAbos = row.value[Int](indexAnzahlAbos),
+        anzahlAbosAktiv = row.value[Int](indexAnzahlAbosAktiv),
         anzahlPendenzen = row.value[Int](indexAnzahlPendenzen),
         anzahlPersonen = row.value[Int](indexAnzahlPersonen),
         //modification flags
