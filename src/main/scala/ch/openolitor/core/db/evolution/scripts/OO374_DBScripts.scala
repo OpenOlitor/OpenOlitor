@@ -34,19 +34,19 @@ object OO374_DBScripts extends DefaultDBScripts {
   val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       logger.debug(s"add column anzahl_abos_aktiv to abotyp")
-      alterTableAddColumnIfNotExists(abotypMapping, "anzahl_abonnenten_aktiv", "int", "anzahl_abonnenten")
+      alterTableAddColumnIfNotExists(abotypMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
       logger.debug(s"add column anzahl_abos_aktiv to kunde")
-      alterTableAddColumnIfNotExists(kundeMapping, "anzahl_abos_aktiv", "int", "anzahl_abos")
+      alterTableAddColumnIfNotExists(kundeMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
       logger.debug(s"add column anzahl_abos_aktiv to vertrieb")
-      alterTableAddColumnIfNotExists(vertriebMapping, "anzahl_abos_aktiv", "int", "anzahl_abos")
+      alterTableAddColumnIfNotExists(vertriebMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
       logger.debug(s"add column anzahl_abos_aktiv to depotlieferung")
-      alterTableAddColumnIfNotExists(depotlieferungMapping, "anzahl_abos_aktiv", "int", "anzahl_abos")
+      alterTableAddColumnIfNotExists(depotlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
       logger.debug(s"add column anzahl_abos_aktiv to heimlieferung")
-      alterTableAddColumnIfNotExists(heimlieferungMapping, "anzahl_abos_aktiv", "int", "anzahl_abos")
+      alterTableAddColumnIfNotExists(heimlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
       logger.debug(s"add column anzahl_abos_aktiv to postlieferung")
-      alterTableAddColumnIfNotExists(postlieferungMapping, "anzahl_abos_aktiv", "int", "anzahl_abos")
+      alterTableAddColumnIfNotExists(postlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
       logger.debug(s"add column anzahl_abos_aktiv to depot")
-      alterTableAddColumnIfNotExists(depotMapping, "anzahl_abonnenten_aktiv", "int", "anzahl_abonnenten")
+      alterTableAddColumnIfNotExists(depotMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
       Success(true)
     }
   }
