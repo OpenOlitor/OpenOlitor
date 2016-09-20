@@ -20,44 +20,48 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.reporting
 
-import spray.json._
-import ch.openolitor.core.models._
-import java.util.UUID
-import org.joda.time._
-import org.joda.time.format._
-import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.StammdatenJsonProtocol
+import ch.openolitor.buchhaltung.models.RechnungId
+import scalaz._
+import scalaz.Scalaz._
+import scala.concurrent.Future
 import ch.openolitor.buchhaltung.models._
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.JSONSerializable
-import zangelo.spray.json.AutoProductFormats
+import ch.openolitor.core.db.AsyncConnectionPoolContextAware
+import scala.concurrent.ExecutionContext.Implicits.global
+import ch.openolitor.core.filestore._
+import ch.openolitor.core.ActorReferences
+import ch.openolitor.core.reporting._
+import ch.openolitor.core.reporting.ReportSystem._
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models.Projekt
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.models.ProjektReport
+import ch.openolitor.core.models.PersonId
+import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import scala.Left
+import scala.Right
 
-/**
- * JSON Format deklarationen für das Modul Buchhaltung
- */
-trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
+trait MahnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol with RechnungReportData {
+  self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
-  implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
-  implicit val zahlungsEingangStatusFormat = enumFormat(ZahlungsEingangStatus.apply)
-
-  //id formats
-  implicit val rechnungIdFormat = baseIdFormat(RechnungId)
-  implicit val zahlungsImportIdFormat = baseIdFormat(ZahlungsImportId)
-  implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
-
-  // special report formats
-  def enhancedRechnungDetailFormatDef(implicit defaultFormat: JsonFormat[RechnungDetailReport]): RootJsonFormat[RechnungDetailReport] = new RootJsonFormat[RechnungDetailReport] {
-    def write(obj: RechnungDetailReport): JsValue = {
-      JsObject(defaultFormat.write(obj)
-        .asJsObject.fields +
-        ("referenzNummerFormatiert" -> JsString(obj.referenzNummerFormatiert),
-          "betragRappen" -> JsNumber(obj.betragRappen)))
-    }
-
-    def read(json: JsValue): RechnungDetailReport = defaultFormat.read(json)
+  def generateMahnungReports(config: ReportConfig[RechnungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
+    generateReports[RechnungId, RechnungDetailReport](
+      config,
+      rechungenById,
+      VorlageMahnung,
+      None,
+      _.id,
+      GeneriertMahnung,
+      x => Some(x.id.id.toString),
+      name,
+      _.projekt.sprache
+    )
   }
 
-  implicit val enhancedRechnungDetailFormat = enhancedRechnungDetailFormatDef
+  private def name(rechnung: RechnungDetailReport) = {
+    // die Anzahl der Mahnungen wird erst durch die Aktion "Mahnung verschickt" inkrementiert
+    s"rechnung_nr_${rechnung.id.id}_mahnung_${rechnung.anzahlMahnungen + 1}";
+  }
 }

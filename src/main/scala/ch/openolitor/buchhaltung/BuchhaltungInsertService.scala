@@ -39,6 +39,8 @@ import org.joda.time.DateTime
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.util.ConfigUtil._
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 
 object BuchhaltungInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungInsertService = new DefaultBuchhaltungInsertService(sysConfig, system)
@@ -87,6 +89,8 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       "status" -> Erstellt,
       "referenzNummer" -> referenzNummer,
       "fileStoreId" -> None,
+      "anzahlMahnungen" -> 0.toInt,
+      "mahnungFileStoreIds" -> Set.empty[String],
       "esrNummer" -> esrNummer,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,

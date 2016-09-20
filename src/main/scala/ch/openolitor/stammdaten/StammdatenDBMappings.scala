@@ -106,7 +106,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val rolleMapTypeBinder: TypeBinder[Map[Rolle, Boolean]] = mapTypeBinder(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean)
   implicit val rolleTypeBinder: TypeBinder[Option[Rolle]] = string.map(Rolle.apply)
 
-  implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
+  implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => if (s != null) s.split(",").toSeq else Nil)
+  implicit val stringSetTypeBinder: TypeBinder[Set[String]] = string.map(s => if (s != null) s.split(",").toSet else Set())
 
   //DB parameter binders for write and query operationsit
   implicit val pendenzStatusBinder = toStringSqlBinder[PendenzStatus]
@@ -177,6 +178,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val fristOptionSqlBinder = optionSqlBinder[Frist]
 
   implicit val stringSeqSqlBinder = seqSqlBinder[String]
+  implicit val stringSetSqlBinder = setSqlBinder[String]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"

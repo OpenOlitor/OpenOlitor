@@ -36,6 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.EntityStoreReference
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.core.filestore.FileStoreFileId
+import ch.openolitor.core.filestore.GeneriertRechnung
+import ch.openolitor.core.filestore.GeneriertMahnung
 
 object BuchhaltungReportEventListener extends DefaultJsonProtocol {
   def props(entityStore: ActorRef): Props = Props(classOf[DefaultBuchhaltungReportEventListener], entityStore)
@@ -58,12 +60,10 @@ abstract class BuchhaltungReportEventListener extends Actor with ActorLogging wi
   }
 
   val receive: Receive = {
-    case SingleReportResult(id: RechnungId, stats, Right(StoredPdfReportResult(_, fileType, fileStoreId))) =>
-      handleRechnungPDFStored(stats.originator, id, fileStoreId)
+    case SingleReportResult(id: RechnungId, stats, Right(StoredPdfReportResult(_, fileType, fileStoreId))) if fileType == GeneriertRechnung =>
+      entityStore ! BuchhaltungCommandHandler.RechnungPDFStoredCommand(stats.originator, id, fileStoreId.id)
+    case SingleReportResult(id: RechnungId, stats, Right(StoredPdfReportResult(_, fileType, fileStoreId))) if fileType == GeneriertMahnung =>
+      entityStore ! BuchhaltungCommandHandler.MahnungPDFStoredCommand(stats.originator, id, fileStoreId.id)
     case x =>
-  }
-
-  def handleRechnungPDFStored(originator: PersonId, id: RechnungId, fileStoreId: FileStoreFileId) = {
-    entityStore ! BuchhaltungCommandHandler.RechnungPDFStoredCommand(originator, id, fileStoreId.id)
   }
 }

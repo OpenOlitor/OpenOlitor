@@ -41,6 +41,8 @@ import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
 import ch.openolitor.buchhaltung.models.RechnungModifyBezahlt
 import scala.concurrent.Future
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 
 object BuchhaltungAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungAktionenService = new DefaultBuchhaltungAktionenService(sysConfig, system)
@@ -75,6 +77,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       zahlungsEingangErledigen(meta, entity)
     case RechnungPDFStoredEvent(meta, rechnungId, fileStoreId) =>
       rechnungPDFStored(meta, rechnungId, fileStoreId)
+    case MahnungPDFStoredEvent(meta, rechnungId, fileStoreId) =>
+      mahnungPDFStored(meta, rechnungId, fileStoreId)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -83,6 +87,14 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(fileStoreId = Some(fileStoreId)))
+      }
+    }
+  }
+
+  def mahnungPDFStored(meta: EventMetadata, id: RechnungId, fileStoreId: String)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
+        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(mahnungFileStoreIds = (rechnung.mahnungFileStoreIds filterNot (_ == "")) + fileStoreId))
       }
     }
   }
@@ -101,7 +113,12 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     DB autoCommit { implicit session =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
         if (Verschickt == rechnung.status) {
-          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = MahnungVerschickt))
+          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](
+            rechnung.copy(
+              status = MahnungVerschickt,
+              anzahlMahnungen = rechnung.anzahlMahnungen + 1
+            )
+          )
         }
       }
     }

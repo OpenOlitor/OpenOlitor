@@ -47,6 +47,8 @@ import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportTotalRecord
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import scala.concurrent.Future
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 
 object BuchhaltungCommandHandler {
   case class RechnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
@@ -56,6 +58,7 @@ object BuchhaltungCommandHandler {
   case class RechnungStornierenCommand(originator: PersonId, id: RechnungId) extends UserCommand
 
   case class RechnungPDFStoredCommand(originator: PersonId, id: RechnungId, fileStoreId: String) extends UserCommand
+  case class MahnungPDFStoredCommand(originator: PersonId, id: RechnungId, fileStoreId: String) extends UserCommand
 
   case class RechnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
@@ -70,6 +73,7 @@ object BuchhaltungCommandHandler {
   case class ZahlungsEingangErledigtEvent(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt) extends PersistentEvent with JSONSerializable
 
   case class RechnungPDFStoredEvent(meta: EventMetadata, id: RechnungId, fileStoreId: String) extends PersistentEvent with JSONSerializable
+  case class MahnungPDFStoredEvent(meta: EventMetadata, id: RechnungId, fileStoreId: String) extends PersistentEvent with JSONSerializable
 }
 
 trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware with AsyncConnectionPoolContextAware {
@@ -184,6 +188,9 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 
     case RechnungPDFStoredCommand(personId, id, fileStoreId) => idFactory => meta =>
       Success(Seq(RechnungPDFStoredEvent(meta, id, fileStoreId)))
+
+    case MahnungPDFStoredCommand(personId, id, fileStoreId) => idFactory => meta =>
+      Success(Seq(MahnungPDFStoredEvent(meta, id, fileStoreId)))
 
     /*
        * Insert command handling

@@ -61,12 +61,16 @@ import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComp
 import ch.openolitor.buchhaltung.reporting.RechnungReportService
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.reporting.MahnungReportService
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with BuchhaltungJsonProtocol
     with BuchhaltungEventStoreSerializer
     with RechnungReportService
+    with MahnungReportService
     with BuchhaltungDBMappings {
   self: BuchhaltungReadRepositoryComponent with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
@@ -89,7 +93,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungen, exportFormat)) ~
         post(create[RechnungCreate, RechnungId](RechnungId.apply _))
     } ~
-      path("rechnungen" / "aktionen" / "download") {
+      path("rechnungen" / "aktionen" / "downloadrechnungen") {
         post {
           requestInstance { request =>
             entity(as[RechnungenContainer]) { cont =>
@@ -97,6 +101,19 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
                 val fileStoreIds = rechnungen.map(_.fileStoreId.map(FileStoreFileId(_))).flatten
                 logger.debug(s"Download rechnungen with filestoreRefs:$fileStoreIds")
                 downloadAll("Rechnungen_" + System.currentTimeMillis + ".zip", GeneriertRechnung, fileStoreIds)
+              }
+            }
+          }
+        }
+      } ~
+      path("rechnungen" / "aktionen" / "downloadmahnungen") {
+        post {
+          requestInstance { request =>
+            entity(as[RechnungenContainer]) { cont =>
+              onSuccess(buchhaltungReadRepository.getByIds(rechnungMapping, cont.ids)) { rechnungen =>
+                val fileStoreIds = rechnungen.map(_.mahnungFileStoreIds.map(FileStoreFileId(_))).flatten
+                logger.debug(s"Download mahnungen with filestoreRefs:$fileStoreIds")
+                downloadAll("Mahnungen_" + System.currentTimeMillis + ".zip", GeneriertMahnung, fileStoreIds)
               }
             }
           }
@@ -114,19 +131,31 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       path("rechnungen" / "berichte" / "rechnungen") {
         (post)(rechnungBerichte())
       } ~
+      path("rechnungen" / "berichte" / "mahnungen") {
+        (post)(mahnungBerichte())
+      } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
           delete(remove(id)) ~
           (put | post)(update[RechnungModify, RechnungId](id))
       } ~
-      path("rechnungen" / rechnungIdPath / "aktionen" / "download") { id =>
+      path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
         (get)(
-          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { x =>
-            x.flatMap { rechnung =>
-              rechnung.fileStoreId.map { fileStoreId =>
+          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { detail =>
+            detail flatMap { rechnung =>
+              rechnung.fileStoreId map { fileStoreId =>
                 download(GeneriertRechnung, fileStoreId)
               }
-            }.getOrElse(complete(StatusCodes.BadRequest))
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "download" / Segment) { (id, fileStoreId) =>
+        (get)(
+          onSuccess(buchhaltungReadRepository.getRechnungDetail(id)) { detail =>
+            detail map { rechnung =>
+              download(GeneriertMahnung, fileStoreId)
+            } getOrElse (complete(StatusCodes.BadRequest))
           }
         )
       } ~
@@ -144,6 +173,9 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath / "berichte" / "rechnung") { id =>
         (post)(rechnungBericht(id))
+      } ~
+      path("rechnungen" / rechnungIdPath / "berichte" / "mahnung") { id =>
+        (post)(mahnungBericht(id))
       }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
@@ -252,8 +284,14 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     generateReport[RechnungId](None, generateRechnungReports _)(RechnungId.apply)
   }
 
-  def rechnungenHerunterladen()(implicit subject: Subject) = {
+  def mahnungBericht(id: RechnungId)(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
+    generateReport[RechnungId](Some(id), generateMahnungReports _)(RechnungId.apply)
+  }
 
+  def mahnungBerichte()(implicit idPersister: Persister[ZahlungsEingangId, _], subject: Subject) = {
+    implicit val personId = subject.personId
+    generateReport[RechnungId](None, generateMahnungReports _)(RechnungId.apply)
   }
 }
 

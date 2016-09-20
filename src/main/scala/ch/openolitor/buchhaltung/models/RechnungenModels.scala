@@ -30,6 +30,8 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.scalax.Tuple24
 import java.text.DecimalFormat
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.scalax.Tuple25
+import ch.openolitor.core.scalax.Tuple26
 
 /**
  *        +
@@ -85,6 +87,8 @@ case class Rechnung(
   referenzNummer: String,
   esrNummer: String,
   fileStoreId: Option[String],
+  anzahlMahnungen: Int,
+  mahnungFileStoreIds: Set[String],
   // rechnungsadresse
   strasse: String,
   hausNummer: Option[String],
@@ -100,7 +104,7 @@ case class Rechnung(
 
 object Rechnung {
   def unapply(entity: Rechnung) = {
-    Some(Tuple24(
+    Some(Tuple26(
       entity.id,
       entity.kundeId,
       entity.aboId,
@@ -116,6 +120,8 @@ object Rechnung {
       entity.referenzNummer,
       entity.esrNummer,
       entity.fileStoreId,
+      entity.anzahlMahnungen,
+      entity.mahnungFileStoreIds,
       entity.strasse,
       entity.hausNummer,
       entity.adressZusatz,
@@ -145,6 +151,8 @@ case class RechnungDetail(
   referenzNummer: String,
   esrNummer: String,
   fileStoreId: Option[String],
+  anzahlMahnungen: Int,
+  mahnungFileStoreIds: Set[String],
   // rechnungsadresse
   strasse: String,
   hausNummer: Option[String],
@@ -173,6 +181,7 @@ case class RechnungDetailReport(
     status: RechnungStatus,
     referenzNummer: String,
     esrNummer: String,
+    anzahlMahnungen: Int,
     // rechnungsadresse
     strasse: String,
     hausNummer: Option[String],

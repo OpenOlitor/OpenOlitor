@@ -20,44 +20,29 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.core.db.evolution.scripts
 
-import spray.json._
-import ch.openolitor.core.models._
-import java.util.UUID
-import org.joda.time._
-import org.joda.time.format._
-import ch.openolitor.core.BaseJsonProtocol
-import ch.openolitor.stammdaten.StammdatenJsonProtocol
-import ch.openolitor.buchhaltung.models._
+import ch.openolitor.core.db.evolution.Script
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.JSONSerializable
-import zangelo.spray.json.AutoProductFormats
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 /**
- * JSON Format deklarationen für das Modul Buchhaltung
+ * Add anzahlMahnungen and mahnungFileStoreIds to Rechnung
  */
-trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
-
-  implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
-  implicit val zahlungsEingangStatusFormat = enumFormat(ZahlungsEingangStatus.apply)
-
-  //id formats
-  implicit val rechnungIdFormat = baseIdFormat(RechnungId)
-  implicit val zahlungsImportIdFormat = baseIdFormat(ZahlungsImportId)
-  implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
-
-  // special report formats
-  def enhancedRechnungDetailFormatDef(implicit defaultFormat: JsonFormat[RechnungDetailReport]): RootJsonFormat[RechnungDetailReport] = new RootJsonFormat[RechnungDetailReport] {
-    def write(obj: RechnungDetailReport): JsValue = {
-      JsObject(defaultFormat.write(obj)
-        .asJsObject.fields +
-        ("referenzNummerFormatiert" -> JsString(obj.referenzNummerFormatiert),
-          "betragRappen" -> JsNumber(obj.betragRappen)))
+object OO106_DBScripts_Mahnungen extends DefaultDBScripts {
+  val BuchhaltungScripts = new Script with LazyLogging with BuchhaltungDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"add columns anzahlMahnungen and mahnungFileStoreIds to rechnung...")
+      alterTableAddColumnIfNotExists(rechnungMapping, "anzahl_mahnungen", "int not null default 0", "file_store_id")
+      alterTableAddColumnIfNotExists(rechnungMapping, "mahnung_file_store_ids", "varchar(1000)", "anzahl_mahnungen")
+      Success(true)
     }
-
-    def read(json: JsValue): RechnungDetailReport = defaultFormat.read(json)
   }
 
-  implicit val enhancedRechnungDetailFormat = enhancedRechnungDetailFormatDef
+  val scripts = Seq(BuchhaltungScripts)
 }
