@@ -20,7 +20,7 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.recalculations
 
 import ch.openolitor.core.db.evolution.Script
 import com.typesafe.scalalogging.LazyLogging
@@ -30,9 +30,23 @@ import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateKorbStatus
-import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateLieferungCounter
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object OO311_DBScripts {
-  val scripts = Seq(RecalulateKorbStatus.scripts, RecalulateLieferungCounter.scripts)
+object RecalulateLieferungCounter {
+  val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Recalculate Lieferung counter")
+      sql"""update ${lieferungMapping.table} l 
+		INNER JOIN (SELECT k.lieferung_id, count(k.id) counter from ${korbMapping.table} k WHERE Status='WirdGeliefert' group by k.lieferung_id) k ON l.id=k.lieferung_id
+		set l.anzahl_koerbe_zu_liefern=k.counter""".execute.apply()
+      sql"""update ${lieferungMapping.table} l 
+		INNER JOIN (SELECT k.lieferung_id, count(k.id) counter from ${korbMapping.table} k WHERE Status='FaelltAusAbwesend' group by k.lieferung_id) k ON l.id=k.lieferung_id
+		set l.anzahl_abwesenheiten=k.counter""".execute.apply()
+      sql"""update ${lieferungMapping.table} l 
+		INNER JOIN (SELECT k.lieferung_id, count(k.id) counter from ${korbMapping.table} k WHERE Status='FaelltAusSaldoZuTief' group by k.lieferung_id) k ON l.id=k.lieferung_id
+		set l.anzahl_saldo_zu_tief=k.counter""".execute.apply()
+
+      Success(true)
+    }
+  }
 }
