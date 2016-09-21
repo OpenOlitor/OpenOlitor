@@ -51,7 +51,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(vertriebMapping as vertrieb).on(depotlieferungAbo.vertriebId, vertrieb.id)
         .where.eq(depotlieferungAbo.kundeId, parameter(owner.kundeId))
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, depotlieferungAbo))
-        .and.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
     }
       .one(depotlieferungAboMapping(depotlieferungAbo))
       .toManies(
@@ -79,7 +79,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(vertriebMapping as vertrieb).on(heimlieferungAbo.vertriebId, vertrieb.id)
         .where.eq(heimlieferungAbo.kundeId, parameter(owner.kundeId))
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, heimlieferungAbo))
-        .and.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
     }
       .one(heimlieferungAboMapping(heimlieferungAbo))
       .toManies(
@@ -107,7 +107,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(vertriebMapping as vertrieb).on(postlieferungAbo.vertriebId, vertrieb.id)
         .where.eq(postlieferungAbo.kundeId, parameter(owner.kundeId))
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
-        .and.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
     }
       .one(postlieferungAboMapping(postlieferungAbo))
       .toManies(
