@@ -33,6 +33,7 @@ import ch.openolitor.stammdaten.StammdatenInsertService
 import ch.openolitor.core.Boot
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateLieferungCounter
 
 object OO330_DBScripts {
 
@@ -64,5 +65,5 @@ object OO330_DBScripts {
     }
   }
 
-  val scripts = Seq(StammdatenScripts, OO311_DBScripts.RecalulateLieferungCounter)
+  val scripts = Seq(StammdatenScripts, RecalulateLieferungCounter.scripts)
 }

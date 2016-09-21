@@ -20,7 +20,7 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.recalculations
 
 import ch.openolitor.core.db.evolution.Script
 import com.typesafe.scalalogging.LazyLogging
@@ -30,9 +30,16 @@ import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateKorbStatus
-import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateLieferungCounter
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object OO311_DBScripts {
-  val scripts = Seq(RecalulateKorbStatus.scripts, RecalulateLieferungCounter.scripts)
+object RecalulateKorbStatus {
+  val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Recalculate Korb Status")
+      sql"""update ${korbMapping.table} k inner join ${abwesenheitMapping.table} a on k.abo_id=a.abo_id and k.lieferung_id=a.lieferung_id 
+      	set Status='FaelltAusAbwesend'""".execute.apply()
+
+      Success(true)
+    }
+  }
 }
