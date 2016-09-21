@@ -67,10 +67,10 @@ import org.joda.time.DateTime
 import ch.openolitor.stammdaten.models.EinladungId
 
 trait LoginRouteService extends HttpService with ActorReferences
-  with AsyncConnectionPoolContextAware
-  with SprayDeserializers
-  with DefaultRouteService with LazyLogging with LoginJsonProtocol
-  with XSRFTokenSessionAuthenticatorProvider {
+    with AsyncConnectionPoolContextAware
+    with SprayDeserializers
+    with DefaultRouteService with LazyLogging with LoginJsonProtocol
+    with XSRFTokenSessionAuthenticatorProvider {
   self: StammdatenReadRepositoryComponent =>
   import SystemEvents._
 
@@ -81,7 +81,8 @@ trait LoginRouteService extends HttpService with ActorReferences
   val secondFactorTokenCache = LruCache[SecondFactor](
     maxCapacity = 1000,
     timeToLive = 20 minutes,
-    timeToIdle = 10 minutes)
+    timeToIdle = 10 minutes
+  )
 
   lazy val config = sysConfig.mandantConfiguration.config
   lazy val requireSecondFactorAuthentication = config.getBooleanOption(s"security.second-factor-auth.require").getOrElse(true)
@@ -430,6 +431,7 @@ class DefaultLoginRouteService(
   override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory,
-  override val loginTokenCache: Cache[Subject])
-  extends LoginRouteService
-  with DefaultStammdatenReadRepositoryComponent
+  override val loginTokenCache: Cache[Subject]
+)
+    extends LoginRouteService
+    with DefaultStammdatenReadRepositoryComponent
