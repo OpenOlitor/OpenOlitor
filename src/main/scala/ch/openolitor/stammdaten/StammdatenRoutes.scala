@@ -382,6 +382,18 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             //TODO: update projekt stammdaten entity
             complete("Logo uploaded")
           })
+      } ~
+      path("projekt" / projektIdPath / "style-admin") { id =>
+        get(download(ProjektStammdaten, "style-admin")) ~
+          (put | post)(uploadStored(ProjektStammdaten, Some("style-admin")) { (id, metadata) =>
+            complete("Style 'style-admin' uploaded")
+          })
+      } ~
+      path("projekt" / projektIdPath / "style-kundenportal") { id =>
+        get(download(ProjektStammdaten, "style-kundenportal")) ~
+          (put | post)(uploadStored(ProjektStammdaten, Some("style-kundenportal")) { (id, metadata) =>
+            complete("Style 'style-kundenportal' uploaded")
+          })
       }
 
   def lieferplanungRoute(implicit subject: Subject) =
