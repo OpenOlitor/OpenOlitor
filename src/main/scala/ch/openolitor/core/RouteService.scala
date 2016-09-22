@@ -71,6 +71,7 @@ import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.util.InputStreamUtil._
 import java.io.InputStream
 import java.util.zip.ZipInputStream
+import ch.openolitor.core.system.DefaultNonAuthRessourcesRouteService
 import ch.openolitor.util.ZipBuilder
 import ch.openolitor.kundenportal.KundenportalRoutes
 import ch.openolitor.kundenportal.DefaultKundenportalRoutes
@@ -88,6 +89,10 @@ import org.odftoolkit.simple.style.StyleTypeDefinitions
 import scala.None
 import scala.collection.Iterable
 import collection.JavaConverters._
+
+sealed trait ResponseType
+case object Download extends ResponseType
+case object Fetch extends ResponseType
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -108,6 +113,7 @@ trait RouteServiceComponent extends ActorReferences {
   val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
   val loginRouteService: LoginRouteService
+  val nonAuthRessourcesRouteService: NonAuthRessourcesRouteService
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
@@ -116,6 +122,7 @@ trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache
   override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
+  override lazy val nonAuthRessourcesRouteService = new DefaultNonAuthRessourcesRouteService(sysConfig, system, fileStore, actorRefFactory)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -152,6 +159,7 @@ trait RouteServiceActor
     // unsecured routes
     helloWorldRoute ~
       systemRouteService.statusRoute ~
+      nonAuthRessourcesRouteService.ressourcesRoutes ~
       loginRouteService.loginRoute ~
 
       // secured routes by XSRF token authenticator
@@ -364,18 +372,28 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  protected def download(fileType: FileType, id: String) = {
-    tryDownload(fileType, id)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
+  protected def fetch(fileType: FileType, id: String) = {
+    tryDownload(fileType, id, Fetch)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
   }
 
-  protected def tryDownload(fileType: FileType, id: String)(errorFunction: FileStoreError => RequestContext => Unit) = {
+  protected def download(fileType: FileType, id: String) = {
+    tryDownload(fileType, id, Download)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
+  }
+
+  protected def tryDownload(fileType: FileType, id: String, responseType: ResponseType = Download)(errorFunction: FileStoreError => RequestContext => Unit) = {
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
       case Left(e) => errorFunction(e)
       case Right(file) =>
         val name = if (file.metaData.name.isEmpty) id else file.metaData.name
-        respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
-          stream(file.file)
+        responseType match {
+          case Download => respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
+            stream(file.file)
+          }
+          case Fetch => respondWithMediaType(MediaTypes.`text/css`) {
+            stream(file.file)
+          }
         }
+
     }
   }
 
