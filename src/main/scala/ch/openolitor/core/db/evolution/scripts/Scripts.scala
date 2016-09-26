@@ -42,5 +42,6 @@ object Scripts {
       OO152_DBScripts.scripts ++
       OO330_DBScripts.scripts ++
       OO337_DBScripts.scripts ++
+      OO382_DBScripts.scripts ++
       OO106_DBScripts_Mahnungen.scripts
 }

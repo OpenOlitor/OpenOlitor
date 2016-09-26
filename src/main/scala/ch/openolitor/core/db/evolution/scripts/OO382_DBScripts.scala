@@ -33,6 +33,6 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateKorbStatus
 import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateLieferungCounter
 
-object OO311_DBScripts {
-  val scripts = Seq(RecalulateKorbStatus.scripts, RecalulateLieferungCounter.scripts)
+object OO382_DBScripts {
+  val scripts = Seq(RecalulateLieferungCounter.scripts)
 }

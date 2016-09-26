@@ -149,9 +149,9 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
             stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
               val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
                 bestellposition =>
-                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.get} = ${bestellposition.preis.get} ${projekt.waehrung}"""
+                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung}"""
               }
-              val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.get}:
+              val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.getOrElse("")}:
               
 Lieferung: ${format.print(bestellung.datum)}
 
