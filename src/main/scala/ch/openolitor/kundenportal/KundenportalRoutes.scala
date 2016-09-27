@@ -91,7 +91,7 @@ trait KundenportalRoutes extends HttpService with ActorReferences
         UriQueryParamFilterParser.parse(filterString)
       }
       pathPrefix("kundenportal") {
-        abosRoute ~ projektRoute
+        abosRoute ~ rechnungenRoute ~ projektRoute
       }
     }
 
@@ -103,6 +103,34 @@ trait KundenportalRoutes extends HttpService with ActorReferences
     } ~
       path("projekt" / projektIdPath / "logo") { id =>
         get(download(ProjektStammdaten, "logo"))
+      }
+  }
+
+  def rechnungenRoute(implicit subject: Subject) = {
+    path("rechnungen") {
+      get {
+        list(kundenportalReadRepository.getRechnungen)
+      }
+    } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
+        (get)(
+          onSuccess(kundenportalReadRepository.getRechnungDetail(id)) { detail =>
+            detail flatMap { rechnung =>
+              rechnung.fileStoreId map { fileStoreId =>
+                download(GeneriertRechnung, fileStoreId)
+              }
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "download" / Segment) { (id, fileStoreId) =>
+        (get)(
+          onSuccess(kundenportalReadRepository.getRechnungDetail(id)) { detail =>
+            detail map { rechnung =>
+              download(GeneriertMahnung, fileStoreId)
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
       }
   }
 

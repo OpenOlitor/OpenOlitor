@@ -16,9 +16,11 @@ import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.core.security.Subject
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMappings {
+trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
 
+  //Stammdaten
   lazy val projekt = projektMapping.syntax("projekt")
   lazy val kunde = kundeMapping.syntax("kunde")
   lazy val kundentyp = customKundentypMapping.syntax("kundentyp")
@@ -33,6 +35,9 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
   lazy val aboTyp = abotypMapping.syntax("atyp")
   lazy val vertrieb = vertriebMapping.syntax("vertrieb")
   lazy val lieferposition = lieferpositionMapping.syntax("lieferposition")
+
+  //Buchhaltung
+  lazy val rechnung = rechnungMapping.syntax("rechnung")
 
   protected def getProjektQuery = {
     withSQL {
@@ -161,5 +166,39 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
       .map { (lieferung, abotyp, positionen) =>
         copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp.headOption, "lieferpositionen" -> positionen)
       }.single
+  }
+
+  protected def getRechnungenQuery(implicit owner: Subject) = {
+    withSQL {
+      select
+        .from(rechnungMapping as rechnung)
+        .where.eq(rechnung.kundeId, parameter(owner.kundeId))
+        .orderBy(rechnung.rechnungsDatum)
+    }.map(rechnungMapping(rechnung)).list
+  }
+
+  protected def getRechnungDetailQuery(id: RechnungId)(implicit owner: Subject) = {
+    withSQL {
+      select
+        .from(rechnungMapping as rechnung)
+        .leftJoin(kundeMapping as kunde).on(rechnung.kundeId, kunde.id)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(rechnung.aboId, depotlieferungAbo.id)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(rechnung.aboId, heimlieferungAbo.id)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(rechnung.aboId, postlieferungAbo.id)
+        .where.eq(rechnung.id, parameter(id))
+        .and.eq(rechnung.kundeId, parameter(owner.kundeId))
+        .orderBy(rechnung.rechnungsDatum)
+    }.one(rechnungMapping(rechnung))
+      .toManies(
+        rs => kundeMapping.opt(kunde)(rs),
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs)
+      )
+      .map({ (rechnung, kunden, pl, hl, dl) =>
+        val kunde = kunden.head
+        val abo = (pl ++ hl ++ dl).head
+        copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "abo" -> abo)
+      }).single
   }
 }
