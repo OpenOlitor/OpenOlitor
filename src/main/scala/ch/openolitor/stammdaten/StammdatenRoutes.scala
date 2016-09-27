@@ -201,6 +201,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "einladungsenden") { (kundeId, personId) =>
         (post)(sendEinladung(kundeId, personId))
       } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "rollewechseln") { (kundeId, personId) =>
+        post {
+          requestInstance { request =>
+            entity(as[Rolle]) { rolle =>
+              changeRolle(kundeId, personId, rolle)
+            }
+          }
+        }
+      } ~
       path("kunden" / kundeIdPath / "rechnungen") { (kundeId) =>
         get(list(buchhaltungReadRepository.getKundenRechnungen(kundeId)))
       }
@@ -637,6 +646,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess((entityStore ? StammdatenCommandHandler.EinladungSendenCommand(subject.personId, kundeId, personId))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Einladung konnte nicht gesendet werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def changeRolle(kundeId: KundeId, personId: PersonId, rolle: Rolle)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.RolleWechselnCommand(subject.personId, kundeId, personId, rolle))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rolle der Person konnte nicht gewechselt werden.")
       case _ =>
         complete("")
     }

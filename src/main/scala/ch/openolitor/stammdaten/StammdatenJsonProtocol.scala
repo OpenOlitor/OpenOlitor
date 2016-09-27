@@ -79,7 +79,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
-  implicit val rolleFormat = new JsonFormat[Rolle] {
+  implicit val rolleFormat = new RootJsonFormat[Rolle] {
     def write(obj: Rolle): JsValue =
       obj match {
         case AdministratorZugang => JsString("Administrator")

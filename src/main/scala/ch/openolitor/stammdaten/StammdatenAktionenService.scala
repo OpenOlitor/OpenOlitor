@@ -93,6 +93,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       sendEinladung(meta, einladung)
     case PasswortResetGesendetEvent(meta, einladung) =>
       sendPasswortReset(meta, einladung)
+    case RolleGewechseltEvent(meta, _, personId, rolle) =>
+      changeRolle(meta, personId, rolle)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -257,6 +259,15 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
               logger.debug(s"Sending Mail failed resulting in $other")
           }
         }
+      }
+    }
+  }
+
+  def changeRolle(meta: EventMetadata, personId: PersonId, rolle: Rolle)(implicit originator: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        val updated = person.copy(rolle = Some(rolle))
+        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
       }
     }
   }
