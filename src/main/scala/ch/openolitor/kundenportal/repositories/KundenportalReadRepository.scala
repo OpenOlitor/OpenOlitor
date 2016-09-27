@@ -39,6 +39,9 @@ import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.core.security.Subject
+import ch.openolitor.buchhaltung.models.RechnungId
+import ch.openolitor.buchhaltung.models.Rechnung
+import ch.openolitor.buchhaltung.models.RechnungDetail
 
 trait KundenportalReadRepository {
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]]
@@ -46,8 +49,10 @@ trait KundenportalReadRepository {
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[AboDetail]]
 
   def getLieferungenDetails(aboId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[LieferungDetail]]
+  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[LieferungDetail]]
 
-  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[LieferungDetail]]
+  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[List[Rechnung]]
+  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[RechnungDetail]]
 }
 
 class KundenportalReadRepositoryImpl extends KundenportalReadRepository with LazyLogging with KundenportalRepositoryQueries {
@@ -81,7 +86,15 @@ class KundenportalReadRepositoryImpl extends KundenportalReadRepository with Laz
     getLieferungenByAbotypQuery(abotypId, filter).list.future
   }
 
-  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[LieferungDetail]] = {
+  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[LieferungDetail]] = {
     getLieferungenDetailQuery(lieferungId).future
+  }
+
+  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[List[Rechnung]] = {
+    getRechnungenQuery.future
+  }
+
+  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[RechnungDetail]] = {
+    getRechnungDetailQuery(id).future
   }
 }
