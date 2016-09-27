@@ -52,6 +52,7 @@ object StammdatenCommandHandler {
   case class EinladungSendenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class BestellungenAlsAbgerechnetMarkierenCommand(originator: PersonId, datum: DateTime, ids: Seq[BestellungId]) extends UserCommand
   case class PasswortResetCommand(originator: PersonId, personId: PersonId) extends UserCommand
+  case class RolleWechselnCommand(originator: PersonId, kundeId: KundeId, personId: PersonId, rolle: Rolle) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
@@ -63,6 +64,7 @@ object StammdatenCommandHandler {
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
   case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortResetGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
+  case class RolleGewechseltEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId, rolle: Rolle) extends PersistentEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -187,6 +189,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
     case PasswortResetCommand(originator, personId) => idFactory => meta =>
       sendPasswortReset(idFactory, meta, personId)
+
+    case RolleWechselnCommand(originator, kundeId, personId, rolle) if originator.id != personId => idFactory => meta =>
+      changeRolle(idFactory, meta, kundeId, personId, rolle)
 
     /*
        * Insert command handling
@@ -431,6 +436,24 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           Success(Seq(PasswortResetGesendetEvent(meta, einladung)))
         } getOrElse {
           Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
+        }
+      } getOrElse {
+        Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
+      }
+    }
+  }
+
+  def changeRolle(idFactory: IdFactory, meta: EventMetadata, kundeId: KundeId, personId: PersonId, rolle: Rolle) = {
+    DB readOnly { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        person.rolle map { existingRolle =>
+          if (existingRolle != rolle) {
+            Success(Seq(RolleGewechseltEvent(meta, kundeId, personId, rolle)))
+          } else {
+            Failure(new InvalidStateException(s"Die Person mit der Id: $personId hat bereits die Rolle: $rolle."))
+          }
+        } getOrElse {
+          Success(Seq(RolleGewechseltEvent(meta, kundeId, personId, rolle)))
         }
       } getOrElse {
         Failure(new InvalidStateException(s"Person wurde nicht gefunden."))

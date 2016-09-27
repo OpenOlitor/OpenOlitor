@@ -20,7 +20,7 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.recalculations
 
 import ch.openolitor.core.db.evolution.Script
 import com.typesafe.scalalogging.LazyLogging
@@ -29,29 +29,17 @@ import ch.openolitor.core.SystemConfig
 import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object OO374_DBScripts extends DefaultDBScripts {
-  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
+object RecalulateKorbStatus {
+  val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      logger.debug(s"add column anzahl_abos_aktiv to abotyp")
-      alterTableAddColumnIfNotExists(abotypMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-      logger.debug(s"add column anzahl_abos_aktiv to kunde")
-      alterTableAddColumnIfNotExists(kundeMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to vertrieb")
-      alterTableAddColumnIfNotExists(vertriebMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to depotlieferung")
-      alterTableAddColumnIfNotExists(depotlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to heimlieferung")
-      alterTableAddColumnIfNotExists(heimlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to postlieferung")
-      alterTableAddColumnIfNotExists(postlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to depot")
-      alterTableAddColumnIfNotExists(depotMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-      logger.debug(s"add column anzahl_abos_aktiv to tour")
-      alterTableAddColumnIfNotExists(tourMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
+      logger.debug(s"Recalculate Korb Status")
+      sql"""update ${korbMapping.table} k inner join ${abwesenheitMapping.table} a on k.abo_id=a.abo_id and k.lieferung_id=a.lieferung_id 
+      	set Status='FaelltAusAbwesend'""".execute.apply()
+
       Success(true)
     }
   }
-
-  val scripts = Seq(StammdatenScripts)
 }

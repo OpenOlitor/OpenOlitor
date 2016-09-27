@@ -29,29 +29,10 @@ import ch.openolitor.core.SystemConfig
 import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateKorbStatus
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateLieferungCounter
 
-object OO374_DBScripts extends DefaultDBScripts {
-  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
-    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      logger.debug(s"add column anzahl_abos_aktiv to abotyp")
-      alterTableAddColumnIfNotExists(abotypMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-      logger.debug(s"add column anzahl_abos_aktiv to kunde")
-      alterTableAddColumnIfNotExists(kundeMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to vertrieb")
-      alterTableAddColumnIfNotExists(vertriebMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to depotlieferung")
-      alterTableAddColumnIfNotExists(depotlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to heimlieferung")
-      alterTableAddColumnIfNotExists(heimlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to postlieferung")
-      alterTableAddColumnIfNotExists(postlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to depot")
-      alterTableAddColumnIfNotExists(depotMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-      logger.debug(s"add column anzahl_abos_aktiv to tour")
-      alterTableAddColumnIfNotExists(tourMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-      Success(true)
-    }
-  }
-
-  val scripts = Seq(StammdatenScripts)
+object OO382_DBScripts {
+  val scripts = Seq(RecalulateLieferungCounter.scripts)
 }

@@ -15,7 +15,7 @@ object KundeParser extends EntityParser {
     parseEntity[Kunde, KundeId]("id", Seq("bezeichnung", "strasse", "haus_nummer", "adress_zusatz", "plz", "ort", "bemerkungen",
       "abweichende_lieferadresse", "bezeichnung_lieferung", "strasse_lieferung", "haus_nummer_lieferung",
       "adress_zusatz_lieferung", "plz_lieferung", "ort_lieferung", "zusatzinfo_lieferung", "typen",
-      "anzahl_abos", "anzahl_pendenzen", "anzahl_personen") ++ modifyColumns) { id => indexes => row =>
+      "anzahl_abos", "anzahl_abos_aktiv", "anzahl_pendenzen", "anzahl_personen") ++ modifyColumns) { id => indexes => row =>
       //match column indexes
       val Seq(indexBezeichnung, indexStrasse, indexHausNummer, indexAdressZusatz, indexPlz, indexOrt, indexBemerkungen,
         indexAbweichendeLieferadresse, indexBezeichnungLieferung, indexStrasseLieferung, indexHausNummerLieferung,
