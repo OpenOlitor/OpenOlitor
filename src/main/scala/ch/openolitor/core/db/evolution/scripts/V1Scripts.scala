@@ -84,6 +84,7 @@ object V1Scripts {
         liefertag varchar(10),      	
         beschrieb varchar(2000),
       	anzahl_abos int not null,
+        anzahl_abos_aktiv int not null,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
@@ -201,6 +202,7 @@ object V1Scripts {
         zusatzinfo_lieferung varchar(100),
         typen varchar(200),
         anzahl_abos int not null,
+        anzahl_abos_aktiv int not null,
         anzahl_pendenzen int not null,
         anzahl_personen int not null,
         erstelldat datetime not null,
@@ -537,6 +539,7 @@ object V1Scripts {
         typen = Set(),
         //Zusatzinformationen
         anzahlAbos = 0,
+        anzahlAbosAktiv = 0,
         anzahlPendenzen = 0,
         anzahlPersonen = 1,
         //modification flags

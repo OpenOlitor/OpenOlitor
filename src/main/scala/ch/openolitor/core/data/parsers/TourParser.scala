@@ -12,9 +12,9 @@ object TourParser extends EntityParser {
   import EntityParser._
 
   def parse(implicit loggingAdapter: LoggingAdapter) = {
-    parseEntity[Tour, TourId]("id", Seq("name", "beschreibung", "anzahl_abonnenten") ++ modifyColumns) { id => indexes => row =>
+    parseEntity[Tour, TourId]("id", Seq("name", "beschreibung", "anzahl_abonnenten", "anzahl_abonnenten_aktiv") ++ modifyColumns) { id => indexes => row =>
       //match column indexes
-      val Seq(indexName, indexBeschreibung, indexAnzahlAbonnenten) = indexes take (3)
+      val Seq(indexName, indexBeschreibung, indexAnzahlAbonnenten, indexAnzahlAbonnentenAktiv) = indexes take (4)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       Tour(
@@ -23,6 +23,7 @@ object TourParser extends EntityParser {
         beschreibung = row.value[Option[String]](indexBeschreibung),
         //Zusatzinformationen
         anzahlAbonnenten = row.value[Int](indexAnzahlAbonnenten),
+        anzahlAbonnentenAktiv = row.value[Int](indexAnzahlAbonnentenAktiv),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),

@@ -33,6 +33,7 @@ case class VertriebId(id: Long) extends BaseId
 
 case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   durchschnittspreis: TreeMap[String, BigDecimal],
   anzahlLieferungen: TreeMap[String, Int],
   //modification flags
@@ -43,6 +44,7 @@ case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpun
 
 case class VertriebVertriebsarten(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   depotlieferungen: Seq[DepotlieferungDetail],
   heimlieferungen: Seq[HeimlieferungDetail],
   postlieferungen: Seq[Postlieferung],
@@ -59,10 +61,12 @@ case class VertriebsartId(id: Long) extends BaseId
 sealed trait Vertriebsart extends BaseEntity[VertriebsartId] {
   val vertriebId: VertriebId
   val anzahlAbos: Int
+  val anzahlAbosAktiv: Int
 }
 
 case class Depotlieferung(id: VertriebsartId, vertriebId: VertriebId, depotId: DepotId,
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -71,6 +75,7 @@ case class Depotlieferung(id: VertriebsartId, vertriebId: VertriebId, depotId: D
 
 case class Heimlieferung(id: VertriebsartId, vertriebId: VertriebId, tourId: TourId,
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -79,6 +84,7 @@ case class Heimlieferung(id: VertriebsartId, vertriebId: VertriebId, tourId: Tou
 
 case class Postlieferung(id: VertriebsartId, vertriebId: VertriebId,
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -89,9 +95,11 @@ sealed trait VertriebsartDetail extends JSONSerializable {
   val id: VertriebsartId
   val vertriebId: VertriebId
   val anzahlAbos: Int
+  val anzahlAbosAktiv: Int
 }
 case class DepotlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, depotId: DepotId, depot: DepotSummary,
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -100,6 +108,7 @@ case class DepotlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, depo
 
 case class HeimlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, tourId: TourId, tour: Tour,
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -108,6 +117,7 @@ case class HeimlieferungDetail(id: VertriebsartId, vertriebId: VertriebId, tourI
 
 case class PostlieferungDetail(id: VertriebsartId, vertriebId: VertriebId,
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
