@@ -332,7 +332,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   def pendenzenRoute(implicit subject: Subject) =
     path("pendenzen" ~ exportFormatPath.?) { exportFormat =>
       get(list(stammdatenReadRepository.getPendenzen, exportFormat))
-    }
+    } ~
+      path("pendenzen" / pendenzIdPath) { pendenzId =>
+        (put | post)(update[PendenzModify, PendenzId](pendenzId))
+      }
 
   def produkteRoute(implicit subject: Subject) =
     path("produkte" ~ exportFormatPath.?) { exportFormat =>
