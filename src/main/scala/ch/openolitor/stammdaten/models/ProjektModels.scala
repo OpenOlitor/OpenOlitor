@@ -96,7 +96,9 @@ case class ProjektPublik(
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: Option[String],
-  ort: Option[String]
+  ort: Option[String],
+  preiseSichtbar: Boolean,
+  waehrung: Waehrung
 ) extends JSONSerializable
 
 case class ProjektReport(
@@ -150,7 +152,7 @@ case class ProjektModify(
   sprache: Locale
 ) extends JSONSerializable
 
-case class KundentypId(id: String)
+case class KundentypId(id: String) extends BaseStringId
 
 case class CustomKundentypId(id: Long) extends BaseId
 

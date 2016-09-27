@@ -36,6 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.models.AboId
 import ch.openolitor.stammdaten.models.{ DepotlieferungAbo, HeimlieferungAbo, PostlieferungAbo }
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 
 object BuchhaltungDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungDBEventEntityListener], sysConfig, system)

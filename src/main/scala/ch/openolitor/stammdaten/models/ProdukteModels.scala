@@ -67,7 +67,7 @@ object Liefereinheit {
   }
 }
 
-case class BaseProduktekategorieId(id: String)
+case class BaseProduktekategorieId(id: String) extends BaseStringId
 
 case class ProduktekategorieId(id: Long) extends BaseId
 

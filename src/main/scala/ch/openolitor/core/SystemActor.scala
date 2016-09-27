@@ -43,7 +43,7 @@ class SystemActor(sysConfig: SystemConfig) extends Actor with ActorLogging {
 
   log.debug(s"oo-system:SystemActor initialization:$sysConfig")
 
-  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
+  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
     case e =>
       log.warning(s"Child actor failed:$e")
       Restart

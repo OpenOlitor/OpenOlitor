@@ -33,7 +33,7 @@ import zangelo.spray.json.AutoProductFormats
 import ch.openolitor.core.JSONSerializable
 
 trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
-  //V1 persisters
+  // V1 persisters
   implicit val rechnungCreatePersister = persister[RechnungCreate]("rechnung-create")
   implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
   implicit val rechnungVerschicktEventPersister = persister[RechnungVerschicktEvent]("rechnung-verschickt-event")
@@ -48,6 +48,7 @@ trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with Entit
   implicit val zahlungsEingangErledigtEventPersister = persister[ZahlungsEingangErledigtEvent]("zahlungs-eingang-erledigt-event")
 
   implicit val rechnungPDFStoreEventPersister = persister[RechnungPDFStoredEvent]("rechnung-pdf-stored-event")
+  implicit val mahnungPDFStoreEventPersister = persister[MahnungPDFStoredEvent]("mahnung-pdf-stored-event")
 
   val buchhaltungPersisters = List(
     rechnungCreatePersister,
@@ -61,6 +62,7 @@ trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with Entit
     zahlungsImportCreatedEventPersister,
     zahlungsEingangIdPersister,
     zahlungsEingangErledigtEventPersister,
-    rechnungPDFStoreEventPersister
+    rechnungPDFStoreEventPersister,
+    mahnungPDFStoreEventPersister
   )
 }

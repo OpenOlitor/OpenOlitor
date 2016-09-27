@@ -79,7 +79,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
       }
   }
 
-  implicit val rolleFormat = new JsonFormat[Rolle] {
+  implicit val rolleFormat = new RootJsonFormat[Rolle] {
     def write(obj: Rolle): JsValue =
       obj match {
         case AdministratorZugang => JsString("Administrator")
@@ -129,6 +129,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
   implicit val aboIdFormat = baseIdFormat(AboId)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId)
+  implicit val lieferungOnLieferplanungIdFormat = baseIdFormat(LieferungOnLieferplanungId)
   implicit val lieferplanungIdFormat = baseIdFormat(LieferplanungId)
   implicit val lieferpositionIdFormat = baseIdFormat(LieferpositionId)
   implicit val bestellungIdFormat = baseIdFormat(BestellungId)
@@ -314,6 +315,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         case pt => sys.error(s"Unknown treemap:$pt")
       }
   }
+
   implicit val treeMapBigDecimalFormat = new JsonFormat[TreeMap[String, BigDecimal]] {
     def write(obj: TreeMap[String, BigDecimal]): JsValue = {
       val elems = obj.toTraversable.map {

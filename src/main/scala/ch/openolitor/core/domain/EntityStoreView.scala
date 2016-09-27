@@ -48,7 +48,7 @@ trait EntityStoreViewComponent extends Actor {
 
   val aktionenService: EventService[PersistentEvent]
 
-  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 second) {
+  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
     case _: Exception => Restart
   }
 }

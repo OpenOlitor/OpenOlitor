@@ -71,11 +71,28 @@ import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.util.InputStreamUtil._
 import java.io.InputStream
 import java.util.zip.ZipInputStream
+import ch.openolitor.core.system.DefaultNonAuthRessourcesRouteService
 import ch.openolitor.util.ZipBuilder
 import ch.openolitor.kundenportal.KundenportalRoutes
 import ch.openolitor.kundenportal.DefaultKundenportalRoutes
 import ch.openolitor.stammdaten.models.ProjektVorlageId
 import spray.can.server.Response
+import ch.openolitor.core.ws.ExportFormat
+import ch.openolitor.core.ws.Json
+import ch.openolitor.core.ws.ODS
+import org.odftoolkit.simple._
+import org.odftoolkit.simple.table._
+import org.odftoolkit.simple.SpreadsheetDocument
+import java.io.ByteArrayOutputStream
+import java.util.Locale
+import org.odftoolkit.simple.style.StyleTypeDefinitions
+import scala.None
+import scala.collection.Iterable
+import collection.JavaConverters._
+
+sealed trait ResponseType
+case object Download extends ResponseType
+case object Fetch extends ResponseType
 
 object RouteServiceActor {
   def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
@@ -96,6 +113,7 @@ trait RouteServiceComponent extends ActorReferences {
   val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
   val loginRouteService: LoginRouteService
+  val nonAuthRessourcesRouteService: NonAuthRessourcesRouteService
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
@@ -104,6 +122,7 @@ trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache
   override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
   override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
+  override lazy val nonAuthRessourcesRouteService = new DefaultNonAuthRessourcesRouteService(sysConfig, system, fileStore, actorRefFactory)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -140,6 +159,7 @@ trait RouteServiceActor
     // unsecured routes
     helloWorldRoute ~
       systemRouteService.statusRoute ~
+      nonAuthRessourcesRouteService.ressourcesRoutes ~
       loginRouteService.loginRoute ~
 
       // secured routes by XSRF token authenticator
@@ -195,9 +215,18 @@ trait RouteServiceActor
 trait DefaultRouteService extends HttpService with ActorReferences with BaseJsonProtocol with StreamSupport
     with FileStoreComponent
     with LazyLogging
+    with SprayDeserializers
     with ReportJsonProtocol {
 
   implicit val timeout = Timeout(5.seconds)
+
+  implicit val exportFormatPath = enumPathMatcher(path =>
+    path.head match {
+      case '.' => ExportFormat.apply(path) match {
+        case x => Some(x)
+      }
+      case _ => None
+    })
 
   protected def create[E <: AnyRef: ClassTag, I <: BaseId](idFactory: Long => I)(implicit
     um: FromRequestUnmarshaller[E],
@@ -249,6 +278,74 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
+  protected def list[R](f: => Future[R], exportFormat: Option[ExportFormat])(implicit tr: ToResponseMarshaller[R]) = {
+    //fetch list of something
+    onSuccess(f) { result =>
+      exportFormat match {
+        case Some(ODS) => {
+          val dataDocument = SpreadsheetDocument.newSpreadsheetDocument()
+          val sheet = dataDocument.getSheetByIndex(0)
+          sheet.setCellStyleInheritance(false)
+
+          result match {
+            case list: List[Product] =>
+              if (list.nonEmpty) {
+
+                val row = sheet.getRowByIndex(0);
+
+                def getCCParams(cc: Product) = cc.getClass.getDeclaredFields.map(_.getName) // all field names
+                  .zip(cc.productIterator.to).toMap // zipped with all values
+
+                getCCParams(list.head).zipWithIndex foreach {
+                  case ((fieldName, value), index) =>
+                    row.getCellByIndex(index).setStringValue(fieldName)
+                    val font = row.getCellByIndex(index).getFont
+                    font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
+                    font.setSize(10)
+                    row.getCellByIndex(index).setFont(font)
+                }
+
+                def writeToRow(row: Row, element: Any, cellIndex: Int): Unit = {
+                  element match {
+                    case some: Some[Any] => writeToRow(row, some.x, cellIndex)
+                    case None =>
+                    case ite: Iterable[Any] => ite map { item => writeToRow(row, item, cellIndex) }
+                    case id: BaseId => row.getCellByIndex(cellIndex).setDoubleValue(id.id)
+                    case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id).trim)
+                    case str: String => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + str).trim)
+                    case dat: org.joda.time.DateTime => row.getCellByIndex(cellIndex).setDateTimeValue(dat.toCalendar(Locale.GERMAN))
+                    case nbr: Number => row.getCellByIndex(cellIndex).setDoubleValue(nbr.doubleValue())
+                    case x => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + x.toString).trim)
+                  }
+                }
+
+                list.zipWithIndex foreach {
+                  case (entry, index) =>
+                    val row = sheet.getRowByIndex(index + 1);
+
+                    getCCParams(entry).zipWithIndex foreach {
+                      case ((fieldName, value), colIndex) =>
+                        writeToRow(row, value, colIndex)
+                    }
+                }
+              }
+            case x: Any => sheet.getRowByIndex(0).getCellByIndex(0).setStringValue("Data of type" + x.toString() + " could not be transfered to ODS file.")
+          }
+
+          sheet.getColumnList.asScala map { _.setUseOptimalWidth(true) }
+
+          val outputStream = new ByteArrayOutputStream
+          dataDocument.save(outputStream)
+          streamOds("Daten_" + System.currentTimeMillis + ".ods", outputStream.toByteArray())
+        }
+        //matches "None" and "Some(Json)"
+        case None => complete(result)
+        case Some(x) => complete(result)
+      }
+    }
+
+  }
+
   protected def detail[R](f: => Future[Option[R]])(implicit tr: ToResponseMarshaller[R]) = {
     //fetch detail of something
     onSuccess(f) { result =>
@@ -275,18 +372,28 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  protected def download(fileType: FileType, id: String) = {
-    tryDownload(fileType, id)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
+  protected def fetch(fileType: FileType, id: String) = {
+    tryDownload(fileType, id, Fetch)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
   }
 
-  protected def tryDownload(fileType: FileType, id: String)(errorFunction: FileStoreError => RequestContext => Unit) = {
+  protected def download(fileType: FileType, id: String) = {
+    tryDownload(fileType, id, Download)(e => complete(StatusCodes.NotFound, s"File of file type ${fileType} with id ${id} was not found."))
+  }
+
+  protected def tryDownload(fileType: FileType, id: String, responseType: ResponseType = Download)(errorFunction: FileStoreError => RequestContext => Unit) = {
     onSuccess(fileStore.getFile(fileType.bucket, id)) {
       case Left(e) => errorFunction(e)
       case Right(file) =>
         val name = if (file.metaData.name.isEmpty) id else file.metaData.name
-        respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
-          stream(file.file)
+        responseType match {
+          case Download => respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", name)))) {
+            stream(file.file)
+          }
+          case Fetch => respondWithMediaType(MediaTypes.`text/css`) {
+            stream(file.file)
+          }
         }
+
     }
   }
 
@@ -340,6 +447,14 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamOdt(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.text`) {
+        stream(result)
+      }
+    }
+  }
+
+  protected def streamOds(fileName: String, result: Array[Byte]) = {
+    respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
+      respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.spreadsheet`) {
         stream(result)
       }
     }

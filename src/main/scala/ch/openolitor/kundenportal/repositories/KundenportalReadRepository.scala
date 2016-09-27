@@ -39,11 +39,20 @@ import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.core.security.Subject
+import ch.openolitor.buchhaltung.models.RechnungId
+import ch.openolitor.buchhaltung.models.Rechnung
+import ch.openolitor.buchhaltung.models.RechnungDetail
 
 trait KundenportalReadRepository {
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]]
 
-  def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[Abo]]
+  def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[AboDetail]]
+
+  def getLieferungenDetails(aboId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[LieferungDetail]]
+  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[LieferungDetail]]
+
+  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[List[Rechnung]]
+  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[RechnungDetail]]
 }
 
 class KundenportalReadRepositoryImpl extends KundenportalReadRepository with LazyLogging with KundenportalRepositoryQueries {
@@ -51,19 +60,19 @@ class KundenportalReadRepositoryImpl extends KundenportalReadRepository with Laz
     getProjektQuery.future map (_ map (projekt => copyTo[Projekt, ProjektPublik](projekt)))
   }
 
-  def getDepotlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[DepotlieferungAbo]] = {
+  def getDepotlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[DepotlieferungAboDetail]] = {
     getDepotlieferungAbosQuery(filter).future
   }
 
-  def getHeimlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[HeimlieferungAbo]] = {
+  def getHeimlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[HeimlieferungAboDetail]] = {
     getHeimlieferungAbosQuery(filter).future
   }
 
-  def getPostlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[PostlieferungAbo]] = {
+  def getPostlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[PostlieferungAboDetail]] = {
     getPostlieferungAbosQuery(filter).future
   }
 
-  def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[Abo]] = {
+  def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[AboDetail]] = {
     for {
       d <- getDepotlieferungAbos
       h <- getHeimlieferungAbos
@@ -71,5 +80,21 @@ class KundenportalReadRepositoryImpl extends KundenportalReadRepository with Laz
     } yield {
       d ::: h ::: p
     }
+  }
+
+  def getLieferungenDetails(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[LieferungDetail]] = {
+    getLieferungenByAbotypQuery(abotypId, filter).list.future
+  }
+
+  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[LieferungDetail]] = {
+    getLieferungenDetailQuery(lieferungId).future
+  }
+
+  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[List[Rechnung]] = {
+    getRechnungenQuery.future
+  }
+
+  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, owner: Subject): Future[Option[RechnungDetail]] = {
+    getRechnungDetailQuery(id).future
   }
 }

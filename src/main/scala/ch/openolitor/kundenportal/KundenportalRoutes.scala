@@ -66,16 +66,22 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.kundenportal.repositories.KundenportalReadRepositoryComponent
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import ch.openolitor.kundenportal.repositories.DefaultKundenportalReadRepositoryComponent
 
 trait KundenportalRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
+    with StammdatenEventStoreSerializer
     with BuchhaltungJsonProtocol
     with StammdatenDBMappings {
   self: KundenportalReadRepositoryComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
+  implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
+  implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
+  implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
+  implicit val lieferungIdPath = long2BaseIdPathMatcher(LieferungId.apply)
 
   import EntityStore._
 
@@ -85,7 +91,7 @@ trait KundenportalRoutes extends HttpService with ActorReferences
         UriQueryParamFilterParser.parse(filterString)
       }
       pathPrefix("kundenportal") {
-        abosRoute ~ projektRoute
+        abosRoute ~ rechnungenRoute ~ projektRoute
       }
     }
 
@@ -100,12 +106,73 @@ trait KundenportalRoutes extends HttpService with ActorReferences
       }
   }
 
-  def abosRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+  def rechnungenRoute(implicit subject: Subject) = {
+    path("rechnungen") {
+      get {
+        list(kundenportalReadRepository.getRechnungen)
+      }
+    } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
+        (get)(
+          onSuccess(kundenportalReadRepository.getRechnungDetail(id)) { detail =>
+            detail flatMap { rechnung =>
+              rechnung.fileStoreId map { fileStoreId =>
+                download(GeneriertRechnung, fileStoreId)
+              }
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "download" / Segment) { (id, fileStoreId) =>
+        (get)(
+          onSuccess(kundenportalReadRepository.getRechnungDetail(id)) { detail =>
+            detail map { rechnung =>
+              download(GeneriertMahnung, fileStoreId)
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
+      }
+  }
+
+  def abosRoute(implicit subject: Subject, filter: Option[FilterExpr]) = {
     path("abos") {
       get {
         list(kundenportalReadRepository.getAbos)
       }
-    }
+    } ~
+      path("abos" / aboIdPath / "abwesenheiten") { aboId =>
+        post {
+          requestInstance { request =>
+            entity(as[AbwesenheitModify]) { abw =>
+              onSuccess(entityStore ? KundenportalCommandHandler.AbwesenheitErstellenCommand(subject.personId, subject, copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))) {
+                case UserCommandFailed =>
+                  complete(StatusCodes.BadRequest, s"Abwesenheit konnte nicht erstellt werden.")
+                case _ =>
+                  complete("")
+              }
+            }
+          }
+        }
+      } ~
+      path("abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (aboId, abwesenheitId) =>
+        onSuccess(entityStore ? KundenportalCommandHandler.AbwesenheitLoeschenCommand(subject.personId, subject, aboId, abwesenheitId)) {
+          case UserCommandFailed =>
+            complete(StatusCodes.BadRequest, s"Abwesenheit konnte nicht gelöscht werden.")
+          case _ =>
+            complete("")
+        }
+      } ~
+      path("abos" / abotypIdPath / "lieferungen") { abotypId =>
+        get {
+          list(kundenportalReadRepository.getLieferungenDetails(abotypId))
+        }
+      } ~
+      path("abos" / abotypIdPath / "lieferungen" / lieferungIdPath) { (abotypId, lieferungId) =>
+        get {
+          get(detail(kundenportalReadRepository.getLieferungenDetail(lieferungId)))
+        }
+      }
+  }
 }
 
 class DefaultKundenportalRoutes(

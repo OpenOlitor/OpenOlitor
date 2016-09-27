@@ -69,7 +69,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
 
   lazy val config = sysConfig.mandantConfiguration.config
-  lazy val BaseLink = config.getStringOption(s"security.zugang-base-url").getOrElse("")
+  lazy val BaseZugangLink = config.getStringOption(s"security.zugang-base-url").getOrElse("")
+  lazy val BasePasswortResetLink = config.getStringOption(s"security.passwort-reset-base-url").getOrElse("")
 
   val handle: Handle = {
     case LieferplanungAbschliessenEvent(meta, id: LieferplanungId) =>
@@ -90,6 +91,10 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       enableLogin(meta, personId)
     case EinladungGesendetEvent(meta, einladung) =>
       sendEinladung(meta, einladung)
+    case PasswortResetGesendetEvent(meta, einladung) =>
+      sendPasswortReset(meta, einladung)
+    case RolleGewechseltEvent(meta, _, personId, rolle) =>
+      changeRolle(meta, personId, rolle)
     case e =>
       logger.warn(s"Unknown event:$e")
   }
@@ -146,9 +151,9 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
             stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
               val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
                 bestellposition =>
-                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.get} = ${bestellposition.preis.get} ${projekt.waehrung}"""
+                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung}"""
               }
-              val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.get}:
+              val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.getOrElse("")}:
               
 Lieferung: ${format.print(bestellung.datum)}
 
@@ -207,7 +212,15 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
     }
   }
 
-  def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator) = {
+  def sendPasswortReset(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator): Unit = {
+    sendEinladung(meta, einladungCreate, "Sie können ihr Passwort mit folgendem Link neu setzten:", BasePasswortResetLink)
+  }
+
+  def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator): Unit = {
+    sendEinladung(meta, einladungCreate, "Aktivieren Sie ihren Zugang mit folgendem Link:", BaseZugangLink)
+  }
+
+  def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate, baseText: String, baseLink: String)(implicit originator: PersonId): Unit = {
     DB localTx { implicit session =>
       // TODO bereits hängige Einladungen expires auf jetzt setzen
       stammdatenWriteRepository.getById(personMapping, einladungCreate.personId) map { person =>
@@ -232,7 +245,7 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
           val text = s"""
 	        ${person.vorname} ${person.name},
 	        
-	        Aktivieren Sie ihren Zugang mit folgendem Link: ${BaseLink}?token=${einladung.uid}
+	        ${baseText} ${baseLink}?token=${einladung.uid}
 	        
 	        """
 
@@ -246,7 +259,15 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
               logger.debug(s"Sending Mail failed resulting in $other")
           }
         }
+      }
+    }
+  }
 
+  def changeRolle(meta: EventMetadata, personId: PersonId, rolle: Rolle)(implicit originator: PersonId = meta.originator) = {
+    DB localTx { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        val updated = person.copy(rolle = Some(rolle))
+        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
       }
     }
   }
