@@ -32,6 +32,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
   lazy val lieferplanung = lieferplanungMapping.syntax("lieferplanung")
   lazy val aboTyp = abotypMapping.syntax("atyp")
   lazy val vertrieb = vertriebMapping.syntax("vertrieb")
+  lazy val lieferposition = lieferpositionMapping.syntax("lieferposition")
 
   protected def getProjektQuery = {
     withSQL {
@@ -122,5 +123,43 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> sortedLieferungen,
           "abotyp" -> aboTyp.headOption, "vertrieb" -> vertriebe.headOption)
       }).list
+  }
+
+  protected def getLieferungenByAbotypQuery(id: AbotypId, filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .leftJoin(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
+        .where.eq(lieferung.abotypId, parameter(id))
+        .and(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
+        .and.withRoundBracket { _.eq(lieferung.status, parameter(Abgeschlossen)).or.eq(lieferung.status, parameter(Verrechnet)) }
+        .orderBy(lieferung.datum)
+    }
+      .one(lieferungMapping(lieferung))
+      .toManies(
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => lieferpositionMapping.opt(lieferposition)(rs)
+      )
+      .map((lieferung, abotyp, lieferposition) => {
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp.headOption, "lieferpositionen" -> lieferposition)
+      })
+  }
+
+  protected def getLieferungenDetailQuery(id: LieferungId) = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .join(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
+        .where.eq(lieferung.id, parameter(id))
+    }.one(lieferungMapping(lieferung))
+      .toManies(
+        rs => abotypMapping.opt(aboTyp)(rs),
+        rs => lieferpositionMapping.opt(lieferposition)(rs)
+      )
+      .map { (lieferung, abotyp, positionen) =>
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp.headOption, "lieferpositionen" -> positionen)
+      }.single
   }
 }

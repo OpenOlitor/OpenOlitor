@@ -44,6 +44,12 @@ trait KundenportalReadRepository {
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]]
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[AboDetail]]
+
+  def getLieferungenDetails(aboId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[LieferungDetail]]
+
+  def getLieferungenDetailLast(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[Option[LieferungDetail]]
+
+  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[LieferungDetail]]
 }
 
 class KundenportalReadRepositoryImpl extends KundenportalReadRepository with LazyLogging with KundenportalRepositoryQueries {
@@ -71,5 +77,17 @@ class KundenportalReadRepositoryImpl extends KundenportalReadRepository with Laz
     } yield {
       d ::: h ::: p
     }
+  }
+
+  def getLieferungenDetails(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[LieferungDetail]] = {
+    getLieferungenByAbotypQuery(abotypId, filter).list.future
+  }
+
+  def getLieferungenDetailLast(abotypId: AbotypId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[Option[LieferungDetail]] = {
+    getLieferungenByAbotypQuery(abotypId, filter).first().future
+  }
+
+  def getLieferungenDetail(lieferungId: LieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[LieferungDetail]] = {
+    getLieferungenDetailQuery(lieferungId).future
   }
 }
