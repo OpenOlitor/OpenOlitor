@@ -248,18 +248,23 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createPerson(meta: EventMetadata, id: PersonId, create: PersonCreate)(implicit personId: PersonId = meta.originator) = {
-    val person = copyTo[PersonCreate, Person](create, "id" -> id,
+    val rolle: Option[Rolle] = Some(KundenZugang)
+
+    val person = copyTo[PersonCreate, Person](
+      create,
+      "id" -> id,
       "kundeId" -> create.kundeId,
       "sort" -> create.sort,
       "loginAktiv" -> FALSE,
       "letzteAnmeldung" -> None,
       "passwort" -> None,
       "passwortWechselErforderlich" -> FALSE,
-      "rolle" -> None,
+      "rolle" -> rolle,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
-      "modifikator" -> meta.originator)
+      "modifikator" -> meta.originator
+    )
 
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.insertEntity[Person, PersonId](person)
