@@ -97,6 +97,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
   implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
+  implicit val korbStatusPath = enumPathMatcher(KorbStatus.apply(_) match {
+    case x => Some(x)
+  })
   implicit val vorlageTypePath = enumPathMatcher(VorlageTyp.apply(_) match {
     case UnknownFileType => None
     case x => Some(x)
@@ -427,6 +430,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
         (put | post)(create[LieferungPlanungAdd, LieferungId]((x: Long) => lieferungId)) ~
           delete(remove(lieferungId.getLieferungOnLieferplanungId()))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, lieferungId, korbStatus) =>
+        get(list(stammdatenReadRepository.getAboIds(lieferungId, korbStatus)))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
         get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~

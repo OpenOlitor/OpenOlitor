@@ -814,6 +814,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferpositionMapping(lieferposition)).list
   }
 
+  protected def getAboIdsQuery(lieferungId: LieferungId, korbStatus: KorbStatus) = {
+    withSQL {
+      select(korb.aboId)
+        .from(korbMapping as korb)
+        .where.eq(korb.lieferungId, parameter(lieferungId))
+        .and.eq(korb.status, parameter(korbStatus))
+    }.map(res => AboId(res.long(1))).list
+  }
+
   protected def getBestellpositionByBestellungProduktQuery(bestellungId: BestellungId, produktId: ProduktId) = {
     withSQL {
       select
