@@ -65,6 +65,8 @@ import ch.openolitor.core.reporting._
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import ch.openolitor.core.mailservice.MailService
 import ch.openolitor.buchhaltung.BuchhaltungReportEventListener
+import ch.openolitor.core.calculations.OpenOlitorCalculations
+import ch.openolitor.core.calculations.Calculations.InitializeCalculation
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -188,6 +190,8 @@ object Boot extends App with LazyLogging {
       //start actor mapping dbevents to client messages
       val dbEventClientMessageMapper = Await.result(system ? SystemActor.Child(DBEvent2UserMapping.props, "db-event-mapper"), duration).asInstanceOf[ActorRef]
 
+      val calculations = Await.result(system ? SystemActor.Child(OpenOlitorCalculations.props, "calculations"), duration).asInstanceOf[ActorRef]
+
       //initialize global persistentviews
       logger.debug(s"oo-system: send Startup to entityStoreview")
       eventStore ? DefaultMessages.Startup
@@ -205,6 +209,8 @@ object Boot extends App with LazyLogging {
       //start new websocket service
       IO(UHttp) ? Http.Bind(clientMessages, interface = cfg.interface, port = cfg.wsPort)
       logger.debug(s"oo-system: configured ws listener on port ${cfg.wsPort}")
+
+      calculations ! InitializeCalculation
 
       MandantSystem(cfg, app)
     }
