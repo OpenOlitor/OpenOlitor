@@ -695,10 +695,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.one(lieferungMapping(lieferung))
       .toManies(
         rs => abotypMapping.opt(aboTyp)(rs),
-        rs => lieferpositionMapping.opt(lieferposition)(rs)
+        rs => lieferpositionMapping.opt(lieferposition)(rs),
+        rs => lieferplanungMapping.opt(lieferplanung)(rs)
       )
-      .map { (lieferung, abotyp, positionen) =>
-        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp.headOption, "lieferpositionen" -> positionen)
+      .map { (lieferung, abotyp, positionen, lieferplanung) =>
+        val bemerkung = lieferplanung match {
+          case Nil => None
+          case x => x.head.bemerkungen
+        }
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp.headOption, "lieferpositionen" -> positionen, "lieferplanungBemerkungen" -> bemerkung)
       }.list
   }
 
@@ -743,7 +748,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       .toOne(abotypMapping.opt(aboTyp))
       .map { (lieferung, abotyp) =>
         val emptyPosition = Seq.empty[Lieferposition]
-        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp, "lieferpositionen" -> emptyPosition)
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp, "lieferpositionen" -> emptyPosition, "lieferplanungBemerkungen" -> None)
       }.list
   }
 
