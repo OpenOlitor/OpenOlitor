@@ -31,55 +31,98 @@ import ch.openolitor.core.domain._
 import ch.openolitor.core.db._
 import ch.openolitor.core.models.PersonId
 import scalikejdbc._
+import ch.openolitor.stammdaten.StammdatenCommandHandler.AboAktiviertEvent
+import ch.openolitor.stammdaten.StammdatenCommandHandler.AboDeaktiviertEvent
+import ch.openolitor.core.models.BaseEntity
+import ch.openolitor.core.models.BaseId
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.core.repositories.SqlBinder
 
-object StammdatenMailListener {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenMailListener], sysConfig, system)
+object StammdatenGeneratedEventsListener {
+  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenGeneratedEventsListener], sysConfig, system)
 }
 
-class DefaultStammdatenMailListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenMailListener(sysConfig) with DefaultStammdatenWriteRepositoryComponent
+class DefaultStammdatenGeneratedEventsListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenGeneratedEventsListener(sysConfig) with DefaultStammdatenWriteRepositoryComponent
 
 /**
  * Listens to succesful sent mails
  */
-class StammdatenMailListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
+class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with StammdatenDBMappings
     with ConnectionPoolContextAware {
   this: StammdatenWriteRepositoryComponent =>
-  import StammdatenMailListener._
+  import StammdatenGeneratedEventsListener._
 
   override def preStart() {
     super.preStart()
-    context.system.eventStream.subscribe(self, classOf[MailSentEvent])
+    context.system.eventStream.subscribe(self, classOf[PersistentGeneratedEvent])
   }
 
   override def postStop() {
-    context.system.eventStream.unsubscribe(self, classOf[MailSentEvent])
+    context.system.eventStream.unsubscribe(self, classOf[PersistentGeneratedEvent])
     super.postStop()
   }
 
   def receive: Receive = {
-    case MailSentEvent(meta, uid, Some(id: BestellungId)) => handleBestellungMailSent(meta, id)
-    case MailSentEvent(meta, uid, Some(id: EinladungId)) => handleEinladungMailSent(meta, id)
-    case x => log.debug(s"Received unknown mailsentevent:$x")
+    case AboAktiviertEvent(meta, id: AboId) =>
+      handleAboAktiviert(meta, id)
+    case AboDeaktiviertEvent(meta, id: AboId) =>
+      handleAboDeaktiviert(meta, id)
+    case _ =>
+    // nothing to handle
   }
 
-  protected def handleBestellungMailSent(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
-    log.debug(s"handleBestellungMailSent:$id")
+  def handleAboAktiviert(meta: EventMetadata, id: AboId)(implicit personId: PersonId = meta.originator) = {
+    handleChange(id, 1)
+  }
+
+  def handleAboDeaktiviert(meta: EventMetadata, id: AboId)(implicit personId: PersonId = meta.originator) = {
+    handleChange(id, -1)
+  }
+
+  private def handleChange(id: AboId, change: Int)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
-        val copy = bestellung.copy(datumVersendet = Some(meta.timestamp))
-        stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
+      stammdatenWriteRepository.getAboDetail(id) map { abo =>
+
+        abo match {
+          case d: DepotlieferungAboDetail =>
+            modifyEntity[Depot, DepotId](d.depotId, { depot =>
+              depot.copy(anzahlAbonnentenAktiv = depot.anzahlAbonnentenAktiv + change)
+            })
+          case h: HeimlieferungAboDetail =>
+            modifyEntity[Tour, TourId](h.tourId, { tour =>
+              tour.copy(anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv + change)
+            })
+          case _ =>
+          // nothing to change
+        }
+
+        modifyEntity[Abotyp, AbotypId](abo.abotypId, { abotyp =>
+          abotyp.copy(anzahlAbonnentenAktiv = abotyp.anzahlAbonnentenAktiv + change)
+        })
+        modifyEntity[Kunde, KundeId](abo.kundeId, { kunde =>
+          kunde.copy(anzahlAbosAktiv = kunde.anzahlAbosAktiv + change)
+        })
+        modifyEntity[Vertrieb, VertriebId](abo.vertriebId, { vertrieb =>
+          vertrieb.copy(anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + change)
+        })
+        modifyEntity[Depotlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
+          vertriebsart.copy(anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + change)
+        })
+        modifyEntity[Heimlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
+          vertriebsart.copy(anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + change)
+        })
+        modifyEntity[Postlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
+          vertriebsart.copy(anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + change)
+        })
       }
     }
   }
 
-  protected def handleEinladungMailSent(meta: EventMetadata, id: EinladungId)(implicit personId: PersonId = meta.originator) = {
-    log.debug(s"handleEinladungMailSent:$id")
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(einladungMapping, id) map { einladung =>
-        val copy = einladung.copy(datumVersendet = Some(meta.timestamp))
-        stammdatenWriteRepository.updateEntity[Einladung, EinladungId](copy)
-      }
-    }
+  // TODO refactor this further
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](
+    id: I, mod: E => E
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
+    modifyEntityWithRepository(stammdatenWriteRepository)(id, mod)
   }
 }

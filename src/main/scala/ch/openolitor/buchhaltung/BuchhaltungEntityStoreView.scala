@@ -29,7 +29,6 @@ import akka.actor.Props
 import akka.actor.ActorSystem
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
-import ch.openolitor.Buchhaltung.BuchhaltungGeneratedEventsService
 
 object BuchhaltungEntityStoreView {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungEntityStoreView], sysConfig, system)
@@ -64,6 +63,4 @@ trait BuchhaltungEntityStoreViewComponent extends EntityStoreViewComponent {
   override val deleteService = BuchhaltungDeleteService(sysConfig, system)
 
   override val aktionenService = BuchhaltungAktionenService(sysConfig, system)
-
-  override val generatedEventsService = BuchhaltungGeneratedEventsService(sysConfig, system)
 }

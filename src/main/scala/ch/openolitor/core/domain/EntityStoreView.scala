@@ -48,8 +48,6 @@ trait EntityStoreViewComponent extends Actor {
 
   val aktionenService: EventService[PersistentEvent]
 
-  val generatedEventsService: EventService[PersistentGeneratedEvent]
-
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
     case _: Exception => Restart
   }
@@ -90,8 +88,6 @@ trait EntityStoreView extends PersistentView with ActorLogging {
     case Startup =>
       log.debug("Received startup command")
       sender ! Started
-    case e: PersistentGeneratedEvent =>
-      generatedEventsService.handle(e)
     case e: PersistentEvent =>
       // handle custom events
       aktionenService.handle(e)
