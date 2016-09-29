@@ -169,7 +169,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         post {
           requestInstance { request =>
             entity(as[AbwesenheitModify]) { abw =>
-              created(request)(copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))
+              abwesenheitCreate(copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))
             }
           }
         }
@@ -470,6 +470,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           }
         }
 
+        complete("")
+    }
+  }
+
+  def abwesenheitCreate(abw: AbwesenheitCreate)(implicit idPersister: Persister[AbwesenheitId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.AbwesenheitCreateCommand(subject.personId, abw)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not store Abwesenheit")
+      case _ =>
         complete("")
     }
   }
