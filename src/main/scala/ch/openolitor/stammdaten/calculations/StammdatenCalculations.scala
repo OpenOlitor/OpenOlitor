@@ -30,17 +30,18 @@ import akka.actor.Props
 import ch.openolitor.stammdaten.repositories.DefaultStammdatenWriteRepositoryComponent
 import ch.openolitor.core.calculations.Calculations._
 import ch.openolitor.core.calculations.BaseCalculationsSupervisor
+import akka.actor.ActorRef
 
 object StammdatenCalculations {
-  def props(sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenCalculations], sysConfig, system)
+  def props(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef): Props = Props(classOf[DefaultStammdatenCalculations], sysConfig, system, entityStore)
 }
 
-class StammdatenCalculations(val sysConfig: SystemConfig, val system: ActorSystem) extends BaseCalculationsSupervisor {
+class StammdatenCalculations(val sysConfig: SystemConfig, val system: ActorSystem, val entityStore: ActorRef) extends BaseCalculationsSupervisor {
   override lazy val calculators = Set(
-    context.actorOf(AktiveAbosCalculation.props(sysConfig, system)),
+    context.actorOf(AktiveAbosCalculation.props(sysConfig, system, entityStore)),
     context.actorOf(KorbStatusCalculation.props(sysConfig, system)),
     context.actorOf(LieferungCounterCalculation.props(sysConfig, system))
   )
 }
 
-class DefaultStammdatenCalculations(override val sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenCalculations(sysConfig, system) with DefaultStammdatenWriteRepositoryComponent
+class DefaultStammdatenCalculations(override val sysConfig: SystemConfig, override val system: ActorSystem, override val entityStore: ActorRef) extends StammdatenCalculations(sysConfig, system, entityStore) with DefaultStammdatenWriteRepositoryComponent

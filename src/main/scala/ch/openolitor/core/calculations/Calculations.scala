@@ -66,9 +66,7 @@ trait BaseCalculation extends Actor with LazyLogging {
   /**
    * Default implementation with calculation starting next midnight
    */
-  protected def handleInitialization(): Unit = {
-    scheduledCalculation = Some(context.system.scheduler.schedule(untilNextMidnight, 24 hours)(self ! StartCalculation))
-  }
+  protected def handleInitialization(): Unit
 
   def receive = {
     case InitializeCalculation =>

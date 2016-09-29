@@ -54,4 +54,8 @@ class KorbStatusCalculation(override val sysConfig: SystemConfig, override val s
       	set Status='FaelltAusAbwesend'""".execute.apply()
     }
   }
+
+  protected def handleInitialization(): Unit = {
+    // disable scheduled calculation for now
+  }
 }

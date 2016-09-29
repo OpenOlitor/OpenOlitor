@@ -54,6 +54,10 @@ object StammdatenCommandHandler {
   case class PasswortResetCommand(originator: PersonId, personId: PersonId) extends UserCommand
   case class RolleWechselnCommand(originator: PersonId, kundeId: KundeId, personId: PersonId, rolle: Rolle) extends UserCommand
 
+  // TODO person id for calculations
+  case class AboAktivierenCommand(aboId: AboId, originator: PersonId = PersonId(100)) extends UserCommand
+  case class AboDeaktivierenCommand(aboId: AboId, originator: PersonId = PersonId(100)) extends UserCommand
+
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
@@ -65,6 +69,9 @@ object StammdatenCommandHandler {
   case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortResetGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
   case class RolleGewechseltEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId, rolle: Rolle) extends PersistentEvent with JSONSerializable
+
+  case class AboAktiviertEvent(meta: EventMetadata, aboId: AboId) extends PersistentGeneratedEvent with JSONSerializable
+  case class AboDeaktiviertEvent(meta: EventMetadata, aboId: AboId) extends PersistentGeneratedEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -192,6 +199,12 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
     case RolleWechselnCommand(originator, kundeId, personId, rolle) if originator.id != personId => idFactory => meta =>
       changeRolle(idFactory, meta, kundeId, personId, rolle)
+
+    case AboAktivierenCommand(aboId, originator) => idFactory => meta =>
+      Success(Seq(AboAktiviertEvent(meta, aboId)))
+
+    case AboDeaktivierenCommand(aboId, originator) => idFactory => meta =>
+      Success(Seq(AboDeaktiviertEvent(meta, aboId)))
 
     /*
        * Insert command handling

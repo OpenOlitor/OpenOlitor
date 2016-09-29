@@ -818,11 +818,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
     id: I, mod: E => E
-  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
-
-    stammdatenWriteRepository.getById(syntax, id) map { result =>
-      val copy = mod(result)
-      stammdatenWriteRepository.updateEntity[E, I](copy)
-    }
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
+    modifyEntityWithRepository(stammdatenWriteRepository)(id, mod)
   }
 }

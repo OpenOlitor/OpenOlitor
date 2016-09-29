@@ -61,4 +61,8 @@ class LieferungCounterCalculation(override val sysConfig: SystemConfig, override
 		set l.anzahl_saldo_zu_tief=k.counter""".execute.apply()
     }
   }
+
+  protected def handleInitialization(): Unit = {
+    // disable scheduled calculation for now
+  }
 }

@@ -20,20 +20,38 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.calculations
+package ch.openolitor.stammdaten
 
-import akka.actor.Props
-import akka.actor.Actor
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.calculations.StammdatenCalculations
-import akka.actor.ActorSystem
+import akka.actor._
+
+import spray.json._
+import scalikejdbc._
+import ch.openolitor.core.models._
+import ch.openolitor.core.domain._
+import ch.openolitor.core.ws._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.core.db._
 import ch.openolitor.core.SystemConfig
-import akka.actor.ActorRef
+import ch.openolitor.core.Boot
+import ch.openolitor.core.repositories.SqlBinder
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.buchhaltung.models._
+import ch.openolitor.util.IdUtil
+import scala.concurrent.ExecutionContext.Implicits.global;
+import org.joda.time.DateTime
+import scala.concurrent.Future
 
-object OpenOlitorCalculations {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorCalculations], sysConfig, system, entityStore)
-}
+trait StammdatenEnityModify {
+  this: StammdatenWriteRepositoryComponent =>
 
-class OpenOlitorCalculations(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseCalculationsSupervisor {
-  override lazy val calculators = Set(context.actorOf(StammdatenCalculations.props(sysConfig, system, entityStore)))
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](
+    id: I, mod: E => E
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
+
+    stammdatenWriteRepository.getById(syntax, id) map { result =>
+      val copy = mod(result)
+      stammdatenWriteRepository.updateEntity[E, I](copy)
+    }
+  }
 }

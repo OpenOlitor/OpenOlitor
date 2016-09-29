@@ -20,20 +20,21 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.calculations
+package ch.openolitor.core.repositories
 
-import akka.actor.Props
-import akka.actor.Actor
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.calculations.StammdatenCalculations
-import akka.actor.ActorSystem
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorRef
+import ch.openolitor.core.models.BaseEntity
+import ch.openolitor.core.models.BaseId
+import scalikejdbc.DBSession
+import ch.openolitor.core.models.PersonId
 
-object OpenOlitorCalculations {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorCalculations], sysConfig, system, entityStore)
-}
+trait BaseWriteRepositoryComponent {
+  def modifyEntityWithRepository[E <: BaseEntity[I], I <: BaseId](repository: BaseWriteRepository)(
+    id: I, mod: E => E
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
 
-class OpenOlitorCalculations(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseCalculationsSupervisor {
-  override lazy val calculators = Set(context.actorOf(StammdatenCalculations.props(sysConfig, system, entityStore)))
+    repository.getById(syntax, id) flatMap { result =>
+      val copy = mod(result)
+      repository.updateEntity[E, I](copy)
+    }
+  }
 }

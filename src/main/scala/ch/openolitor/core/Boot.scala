@@ -190,7 +190,7 @@ object Boot extends App with LazyLogging {
       //start actor mapping dbevents to client messages
       val dbEventClientMessageMapper = Await.result(system ? SystemActor.Child(DBEvent2UserMapping.props, "db-event-mapper"), duration).asInstanceOf[ActorRef]
 
-      val calculations = Await.result(system ? SystemActor.Child(OpenOlitorCalculations.props, "calculations"), duration).asInstanceOf[ActorRef]
+      val calculations = Await.result(system ? SystemActor.Child(OpenOlitorCalculations.props(entityStore), "calculations"), duration).asInstanceOf[ActorRef]
 
       //initialize global persistentviews
       logger.debug(s"oo-system: send Startup to entityStoreview")

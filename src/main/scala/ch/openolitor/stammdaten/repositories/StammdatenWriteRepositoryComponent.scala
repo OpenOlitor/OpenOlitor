@@ -22,10 +22,12 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.repositories
 
-import akka.actor.ActorSystem
-import ch.openolitor.core._
+import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
+import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
 
-trait StammdatenWriteRepositoryComponent {
+import akka.actor.ActorSystem
+
+trait StammdatenWriteRepositoryComponent extends BaseWriteRepositoryComponent {
   val stammdatenWriteRepository: StammdatenWriteRepository
 }
 
