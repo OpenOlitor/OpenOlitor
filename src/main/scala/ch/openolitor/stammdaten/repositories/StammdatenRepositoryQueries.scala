@@ -152,6 +152,30 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(abotypMapping(aboTyp)).single
   }
 
+  protected def getDepotlieferungAbosQuery(abotypId: AbotypId) = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.eq(depotlieferungAbo.abotypId, parameter(abotypId))
+    }.map(depotlieferungAboMapping(depotlieferungAbo)).list
+  }
+
+  protected def getHeimlieferungAbosQuery(abotypId: AbotypId) = {
+    withSQL {
+      select
+        .from(heimlieferungAboMapping as heimlieferungAbo)
+        .where.eq(heimlieferungAbo.abotypId, parameter(abotypId))
+    }.map(heimlieferungAboMapping(heimlieferungAbo)).list
+  }
+
+  protected def getPostlieferungAbosQuery(abotypId: AbotypId) = {
+    withSQL {
+      select
+        .from(postlieferungAboMapping as postlieferungAbo)
+        .where.eq(postlieferungAbo.abotypId, parameter(abotypId))
+    }.map(postlieferungAboMapping(postlieferungAbo)).list
+  }
+
   protected def getDepotlieferungQuery(vertriebId: VertriebId) = {
     withSQL {
       select

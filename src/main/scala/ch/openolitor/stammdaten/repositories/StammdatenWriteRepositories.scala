@@ -41,6 +41,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
+  def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
 
   def getProjekt(implicit session: DBSession): Option[Projekt]
   def getKunden(implicit session: DBSession): List[Kunde]
@@ -135,6 +136,22 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
+  }
+
+  def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo] = {
+    getDepotlieferungAbos(abotypId) ::: getHeimlieferungAbos(abotypId) ::: getPostlieferungAbos(abotypId)
+  }
+
+  def getDepotlieferungAbos(abotypId: AbotypId)(implicit session: DBSession): List[DepotlieferungAbo] = {
+    getDepotlieferungAbosQuery(abotypId).apply()
+  }
+
+  def getHeimlieferungAbos(abotypId: AbotypId)(implicit session: DBSession): List[HeimlieferungAbo] = {
+    getHeimlieferungAbosQuery(abotypId).apply()
+  }
+
+  def getPostlieferungAbos(abotypId: AbotypId)(implicit session: DBSession): List[PostlieferungAbo] = {
+    getPostlieferungAbosQuery(abotypId).apply()
   }
 
   def getProjekt(implicit session: DBSession): Option[Projekt] = {
