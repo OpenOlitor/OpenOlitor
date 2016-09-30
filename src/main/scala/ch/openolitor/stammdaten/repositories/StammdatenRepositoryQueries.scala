@@ -71,6 +71,23 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(kundeMapping(kunde)).list
   }
 
+  protected def getKundenUebersichtQuery = {
+    withSQL {
+      select
+        .from(kundeMapping as kunde)
+        .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
+        .orderBy(person.sort)
+    }.one(kundeMapping(kunde))
+      .toMany(
+        rs => personMapping.opt(person)(rs)
+      )
+      .map((kunde, personen) => {
+        val personenWihoutPwd = personen.toSet[Person].map(p => copyTo[Person, PersonSummary](p)).toSeq
+
+        copyTo[Kunde, KundeUebersicht](kunde, "ansprechpersonen" -> personenWihoutPwd)
+      }).list
+  }
+
   protected def getCustomKundentypenQuery = {
     withSQL {
       select
