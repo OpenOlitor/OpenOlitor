@@ -30,25 +30,31 @@ import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
 
-object OO374_DBScripts extends DefaultDBScripts {
+object OO374_DBScripts_aktiv_to_abo extends DefaultDBScripts {
   val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      logger.debug(s"add column anzahl_abos_aktiv to abotyp")
-      alterTableAddColumnIfNotExists(abotypMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-      logger.debug(s"add column anzahl_abos_aktiv to kunde")
-      alterTableAddColumnIfNotExists(kundeMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to vertrieb")
-      alterTableAddColumnIfNotExists(vertriebMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to depotlieferung")
-      alterTableAddColumnIfNotExists(depotlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to heimlieferung")
-      alterTableAddColumnIfNotExists(heimlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to postlieferung")
-      alterTableAddColumnIfNotExists(postlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
-      logger.debug(s"add column anzahl_abos_aktiv to depot")
-      alterTableAddColumnIfNotExists(depotMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-      logger.debug(s"add column anzahl_abos_aktiv to tour")
-      alterTableAddColumnIfNotExists(tourMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
+      // aktiv to abo
+      logger.debug(s"add column aktiv to depotlieferungabo")
+      alterTableAddColumnIfNotExists(depotlieferungAboMapping, "aktiv", "varchar(1)", "anzahl_lieferungen")
+      logger.debug(s"add column aktiv to heimlieferungabo")
+      alterTableAddColumnIfNotExists(heimlieferungAboMapping, "aktiv", "varchar(1)", "anzahl_lieferungen")
+      logger.debug(s"add column aktiv to postlieferungabo")
+      alterTableAddColumnIfNotExists(postlieferungAboMapping, "aktiv", "varchar(1)", "anzahl_lieferungen")
+
+      // update aktiv
+      sql"""update ${depotlieferungAboMapping.table} 
+        set aktiv = DATEDIFF(start, CURDATE()) <= 0 AND (ende is null OR DATEDIFF(ende, CURDATE()) >= 0)""".execute.apply()
+      sql"""update ${heimlieferungAboMapping.table} 
+        set aktiv = DATEDIFF(start, CURDATE()) <= 0 AND (ende is null OR DATEDIFF(ende, CURDATE()) >= 0)""".execute.apply()
+      sql"""update ${postlieferungAboMapping.table} 
+        set aktiv = DATEDIFF(start, CURDATE()) <= 0 AND (ende is null OR DATEDIFF(ende, CURDATE()) >= 0)""".execute.apply()
+
+      sql"""ALTER TABLE ${depotlieferungAboMapping.table} 
+        MODIFY aktiv varchar(1) NOT NULL""".execute.apply()
+      sql"""ALTER TABLE ${heimlieferungAboMapping.table} 
+        MODIFY aktiv varchar(1) NOT NULL""".execute.apply()
+      sql"""ALTER TABLE ${postlieferungAboMapping.table} 
+        MODIFY aktiv varchar(1) NOT NULL""".execute.apply()
 
       Success(true)
     }

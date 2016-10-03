@@ -30,7 +30,6 @@ import ch.openolitor.core.models.PersonId
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.models.PersonId
 import java.util.Locale
-import ch.openolitor.core.scalax.Tuple23
 
 trait DBMappings extends BaseParameter
     with Parameters23

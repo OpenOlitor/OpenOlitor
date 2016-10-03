@@ -20,18 +20,21 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.repositories
+package ch.openolitor.core.repositories
 
-import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
-import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
+import ch.openolitor.core.models.BaseEntity
+import ch.openolitor.core.models.BaseId
+import scalikejdbc.DBSession
+import ch.openolitor.core.models.PersonId
 
-import akka.actor.ActorSystem
+trait BaseWriteRepositoryComponent {
+  def modifyEntityWithRepository[E <: BaseEntity[I], I <: BaseId](repository: BaseWriteRepository)(
+    id: I, mod: E => E
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
 
-trait StammdatenWriteRepositoryComponent extends BaseWriteRepositoryComponent {
-  val stammdatenWriteRepository: StammdatenWriteRepository
-}
-
-trait DefaultStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {
-  val system: ActorSystem
-  override val stammdatenWriteRepository: StammdatenWriteRepository = new DefaultActorSystemReference(system) with StammdatenWriteRepositoryImpl with AkkaEventStream
+    repository.getById(syntax, id) flatMap { result =>
+      val copy = mod(result)
+      repository.updateEntity[E, I](copy)
+    }
+  }
 }
