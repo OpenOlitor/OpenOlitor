@@ -72,6 +72,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   val receive: Receive = {
+    case e @ EntityModified(personId, entity: Abotyp, orig: Abotyp) if entity.name != orig.name =>
+      handleAbotypModify(orig, entity)(personId)
     case e @ EntityCreated(personId, entity: DepotlieferungAbo) =>
       handleDepotlieferungAboCreated(entity)(personId)
       handleAboCreated(entity)(personId)
@@ -134,6 +136,22 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(userId, entity: Korb, orig: Korb) if entity.status != orig.status => handleKorbStatusChanged(entity, orig.status)(userId)
 
     case x => //log.debug(s"receive unused event $x")
+  }
+
+  def handleAbotypModify(orig: Abotyp, entity: Abotyp)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getAbosByAbotyp(entity.id) map { abo =>
+        modifyEntity[DepotlieferungAbo, AboId](abo.id, { abo =>
+          abo.copy(abotypName = entity.name)
+        })
+        modifyEntity[HeimlieferungAbo, AboId](abo.id, { abo =>
+          abo.copy(abotypName = entity.name)
+        })
+        modifyEntity[PostlieferungAbo, AboId](abo.id, { abo =>
+          abo.copy(abotypName = entity.name)
+        })
+      }
+    }
   }
 
   def handleVertriebsartModified(vertriebsart: Vertriebsart, orig: Vertriebsart)(implicit personId: PersonId) = {
@@ -568,27 +586,33 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
+      val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanung.id)
 
-        //create auslieferungen
-        stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) map { vertriebsart =>
+      val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
+      vertriebeDaten map {
+        case (vertriebId, lieferungDatum) =>
 
-          if (!isAuslieferungExisting(lieferung.datum, vertriebsart)) {
-            val koerbe = stammdatenWriteRepository.getKoerbe(lieferung.datum, vertriebsart.id, WirdGeliefert)
+          log.debug(s"handleLieferplanungAbgeschlossen: ${vertriebId}:${lieferungDatum}.")
+          //create auslieferungen
+          stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
 
-            if (!koerbe.isEmpty) {
-              val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+            if (!isAuslieferungExisting(lieferungDatum, vertriebsart)) {
+              log.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
+              val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
 
-              val auslieferung = createAuslieferung(lieferung, vertriebsart, koerbe.size)
+              if (!koerbe.isEmpty) {
+                val auslieferung = createAuslieferung(lieferungDatum, vertriebsart, koerbe.size)
 
-              koerbe map { korb =>
-                val copy = korb.copy(auslieferungId = Some(auslieferung.id))
-                stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                koerbe map { korb =>
+                  val copy = korb.copy(auslieferungId = Some(auslieferung.id))
+                  stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                }
               }
             }
           }
-        }
+      }
 
+      lieferungen map { lieferung =>
         //calculate total of lieferung
         val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
         val lieferungCopy = lieferung.copy(preisTotal = total)
@@ -646,7 +670,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  private def createAuslieferung(lieferung: Lieferung, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession): Auslieferung = {
+  private def createAuslieferung(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession): Auslieferung = {
     val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
 
     vertriebsart match {
@@ -656,7 +680,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           Erfasst,
           d.depotId,
           d.depot.name,
-          lieferung.datum,
+          lieferungDatum,
           anzahlKoerbe,
           DateTime.now,
           personId,
@@ -671,7 +695,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           Erfasst,
           h.tourId,
           h.tour.name,
-          lieferung.datum,
+          lieferungDatum,
           anzahlKoerbe,
           DateTime.now,
           personId,
@@ -687,7 +711,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         val result = PostAuslieferung(
           auslieferungId,
           Erfasst,
-          lieferung.datum,
+          lieferungDatum,
           anzahlKoerbe,
           DateTime.now,
           personId,
