@@ -90,6 +90,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getDepotlieferungAbo(id: AboId)(implicit session: DBSession): Option[DepotlieferungAboDetail]
   def getHeimlieferungAbo(id: AboId)(implicit session: DBSession): Option[HeimlieferungAboDetail]
   def getPostlieferungAbo(id: AboId)(implicit session: DBSession): Option[PostlieferungAboDetail]
+
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
 }
 
 trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging with StammdatenRepositoryQueries {
@@ -361,5 +363,9 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getKundeDetail(kundeId: KundeId)(implicit session: DBSession): Option[KundeDetail] = {
     getKundeDetailQuery(kundeId).apply()
+  }
+
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
+    getSingleDepotlieferungAbo(id)() orElse getSingleHeimlieferungAbo(id)() orElse getSinglePostlieferungAbo(id)()
   }
 }

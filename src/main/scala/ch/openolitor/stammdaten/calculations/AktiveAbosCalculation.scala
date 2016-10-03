@@ -56,16 +56,18 @@ class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val s
 
   override def calculate(): Unit = {
     DB autoCommit { implicit session =>
-      val yesterday = DateTime.now.toLocalDate.minusDays(1)
-      val today = DateTime.now.toLocalDate
+      val yesterday = LocalDate.now.minusDays(1).toDateTimeAtStartOfDay
+      val today = LocalDate.now.toDateTimeAtStartOfDay
 
       val aktiviert = withSQL {
         select(depotlieferungAbo.id)
           .from(depotlieferungAboMapping as depotlieferungAbo)
-          .where.eq(depotlieferungAbo.start, today)
+          .where.le(depotlieferungAbo.start, parameter(today))
+          .and.ge(depotlieferungAbo.ende, parameter(today))
+          .and.eq(depotlieferungAbo.aktiv, parameter(false))
       }.map(res => AboId(res.long(1))).list()()
 
-      logger.debug(s"found ${aktiviert.size} activated abos")
+      logger.debug(s"Found ${aktiviert.size} activated abos for ${sysConfig.mandantConfiguration.name}")
 
       aktiviert foreach { id =>
         entityStore ! StammdatenCommandHandler.AboAktivierenCommand(id)
@@ -74,10 +76,12 @@ class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val s
       val deaktiviert = withSQL {
         select(depotlieferungAbo.id)
           .from(depotlieferungAboMapping as depotlieferungAbo)
-          .where.eq(depotlieferungAbo.ende, yesterday)
+          .where.le(depotlieferungAbo.start, parameter(yesterday))
+          .and.le(depotlieferungAbo.ende, parameter(yesterday))
+          .and.eq(depotlieferungAbo.aktiv, parameter(true))
       }.map(res => AboId(res.long(1))).list()()
 
-      logger.debug(s"found ${deaktiviert.size} deactivated abos")
+      logger.debug(s"found ${deaktiviert.size} deactivated abos for ${sysConfig.mandantConfiguration.name}")
 
       deaktiviert foreach { id =>
         entityStore ! StammdatenCommandHandler.AboDeaktivierenCommand(id)
@@ -86,6 +90,6 @@ class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val s
   }
 
   protected def handleInitialization(): Unit = {
-    scheduledCalculation = Some(context.system.scheduler.schedule(untilNextMidnight, 24 hours)(self ! StartCalculation))
+    scheduledCalculation = Some(context.system.scheduler.schedule(1 minute, 1 minute)(self ! StartCalculation))
   }
 }
