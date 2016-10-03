@@ -31,8 +31,16 @@ import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.kundenportal.models.BelongsToKunde
+import ch.openolitor.core.scalax.Tuple23
 
 case class AboId(id: Long) extends BaseId
+
+object IAbo {
+  def calculateAktiv(start: DateTime, ende: Option[DateTime]): Boolean = {
+    val yesterday = DateTime.now.toLocalDate.minusDays(1)
+    start.isBeforeNow && (ende map (_.toLocalDate.isAfter(yesterday)) getOrElse true)
+  }
+}
 
 trait IAbo extends BaseEntity[AboId] with BelongsToKunde {
   val id: AboId
@@ -52,6 +60,10 @@ trait IAbo extends BaseEntity[AboId] with BelongsToKunde {
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
   val anzahlLieferungen: TreeMap[String, Int]
+  val aktiv: Boolean
+
+  def calculateAktiv: Boolean =
+    IAbo.calculateAktiv(start, ende)
 }
 
 sealed trait Abo extends IAbo {
@@ -80,6 +92,7 @@ sealed trait AboDetail extends JSONSerializable {
   val anzahlLieferungen: TreeMap[String, Int]
   val abwesenheiten: Seq[Abwesenheit]
   val lieferdaten: Seq[Lieferung]
+  val aktiv: Boolean
 }
 
 sealed trait AboModify extends JSONSerializable {
@@ -110,12 +123,43 @@ case class DepotlieferungAbo(
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Abo
+
+object DepotlieferungAbo {
+  def unapply(o: DepotlieferungAbo) = {
+    Some(Tuple23(
+      o.id,
+      o.kundeId,
+      o.kunde,
+      o.vertriebsartId,
+      o.vertriebId,
+      o.vertriebBeschrieb,
+      o.abotypId,
+      o.abotypName,
+      o.depotId,
+      o.depotName,
+      o.start,
+      o.ende,
+      o.guthabenVertraglich,
+      o.guthaben,
+      o.guthabenInRechnung,
+      o.letzteLieferung,
+      o.anzahlAbwesenheiten,
+      o.anzahlLieferungen,
+      o.aktiv,
+      o.erstelldat,
+      o.ersteller,
+      o.modifidat,
+      o.modifikator
+    ))
+  }
+}
 
 case class DepotlieferungAboReport(
   id: AboId,
@@ -138,6 +182,7 @@ case class DepotlieferungAboReport(
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -165,6 +210,7 @@ case class DepotlieferungAboDetail(
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -205,12 +251,43 @@ case class HeimlieferungAbo(
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Abo
+
+object HeimlieferungAbo {
+  def unapply(o: HeimlieferungAbo) = {
+    Some(Tuple23(
+      o.id,
+      o.kundeId,
+      o.kunde,
+      o.vertriebsartId,
+      o.vertriebId,
+      o.vertriebBeschrieb,
+      o.abotypId,
+      o.abotypName,
+      o.tourId,
+      o.tourName,
+      o.start,
+      o.ende,
+      o.guthabenVertraglich,
+      o.guthaben,
+      o.guthabenInRechnung,
+      o.letzteLieferung,
+      o.anzahlAbwesenheiten,
+      o.anzahlLieferungen,
+      o.aktiv,
+      o.erstelldat,
+      o.ersteller,
+      o.modifidat,
+      o.modifikator
+    ))
+  }
+}
 
 case class HeimlieferungAboDetail(
   id: AboId,
@@ -232,6 +309,7 @@ case class HeimlieferungAboDetail(
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -270,6 +348,7 @@ case class PostlieferungAbo(
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -295,6 +374,7 @@ case class PostlieferungAboDetail(
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
