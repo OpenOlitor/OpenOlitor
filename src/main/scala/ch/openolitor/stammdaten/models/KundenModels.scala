@@ -211,6 +211,33 @@ object Kunde {
   ))
 }
 
+case class KundeUebersicht(
+  id: KundeId,
+  bezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  abweichendeLieferadresse: Boolean,
+  bezeichnungLieferung: Option[String],
+  strasseLieferung: Option[String],
+  hausNummerLieferung: Option[String],
+  adressZusatzLieferung: Option[String],
+  plzLieferung: Option[String],
+  ortLieferung: Option[String],
+  zusatzinfoLieferung: Option[String],
+  typen: Set[KundentypId],
+  //Zusatzinformationen
+  ansprechpersonen: Seq[PersonSummary],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class KundeDetail(
   id: KundeId,
   bezeichnung: String,
