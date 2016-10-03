@@ -49,12 +49,12 @@ object OO374_DBScripts_aktiv_to_abo extends DefaultDBScripts {
       sql"""update ${postlieferungAboMapping.table} 
         set aktiv = DATEDIFF(start, CURDATE()) <= 0 AND (ende is null OR DATEDIFF(ende, CURDATE()) >= 0)""".execute.apply()
 
-      sql"""update ${depotlieferungAboMapping.table} 
-        ALTER COLUMN aktiv varchar(1) NOT NULL""".execute.apply()
-      sql"""update ${heimlieferungAboMapping.table} 
-        ALTER COLUMN aktiv varchar(1) NOT NULL""".execute.apply()
-      sql"""update ${postlieferungAboMapping.table} 
-        ALTER COLUMN aktiv varchar(1) NOT NULL""".execute.apply()
+      sql"""ALTER TABLE ${depotlieferungAboMapping.table} 
+        MODIFY aktiv varchar(1) NOT NULL""".execute.apply()
+      sql"""ALTER TABLE ${heimlieferungAboMapping.table} 
+        MODIFY aktiv varchar(1) NOT NULL""".execute.apply()
+      sql"""ALTER TABLE ${postlieferungAboMapping.table} 
+        MODIFY aktiv varchar(1) NOT NULL""".execute.apply()
 
       Success(true)
     }
