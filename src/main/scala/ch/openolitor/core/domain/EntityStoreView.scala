@@ -31,6 +31,14 @@ import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.domain._
 import ch.openolitor.core.AkkaEventStream
 import DefaultMessages._
+import ch.openolitor.core.EntityStoreReference
+import akka.util.Timeout
+import scala.concurrent.duration._
+import akka.actor._
+import akka.pattern.ask
+import scala.util._
+import scala.concurrent.ExecutionContext.Implicits.global
+import com.typesafe.scalalogging.LazyLogging
 
 trait EventService[E <: PersistentEvent] {
   type Handle = (E => Unit)
@@ -59,7 +67,7 @@ object EntityStoreView {
 /**
  * Diese generische EntityStoreView delelegiert die Events an die jeweilige modulspezifische ActorRef
  */
-trait EntityStoreView extends PersistentView with ActorLogging {
+trait EntityStoreView extends PersistentView with EntityStoreReference with LazyLogging {
   self: EntityStoreViewComponent =>
 
   import EntityStore._
@@ -94,4 +102,17 @@ trait EntityStoreView extends PersistentView with ActorLogging {
   }
 
   def initializeEntityStoreView(): Unit
+
+  /**
+   * start with event recovery after evolution complete
+   */
+  override def preStart(): Unit = {
+    implicit val timeout = Timeout(50.seconds)
+    entityStore ? EntityStore.CheckDBEvolution map {
+      case Success(rev) =>
+        super.preStart()
+      case Failure(e) =>
+        throw e
+    }
+  }
 }

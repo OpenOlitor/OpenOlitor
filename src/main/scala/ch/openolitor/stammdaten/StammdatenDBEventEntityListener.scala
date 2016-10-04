@@ -54,7 +54,8 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with StammdatenDBMappings
     with ConnectionPoolContextAware
-    with KorbStatusHandler {
+    with KorbStatusHandler
+    with AboAktivChangeHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
@@ -87,7 +88,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleHeimlieferungAboDeleted(entity)(personId)
       handleAboDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) if entity.tourId != orig.tourId =>
-      handleHeimlieferungAboDepotChanged(orig.tourId, entity.tourId)(personId)
+      handleHeimlieferungAboChanged(orig.tourId, entity.tourId)(personId)
       handleHeimlieferungAboModified(orig, entity)(personId)
       handleAboModified(orig, entity)(personId)
     case e @ EntityModified(personId, entity: PostlieferungAbo, orig: PostlieferungAbo) if entity.vertriebId != orig.vertriebId =>
@@ -98,6 +99,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) => handleHeimlieferungAboModified(entity, orig)(personId)
     case e @ EntityCreated(personId, entity: Abo) => handleAboCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Abo) => handleAboDeleted(entity)(personId)
+    case e @ EntityModified(personId, entity: Abo, orig: Abo) => handleAboModified(orig, entity)(personId)
     case e @ EntityCreated(personId, entity: Abwesenheit) => handleAbwesenheitCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Abwesenheit) => handleAbwesenheitDeleted(entity)(personId)
 
@@ -158,11 +160,16 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     //update Beschrieb on Vertrieb
   }
 
+  private def calculateAboAktivCreate(abo: Abo): Int = {
+    if (abo.aktiv) 1 else 0
+  }
+
   def handleDepotlieferungAboCreated(abo: DepotlieferungAbo)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       modifyEntity[Depot, DepotId](abo.depotId, { depot =>
         log.debug(s"Add abonnent to depot:${depot.id}")
-        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = depot.anzahlAbonnentenAktiv + 1)
+
+        depot.copy(anzahlAbonnenten = depot.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = depot.anzahlAbonnentenAktiv + calculateAboAktivCreate(abo))
       })
     }
   }
@@ -190,6 +197,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleHeimlieferungAboModified(entity: HeimlieferungAbo, orig: HeimlieferungAbo)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      modifyEntity[Tour, TourId](entity.tourId, { tour =>
+        log.debug(s"Add abonnent to tour:${tour.id}")
+        tour.copy(anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv + calculateAboAktivCreate(entity))
+      })
+    }
+
     insertOrUpdateTourlieferung(entity)
   }
 
@@ -197,7 +211,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Tour, TourId](entity.tourId, { tour =>
         log.debug(s"Add abonnent to tour:${tour.id}")
-        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv + 1)
+        tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv + calculateAboAktivCreate(entity))
       })
     }
     insertOrUpdateTourlieferung(entity)
@@ -214,7 +228,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleHeimlieferungAboDepotChanged(from: TourId, to: TourId)(implicit personId: PersonId) = {
+  def handleHeimlieferungAboChanged(from: TourId, to: TourId)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       modifyEntity[Tour, TourId](from, { tour =>
         log.debug(s"Remove abonnent from tour:${tour.id}")
@@ -231,33 +245,37 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       modifyEntity[Abotyp, AbotypId](abo.abotypId, { abotyp =>
         log.debug(s"Add abonnent to abotyp:${abotyp.id}")
-        abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = abotyp.anzahlAbonnentenAktiv + 1)
+        abotyp.copy(anzahlAbonnenten = abotyp.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = abotyp.anzahlAbonnentenAktiv + calculateAboAktivCreate(abo))
       })
       modifyEntity[Kunde, KundeId](abo.kundeId, { kunde =>
         log.debug(s"Add abonnent to kunde:${kunde.id}")
-        kunde.copy(anzahlAbos = kunde.anzahlAbos + 1, anzahlAbosAktiv = kunde.anzahlAbosAktiv + 1)
+        kunde.copy(anzahlAbos = kunde.anzahlAbos + 1, anzahlAbosAktiv = kunde.anzahlAbosAktiv + calculateAboAktivCreate(abo))
       })
       modifyEntity[Vertrieb, VertriebId](abo.vertriebId, { vertrieb =>
         log.debug(s"Add abonnent to vertrieb:${vertrieb.id}")
-        vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + 1)
+        vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + calculateAboAktivCreate(abo))
       })
       modifyEntity[Depotlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + calculateAboAktivCreate(abo))
       })
       modifyEntity[Heimlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + calculateAboAktivCreate(abo))
       })
       modifyEntity[Postlieferung, VertriebsartId](abo.vertriebsartId, { vertriebsart =>
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
-        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + 1)
+        vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + calculateAboAktivCreate(abo))
       })
     }
   }
 
   def handleAboModified(from: Abo, to: Abo)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
+      if (from.aktiv != to.aktiv) {
+        handleAboAktivChange(to, if (to.aktiv) 1 else -1)
+      }
+
       if (from.vertriebId != to.vertriebId) {
         modifyEntity[Vertrieb, VertriebId](from.vertriebId, { vertrieb =>
           log.debug(s"Remove abonnent from vertrieb:${vertrieb.id}")
@@ -842,11 +860,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
     id: I, mod: E => E
-  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
-
-    stammdatenWriteRepository.getById(syntax, id) map { result =>
-      val copy = mod(result)
-      stammdatenWriteRepository.updateEntity[E, I](copy)
-    }
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
+    modifyEntityWithRepository(stammdatenWriteRepository)(id, mod)
   }
 }

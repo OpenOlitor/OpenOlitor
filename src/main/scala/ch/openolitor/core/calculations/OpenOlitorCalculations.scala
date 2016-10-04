@@ -20,18 +20,20 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.repositories
+package ch.openolitor.core.calculations
 
-import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
-import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
-
+import akka.actor.Props
+import akka.actor.Actor
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.calculations.StammdatenCalculations
 import akka.actor.ActorSystem
+import ch.openolitor.core.SystemConfig
+import akka.actor.ActorRef
 
-trait StammdatenWriteRepositoryComponent extends BaseWriteRepositoryComponent {
-  val stammdatenWriteRepository: StammdatenWriteRepository
+object OpenOlitorCalculations {
+  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorCalculations], sysConfig, system, entityStore)
 }
 
-trait DefaultStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {
-  val system: ActorSystem
-  override val stammdatenWriteRepository: StammdatenWriteRepository = new DefaultActorSystemReference(system) with StammdatenWriteRepositoryImpl with AkkaEventStream
+class OpenOlitorCalculations(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseCalculationsSupervisor {
+  override lazy val calculators = Set(context.actorOf(StammdatenCalculations.props(sysConfig, system, entityStore)))
 }
