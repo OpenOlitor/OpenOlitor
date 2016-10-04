@@ -612,8 +612,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.guthabenInRechnung -> parameter(abo.guthabenInRechnung),
         column.letzteLieferung -> parameter(abo.letzteLieferung),
         column.anzahlAbwesenheiten -> parameter(abo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen),
-        column.aktiv -> parameter(abo.aktiv)
+        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen)
       )
     }
   }

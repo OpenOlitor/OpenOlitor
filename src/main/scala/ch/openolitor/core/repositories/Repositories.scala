@@ -155,7 +155,7 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: PersonId): Option[E] = {
+    user: PersonId) = {
     getById(syntaxSupport, entity.id).map { orig =>
       val alias = syntaxSupport.syntax("x")
       val id = alias.id
@@ -169,9 +169,8 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
       publish(EntityModified(user, entity, orig))
 
       entity
-    } orElse {
+    } getOrElse {
       logger.debug(s"Entity with id:${entity.id} not found, ignore update")
-      None
     }
   }
 
