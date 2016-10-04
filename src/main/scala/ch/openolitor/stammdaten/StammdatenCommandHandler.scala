@@ -335,14 +335,22 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       Success(updateEvent +: (newPersonsEvents ++ newPendenzenEvents))
 
     case UpdateEntityCommand(personId, id: AboId, entity: AboGuthabenModify) => idFactory => meta =>
-      //TODO: assemble text using gettext
-      val title = "Guthaben angepasst. Abo Nr.:" + id.id + ", Grund:"
-      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title + entity.bemerkung)
-      Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+      DB readOnly { implicit session =>
+        //TODO: assemble text using gettext
+        stammdatenWriteRepository.getAboDetail(id) match {
+          case Some(abo) => {
+            val text = s"Guthaben manuell angepasst. Abo Nr.: ${id.id}; Bisher: ${abo.guthaben}; Neu: ${entity.guthabenNeu}; Grund: ${entity.bemerkung}"
+            val pendenzEvent = addKundenPendenz(idFactory, meta, id, text)
+            Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+          }
+          case None =>
+            Failure(new InvalidStateException(s"UpdateEntityCommand: Abo konnte nicht gefunden werden"))
+        }
+      }
     case UpdateEntityCommand(personId, id: AboId, entity: AboVertriebsartModify) => idFactory => meta =>
       //TODO: assemble text using gettext
-      val title = "Vertriebsart angepasst. Abo Nr.:" + id.id + ", Grund:"
-      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title + entity.bemerkung)
+      val text = s"Vertriebsart angepasst. Abo Nr.: ${id.id}, Neu: ${entity.vertriebsartIdNeu}; Grund: ${entity.bemerkung}"
+      val pendenzEvent = addKundenPendenz(idFactory, meta, id, text)
       Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
   }
 
