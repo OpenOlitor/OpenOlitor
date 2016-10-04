@@ -230,6 +230,8 @@ case class KundeUebersicht(
   zusatzinfoLieferung: Option[String],
   typen: Set[KundentypId],
   //Zusatzinformationen
+  anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   ansprechpersonen: Seq[PersonSummary],
   //modification flags
   erstelldat: DateTime,
@@ -258,6 +260,7 @@ case class KundeDetail(
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   anzahlPendenzen: Int,
   anzahlPersonen: Int,
   abos: Seq[Abo],
