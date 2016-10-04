@@ -59,13 +59,7 @@ class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val s
       val yesterday = LocalDate.now.minusDays(1).toDateTimeAtStartOfDay
       val today = LocalDate.now.toDateTimeAtStartOfDay
 
-      val aktiviert = withSQL {
-        select(depotlieferungAbo.id)
-          .from(depotlieferungAboMapping as depotlieferungAbo)
-          .where.le(depotlieferungAbo.start, parameter(today))
-          .and.ge(depotlieferungAbo.ende, parameter(today))
-          .and.eq(depotlieferungAbo.aktiv, parameter(false))
-      }.map(res => AboId(res.long(1))).list()()
+      val aktiviert = getAktivierteAbosQuery()
 
       logger.debug(s"Found ${aktiviert.size} activated abos for ${sysConfig.mandantConfiguration.name}")
 
@@ -73,13 +67,7 @@ class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val s
         entityStore ! StammdatenCommandHandler.AboAktivierenCommand(id)
       }
 
-      val deaktiviert = withSQL {
-        select(depotlieferungAbo.id)
-          .from(depotlieferungAboMapping as depotlieferungAbo)
-          .where.le(depotlieferungAbo.start, parameter(yesterday))
-          .and.le(depotlieferungAbo.ende, parameter(yesterday))
-          .and.eq(depotlieferungAbo.aktiv, parameter(true))
-      }.map(res => AboId(res.long(1))).list()()
+      val deaktiviert = getDeaktivierteAbosQuery()
 
       logger.debug(s"found ${deaktiviert.size} deactivated abos for ${sysConfig.mandantConfiguration.name}")
 
@@ -90,6 +78,6 @@ class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val s
   }
 
   protected def handleInitialization(): Unit = {
-    scheduledCalculation = Some(context.system.scheduler.schedule(1 minute, 1 minute)(self ! StartCalculation))
+    scheduledCalculation = Some(context.system.scheduler.schedule(untilNextMidnight, 24 hours)(self ! StartCalculation))
   }
 }

@@ -15,6 +15,7 @@ import org.joda.time.DateTime
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.util.parsing.FilterExpr
+import org.joda.time.LocalDate
 
 trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
 
@@ -1230,5 +1231,47 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(korbMapping as korbShort)
         .where.eq(korbShort.lieferungId, parameter(id))
     }
+  }
+
+  protected def getAktivierteAbosQuery = {
+    val today = LocalDate.now.toDateTimeAtStartOfDay
+
+    withSQL {
+      select(depotlieferungAbo.id)
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.le(depotlieferungAbo.start, parameter(today))
+        .and.ge(depotlieferungAbo.ende, parameter(today))
+        .and.eq(depotlieferungAbo.aktiv, parameter(false))
+        .union(select(heimlieferungAbo.id).from(heimlieferungAboMapping as heimlieferungAbo)
+          .where.le(heimlieferungAbo.start, parameter(today))
+          .and.ge(heimlieferungAbo.ende, parameter(today))
+          .and.eq(heimlieferungAbo.aktiv, parameter(false))).union(
+          select(postlieferungAbo.id).from(postlieferungAboMapping as postlieferungAbo)
+            .where.le(postlieferungAbo.start, parameter(today))
+            .and.ge(postlieferungAbo.ende, parameter(today))
+            .and.eq(postlieferungAbo.aktiv, parameter(false))
+        )
+    }.map(res => AboId(res.long(1))).list
+  }
+
+  protected def getDeaktivierteAbosQuery = {
+    val yesterday = LocalDate.now.minusDays(1).toDateTimeAtStartOfDay
+
+    withSQL {
+      select(depotlieferungAbo.id)
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.le(depotlieferungAbo.start, parameter(yesterday))
+        .and.le(depotlieferungAbo.ende, parameter(yesterday))
+        .and.eq(depotlieferungAbo.aktiv, parameter(true))
+        .union(select(heimlieferungAbo.id).from(heimlieferungAboMapping as heimlieferungAbo)
+          .where.le(heimlieferungAbo.start, parameter(yesterday))
+          .and.le(heimlieferungAbo.ende, parameter(yesterday))
+          .and.eq(heimlieferungAbo.aktiv, parameter(true))).union(
+          select(postlieferungAbo.id).from(postlieferungAboMapping as postlieferungAbo)
+            .where.le(postlieferungAbo.start, parameter(yesterday))
+            .and.le(postlieferungAbo.ende, parameter(yesterday))
+            .and.eq(postlieferungAbo.aktiv, parameter(true))
+        )
+    }.map(res => AboId(res.long(1))).list
   }
 }
