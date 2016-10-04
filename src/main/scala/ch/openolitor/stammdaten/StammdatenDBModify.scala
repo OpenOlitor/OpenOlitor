@@ -20,18 +20,38 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.repositories
+package ch.openolitor.stammdaten
 
-import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
-import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
+import akka.actor._
 
-import akka.actor.ActorSystem
+import spray.json._
+import scalikejdbc._
+import ch.openolitor.core.models._
+import ch.openolitor.core.domain._
+import ch.openolitor.core.ws._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.core.db._
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.Boot
+import ch.openolitor.core.repositories.SqlBinder
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.buchhaltung.models._
+import ch.openolitor.util.IdUtil
+import scala.concurrent.ExecutionContext.Implicits.global;
+import org.joda.time.DateTime
+import scala.concurrent.Future
 
-trait StammdatenWriteRepositoryComponent extends BaseWriteRepositoryComponent {
-  val stammdatenWriteRepository: StammdatenWriteRepository
-}
+trait StammdatenEnityModify {
+  this: StammdatenWriteRepositoryComponent =>
 
-trait DefaultStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {
-  val system: ActorSystem
-  override val stammdatenWriteRepository: StammdatenWriteRepository = new DefaultActorSystemReference(system) with StammdatenWriteRepositoryImpl with AkkaEventStream
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](
+    id: I, mod: E => E
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
+
+    stammdatenWriteRepository.getById(syntax, id) map { result =>
+      val copy = mod(result)
+      stammdatenWriteRepository.updateEntity[E, I](copy)
+    }
+  }
 }

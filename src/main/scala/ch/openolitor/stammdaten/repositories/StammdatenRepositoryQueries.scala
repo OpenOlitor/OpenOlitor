@@ -1190,6 +1190,30 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(einladungMapping(einladung)).single
   }
 
+  protected def getSingleDepotlieferungAbo(id: AboId) = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.eq(depotlieferungAbo.id, parameter(id))
+    }.map(depotlieferungAboMapping(depotlieferungAbo)).single
+  }
+
+  protected def getSingleHeimlieferungAbo(id: AboId) = {
+    withSQL {
+      select
+        .from(heimlieferungAboMapping as heimlieferungAbo)
+        .where.eq(heimlieferungAbo.id, parameter(id))
+    }.map(heimlieferungAboMapping(heimlieferungAbo)).single
+  }
+
+  protected def getSinglePostlieferungAbo(id: AboId) = {
+    withSQL {
+      select
+        .from(postlieferungAboMapping as postlieferungAbo)
+        .where.eq(postlieferungAbo.id, parameter(id))
+    }.map(postlieferungAboMapping(postlieferungAbo)).single
+  }
+
   // MODIFY and DELETE Queries
 
   protected def deleteLieferpositionenQuery(id: LieferungId) = {
@@ -1207,5 +1231,4 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .where.eq(korbShort.lieferungId, parameter(id))
     }
   }
-
 }
