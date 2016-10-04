@@ -56,25 +56,24 @@ object AboParser extends EntityParser {
         val depotIdOpt = row.value[Option[Long]](depotIdIndex)
         val tourIdOpt = row.value[Option[Long]](tourIdIndex)
         val vertriebBeschrieb = vertrieb.beschrieb
-        val aktiv = IAbo.calculateAktiv(start, ende)
 
         depotIdOpt map { depotIdInt =>
           val depotId = depotIdMapping getOrElse (depotIdInt, throw ParseException(s"Depot id $depotIdInt referenced from abo not found"))
           val depotName = (depots filter (_.id == depotId)).headOption map (_.name) getOrElse (s"Depot not found with id:$depotId")
           DepotlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, vertriebBeschrieb, abotypId, abotypName, depotId, depotName,
             start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
-            anzahlLieferungen, aktiv, erstelldat, ersteller, modifidat, modifikator)
+            anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
         } getOrElse {
           tourIdOpt map { tourIdInt =>
             val tourId = tourIdMapping getOrElse (tourIdInt, throw ParseException(s"Tour id tourIdInt referenced from abo not found"))
             val tourName = (tours filter (_.id == tourId)).headOption map (_.name) getOrElse (s"Tour not found with id:$tourId")
             HeimlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, vertriebBeschrieb, abotypId, abotypName, tourId, tourName,
               start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
-              anzahlLieferungen, aktiv, erstelldat, ersteller, modifidat, modifikator)
+              anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
           } getOrElse {
             PostlieferungAbo(aboId, kundeId, kunde, vertriebsartId, vertriebId, vertriebBeschrieb, abotypId, abotypName,
               start, ende, guthabenVertraglich, guthaben, guthabenInRechnung, letzteLieferung, anzahlAbwesenheiten,
-              anzahlLieferungen, aktiv, erstelldat, ersteller, modifidat, modifikator)
+              anzahlLieferungen, erstelldat, ersteller, modifidat, modifikator)
           }
         }
     }

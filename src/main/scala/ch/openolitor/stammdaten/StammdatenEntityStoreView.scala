@@ -22,17 +22,19 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
-import akka.actor._
 import ch.openolitor.core.domain._
 import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
+import akka.actor.Props
+import akka.actor.ActorSystem
+import akka.actor.ActorRef
 import ch.openolitor.stammdaten.repositories._
 
 object StammdatenEntityStoreView {
-  def props(mailService: ActorRef, entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenEntityStoreView], mailService, entityStore, sysConfig, system)
+  def props(mailService: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenEntityStoreView], mailService, sysConfig, system)
 }
 
-class DefaultStammdatenEntityStoreView(override val mailService: ActorRef, override val entityStore: ActorRef, implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends StammdatenEntityStoreView
+class DefaultStammdatenEntityStoreView(override val mailService: ActorRef, implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends StammdatenEntityStoreView
   with DefaultStammdatenWriteRepositoryComponent
 
 /**

@@ -22,12 +22,11 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung.repositories
 
-import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
-import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
-
 import akka.actor.ActorSystem
+import ch.openolitor.core.DefaultActorSystemReference
+import ch.openolitor.core.AkkaEventStream
 
-trait BuchhaltungWriteRepositoryComponent extends BaseWriteRepositoryComponent {
+trait BuchhaltungWriteRepositoryComponent {
   val buchhaltungWriteRepository: BuchhaltungWriteRepository
 }
 

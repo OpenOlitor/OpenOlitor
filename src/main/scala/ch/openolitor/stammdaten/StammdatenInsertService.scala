@@ -309,17 +309,11 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[DateTime], Boolean) = {
+  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[DateTime]) = {
     abotyp.laufzeiteinheit match {
-      case Unbeschraenkt =>
-        (None, None, IAbo.calculateAktiv(create.start, None))
-
-      case Lieferungen =>
-        (abotyp.laufzeit, None, IAbo.calculateAktiv(create.start, None))
-
-      case Monate =>
-        val ende = Some(create.start.plusMonths(abotyp.laufzeit.get))
-        (None, ende, IAbo.calculateAktiv(create.start, ende))
+      case Unbeschraenkt => (None, None)
+      case Lieferungen => (abotyp.laufzeit, None)
+      case Monate => (None, Some(create.start.plusMonths(abotyp.laufzeit.get)))
     }
   }
 
@@ -355,7 +349,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       abotypByVertriebartId(create.vertriebsartId) map {
         case (vertriebsart, vertrieb, abotyp) =>
           aboParameters(create)(abotyp) match {
-            case (guthaben, ende, aktiv) =>
+            case (guthaben, ende) =>
               val abo = create match {
                 case create: DepotlieferungAboModify =>
                   val depotName = depotById(create.depotId).map(_.name).getOrElse("")
@@ -375,7 +369,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "letzteLieferung" -> None,
                     "anzahlAbwesenheiten" -> emptyMap,
                     "anzahlLieferungen" -> emptyMap,
-                    "aktiv" -> aktiv,
                     "erstelldat" -> meta.timestamp,
                     "ersteller" -> meta.originator,
                     "modifidat" -> meta.timestamp,
@@ -399,7 +392,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "letzteLieferung" -> None,
                     "anzahlAbwesenheiten" -> emptyMap,
                     "anzahlLieferungen" -> emptyMap,
-                    "aktiv" -> aktiv,
                     "erstelldat" -> meta.timestamp,
                     "ersteller" -> meta.originator,
                     "modifidat" -> meta.timestamp,
@@ -420,7 +412,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "letzteLieferung" -> None,
                     "anzahlAbwesenheiten" -> emptyMap,
                     "anzahlLieferungen" -> emptyMap,
-                    "aktiv" -> aktiv,
                     "erstelldat" -> meta.timestamp,
                     "ersteller" -> meta.originator,
                     "modifidat" -> meta.timestamp,

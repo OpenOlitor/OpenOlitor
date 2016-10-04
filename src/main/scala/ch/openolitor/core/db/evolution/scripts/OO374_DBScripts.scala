@@ -49,7 +49,6 @@ object OO374_DBScripts extends DefaultDBScripts {
       alterTableAddColumnIfNotExists(depotMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
       logger.debug(s"add column anzahl_abos_aktiv to tour")
       alterTableAddColumnIfNotExists(tourMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
-
       Success(true)
     }
   }

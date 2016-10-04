@@ -32,8 +32,6 @@ trait PersistentEvent extends Serializable {
   val meta: EventMetadata
 }
 
-trait PersistentGeneratedEvent extends PersistentEvent
-
 case class PersistentSystemEvent(meta: EventMetadata, event: SystemEvent) extends PersistentEvent
 
 trait SystemEvent extends JSONSerializable
