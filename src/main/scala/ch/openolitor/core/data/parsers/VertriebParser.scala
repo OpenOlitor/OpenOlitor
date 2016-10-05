@@ -27,7 +27,7 @@ object VertriebParser extends EntityParser {
       val durchschnittspreis = parseTreeMap(row.value[String](indexDurchschnittspreis))(identity, BigDecimal(_))
 
       Vertrieb(vertriebId, abotypId, liefertag, beschrieb,
-        anzahlAbos, anzahlAbosAktiv, durchschnittspreis, anzahlLieferungen,
+        anzahlAbos, durchschnittspreis, anzahlLieferungen, anzahlAbosAktiv,
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),
         ersteller = PersonId(row.value[Long](indexErsteller)),

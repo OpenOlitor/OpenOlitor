@@ -33,9 +33,9 @@ case class VertriebId(id: Long) extends BaseId
 
 case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
-  anzahlAbosAktiv: Int,
   durchschnittspreis: TreeMap[String, BigDecimal],
   anzahlLieferungen: TreeMap[String, Int],
+  anzahlAbosAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
