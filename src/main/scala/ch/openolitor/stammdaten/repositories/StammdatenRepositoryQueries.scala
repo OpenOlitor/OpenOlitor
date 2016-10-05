@@ -938,6 +938,30 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       .list
   }
 
+  protected def getKoerbeQuery(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus) = {
+    withSQL {
+      select
+        .from(korbMapping as korb)
+        .innerJoin(lieferungMapping as lieferung).on(lieferung.id, korb.lieferungId)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(depotlieferungAbo.id, korb.aboId)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(heimlieferungAbo.id, korb.aboId)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(postlieferungAbo.id, korb.aboId)
+        .where.eq(lieferung.datum, parameter(datum)).and.eq(korb.status, parameter(status)).and.
+        withRoundBracket(_.in(depotlieferungAbo.vertriebsartId, vertriebsartIds.map(_.id)).
+          or.in(heimlieferungAbo.vertriebsartId, vertriebsartIds.map(_.id)).
+          or.in(postlieferungAbo.vertriebsartId, vertriebsartIds.map(_.id)))
+    }.one(korbMapping(korb))
+      .toManies(
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => vertriebMapping.opt(vertrieb)(rs),
+        rs => depotlieferungMapping.opt(depotlieferung)(rs),
+        rs => heimlieferungMapping.opt(heimlieferung)(rs),
+        rs => postlieferungMapping.opt(postlieferung)(rs)
+      )
+      .map { (korb, _, _, _, _, _) => korb }
+      .list
+  }
+
   protected def getKoerbeQuery(auslieferungId: AuslieferungId) = {
     withSQL {
       select

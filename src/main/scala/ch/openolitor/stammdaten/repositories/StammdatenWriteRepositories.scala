@@ -65,6 +65,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit session: DBSession): List[Produkt]
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Korb]
   def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb]
+  def getKoerbe(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus)(implicit session: DBSession): List[Korb]
   def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb]
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo]
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
@@ -278,6 +279,10 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb] = {
     getKoerbeQuery(datum, vertriebsartId, status).apply()
+  }
+
+  def getKoerbe(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus)(implicit session: DBSession): List[Korb] = {
+    getKoerbeQuery(datum, vertriebsartIds, status).apply()
   }
 
   def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb] = {

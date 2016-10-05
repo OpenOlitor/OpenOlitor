@@ -587,30 +587,34 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
       val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
       val statusL = abos map { abo =>
-        val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
-        val retAbw = abwCount match {
-          case Some(abw) if abw > 0 => 1
-          case _ => 0
+        stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
+          case None => {
+            val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
+            val retAbw = abwCount match {
+              case Some(abw) if abw > 0 => 1
+              case _ => 0
+            }
+            val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+            val korbId = KorbId(IdUtil.positiveRandomId)
+            val korb = Korb(
+              korbId,
+              lieferung.id,
+              abo.id,
+              status,
+              abo.guthaben,
+              None,
+              None,
+              DateTime.now,
+              personId,
+              DateTime.now,
+              personId
+            )
+            stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
+            status
+          }
+          case Some(_) =>
         }
-        val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
-        val korbId = KorbId(IdUtil.positiveRandomId)
-        val korb = Korb(
-          korbId,
-          lieferung.id,
-          abo.id,
-          status,
-          abo.guthaben,
-          None,
-          None,
-          DateTime.now,
-          personId,
-          DateTime.now,
-          personId
-        )
-        stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
-        status
       }
-
       val counts = statusL.groupBy { _.getClass }.mapValues(_.size)
 
       logger.debug(s"Update lieferung:$lieferung")
