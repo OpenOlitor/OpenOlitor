@@ -33,9 +33,12 @@ import spray.json.DefaultJsonProtocol._
 import ch.openolitor.core._
 import scala.util.Properties
 
-case class Status(buildNr: String)
+case class Status(version: String, buildNr: String)
 
 trait StatusRoutes extends HttpService with DefaultRouteService with StatusJsonProtocol {
+
+  lazy val version =
+    Option(getClass.getPackage.getImplementationVersion)
 
   lazy val statusRoute =
     pathPrefix("status") {
@@ -50,7 +53,7 @@ trait StatusRoutes extends HttpService with DefaultRouteService with StatusJsonP
       get {
         respondWithMediaType(`application/json`) {
           complete {
-            Status(Properties.envOrElse("application_buildnr", "dev"))
+            Status(version getOrElse "dev", Properties.envOrElse("application_buildnr", "dev"))
           }
         }
       }
