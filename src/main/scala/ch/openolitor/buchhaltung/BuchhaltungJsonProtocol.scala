@@ -58,5 +58,6 @@ trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with Aut
 
     def read(json: JsValue): RechnungDetailReport = defaultFormat.read(json)
   }
+
   implicit val enhancedRechnungDetailFormat = enhancedRechnungDetailFormatDef
 }

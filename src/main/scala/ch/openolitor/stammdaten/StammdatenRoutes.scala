@@ -54,8 +54,8 @@ import ch.openolitor.stammdaten.reporting._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
 import akka.actor._
-import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
-import ch.openolitor.buchhaltung.DefaultBuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
 import ch.openolitor.stammdaten.repositories._
@@ -97,6 +97,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
   implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
+  implicit val korbStatusPath = enumPathMatcher(KorbStatus.apply(_) match {
+    case x => Some(x)
+  })
   implicit val vorlageTypePath = enumPathMatcher(VorlageTyp.apply(_) match {
     case UnknownFileType => None
     case x => Some(x)
@@ -116,7 +119,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   def kundenRoute(implicit subject: Subject) =
     path("kunden" ~ exportFormatPath.?) { exportFormat =>
-      get(list(stammdatenReadRepository.getKunden, exportFormat)) ~
+      get(list(stammdatenReadRepository.getKundenUebersicht, exportFormat)) ~
         post(create[KundeModify, KundeId](KundeId.apply _))
     } ~
       path("kunden" / kundeIdPath) { id =>
@@ -166,7 +169,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         post {
           requestInstance { request =>
             entity(as[AbwesenheitModify]) { abw =>
-              created(request)(copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))
+              abwesenheitCreate(copyTo[AbwesenheitModify, AbwesenheitCreate](abw, "aboId" -> aboId))
             }
           }
         }
@@ -200,6 +203,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "einladungsenden") { (kundeId, personId) =>
         (post)(sendEinladung(kundeId, personId))
+      } ~
+      path("kunden" / kundeIdPath / "personen" / personIdPath / "aktionen" / "rollewechseln") { (kundeId, personId) =>
+        post {
+          requestInstance { request =>
+            entity(as[Rolle]) { rolle =>
+              changeRolle(kundeId, personId, rolle)
+            }
+          }
+        }
       } ~
       path("kunden" / kundeIdPath / "rechnungen") { (kundeId) =>
         get(list(buchhaltungReadRepository.getKundenRechnungen(kundeId)))
@@ -323,7 +335,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   def pendenzenRoute(implicit subject: Subject) =
     path("pendenzen" ~ exportFormatPath.?) { exportFormat =>
       get(list(stammdatenReadRepository.getPendenzen, exportFormat))
-    }
+    } ~
+      path("pendenzen" / pendenzIdPath) { pendenzId =>
+        (put | post)(update[PendenzModify, PendenzId](pendenzId))
+      }
 
   def produkteRoute(implicit subject: Subject) =
     path("produkte" ~ exportFormatPath.?) { exportFormat =>
@@ -382,6 +397,18 @@ trait StammdatenRoutes extends HttpService with ActorReferences
             //TODO: update projekt stammdaten entity
             complete("Logo uploaded")
           })
+      } ~
+      path("projekt" / projektIdPath / "style-admin") { id =>
+        get(download(ProjektStammdaten, "style-admin")) ~
+          (put | post)(uploadStored(ProjektStammdaten, Some("style-admin")) { (id, metadata) =>
+            complete("Style 'style-admin' uploaded")
+          })
+      } ~
+      path("projekt" / projektIdPath / "style-kundenportal") { id =>
+        get(download(ProjektStammdaten, "style-kundenportal")) ~
+          (put | post)(uploadStored(ProjektStammdaten, Some("style-kundenportal")) { (id, metadata) =>
+            complete("Style 'style-kundenportal' uploaded")
+          })
       }
 
   def lieferplanungRoute(implicit subject: Subject) =
@@ -403,6 +430,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath) { (lieferplanungId, lieferungId) =>
         (put | post)(create[LieferungPlanungAdd, LieferungId]((x: Long) => lieferungId)) ~
           delete(remove(lieferungId.getLieferungOnLieferplanungId()))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, lieferungId, korbStatus) =>
+        get(list(stammdatenReadRepository.getAboIds(lieferungId, korbStatus)))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
         get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~
@@ -440,6 +470,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           }
         }
 
+        complete("")
+    }
+  }
+
+  def abwesenheitCreate(abw: AbwesenheitCreate)(implicit idPersister: Persister[AbwesenheitId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.AbwesenheitCreateCommand(subject.personId, abw)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not store Abwesenheit")
+      case _ =>
         complete("")
     }
   }
@@ -625,6 +664,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess((entityStore ? StammdatenCommandHandler.EinladungSendenCommand(subject.personId, kundeId, personId))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Einladung konnte nicht gesendet werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def changeRolle(kundeId: KundeId, personId: PersonId, rolle: Rolle)(implicit idPersister: Persister[KundeId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.RolleWechselnCommand(subject.personId, kundeId, personId, rolle))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rolle der Person konnte nicht gewechselt werden.")
       case _ =>
         complete("")
     }

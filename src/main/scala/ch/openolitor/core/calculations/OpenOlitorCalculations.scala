@@ -20,14 +20,20 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.core.calculations
 
+import akka.actor.Props
+import akka.actor.Actor
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.calculations.StammdatenCalculations
 import akka.actor.ActorSystem
+import ch.openolitor.core.SystemConfig
+import akka.actor.ActorRef
 
-trait BuchhaltungReadRepositoryComponent {
-  val buchhaltungReadRepository: BuchhaltungReadRepository
+object OpenOlitorCalculations {
+  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorCalculations], sysConfig, system, entityStore)
 }
 
-trait DefaultBuchhaltungReadRepositoryComponent extends BuchhaltungReadRepositoryComponent {
-  override val buchhaltungReadRepository: BuchhaltungReadRepository = new BuchhaltungReadRepositoryImpl
+class OpenOlitorCalculations(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseCalculationsSupervisor {
+  override lazy val calculators = Set(context.actorOf(StammdatenCalculations.props(sysConfig, system, entityStore)))
 }

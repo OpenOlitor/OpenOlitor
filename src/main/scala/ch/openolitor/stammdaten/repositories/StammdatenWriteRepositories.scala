@@ -41,6 +41,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
+  def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
 
   def getProjekt(implicit session: DBSession): Option[Projekt]
   def getKunden(implicit session: DBSession): List[Kunde]
@@ -64,6 +65,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit session: DBSession): List[Produkt]
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Korb]
   def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb]
+  def getKoerbe(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus)(implicit session: DBSession): List[Korb]
   def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb]
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo]
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
@@ -86,6 +88,12 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getTourlieferungen(id: TourId)(implicit session: DBSession): List[Tourlieferung]
   def getHeimlieferung(tourId: TourId)(implicit session: DBSession): List[Heimlieferung]
   def getDepotlieferung(depotId: DepotId)(implicit session: DBSession): List[Depotlieferung]
+
+  def getDepotlieferungAbo(id: AboId)(implicit session: DBSession): Option[DepotlieferungAboDetail]
+  def getHeimlieferungAbo(id: AboId)(implicit session: DBSession): Option[HeimlieferungAboDetail]
+  def getPostlieferungAbo(id: AboId)(implicit session: DBSession): Option[PostlieferungAboDetail]
+
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
 }
 
 trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging with StammdatenRepositoryQueries {
@@ -135,6 +143,22 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
+  }
+
+  def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo] = {
+    getDepotlieferungAbos(abotypId) ::: getHeimlieferungAbos(abotypId) ::: getPostlieferungAbos(abotypId)
+  }
+
+  def getDepotlieferungAbos(abotypId: AbotypId)(implicit session: DBSession): List[DepotlieferungAbo] = {
+    getDepotlieferungAbosQuery(abotypId).apply()
+  }
+
+  def getHeimlieferungAbos(abotypId: AbotypId)(implicit session: DBSession): List[HeimlieferungAbo] = {
+    getHeimlieferungAbosQuery(abotypId).apply()
+  }
+
+  def getPostlieferungAbos(abotypId: AbotypId)(implicit session: DBSession): List[PostlieferungAbo] = {
+    getPostlieferungAbosQuery(abotypId).apply()
   }
 
   def getProjekt(implicit session: DBSession): Option[Projekt] = {
@@ -257,6 +281,10 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getKoerbeQuery(datum, vertriebsartId, status).apply()
   }
 
+  def getKoerbe(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus)(implicit session: DBSession): List[Korb] = {
+    getKoerbeQuery(datum, vertriebsartIds, status).apply()
+  }
+
   def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb] = {
     getKoerbeQuery(auslieferungId).apply()
   }
@@ -357,5 +385,9 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getKundeDetail(kundeId: KundeId)(implicit session: DBSession): Option[KundeDetail] = {
     getKundeDetailQuery(kundeId).apply()
+  }
+
+  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
+    getSingleDepotlieferungAbo(id)() orElse getSingleHeimlieferungAbo(id)() orElse getSinglePostlieferungAbo(id)()
   }
 }

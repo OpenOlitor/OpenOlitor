@@ -20,17 +20,38 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.stammdaten
 
-import akka.actor.ActorSystem
-import ch.openolitor.core._
+import akka.actor._
 
-trait BuchhaltungWriteRepositoryComponent {
-  val buchhaltungWriteRepository: BuchhaltungWriteRepository
-}
+import spray.json._
+import scalikejdbc._
+import ch.openolitor.core.models._
+import ch.openolitor.core.domain._
+import ch.openolitor.core.ws._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.core.db._
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.Boot
+import ch.openolitor.core.repositories.SqlBinder
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.buchhaltung.models._
+import ch.openolitor.util.IdUtil
+import scala.concurrent.ExecutionContext.Implicits.global;
+import org.joda.time.DateTime
+import scala.concurrent.Future
 
-trait DefaultBuchhaltungWriteRepositoryComponent extends BuchhaltungWriteRepositoryComponent {
-  val system: ActorSystem
+trait StammdatenEnityModify {
+  this: StammdatenWriteRepositoryComponent =>
 
-  override val buchhaltungWriteRepository: BuchhaltungWriteRepository = new DefaultActorSystemReference(system) with BuchhaltungWriteRepositoryImpl with AkkaEventStream
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](
+    id: I, mod: E => E
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
+
+    stammdatenWriteRepository.getById(syntax, id) map { result =>
+      val copy = mod(result)
+      stammdatenWriteRepository.updateEntity[E, I](copy)
+    }
+  }
 }

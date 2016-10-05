@@ -79,7 +79,9 @@ trait KundenportalRoutes extends HttpService with ActorReferences
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
   implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
+  implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
+  implicit val lieferungIdPath = long2BaseIdPathMatcher(LieferungId.apply)
 
   import EntityStore._
 
@@ -89,7 +91,7 @@ trait KundenportalRoutes extends HttpService with ActorReferences
         UriQueryParamFilterParser.parse(filterString)
       }
       pathPrefix("kundenportal") {
-        abosRoute ~ projektRoute
+        abosRoute ~ rechnungenRoute ~ projektRoute
       }
     }
 
@@ -101,6 +103,34 @@ trait KundenportalRoutes extends HttpService with ActorReferences
     } ~
       path("projekt" / projektIdPath / "logo") { id =>
         get(download(ProjektStammdaten, "logo"))
+      }
+  }
+
+  def rechnungenRoute(implicit subject: Subject) = {
+    path("rechnungen") {
+      get {
+        list(kundenportalReadRepository.getRechnungen)
+      }
+    } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
+        (get)(
+          onSuccess(kundenportalReadRepository.getRechnungDetail(id)) { detail =>
+            detail flatMap { rechnung =>
+              rechnung.fileStoreId map { fileStoreId =>
+                download(GeneriertRechnung, fileStoreId)
+              }
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
+      } ~
+      path("rechnungen" / rechnungIdPath / "aktionen" / "download" / Segment) { (id, fileStoreId) =>
+        (get)(
+          onSuccess(kundenportalReadRepository.getRechnungDetail(id)) { detail =>
+            detail map { rechnung =>
+              download(GeneriertMahnung, fileStoreId)
+            } getOrElse (complete(StatusCodes.BadRequest))
+          }
+        )
       }
   }
 
@@ -130,6 +160,16 @@ trait KundenportalRoutes extends HttpService with ActorReferences
             complete(StatusCodes.BadRequest, s"Abwesenheit konnte nicht gelöscht werden.")
           case _ =>
             complete("")
+        }
+      } ~
+      path("abos" / abotypIdPath / "lieferungen") { abotypId =>
+        get {
+          list(kundenportalReadRepository.getLieferungenDetails(abotypId))
+        }
+      } ~
+      path("abos" / abotypIdPath / "lieferungen" / lieferungIdPath) { (abotypId, lieferungId) =>
+        get {
+          get(detail(kundenportalReadRepository.getLieferungenDetail(lieferungId)))
         }
       }
   }

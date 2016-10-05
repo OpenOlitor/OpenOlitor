@@ -42,6 +42,7 @@ import java.util.UUID
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
+  case class AbwesenheitCreateCommand(originator: PersonId, abw: AbwesenheitCreate) extends UserCommand
   case class BestellungAnProduzentenVersenden(originator: PersonId, id: BestellungId) extends UserCommand
   case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char], einladung: Option[EinladungId]) extends UserCommand
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
@@ -52,9 +53,15 @@ object StammdatenCommandHandler {
   case class EinladungSendenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class BestellungenAlsAbgerechnetMarkierenCommand(originator: PersonId, datum: DateTime, ids: Seq[BestellungId]) extends UserCommand
   case class PasswortResetCommand(originator: PersonId, personId: PersonId) extends UserCommand
+  case class RolleWechselnCommand(originator: PersonId, kundeId: KundeId, personId: PersonId, rolle: Rolle) extends UserCommand
+
+  // TODO person id for calculations
+  case class AboAktivierenCommand(aboId: AboId, originator: PersonId = PersonId(100)) extends UserCommand
+  case class AboDeaktivierenCommand(aboId: AboId, originator: PersonId = PersonId(100)) extends UserCommand
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
+  case class AbwesenheitCreateEvent(meta: EventMetadata, id: AbwesenheitId, abw: AbwesenheitCreate) extends PersistentEvent with JSONSerializable
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortGewechseltEvent(meta: EventMetadata, personId: PersonId, passwort: Array[Char], einladungId: Option[EinladungId]) extends PersistentEvent with JSONSerializable
   case class LoginDeaktiviertEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId) extends PersistentEvent with JSONSerializable
@@ -63,6 +70,10 @@ object StammdatenCommandHandler {
   case class AuslieferungAlsAusgeliefertMarkierenEvent(meta: EventMetadata, id: AuslieferungId) extends PersistentEvent with JSONSerializable
   case class BestellungAlsAbgerechnetMarkierenEvent(meta: EventMetadata, datum: DateTime, id: BestellungId) extends PersistentEvent with JSONSerializable
   case class PasswortResetGesendetEvent(meta: EventMetadata, einladung: EinladungCreate) extends PersistentEvent with JSONSerializable
+  case class RolleGewechseltEvent(meta: EventMetadata, kundeId: KundeId, personId: PersonId, rolle: Rolle) extends PersistentEvent with JSONSerializable
+
+  case class AboAktiviertEvent(meta: EventMetadata, aboId: AboId) extends PersistentGeneratedEvent with JSONSerializable
+  case class AboDeaktiviertEvent(meta: EventMetadata, aboId: AboId) extends PersistentGeneratedEvent with JSONSerializable
 }
 
 trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
@@ -111,6 +122,16 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Abgeschlossen' verrechnet werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
+      }
+
+    case AbwesenheitCreateCommand(personId, abw: AbwesenheitCreate) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        stammdatenWriteRepository.countAbwesend(abw.lieferungId, abw.aboId) match {
+          case Some(0) =>
+            handleEntityInsert[AbwesenheitCreate, AbwesenheitId](idFactory, meta, abw, AbwesenheitId.apply)
+          case _ =>
+            Failure(new InvalidStateException("Eine Abwesenheit kann nur einmal erfasst werden"))
+        }
       }
 
     case BestellungAnProduzentenVersenden(personId, id: BestellungId) => idFactory => meta =>
@@ -187,6 +208,15 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
     case PasswortResetCommand(originator, personId) => idFactory => meta =>
       sendPasswortReset(idFactory, meta, personId)
+
+    case RolleWechselnCommand(originator, kundeId, personId, rolle) if originator.id != personId => idFactory => meta =>
+      changeRolle(idFactory, meta, kundeId, personId, rolle)
+
+    case AboAktivierenCommand(aboId, originator) => idFactory => meta =>
+      Success(Seq(AboAktiviertEvent(meta, aboId)))
+
+    case AboDeaktivierenCommand(aboId, originator) => idFactory => meta =>
+      Success(Seq(AboDeaktiviertEvent(meta, aboId)))
 
     /*
        * Insert command handling
@@ -305,14 +335,22 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       Success(updateEvent +: (newPersonsEvents ++ newPendenzenEvents))
 
     case UpdateEntityCommand(personId, id: AboId, entity: AboGuthabenModify) => idFactory => meta =>
-      //TODO: assemble text using gettext
-      val title = "Guthaben angepasst. Abo Nr.:" + id.id + ", Grund:"
-      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title + entity.bemerkung)
-      Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+      DB readOnly { implicit session =>
+        //TODO: assemble text using gettext
+        stammdatenWriteRepository.getAboDetail(id) match {
+          case Some(abo) => {
+            val text = s"Guthaben manuell angepasst. Abo Nr.: ${id.id}; Bisher: ${abo.guthaben}; Neu: ${entity.guthabenNeu}; Grund: ${entity.bemerkung}"
+            val pendenzEvent = addKundenPendenz(idFactory, meta, id, text)
+            Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+          }
+          case None =>
+            Failure(new InvalidStateException(s"UpdateEntityCommand: Abo konnte nicht gefunden werden"))
+        }
+      }
     case UpdateEntityCommand(personId, id: AboId, entity: AboVertriebsartModify) => idFactory => meta =>
       //TODO: assemble text using gettext
-      val title = "Vertriebsart angepasst. Abo Nr.:" + id.id + ", Grund:"
-      val pendenzEvent = addKundenPendenz(idFactory, meta, id, title + entity.bemerkung)
+      val text = s"Vertriebsart angepasst. Abo Nr.: ${id.id}, Neu: ${entity.vertriebsartIdNeu}; Grund: ${entity.bemerkung}"
+      val pendenzEvent = addKundenPendenz(idFactory, meta, id, text)
       Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
   }
 
@@ -431,6 +469,24 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           Success(Seq(PasswortResetGesendetEvent(meta, einladung)))
         } getOrElse {
           Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
+        }
+      } getOrElse {
+        Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
+      }
+    }
+  }
+
+  def changeRolle(idFactory: IdFactory, meta: EventMetadata, kundeId: KundeId, personId: PersonId, rolle: Rolle) = {
+    DB readOnly { implicit session =>
+      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+        person.rolle map { existingRolle =>
+          if (existingRolle != rolle) {
+            Success(Seq(RolleGewechseltEvent(meta, kundeId, personId, rolle)))
+          } else {
+            Failure(new InvalidStateException(s"Die Person mit der Id: $personId hat bereits die Rolle: $rolle."))
+          }
+        } getOrElse {
+          Success(Seq(RolleGewechseltEvent(meta, kundeId, personId, rolle)))
         }
       } getOrElse {
         Failure(new InvalidStateException(s"Person wurde nicht gefunden."))

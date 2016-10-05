@@ -39,11 +39,11 @@ import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.stammdaten.models.ProjektReport
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
-import ch.openolitor.buchhaltung.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
 import scala.Left
 import scala.Right
 
-trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol {
+trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol with RechnungReportData {
   self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   def generateRechnungReports(config: ReportConfig[RechnungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
@@ -60,31 +60,7 @@ trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportS
     )
   }
 
-  def name(rechnung: RechnungDetailReport) = {
+  private def name(rechnung: RechnungDetailReport) = {
     s"rechnung_nr_${rechnung.id.id}";
-  }
-
-  def rechungenById(rechnungIds: Seq[RechnungId]): Future[(Seq[ValidationError[RechnungId]], Seq[RechnungDetailReport])] = {
-    stammdatenReadRepository.getProjekt flatMap {
-      _ map { projekt =>
-        val results = Future.sequence(rechnungIds.map { rechnungId =>
-          buchhaltungReadRepository.getRechnungDetail(rechnungId).map(_.map { rechnung =>
-            rechnung.status match {
-              case Storniert =>
-                Left(ValidationError[RechnungId](rechnungId, s"Für stornierte Rechnungen können keine Berichte mehr erzeugt werden"))
-              case Bezahlt =>
-                Left(ValidationError[RechnungId](rechnungId, s"Für bezahlte Rechnungen können keine Berichte mehr erzeugt werden"))
-              case _ =>
-                val projektReport = copyTo[Projekt, ProjektReport](projekt)
-                Right(copyTo[RechnungDetail, RechnungDetailReport](rechnung, "projekt" -> projektReport))
-            }
-
-          }.getOrElse(Left(ValidationError[RechnungId](rechnungId, s"Rechnung konnte nicht gefunden werden"))))
-        })
-        results.map(_.partition(_.isLeft) match {
-          case (a, b) => (a.map(_.left.get), b.map(_.right.get))
-        })
-      } getOrElse Future { (Seq(ValidationError[RechnungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
-    }
   }
 }

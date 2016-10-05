@@ -349,7 +349,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
         //map all updatable fields
-        val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+        val aktiv = IAbo.calculateAktiv(update.start, update.ende)
+        val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
         stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
       }
     }
@@ -359,7 +360,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
         //map all updatable fields
-        val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+        val aktiv = IAbo.calculateAktiv(update.start, update.ende)
+        val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
         stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
       }
     }
@@ -369,7 +371,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
         //map all updatable fields
-        val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+        val aktiv = IAbo.calculateAktiv(update.start, update.ende)
+        val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
         stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
       }
     }

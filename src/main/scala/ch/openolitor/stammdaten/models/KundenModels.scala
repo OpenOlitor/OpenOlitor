@@ -29,6 +29,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple24
 import scala.collection.immutable.TreeMap
+import ch.openolitor.core.scalax.Tuple25
 
 case class KundeId(id: Long) extends BaseId
 
@@ -52,6 +53,7 @@ trait IKunde extends BaseEntity[KundeId] {
   val typen: Set[KundentypId]
   //Zusatzinformationen
   val anzahlAbos: Int
+  val anzahlAbosAktiv: Int
   val anzahlPendenzen: Int
   val anzahlPersonen: Int
 }
@@ -76,6 +78,7 @@ case class Kunde(
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   anzahlPendenzen: Int,
   anzahlPersonen: Int,
   //modification flags
@@ -131,6 +134,7 @@ case class KundeReport(
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   anzahlPendenzen: Int,
   anzahlPersonen: Int,
   //modification flags
@@ -160,6 +164,7 @@ case class KundeDetailReport(
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   anzahlPendenzen: Int,
   anzahlPersonen: Int,
   //Report infos
@@ -175,7 +180,7 @@ case class KundeDetailReport(
 ) extends BaseEntity[KundeId] with IKundeReport
 
 object Kunde {
-  def unapply(k: Kunde) = Some(Tuple24(
+  def unapply(k: Kunde) = Some(Tuple25(
     k.id: KundeId,
     k.bezeichnung: String,
     k.strasse: String,
@@ -195,6 +200,7 @@ object Kunde {
     k.typen: Set[KundentypId],
     //Zusatzinformationen
     k.anzahlAbos: Int,
+    k.anzahlAbosAktiv: Int,
     k.anzahlPendenzen: Int,
     k.anzahlPersonen: Int,
     //modification flags
@@ -204,6 +210,35 @@ object Kunde {
     k.modifikator: PersonId
   ))
 }
+
+case class KundeUebersicht(
+  id: KundeId,
+  bezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  abweichendeLieferadresse: Boolean,
+  bezeichnungLieferung: Option[String],
+  strasseLieferung: Option[String],
+  hausNummerLieferung: Option[String],
+  adressZusatzLieferung: Option[String],
+  plzLieferung: Option[String],
+  ortLieferung: Option[String],
+  zusatzinfoLieferung: Option[String],
+  typen: Set[KundentypId],
+  //Zusatzinformationen
+  anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
+  ansprechpersonen: Seq[PersonSummary],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
 
 case class KundeDetail(
   id: KundeId,
@@ -225,6 +260,7 @@ case class KundeDetail(
   typen: Set[KundentypId],
   //Zusatzinformationen
   anzahlAbos: Int,
+  anzahlAbosAktiv: Int,
   anzahlPendenzen: Int,
   anzahlPersonen: Int,
   abos: Seq[Abo],

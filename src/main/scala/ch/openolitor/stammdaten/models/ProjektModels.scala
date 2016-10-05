@@ -96,7 +96,11 @@ case class ProjektPublik(
   hausNummer: Option[String],
   adressZusatz: Option[String],
   plz: Option[String],
-  ort: Option[String]
+  ort: Option[String],
+  preiseSichtbar: Boolean,
+  waehrung: Waehrung,
+  geschaeftsjahrMonat: Int,
+  geschaeftsjahrTag: Int
 ) extends JSONSerializable
 
 case class ProjektReport(

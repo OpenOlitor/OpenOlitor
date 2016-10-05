@@ -118,6 +118,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       abotyp,
       "id" -> id,
       "anzahlAbonnenten" -> ZERO,
+      "anzahlAbonnentenAktiv" -> ZERO,
       "letzteLieferung" -> None,
       "waehrung" -> CHF,
       "erstelldat" -> meta.timestamp,
@@ -139,6 +140,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       vertrieb,
       "id" -> id,
       "anzahlAbos" -> ZERO,
+      "anzahlAbosAktiv" -> ZERO,
       "durchschnittspreis" -> emptyDecimalMap,
       "anzahlLieferungen" -> emptyIntMap,
       "erstelldat" -> meta.timestamp,
@@ -156,6 +158,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createDepotlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit personId: PersonId = meta.originator) = {
     val insert = copyTo[DepotlieferungAbotypModify, Depotlieferung](vertriebsart, "id" -> id,
       "anzahlAbos" -> ZERO,
+      "anzahlAbosAktiv" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -169,6 +172,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createHeimlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: HeimlieferungAbotypModify)(implicit personId: PersonId = meta.originator) = {
     val insert = copyTo[HeimlieferungAbotypModify, Heimlieferung](vertriebsart, "id" -> id,
       "anzahlAbos" -> ZERO,
+      "anzahlAbosAktiv" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -182,6 +186,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createPostlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: PostlieferungAbotypModify)(implicit personId: PersonId = meta.originator) = {
     val insert = copyTo[PostlieferungAbotypModify, Postlieferung](vertriebsart, "id" -> id,
       "anzahlAbos" -> ZERO,
+      "anzahlAbosAktiv" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -235,6 +240,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "bezeichnung" -> bez,
       "anzahlPersonen" -> create.ansprechpersonen.length,
       "anzahlAbos" -> ZERO,
+      "anzahlAbosAktiv" -> ZERO,
       "anzahlPendenzen" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
@@ -248,18 +254,23 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createPerson(meta: EventMetadata, id: PersonId, create: PersonCreate)(implicit personId: PersonId = meta.originator) = {
-    val person = copyTo[PersonCreate, Person](create, "id" -> id,
+    val rolle: Option[Rolle] = Some(KundenZugang)
+
+    val person = copyTo[PersonCreate, Person](
+      create,
+      "id" -> id,
       "kundeId" -> create.kundeId,
       "sort" -> create.sort,
       "loginAktiv" -> FALSE,
       "letzteAnmeldung" -> None,
       "passwort" -> None,
       "passwortWechselErforderlich" -> FALSE,
-      "rolle" -> None,
+      "rolle" -> rolle,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
-      "modifikator" -> meta.originator)
+      "modifikator" -> meta.originator
+    )
 
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.insertEntity[Person, PersonId](person)
@@ -287,6 +298,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       create,
       "id" -> id,
       "anzahlAbonnenten" -> ZERO,
+      "anzahlAbonnentenAktiv" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -297,11 +309,17 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[DateTime]) = {
+  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[DateTime], Boolean) = {
     abotyp.laufzeiteinheit match {
-      case Unbeschraenkt => (None, None)
-      case Lieferungen => (abotyp.laufzeit, None)
-      case Monate => (None, Some(create.start.plusMonths(abotyp.laufzeit.get)))
+      case Unbeschraenkt =>
+        (None, None, IAbo.calculateAktiv(create.start, None))
+
+      case Lieferungen =>
+        (abotyp.laufzeit, None, IAbo.calculateAktiv(create.start, None))
+
+      case Monate =>
+        val ende = Some(create.start.plusMonths(abotyp.laufzeit.get))
+        (None, ende, IAbo.calculateAktiv(create.start, ende))
     }
   }
 
@@ -337,7 +355,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       abotypByVertriebartId(create.vertriebsartId) map {
         case (vertriebsart, vertrieb, abotyp) =>
           aboParameters(create)(abotyp) match {
-            case (guthaben, ende) =>
+            case (guthaben, ende, aktiv) =>
               val abo = create match {
                 case create: DepotlieferungAboModify =>
                   val depotName = depotById(create.depotId).map(_.name).getOrElse("")
@@ -357,6 +375,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "letzteLieferung" -> None,
                     "anzahlAbwesenheiten" -> emptyMap,
                     "anzahlLieferungen" -> emptyMap,
+                    "aktiv" -> aktiv,
                     "erstelldat" -> meta.timestamp,
                     "ersteller" -> meta.originator,
                     "modifidat" -> meta.timestamp,
@@ -380,6 +399,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "letzteLieferung" -> None,
                     "anzahlAbwesenheiten" -> emptyMap,
                     "anzahlLieferungen" -> emptyMap,
+                    "aktiv" -> aktiv,
                     "erstelldat" -> meta.timestamp,
                     "ersteller" -> meta.originator,
                     "modifidat" -> meta.timestamp,
@@ -400,6 +420,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "letzteLieferung" -> None,
                     "anzahlAbwesenheiten" -> emptyMap,
                     "anzahlLieferungen" -> emptyMap,
+                    "aktiv" -> aktiv,
                     "erstelldat" -> meta.timestamp,
                     "ersteller" -> meta.originator,
                     "modifidat" -> meta.timestamp,
@@ -473,6 +494,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       create,
       "id" -> id,
       "anzahlAbonnenten" -> ZERO,
+      "anzahlAbonnentenAktiv" -> ZERO,
       "erstelldat" -> meta.timestamp,
       "ersteller" -> meta.originator,
       "modifidat" -> meta.timestamp,
@@ -565,30 +587,34 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
       val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
       val statusL = abos map { abo =>
-        val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
-        val retAbw = abwCount match {
-          case Some(abw) if abw > 0 => 1
-          case _ => 0
+        stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
+          case None => {
+            val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
+            val retAbw = abwCount match {
+              case Some(abw) if abw > 0 => 1
+              case _ => 0
+            }
+            val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+            val korbId = KorbId(IdUtil.positiveRandomId)
+            val korb = Korb(
+              korbId,
+              lieferung.id,
+              abo.id,
+              status,
+              abo.guthaben,
+              None,
+              None,
+              DateTime.now,
+              personId,
+              DateTime.now,
+              personId
+            )
+            stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
+            status
+          }
+          case Some(_) =>
         }
-        val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
-        val korbId = KorbId(IdUtil.positiveRandomId)
-        val korb = Korb(
-          korbId,
-          lieferung.id,
-          abo.id,
-          status,
-          abo.guthaben,
-          None,
-          None,
-          DateTime.now,
-          personId,
-          DateTime.now,
-          personId
-        )
-        stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
-        status
       }
-
       val counts = statusL.groupBy { _.getClass }.mapValues(_.size)
 
       logger.debug(s"Update lieferung:$lieferung")

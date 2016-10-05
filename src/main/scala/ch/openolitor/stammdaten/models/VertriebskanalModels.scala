@@ -29,6 +29,7 @@ import ch.openolitor.core.scalax.Product27
 import ch.openolitor.core.scalax.Tuple27
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.scalax.Tuple28
 
 sealed trait Vertriebskanal {
   val name: String
@@ -65,6 +66,7 @@ trait IDepot extends BaseEntity[DepotId] {
   val anzahlAbonnentenMax: Option[Int]
   //Zusatzinformationen
   val anzahlAbonnenten: Int
+  val anzahlAbonnentenAktiv: Int
 }
 
 case class Depot(
@@ -92,6 +94,7 @@ case class Depot(
   anzahlAbonnentenMax: Option[Int],
   //Zusatzinformationen
   anzahlAbonnenten: Int,
+  anzahlAbonnentenAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -135,6 +138,7 @@ case class DepotReport(
   anzahlAbonnentenMax: Option[Int],
   //Zusatzinformationen
   anzahlAbonnenten: Int,
+  anzahlAbonnentenAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -167,6 +171,7 @@ case class DepotDetailReport(
   anzahlAbonnentenMax: Option[Int],
   //Zusatzinformationen
   anzahlAbonnenten: Int,
+  anzahlAbonnentenAktiv: Int,
   abos: Seq[DepotlieferungAboReport],
   projekt: ProjektReport,
   //modification flags
@@ -178,7 +183,7 @@ case class DepotDetailReport(
 
 object Depot {
   def unapply(d: Depot) = {
-    Some(Tuple27(
+    Some(Tuple28(
       d.id: DepotId,
       d.name: String,
       d.kurzzeichen: String,
@@ -203,6 +208,7 @@ object Depot {
       d.anzahlAbonnentenMax: Option[Int],
       //Zusatzinformationen
       d.anzahlAbonnenten: Int,
+      d.anzahlAbonnentenAktiv: Int,
       //modification flags
       d.erstelldat: DateTime,
       d.ersteller: PersonId,
@@ -250,6 +256,7 @@ case class Tour(
   beschreibung: Option[String],
   //Zusatzinformationen
   anzahlAbonnenten: Int,
+  anzahlAbonnentenAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -262,6 +269,8 @@ case class TourDetail(
   name: String,
   beschreibung: Option[String],
   tourlieferungen: Seq[Tourlieferung],
+  anzahlAbonnenten: Int,
+  anzahlAbonnentenAktiv: Int,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

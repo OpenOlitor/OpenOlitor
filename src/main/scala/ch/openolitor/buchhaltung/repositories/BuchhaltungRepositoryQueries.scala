@@ -20,31 +20,27 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung
+package ch.openolitor.buchhaltung.repositories
 
 import ch.openolitor.core.models._
 import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
-import scala.concurrent.ExecutionContext
 import ch.openolitor.core.db._
 import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
 import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
-import akka.event.Logging
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.EventStream
-import ch.openolitor.core.Boot
-import akka.actor.ActorSystem
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.core.AkkaEventStream
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMappings with StammdatenDBMappings {
   lazy val rechnung = rechnungMapping.syntax("rechnung")
@@ -126,93 +122,5 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
       .map({ (zahlungsImport, zahlungsEingaenge) =>
         copyTo[ZahlungsImport, ZahlungsImportDetail](zahlungsImport, "zahlungsEingaenge" -> zahlungsEingaenge)
       }).single
-  }
-}
-
-/**
- * Asynchronous Repository
- */
-trait BuchhaltungReadRepository extends BaseReadRepository {
-  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]]
-  def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
-  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]
-  def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]]
-
-  def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]]
-  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZahlungsImportDetail]]
-}
-
-/**
- * Synchronous Repository
- */
-trait BuchhaltungWriteRepository extends BaseWriteRepository with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-
-  def getRechnungen(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung]
-  def getKundenRechnungen(kundeId: KundeId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung]
-  def getRechnungDetail(id: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[RechnungDetail]
-  def getRechnungByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Rechnung]
-
-  def getZahlungsImports(implicit session: DBSession, cpContext: ConnectionPoolContext): List[ZahlungsImport]
-  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsImportDetail]
-}
-
-class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyLogging with BuchhaltungRepositoryQueries {
-  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]] = {
-    getRechnungenQuery(filter).future
-  }
-
-  def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]] = {
-    getKundenRechnungenQuery(kundeId).future
-  }
-
-  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]] = {
-    getRechnungDetailQuery(id).future
-  }
-
-  def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]] = {
-    getRechnungByReferenznummerQuery(referenzNummer).future
-  }
-
-  def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]] = {
-    getZahlungsImportsQuery.future
-  }
-
-  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZahlungsImportDetail]] = {
-    getZahlungsImportDetailQuery(id).future
-  }
-}
-
-trait BuchhaltungWriteRepositoryImpl extends BuchhaltungWriteRepository with LazyLogging with BuchhaltungRepositoryQueries {
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB autoCommit { implicit session =>
-      sql"truncate table ${rechnungMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()
-    }
-  }
-
-  def getRechnungen(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung] = {
-    getRechnungenQuery(None).apply()
-  }
-
-  def getKundenRechnungen(kundeId: KundeId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung] = {
-    getKundenRechnungenQuery(kundeId).apply()
-  }
-
-  def getRechnungDetail(id: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[RechnungDetail] = {
-    getRechnungDetailQuery(id).apply()
-  }
-
-  def getRechnungByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Rechnung] = {
-    getRechnungByReferenznummerQuery(referenzNummer).apply()
-  }
-
-  def getZahlungsImports(implicit session: DBSession, cpContext: ConnectionPoolContext): List[ZahlungsImport] = {
-    getZahlungsImportsQuery.apply()
-  }
-
-  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsImportDetail] = {
-    getZahlungsImportDetailQuery(id).apply()
   }
 }

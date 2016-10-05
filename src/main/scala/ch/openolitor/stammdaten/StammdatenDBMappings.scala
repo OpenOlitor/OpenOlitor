@@ -52,6 +52,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder(AbotypId.apply _)
   implicit val vertriebIdBinder: TypeBinder[VertriebId] = baseIdTypeBinder(VertriebId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
+  implicit val vertriebsartIdSetBinder: TypeBinder[Set[VertriebsartId]] = string.map(s => s.split(",").map(_.toLong).map(VertriebsartId.apply _).toSet)
+  implicit val vertriebsartIdSeqBinder: TypeBinder[Seq[VertriebsartId]] = string.map(s => if (s != null) s.split(",").map(_.toLong).map(VertriebsartId.apply _).toSeq else Nil)
   implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
   implicit val pendenzIdBinder: TypeBinder[PendenzId] = baseIdTypeBinder(PendenzId.apply _)
   implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
@@ -106,7 +108,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val rolleMapTypeBinder: TypeBinder[Map[Rolle, Boolean]] = mapTypeBinder(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean)
   implicit val rolleTypeBinder: TypeBinder[Option[Rolle]] = string.map(Rolle.apply)
 
-  implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => s.split(",").map(c => c).toSeq)
+  implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => if (s != null) s.split(",").toSeq else Nil)
+  implicit val stringSetTypeBinder: TypeBinder[Set[String]] = string.map(s => if (s != null) s.split(",").toSet else Set())
 
   //DB parameter binders for write and query operationsit
   implicit val pendenzStatusBinder = toStringSqlBinder[PendenzStatus]
@@ -130,6 +133,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
   implicit val vertriebIdSqlBinder = baseIdSqlBinder[VertriebId]
   implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
+  implicit val vertriebsartIdSetSqlBinder = setSqlBinder[VertriebsartId]
+  implicit val vertriebsartIdSeqSqlBinder = seqSqlBinder[VertriebsartId]
   implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
   implicit val pendenzIdSqlBinder = baseIdSqlBinder[PendenzId]
   implicit val customKundentypIdSqlBinder = baseIdSqlBinder[CustomKundentypId]
@@ -177,6 +182,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val fristOptionSqlBinder = optionSqlBinder[Frist]
 
   implicit val stringSeqSqlBinder = seqSqlBinder[String]
+  implicit val stringSetSqlBinder = setSqlBinder[String]
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -208,6 +214,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.adminProzente -> parameter(abotyp.adminProzente),
         column.wirdGeplant -> parameter(abotyp.wirdGeplant),
         column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(abotyp.anzahlAbonnentenAktiv),
         column.letzteLieferung -> parameter(abotyp.letzteLieferung),
         column.waehrung -> parameter(abotyp.waehrung)
       )
@@ -264,6 +271,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.typen -> parameter(kunde.typen),
         column.bemerkungen -> parameter(kunde.bemerkungen),
         column.anzahlAbos -> parameter(kunde.anzahlAbos),
+        column.anzahlAbosAktiv -> parameter(kunde.anzahlAbosAktiv),
         column.anzahlPendenzen -> parameter(kunde.anzahlPendenzen),
         column.anzahlPersonen -> parameter(kunde.anzahlPersonen)
       )
@@ -464,7 +472,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(tour) ++ Seq(
         column.name -> parameter(tour.name),
         column.beschreibung -> parameter(tour.beschreibung),
-        column.anzahlAbonnenten -> parameter(tour.anzahlAbonnenten)
+        column.anzahlAbonnenten -> parameter(tour.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(tour.anzahlAbonnentenAktiv)
       )
     }
   }
@@ -502,6 +511,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.bank -> parameter(depot.bank),
         column.beschreibung -> parameter(depot.beschreibung),
         column.anzahlAbonnenten -> parameter(depot.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(depot.anzahlAbonnentenAktiv),
         column.anzahlAbonnentenMax -> parameter(depot.anzahlAbonnentenMax)
       )
     }
@@ -523,6 +533,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.liefertag -> parameter(vertrieb.liefertag),
         column.beschrieb -> parameter(vertrieb.beschrieb),
         column.anzahlAbos -> parameter(vertrieb.anzahlAbos),
+        column.anzahlAbosAktiv -> parameter(vertrieb.anzahlAbosAktiv),
         column.durchschnittspreis -> parameter(vertrieb.durchschnittspreis),
         column.anzahlLieferungen -> parameter(vertrieb.anzahlLieferungen)
       )
@@ -533,7 +544,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     override def updateParameters(lieferung: E) = {
       super.updateParameters(lieferung) ++ Seq(
         column.vertriebId -> parameter(lieferung.vertriebId),
-        column.anzahlAbos -> parameter(lieferung.anzahlAbos)
+        column.anzahlAbos -> parameter(lieferung.anzahlAbos),
+        column.anzahlAbosAktiv -> parameter(lieferung.anzahlAbosAktiv)
       )
     }
   }
@@ -604,7 +616,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.guthabenInRechnung -> parameter(abo.guthabenInRechnung),
         column.letzteLieferung -> parameter(abo.letzteLieferung),
         column.anzahlAbwesenheiten -> parameter(abo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen)
+        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen),
+        column.aktiv -> parameter(abo.aktiv)
       )
     }
   }

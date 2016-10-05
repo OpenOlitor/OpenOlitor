@@ -30,35 +30,9 @@ import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateKorbStatus
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateLieferungCounter
 
 object OO311_DBScripts {
-
-  val RecalulateKorbStatus = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
-    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      logger.debug(s"Recalculate Korb Status")
-      sql"""update ${korbMapping.table} k inner join ${abwesenheitMapping.table} a on k.abo_id=a.abo_id and k.lieferung_id=a.lieferung_id 
-      	set Status='FaelltAusAbwesend'""".execute.apply()
-
-      Success(true)
-    }
-  }
-
-  val RecalulateLieferungCounter = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
-    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      logger.debug(s"Recalculate Lieferung counter")
-      sql"""update ${lieferungMapping.table} l 
-		INNER JOIN (SELECT k.lieferung_id, count(k.id) counter from ${korbMapping.table} k WHERE Status='WirdGeliefert' group by k.lieferung_id) k ON l.id=k.lieferung_id
-		set l.anzahl_koerbe_zu_liefern=k.counter""".execute.apply()
-      sql"""update ${lieferungMapping.table} l 
-		INNER JOIN (SELECT k.lieferung_id, count(k.id) counter from ${korbMapping.table} k WHERE Status='FaelltAusAbwesend' group by k.lieferung_id) k ON l.id=k.lieferung_id
-		set l.anzahl_abwesenheiten=k.counter""".execute.apply()
-      sql"""update ${lieferungMapping.table} l 
-		INNER JOIN (SELECT k.lieferung_id, count(k.id) counter from ${korbMapping.table} k WHERE Status='FaelltAusSaldoZuTief' group by k.lieferung_id) k ON l.id=k.lieferung_id
-		set l.anzahl_saldo_zu_tief=k.counter""".execute.apply()
-
-      Success(true)
-    }
-  }
-
-  val scripts = Seq(RecalulateKorbStatus, RecalulateLieferungCounter)
+  val scripts = Seq(RecalulateKorbStatus.scripts, RecalulateLieferungCounter.scripts)
 }

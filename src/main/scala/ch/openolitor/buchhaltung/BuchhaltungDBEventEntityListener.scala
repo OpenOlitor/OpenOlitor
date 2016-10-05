@@ -36,6 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.models.AboId
 import ch.openolitor.stammdaten.models.{ DepotlieferungAbo, HeimlieferungAbo, PostlieferungAbo }
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 
 object BuchhaltungDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungDBEventEntityListener], sysConfig, system)
@@ -94,12 +96,7 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
     id: I, mod: E => E
-  )(implicit syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
-    DB autoCommit { implicit session =>
-      buchhaltungWriteRepository.getById(syntax, id) map { result =>
-        val copy = mod(result)
-        buchhaltungWriteRepository.updateEntity[E, I](copy)
-      }
-    }
+  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
+    modifyEntityWithRepository(buchhaltungWriteRepository)(id, mod)
   }
 }

@@ -277,6 +277,9 @@ trait EntityStore extends AggregateRoot
       log.error(s"SaveSnapshotFailure failed:$reason")
     case ReadSeedsFromDB =>
       readDBSeeds()
+    case CheckDBEvolution =>
+      log.debug(s"received additional CheckDBEvolution; evolution has been successful, otherwise I would be in uncheckedDB")
+      sender ! Success(state.dbRevision)
     case other =>
       log.warning(s"received unknown command:$other")
   }

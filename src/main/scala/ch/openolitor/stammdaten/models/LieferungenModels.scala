@@ -135,6 +135,7 @@ case class LieferungDetail(
   lieferplanungId: Option[LieferplanungId],
   abotyp: Option[Abotyp],
   lieferpositionen: Seq[Lieferposition],
+  lieferplanungBemerkungen: Option[String],
   //value for actual geschaeftsjahr
   durchschnittspreis: BigDecimal,
   anzahlLieferungen: Int,
