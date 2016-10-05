@@ -8,3 +8,8 @@ https://github.com/OpenOlitor/openolitor-server/wiki/Entwicklungs-Setup
 
 ## REST Schnittstellen
 https://github.com/OpenOlitor/openolitor-server/wiki/REST-Schnittstellen
+
+## bumpversion.sh
+Mittels `./bumpversion.sh` (`./bumpversion.sh -v 1.0.x`) wird die Version in `project/Build.scala` erhöht.
+Gleichzeitig wird ein git commit und ein git tag mit entsprechender Nachricht gemacht.
+
