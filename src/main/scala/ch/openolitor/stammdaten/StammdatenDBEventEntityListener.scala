@@ -825,7 +825,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   private def getLatestDate(date1: Option[DateTime], date2: Option[DateTime]): Option[DateTime] = {
-    if (date2 == None || (date2 != None && date1.get.isAfter(date2.get))) {
+    if (date2 == None || (date1 != None && date1.get.isAfter(date2.get))) {
       date1
     } else {
       date2
