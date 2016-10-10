@@ -26,7 +26,7 @@ import ch.openolitor.stammdaten.models.Rolle
 
 trait RoleBasedAuthorization {
 
-  def hasRole(rolle: Rolle)(implicit subject: Subject) = {
+  def hasRole(rolle: Rolle)(implicit subject: Subject): Boolean = {
     subject.rolle == Some(rolle)
   }
 }
