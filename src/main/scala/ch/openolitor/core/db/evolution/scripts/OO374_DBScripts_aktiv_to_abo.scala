@@ -100,6 +100,15 @@ object OO374_DBScripts_aktiv_to_abo extends DefaultDBScripts {
         WHERE p.aktiv=true group by p.kunde_id) p ON u.id=p.kunde_id 
         SET u.anzahl_abos_aktiv=COALESCE(d.counter, 0) + COALESCE(t.counter, 0) + COALESCE(p.counter, 0)""".execute.apply()
 
+      sql"""update ${vertriebMapping.table} u 
+        LEFT OUTER JOIN (SELECT d.abotyp_id, count(d.id) counter FROM ${depotlieferungAboMapping.table} d 
+        WHERE d.aktiv=true group by d.vertrieb_id) d ON u.id=d.vertrieb_id 
+        LEFT OUTER JOIN (SELECT t.abotyp_id, count(t.id) counter FROM ${heimlieferungAboMapping.table} t 
+        WHERE t.aktiv=true group by t.vertrieb_id) t ON u.id=t.vertrieb_id 
+        LEFT OUTER JOIN (SELECT p.abotyp_id, count(p.id) counter FROM ${postlieferungAboMapping.table} p 
+        WHERE p.aktiv=true group by p.vertrieb_id) p ON u.id=p.vertrieb_id 
+        SET u.anzahl_abos_aktiv=COALESCE(d.counter, 0) + COALESCE(t.counter, 0) + COALESCE(p.counter, 0)""".execute.apply()
+
       Success(true)
     }
   }
