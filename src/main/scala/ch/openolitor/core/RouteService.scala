@@ -89,14 +89,15 @@ import org.odftoolkit.simple.style.StyleTypeDefinitions
 import scala.None
 import scala.collection.Iterable
 import collection.JavaConverters._
+import ch.openolitor.util.AirbrakeNotifier.AirbrakeNotification
 
 sealed trait ResponseType
 case object Download extends ResponseType
 case object Fetch extends ResponseType
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, mailService, reportSystem, fileStore, sysConfig, system, loginTokenCache)
+  def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, airbrakeNotifier: ActorRef, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, mailService, reportSystem, fileStore, airbrakeNotifier, sysConfig, system, loginTokenCache)
 }
 
 trait RouteServiceComponent extends ActorReferences {
@@ -117,12 +118,12 @@ trait RouteServiceComponent extends ActorReferences {
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
-  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, loginTokenCache)
-  override lazy val nonAuthRessourcesRouteService = new DefaultNonAuthRessourcesRouteService(sysConfig, system, fileStore, actorRefFactory)
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier)
+  override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier)
+  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier)
+  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, loginTokenCache)
+  override lazy val nonAuthRessourcesRouteService = new DefaultNonAuthRessourcesRouteService(sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier)
 }
 
 // we don't implement our route structure directly in the service actor because(entityStore, sysConfig, system, fileStore, actorRefFactory)
@@ -136,7 +137,8 @@ trait RouteServiceActor
     with FileStoreComponent
     with CORSSupport
     with BaseJsonProtocol
-    with RoleBasedAuthorization {
+    with RoleBasedAuthorization
+    with AirbrakeNotifierReference {
   self: RouteServiceComponent =>
 
   //initially run db evolution  
@@ -145,6 +147,12 @@ trait RouteServiceActor
   }
 
   implicit val openolitorRejectionHandler: RejectionHandler = OpenOlitorRejectionHandler()
+
+  implicit def exceptionHandler = ExceptionHandler {
+    case th => ctx =>
+      airbrakeNotifier ! AirbrakeNotification(th, Some(ctx.request))
+      ctx.complete(StatusCodes.InternalServerError)
+  }
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -591,6 +599,7 @@ class DefaultRouteServiceActor(
   override val mailService: ActorRef,
   override val reportSystem: ActorRef,
   override val fileStore: FileStore,
+  override val airbrakeNotifier: ActorRef,
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val loginTokenCache: Cache[Subject]

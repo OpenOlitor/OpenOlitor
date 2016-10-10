@@ -748,7 +748,8 @@ class DefaultStammdatenRoutes(
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val fileStore: FileStore,
-  override val actorRefFactory: ActorRefFactory
+  override val actorRefFactory: ActorRefFactory,
+  override val airbrakeNotifier: ActorRef
 )
     extends StammdatenRoutes
     with DefaultStammdatenReadRepositoryComponent

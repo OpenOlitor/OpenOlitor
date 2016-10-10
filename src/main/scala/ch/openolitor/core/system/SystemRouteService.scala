@@ -39,7 +39,8 @@ class DefaultSystemRouteService(
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val fileStore: FileStore,
-  override val actorRefFactory: ActorRefFactory
+  override val actorRefFactory: ActorRefFactory,
+  override val airbrakeNotifier: ActorRef
 ) extends SystemRouteService
 
 trait SystemRouteService extends HttpService with ActorReferences
