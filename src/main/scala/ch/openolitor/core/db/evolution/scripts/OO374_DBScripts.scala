@@ -38,7 +38,7 @@ object OO374_DBScripts extends DefaultDBScripts {
       logger.debug(s"add column anzahl_abos_aktiv to kunde")
       alterTableAddColumnIfNotExists(kundeMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
       logger.debug(s"add column anzahl_abos_aktiv to vertrieb")
-      alterTableAddColumnIfNotExists(vertriebMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
+      alterTableAddColumnIfNotExists(vertriebMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_lieferungen")
       logger.debug(s"add column anzahl_abos_aktiv to depotlieferung")
       alterTableAddColumnIfNotExists(depotlieferungMapping, "anzahl_abos_aktiv", "int not null default 0", "anzahl_abos")
       logger.debug(s"add column anzahl_abos_aktiv to heimlieferung")

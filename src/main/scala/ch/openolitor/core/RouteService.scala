@@ -170,7 +170,7 @@ trait RouteServiceActor
               buchhaltungRouteService.buchhaltungRoute ~
               fileStoreRoute
           } ~
-          authorize(hasRole(KundenZugang)) {
+          authorize(hasRole(KundenZugang) || hasRole(AdministratorZugang)) {
             kundenportalRouteService.kundenportalRoute
           }
       } ~
