@@ -20,7 +20,8 @@ class DefaultNonAuthRessourcesRouteService(
   override val sysConfig: SystemConfig,
   override val system: ActorSystem,
   override val fileStore: FileStore,
-  override val actorRefFactory: ActorRefFactory
+  override val actorRefFactory: ActorRefFactory,
+  override val airbrakeNotifier: akka.actor.ActorRef
 ) extends NonAuthRessourcesRouteService
 
 trait NonAuthRessourcesRouteService extends HttpService with ActorReferences

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-## packaging tool for OpenOlitor client delivery
-
  #                                                                           #
 #    ____                   ____  ___ __                                      #
 #   / __ \____  ___  ____  / __ \/ (_) /_____  _____                          #

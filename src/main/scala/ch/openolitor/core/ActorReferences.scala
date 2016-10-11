@@ -45,7 +45,16 @@ trait ActorSystemReference {
   val system: ActorSystem
 }
 
+trait AirbrakeNotifierReference {
+  val airbrakeNotifier: ActorRef
+}
+
 class DefaultActorSystemReference(override val system: ActorSystem) extends ActorSystemReference
 
-trait ActorReferences extends ActorSystemReference with EntityStoreReference with EventStoreReference with ReportSystemReference with MailServiceReference {
+trait ActorReferences extends ActorSystemReference
+    with EntityStoreReference
+    with EventStoreReference
+    with ReportSystemReference
+    with MailServiceReference
+    with AirbrakeNotifierReference {
 }
