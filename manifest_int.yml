@@ -1,0 +1,17 @@
+---
+applications:
+- name: openolitor-server-int
+  memory: 1024M
+  instances: 1
+  host: openolitorint
+  domain: applicationcloud.io
+  path: universal/openolitor-server-1.0.0.zip
+  buildpack: https://github.com/cloudfoundry/java-buildpack.git
+  stack: cflinuxfs2
+  env:
+    TIMEOUT: "180"
+    JBP_CONFIG_OPEN_JDK_JRE: "{jre: { version: 1.8.0_+ }}"
+    application_config: openolitor-server-int
+    JAVA_OPTS: "-Dconfig.resource=openolitor-server-int.conf -Dlogback.configurationFile=openolitor-server-int-logback.xml"
+    application_buildnr: "${env.BUILD_NUMBER?notDefined}"
+    
