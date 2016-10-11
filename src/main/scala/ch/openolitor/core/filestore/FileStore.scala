@@ -76,8 +76,6 @@ trait FileStore {
 }
 
 class S3FileStore(override val mandant: String, mandantConfiguration: MandantConfiguration, actorSystem: ActorSystem) extends FileStore with LazyLogging {
-  lazy val createSystem = ActorSystem(mandant, mandantConfiguration.config)
-
   val opts = new ClientConfiguration
   opts.setSignerOverride("S3SignerType")
 

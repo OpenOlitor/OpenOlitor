@@ -261,6 +261,7 @@ class MockLoginRouteService(
   override val fileStore: FileStore = null
   override val actorRefFactory: ActorRefFactory = null
   override val loginTokenCache: Cache[Subject] = LruCache()
+  override val airbrakeNotifier: ActorRef = null
 
   override lazy val requireSecondFactorAuthentication = requireSecondFactorAuthenticationP
 }

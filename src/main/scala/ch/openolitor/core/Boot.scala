@@ -67,6 +67,7 @@ import ch.openolitor.core.mailservice.MailService
 import ch.openolitor.buchhaltung.BuchhaltungReportEventListener
 import ch.openolitor.core.calculations.OpenOlitorCalculations
 import ch.openolitor.core.calculations.Calculations.InitializeCalculation
+import ch.openolitor.util.AirbrakeNotifier
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -99,6 +100,7 @@ object Boot extends App with LazyLogging {
   val ooConfig = config.getConfig("openolitor")
   val configs = getMandantConfiguration(ooConfig)
   implicit val timeout = Timeout(5.seconds)
+
   val mandanten = startServices(configs)
 
   val nonConfigPort = Option(System.getenv("PORT")).getOrElse("8080")
@@ -145,6 +147,12 @@ object Boot extends App with LazyLogging {
     logger.debug(s"oo-proxy-system: configured proxy listener on port ${rootPort}")
   }
 
+  def startAirbrakeService(implicit systemConfig: SystemConfig) = {
+    implicit val airbrakeNotifierSystem = ActorSystem(s"oo-airbrake-notifier-system-${systemConfig.mandantConfiguration.name}")
+    val airbrakeNotifier = airbrakeNotifierSystem.actorOf(AirbrakeNotifier.props, "oo-airbrake-notifier")
+    airbrakeNotifier
+  }
+
   /**
    * Jeder Mandant wird in einem eigenen Akka System gestartet.
    */
@@ -163,7 +171,9 @@ object Boot extends App with LazyLogging {
 
       // initialise root actors
       val duration = Duration.create(1, SECONDS);
-      val system = app.actorOf(SystemActor.props, "oo-system")
+      val airbrakeNotifier = startAirbrakeService
+
+      val system = app.actorOf(SystemActor.props(airbrakeNotifier), "oo-system")
       logger.debug(s"oo-system:$system")
       val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(new Evolution(sysCfg)), "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
@@ -200,7 +210,7 @@ object Boot extends App with LazyLogging {
       buchhaltungEntityStoreView ? DefaultMessages.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, airbrakeNotifier, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler
