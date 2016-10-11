@@ -5,7 +5,7 @@ applications:
   instances: 1
   host: openolitortest
   domain: applicationcloud.io
-  path: target/universal/openolitor-server-1.0.0.zip
+  path: target/universal/openolitor-server-1.0.1.zip
   buildpack: https://github.com/cloudfoundry/java-buildpack.git
   stack: cflinuxfs2
   env:
