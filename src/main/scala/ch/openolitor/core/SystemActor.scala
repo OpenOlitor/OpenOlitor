@@ -32,13 +32,13 @@ import ch.openolitor.core.db._
 object SystemActor {
   case class Child(props: Props, name: String)
 
-  def props(implicit sysConfig: SystemConfig): Props = Props(classOf[SystemActor], sysConfig)
+  def props(airbrakeNotifier: ActorRef)(implicit sysConfig: SystemConfig): Props = Props(classOf[SystemActor], sysConfig, airbrakeNotifier)
 }
 
 /**
  * SystemActor wird benutzt, damit die Supervisor Strategy über alle child actors definiert werden kann
  */
-class SystemActor(sysConfig: SystemConfig) extends Actor with ActorLogging {
+class SystemActor(sysConfig: SystemConfig, airbrakeNotifier: ActorRef) extends Actor with ActorLogging {
   import SystemActor._
 
   log.debug(s"oo-system:SystemActor initialization:$sysConfig")
@@ -46,6 +46,7 @@ class SystemActor(sysConfig: SystemConfig) extends Actor with ActorLogging {
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
     case e =>
       log.warning(s"Child actor failed:$e")
+      airbrakeNotifier ! e
       Restart
   }
 
