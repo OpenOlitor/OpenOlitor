@@ -20,3 +20,8 @@ project/plugins/project/
 .project
 .settings
 /bin/
+
+# ensime
+.ensime
+.ensime_cache
+
