@@ -143,11 +143,16 @@ trait MailService extends AggregateRoot
       }
 
       // we have to await the result, maybe switch to standard javax.mail later
-      val result = Await.ready(mailer(envelope), 5 seconds).value.get
+      try {
+        val result = Await.ready(mailer(envelope), 5 seconds).value.get
 
-      result match {
-        case Success(_) => Success(MailSentEvent(metadata(meta.originator), uid, commandMeta))
-        case Failure(e) => Failure(e)
+        result match {
+          case Success(_) => Success(MailSentEvent(metadata(meta.originator), uid, commandMeta))
+          case Failure(e) => Failure(e)
+        }
+      } catch {
+        case e: Exception =>
+          Failure(e)
       }
     } else {
       log.debug(s"=====================================================================")
