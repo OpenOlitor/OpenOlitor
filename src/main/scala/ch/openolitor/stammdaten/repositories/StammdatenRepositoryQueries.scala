@@ -1298,4 +1298,13 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         )
     }.map(res => AboId(res.long(1))).list
   }
+
+  protected def getLieferungenOffenByAbotypQuery(abotypId: AbotypId) = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .where.eq(lieferung.abotypId, parameter(abotypId))
+        .and.eq(lieferung.status, parameter(Offen))
+    }.map(lieferungMapping(lieferung)).list
+  }
 }

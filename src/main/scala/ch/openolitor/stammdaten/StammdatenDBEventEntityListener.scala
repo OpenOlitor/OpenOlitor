@@ -40,6 +40,7 @@ import ch.openolitor.buchhaltung.models._
 import ch.openolitor.util.IdUtil
 import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
+import com.github.nscala_time.time.Imports._
 import scala.concurrent.Future
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
@@ -54,7 +55,7 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with StammdatenDBMappings
     with ConnectionPoolContextAware
-    with KorbStatusHandler
+    with KorbHandler
     with AboAktivChangeHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
@@ -267,6 +268,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + calculateAboAktivCreate(abo))
       })
+      createKoerbeForAbo(abo)
     }
   }
 
@@ -286,6 +288,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + 1)
         })
       }
+
+      modifyKoerbeForAbo(to, Some(from))
     }
   }
 
@@ -315,6 +319,38 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv - 1)
       })
+
+      deleteKoerbeForDeletedAbo(abo)
+    }
+  }
+
+  def createKoerbeForAbo(abo: Abo)(implicit personId: PersonId, session: DBSession) = {
+    modifyKoerbeForAbo(abo, None)
+  }
+
+  def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession) = {
+    // koerbe erstellen, modifizieren, loeschen falls noetig
+    stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+      stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+        orig map { original =>
+          if (!abo.aktiv) {
+            deleteKorb(lieferung, abo)
+          } else {
+            updateKorb(lieferung, abo, abotyp)
+          }
+        } getOrElse {
+          if (abo.start <= lieferung.datum && abo.ende.map(_ >= lieferung.datum).getOrElse(true)) {
+            maybeInsertKorb(lieferung, abo, abotyp)
+          }
+        }
+      }
+    }
+  }
+
+  def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession) = {
+    // koerbe der offenen lieferungen loeschen
+    stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+      deleteKorb(lieferung, abo)
     }
   }
 

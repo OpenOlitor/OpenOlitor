@@ -26,8 +26,6 @@ import org.joda.time.DateTime
 import ch.openolitor.core.models._
 import java.util.UUID
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
 
 sealed trait LieferungStatus
 
@@ -48,11 +46,10 @@ case object WirdGeliefert extends KorbStatus
 case object Geliefert extends KorbStatus
 case object FaelltAusAbwesend extends KorbStatus
 case object FaelltAusSaldoZuTief extends KorbStatus
-case object FaelltAusGekuendigt extends KorbStatus
 
 object KorbStatus {
   def apply(value: String): KorbStatus = {
-    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief, FaelltAusGekuendigt) find (_.toString == value) getOrElse (WirdGeliefert)
+    Vector(WirdGeliefert, Geliefert, FaelltAusAbwesend, FaelltAusSaldoZuTief) find (_.toString == value) getOrElse (WirdGeliefert)
   }
 }
 
