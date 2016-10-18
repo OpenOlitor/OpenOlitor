@@ -778,6 +778,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(lieferungMapping as lieferung)
         .where.eq(lieferung.lieferplanungId, parameter(id))
+        .orderBy(lieferung.datum).desc
     }.map(lieferungMapping(lieferung)).list
   }
 
