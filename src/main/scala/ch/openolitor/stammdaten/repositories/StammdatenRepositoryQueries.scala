@@ -194,6 +194,30 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 
+  protected def getDepotlieferungAbosByVertriebQuery(vertriebId: VertriebId) = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .where.eq(depotlieferungAbo.vertriebId, parameter(vertriebId))
+    }.map(depotlieferungAboMapping(depotlieferungAbo)).list
+  }
+
+  protected def getHeimlieferungAbosByVertriebQuery(vertriebId: VertriebId) = {
+    withSQL {
+      select
+        .from(heimlieferungAboMapping as heimlieferungAbo)
+        .where.eq(heimlieferungAbo.vertriebId, parameter(vertriebId))
+    }.map(heimlieferungAboMapping(heimlieferungAbo)).list
+  }
+
+  protected def getPostlieferungAbosByVertriebQuery(vertriebId: VertriebId) = {
+    withSQL {
+      select
+        .from(postlieferungAboMapping as postlieferungAbo)
+        .where.eq(postlieferungAbo.vertriebId, parameter(vertriebId))
+    }.map(postlieferungAboMapping(postlieferungAbo)).list
+  }
+
   protected def getDepotlieferungQuery(vertriebId: VertriebId) = {
     withSQL {
       select
@@ -712,7 +736,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 		       WHERE ${aboTyp.wirdGeplant} = true
 		       AND ${lieferung.lieferplanungId} IS NULL
 		       GROUP BY ${lieferung.abotypId}) groupedLieferung
-		    ON ${lieferung.abotypId} = groupedLieferung.abotypId 
+		    ON ${lieferung.abotypId} = groupedLieferung.abotypId
 		    AND ${lieferung.datum} = groupedLieferung.MinDateTime
       """.map(lieferungMapping(lieferung)).list
   }
@@ -784,7 +808,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 		         WHERE ${lieferung.lieferplanungId} = ${id.id}
 		       )
 		       GROUP BY ${lieferung.abotypId}) groupedLieferung
-		    ON ${lieferung.abotypId} = groupedLieferung.abotypId 
+		    ON ${lieferung.abotypId} = groupedLieferung.abotypId
 		    AND ${lieferung.datum} = groupedLieferung.MinDateTime
       """.one(lieferungMapping(lieferung))
       .toOne(abotypMapping.opt(aboTyp))

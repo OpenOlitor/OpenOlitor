@@ -97,6 +97,32 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         val copy = copyFrom(vertrieb, update)
         stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
       }
+
+      stammdatenWriteRepository.getAbosByVertrieb(id) map { abo =>
+        abo match {
+          case dlAbo: DepotlieferungAbo =>
+            logger.debug(s"Update abo with data -> vertriebBeschrieb")
+            val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
+              dlAbo,
+              "vertriebBeschrieb" -> update.beschrieb
+            )
+            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+          case hlAbo: HeimlieferungAbo =>
+            logger.debug(s"Update abo with data -> vertriebBeschrieb")
+            val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
+              hlAbo,
+              "vertriebBeschrieb" -> update.beschrieb
+            )
+            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+          case plAbo: PostlieferungAbo =>
+            logger.debug(s"Update abo with data -> vertriebBeschrieb")
+            val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
+              plAbo,
+              "vertriebBeschrieb" -> update.beschrieb
+            )
+            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+        }
+      }
     }
   }
 
