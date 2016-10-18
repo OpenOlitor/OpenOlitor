@@ -34,11 +34,12 @@ trait KorbHandler extends KorbStatusHandler
   this: StammdatenWriteRepositoryComponent =>
 
   /**
-   * Korb erstellen wenn nicht bereits existent
+   * insert or update Korb
+   * @return (created/updated, existing)
    */
-  def maybeInsertKorb(lieferung: Lieferung, abo: Abo, abotyp: Abotyp)(implicit personId: PersonId, session: DBSession): Korb = {
+  def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: Abotyp)(implicit personId: PersonId, session: DBSession): (Option[Korb], Option[Korb]) = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
-      case None => {
+      case None =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
         val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
         val korbId = KorbId(IdUtil.positiveRandomId)
@@ -55,30 +56,23 @@ trait KorbHandler extends KorbStatusHandler
           DateTime.now,
           personId
         )
-        stammdatenWriteRepository.insertEntity[Korb, KorbId](korb)
-        korb
-      }
+        (stammdatenWriteRepository.insertEntity[Korb, KorbId](korb), None)
+
       case Some(korb) =>
-        korb
-    }
-  }
+        val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
+        val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
 
-  def updateKorb(lieferung: Lieferung, abo: Abo, abotyp: Abotyp)(implicit personId: PersonId, session: DBSession): Option[Korb] = {
-    stammdatenWriteRepository.getKorb(lieferung.id, abo.id) flatMap { korb =>
-      val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
-      val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+        val copy = korb.copy(
+          status = status,
+          guthabenVorLieferung = abo.guthaben
+        )
 
-      val copy = korb.copy(
-        status = status,
-        guthabenVorLieferung = abo.guthaben
-      )
-
-      // only update if changed
-      if (korb != copy) {
-        stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
-      } else {
-        None
-      }
+        // only update if changed
+        if (korb != copy) {
+          (stammdatenWriteRepository.updateEntity[Korb, KorbId](copy), Some(korb))
+        } else {
+          (Some(korb), Some(korb))
+        }
     }
   }
 
