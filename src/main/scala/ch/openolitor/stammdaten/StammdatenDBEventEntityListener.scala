@@ -40,6 +40,7 @@ import ch.openolitor.buchhaltung.models._
 import ch.openolitor.util.IdUtil
 import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
+import com.github.nscala_time.time.Imports._
 import scala.concurrent.Future
 import org.joda.time.format.DateTimeFormat
 
@@ -55,7 +56,7 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with StammdatenDBMappings
     with ConnectionPoolContextAware
-    with KorbStatusHandler
+    with KorbHandler
     with AboAktivChangeHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
@@ -139,6 +140,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ EntityModified(userId, entity: Depot, orig: Depot) => handleDepotModified(entity, orig)(userId)
     case e @ EntityModified(userId, entity: Korb, orig: Korb) if entity.status != orig.status => handleKorbStatusChanged(entity, orig.status)(userId)
+
+    case e @ EntityDeleted(personId, entity: Korb) => handleKorbDeleted(entity)(personId)
 
     case x => //log.debug(s"receive unused event $x")
   }
@@ -270,6 +273,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + calculateAboAktivCreate(abo))
       })
+      createKoerbeForAbo(abo)
     }
   }
 
@@ -289,6 +293,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + 1)
         })
       }
+
+      modifyKoerbeForAbo(to, Some(from))
     }
   }
 
@@ -318,7 +324,78 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv - 1)
       })
+
+      deleteKoerbeForDeletedAbo(abo)
     }
+  }
+
+  def createKoerbeForAbo(abo: Abo)(implicit personId: PersonId, session: DBSession) = {
+    modifyKoerbeForAbo(abo, None)
+  }
+
+  def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession) = {
+    // koerbe erstellen, modifizieren, loeschen falls noetig
+    stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+      stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+        orig map { original =>
+          if (abo.ende map (_ <= (lieferung.datum - 1.day)) getOrElse false) {
+            deleteKorb(lieferung, abo)
+          } else {
+            upsertKorb(lieferung, abo, abotyp) match {
+              case (Some(korb), existingKorb) => updateLieferungWithKorbCounts(lieferung, korb, existingKorb)
+              case _ => // nothing to update
+            }
+          }
+        } getOrElse {
+          if (abo.start <= lieferung.datum && abo.ende.map(_ >= lieferung.datum).getOrElse(true)) {
+            upsertKorb(lieferung, abo, abotyp) match {
+              case (Some(korb), existingKorb) => updateLieferungWithKorbCounts(lieferung, korb, existingKorb)
+              case _ => // nothing to update
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession) = {
+    // koerbe der offenen lieferungen loeschen
+    stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+      deleteKorb(lieferung, abo)
+    }
+  }
+
+  def handleKorbDeleted(korb: Korb)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
+        val copy = updateLieferungWithCount(lieferung, korb, -1)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+      }
+    }
+  }
+
+  private def updateLieferungWithKorbCounts(lieferung: Lieferung, korb: Korb, orig: Option[Korb])(implicit personId: PersonId, session: DBSession) = {
+    orig map { existing =>
+      if (korb.status != existing.status) {
+        // -1 on existing status, +1 on new status
+        val copy = updateLieferungWithCount(
+          updateLieferungWithCount(lieferung, existing, -1),
+          korb, 1
+        )
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+      }
+    } getOrElse {
+      val copy = updateLieferungWithCount(lieferung, korb, 1)
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+    }
+  }
+
+  private def updateLieferungWithCount(lieferung: Lieferung, korb: Korb, add: Int): Lieferung = {
+    lieferung.copy(
+      anzahlKoerbeZuLiefern = if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern,
+      anzahlAbwesenheiten = if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten,
+      anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
+    )
   }
 
   def handleKundeModified(kunde: Kunde, orig: Kunde)(implicit personId: PersonId) = {

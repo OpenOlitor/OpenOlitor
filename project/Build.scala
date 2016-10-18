@@ -67,7 +67,8 @@ object BuildSettings {
       // s3
       "com.amazonaws"                %   "aws-java-sdk"                         % "1.11.4",
       "de.svenkubiak"                %   "jBCrypt"                              % "0.4.1",
-      "me.lessis"                    %%  "courier"                              % "0.1.3"
+      "me.lessis"                    %%  "courier"                              % "0.1.3",
+      "com.github.nscala-time"       %%  "nscala-time"                          % "2.14.0"
 	  )
 	}
   )
