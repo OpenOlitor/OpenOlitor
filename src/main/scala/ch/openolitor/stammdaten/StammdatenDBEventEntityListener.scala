@@ -42,6 +42,7 @@ import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
 import com.github.nscala_time.time.Imports._
 import scala.concurrent.Future
+import org.joda.time.format.DateTimeFormat
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -60,6 +61,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
+
+  val dateFormat = DateTimeFormat.forPattern("dd.MM.yyyy")
 
   override def preStart() {
     super.preStart()
@@ -986,9 +989,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
         val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanungId)
-        val abotypMapping = lieferungen.map(_.abotypBeschrieb).filter(_.nonEmpty).toSet.mkString(", ")
-        logger.debug(s"handleLieferplanungLieferungenChanged: $lieferplanungId => abotypDepotTour=$abotypMapping. $lieferungen")
-        val copy = lp.copy(abotypDepotTour = abotypMapping)
+        val abotypDates = (lieferungen.map(l => (dateFormat.print(l.datum), l.abotypBeschrieb))
+          .groupBy(_._1).mapValues(_ map { _._2 }) map {
+            case (datum, abotypBeschriebe) =>
+              datum + ": " + abotypBeschriebe.mkString(", ")
+          }).mkString("; ")
+        logger.debug(s"handleLieferplanungLieferungenChanged: $lieferplanungId => abotypDepotTour=$abotypDates. $lieferungen")
+        val copy = lp.copy(abotypDepotTour = abotypDates)
         stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
       }
     }
