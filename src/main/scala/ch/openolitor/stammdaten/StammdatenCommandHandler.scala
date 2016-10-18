@@ -87,25 +87,30 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Offen =>
-              val distinctLieferpositionen = stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id).map { lieferposition =>
-                stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
-                  (lieferposition.produzentId, lieferplanung.id, lieferung.datum)
-                }
-              }.flatten.toSet
+              stammdatenWriteRepository.countEarlierLieferungOffen(id) match {
+                case Some(0) =>
+                  val distinctLieferpositionen = stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id).map { lieferposition =>
+                    stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+                      (lieferposition.produzentId, lieferplanung.id, lieferung.datum)
+                    }
+                  }.flatten.toSet
 
-              val bestellEvents = distinctLieferpositionen.map {
-                case (produzentId, lieferplanungId, datum) =>
-                  val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
-                  val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungCreate(produzentId, lieferplanungId, datum))
+                  val bestellEvents = distinctLieferpositionen.map {
+                    case (produzentId, lieferplanungId, datum) =>
+                      val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
+                      val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungCreate(produzentId, lieferplanungId, datum))
 
-                  val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
+                      val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
 
-                  Seq(insertEvent, bestellungVersendenEvent)
-              }.toSeq.flatten
+                      Seq(insertEvent, bestellungVersendenEvent)
+                  }.toSeq.flatten
 
-              val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
+                  val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
 
-              Success(lpAbschliessenEvent +: bestellEvents)
+                  Success(lpAbschliessenEvent +: bestellEvents)
+                case _ =>
+                  Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
+              }
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
@@ -356,7 +361,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
   def addKundenPendenz(idFactory: IdFactory, meta: EventMetadata, id: AboId, bemerkung: String): Option[PersistentEvent] = {
     DB readOnly { implicit session =>
-      // zusätzlich eine pendenz erstellen      
+      // zusätzlich eine pendenz erstellen
       ((stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
         DepotlieferungAboModify
         abo.kundeId

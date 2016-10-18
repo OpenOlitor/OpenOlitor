@@ -57,7 +57,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     with StammdatenDBMappings
     with ConnectionPoolContextAware
     with KorbHandler
-    with AboAktivChangeHandler {
+    with AboAktivChangeHandler
+    with LieferungHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
@@ -125,13 +126,16 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
     case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) =>
       handleLieferplanungAbgeschlossen(entity)(personId)
-    case e @ EntityModified(userId, entity: Vertrieb, orig: Vertrieb) if (orig.anzahlLieferungen != entity.anzahlLieferungen || orig.durchschnittspreis != entity.durchschnittspreis) =>
-      handleVertriebDurchschnittsberechnungenModified(entity, orig)(userId)
+
     case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
-    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) if (orig.lieferplanungId.isEmpty && entity.lieferplanungId.isDefined) => handleLieferplanungLieferungenChanged(entity.lieferplanungId.get)(personId)
-    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) if (orig.lieferplanungId.isDefined && entity.lieferplanungId.isEmpty) => handleLieferplanungLieferungenChanged(orig.lieferplanungId.get)(personId)
+    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) //Die Lieferung wird von der Lieferplanung entfernt
+    if (orig.lieferplanungId.isEmpty && entity.lieferplanungId.isDefined) =>
+      handleLieferplanungLieferungenChanged(entity.lieferplanungId.get)(personId)
+    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) //Die Lieferung wird an eine Lieferplanung angehängt
+    if (orig.lieferplanungId.isDefined && entity.lieferplanungId.isEmpty) => handleLieferplanungLieferungenChanged(orig.lieferplanungId.get)(personId)
+    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) => handleLieferungChanged(entity, orig)(personId)
 
     case e @ EntityModified(personId, entity: Vertriebsart, orig: Vertriebsart) => handleVertriebsartModified(entity, orig)(personId)
 
@@ -768,26 +772,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  protected def calcDurchschnittspreis(durchschnittspreis: BigDecimal, anzahlLieferungen: Int, neuerPreis: BigDecimal) =
-    ((durchschnittspreis * anzahlLieferungen) + neuerPreis) / (anzahlLieferungen + 1)
-
-  protected def handleVertriebDurchschnittsberechnungenModified(aktuell: Vertrieb, alt: Vertrieb)(implicit personId: PersonId) = {
-    //update all attached lieferungen with new stats
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getProjekt map { projekt =>
-        stammdatenWriteRepository.getLieferungen(aktuell.id) map { lieferung =>
-          val gjKey = projekt.geschaftsjahr.key(lieferung.datum)
-
-          val anzahlLieferungen = aktuell.anzahlLieferungen.get(gjKey).getOrElse(0)
-          val durchschnittspreis: BigDecimal = aktuell.durchschnittspreis.get(gjKey).getOrElse(0)
-
-          val copy = lieferung.copy(anzahlLieferungen = anzahlLieferungen, durchschnittspreis = durchschnittspreis)
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-        }
-      }
-    }
-  }
-
   private def isAuslieferungExistingHeim(datum: DateTime, tourId: TourId)(implicit session: DBSession): Boolean = {
     stammdatenWriteRepository.getTourAuslieferung(tourId, datum).isDefined
   }
@@ -1001,9 +985,47 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def modifyEntity[E <: BaseEntity[I], I <: BaseId](
-    id: I, mod: E => E
-  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
+  def handleLieferungChanged(entity: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      val lieferungVorher = stammdatenWriteRepository.getGeplanteLieferungVorher(orig.vertriebId, entity.datum)
+      val referenzVorher = entity.lieferplanungId.isDefined match {
+        case true =>
+          recalculateLieferplanungOffen(entity, lieferungVorher)
+          Some(entity)
+        case false =>
+          lieferungVorher
+      }
+
+      val lieferungenNachher = stammdatenWriteRepository.getGeplanteLieferungenNachher(orig.vertriebId, entity.datum) map { Some(_) }
+      val thisAndlieferungenNachher = referenzVorher :: lieferungenNachher
+
+      (thisAndlieferungenNachher zip lieferungenNachher).map {
+        case (vorher, lieferung) => recalculateLieferplanungOffen(lieferung.get, vorher)
+      }
+    }
+  }
+
+  def recalculateLieferplanungOffen(entity: Lieferung, lieferungVorher: Option[Lieferung])(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      val newValues = lieferungVorher match {
+        case Some(lieferung) =>
+          val durchschnittspreisBisher = calcDurchschnittspreis(lieferung.durchschnittspreis, lieferung.anzahlLieferungen, lieferung.preisTotal)
+          val anzahlLieferungenNeu = lieferung.anzahlLieferungen + 1
+          //(durchschnittspreisBisher, anzahlLieferungenNeu)
+          (BigDecimal(0), 1)
+        case None =>
+          (BigDecimal(0), 1)
+      }
+
+      val updatedLieferung = entity.copy(
+        durchschnittspreis = newValues._1,
+        anzahlLieferungen = newValues._2
+      )
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
+    }
+  }
+
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I, mod: E => E)(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
     modifyEntityWithRepository(stammdatenWriteRepository)(id, mod)
   }
 }
