@@ -184,6 +184,30 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(personMapping(person)).list
   }
 
+  protected def getPersonenUebersichtQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .leftJoin(kundeMapping as kunde).on(person.kundeId, kunde.id)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, person))
+        .orderBy(person.name)
+    }.one(personMapping(person))
+      .toOne(
+        rs => kundeMapping(kunde)(rs)
+      ).map { (person, kunde) =>
+          copyTo[Person, PersonUebersicht](
+            person,
+            "strasse" -> kunde.strasse,
+            "hausNummer" -> kunde.hausNummer,
+            "adressZusatz" -> kunde.adressZusatz,
+            "plz" -> kunde.plz,
+            "ort" -> kunde.ort,
+            "kundentypen" -> kunde.typen,
+            "kundenBemerkungen" -> kunde.bemerkungen
+          )
+        }.list
+  }
+
   protected def getAbotypDetailQuery(id: AbotypId) = {
     withSQL {
       select
