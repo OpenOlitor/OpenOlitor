@@ -845,9 +845,11 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       left outer join
         (
          select
-          ${lieferung.vertriebId} as vertriebId, max(${lieferung.datum}) as maxdat
+          ${lieferung.vertriebId} as vertriebId, min(${lieferung.datum}) as mindat
          from
           ${lieferungMapping as lieferung}
+         where
+          ${lieferung.status} = 'Offen'
          group by
           ${lieferung.vertriebId}
         )
@@ -855,7 +857,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       where
         ${lieferung.lieferplanungId} = ${id.id}
         and ${lieferung.status} = 'Offen'
-        and ${lieferung.datum} < maxdat
+        and ${lieferung.datum} > mindat
       """
       .map(_.int(1)).single
   }

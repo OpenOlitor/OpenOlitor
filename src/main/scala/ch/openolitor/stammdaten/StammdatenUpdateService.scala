@@ -572,6 +572,14 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
+
+        positionen.preisTotal match {
+          case Some(preis) =>
+            val copy = lieferung.copy(preisTotal = preis, modifidat = meta.timestamp, modifikator = personId)
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+          case _ =>
+        }
+
         //save Lieferpositionen
         positionen.lieferpositionen map { create =>
           val lpId = LieferpositionId(IdUtil.positiveRandomId)

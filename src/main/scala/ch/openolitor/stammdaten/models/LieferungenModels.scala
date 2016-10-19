@@ -204,6 +204,7 @@ case class LieferpositionModify(
 ) extends JSONSerializable
 
 case class LieferpositionenModify(
+  preisTotal: Option[BigDecimal],
   lieferpositionen: List[LieferpositionModify]
 ) extends JSONSerializable
 
