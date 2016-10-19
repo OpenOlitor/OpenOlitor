@@ -26,5 +26,9 @@ import ch.openolitor.stammdaten.models._
 
 trait LieferungHandler {
   def calcDurchschnittspreis(durchschnittspreis: BigDecimal, anzahlLieferungen: Int, neuerPreis: BigDecimal): BigDecimal =
-    ((durchschnittspreis * (anzahlLieferungen - 1)) + neuerPreis) / anzahlLieferungen
+    if (anzahlLieferungen == 0) {
+      0
+    } else {
+      ((durchschnittspreis * (anzahlLieferungen - 1)) + neuerPreis) / anzahlLieferungen
+    }
 }

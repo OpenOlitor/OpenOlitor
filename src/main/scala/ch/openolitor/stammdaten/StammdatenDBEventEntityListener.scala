@@ -43,6 +43,7 @@ import org.joda.time.DateTime
 import com.github.nscala_time.time.Imports._
 import scala.concurrent.Future
 import org.joda.time.format.DateTimeFormat
+import BigDecimal.RoundingMode._
 
 object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
@@ -135,7 +136,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleLieferplanungLieferungenChanged(entity.lieferplanungId.get)(personId)
     case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) //Die Lieferung wird an eine Lieferplanung angehängt
     if (orig.lieferplanungId.isDefined && entity.lieferplanungId.isEmpty) => handleLieferplanungLieferungenChanged(orig.lieferplanungId.get)(personId)
-    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) if (!entity.lieferplanungId.isEmpty) => handleLieferungChanged(entity, orig)(personId)
+
+    case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) if (entity.lieferplanungId.isDefined) => handleLieferungChanged(entity, orig)(personId)
 
     case e @ EntityModified(personId, entity: Vertriebsart, orig: Vertriebsart) => handleVertriebsartModified(entity, orig)(personId)
 
@@ -991,16 +993,20 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       val aktuell = Some(entity)
       val lieferungenNachher = stammdatenWriteRepository.getGeplanteLieferungenNachher(orig.vertriebId, entity.datum) map { Some(_) }
 
-      val lieferungenAktuellBisEnde = aktuell :: lieferungenNachher
-      val lieferungenVorherBisEnde = lieferungVorher :: aktuell :: lieferungenNachher
-
-      (lieferungenVorherBisEnde zip lieferungenAktuellBisEnde).map {
-        case (vorher, lieferung) => recalculateLieferplanungOffen(lieferung.get, vorher)
+      if (!lieferungenNachher.isEmpty) {
+        recalculateLieferungOffen(lieferungenNachher.head.get, aktuell)
       }
+
+      //val lieferungenAktuellBisEnde = List(aktuell, lieferungenNachher.head)
+      //val lieferungenVorherBisEnde = List(lieferungVorher, aktuell, lieferungenNachher.head)
+
+      //(lieferungenVorherBisEnde zip lieferungenAktuellBisEnde).map {
+      //  case (vorher, lieferung) => recalculateLieferplanungOffen(lieferung.get, vorher)
+      //}
     }
   }
 
-  def recalculateLieferplanungOffen(entity: Lieferung, lieferungVorher: Option[Lieferung])(implicit personId: PersonId) = {
+  def recalculateLieferungOffen(entity: Lieferung, lieferungVorher: Option[Lieferung])(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       val (newDurchschnittspreis, newAnzahlLieferungen) = lieferungVorher match {
         case Some(lieferung) =>
@@ -1012,9 +1018,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           (BigDecimal(0), 1)
       }
 
-      logger.debug(s"handleLieferplanungLieferungenChanged: ${entity.durchschnittspreis} ${newDurchschnittspreis.setScale(2)} ${entity.anzahlLieferungen} ${newAnzahlLieferungen}")
+      val scaled = newDurchschnittspreis.setScale(2, HALF_UP)
+      val equals = entity.durchschnittspreis == scaled
+      logger.debug(s"recalculateLieferplanungOffen: ${entity.id} ${entity.durchschnittspreis} => ${scaled} => $equals")
 
-      if (entity.durchschnittspreis != newDurchschnittspreis.setScale(2) || entity.anzahlLieferungen != newAnzahlLieferungen) {
+      if (entity.durchschnittspreis != scaled || entity.anzahlLieferungen != newAnzahlLieferungen) {
         val updatedLieferung = entity.copy(
           durchschnittspreis = newDurchschnittspreis,
           anzahlLieferungen = newAnzahlLieferungen,
