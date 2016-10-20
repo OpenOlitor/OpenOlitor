@@ -813,6 +813,20 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferungMapping(lieferung)).list
   }
 
+  protected def sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
+    sql"""
+      select
+        sum(${lieferung.preisTotal})
+      from
+        ${lieferungMapping as lieferung}
+      where
+        ${lieferung.vertriebId} = ${vertriebId.id}
+        and ${lieferung.lieferplanungId} IS NOT NULL
+        and ${lieferung.datum} < ${datum}
+      """
+      .map(x => BigDecimal(x.bigDecimal(1))).single
+  }
+
   protected def getGeplanteLieferungVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
     withSQL {
       select
@@ -825,7 +839,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferungMapping(lieferung)).single
   }
 
-  protected def getGeplanteLieferungenNachherQuery(vertriebId: VertriebId, datum: DateTime) = {
+  protected def getGeplanteLieferungNachherQuery(vertriebId: VertriebId, datum: DateTime) = {
     withSQL {
       select
         .from(lieferungMapping as lieferung)
@@ -833,7 +847,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .and.not.isNull(lieferung.lieferplanungId)
         .and.gt(lieferung.datum, parameter(datum))
         .orderBy(lieferung.datum).asc
-    }.map(lieferungMapping(lieferung)).list
+        .limit(1)
+    }.map(lieferungMapping(lieferung)).single
   }
 
   protected def countEarlierLieferungOffenQuery(id: LieferplanungId) = {

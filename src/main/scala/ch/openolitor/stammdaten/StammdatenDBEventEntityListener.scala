@@ -980,7 +980,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             case (datum, abotypBeschriebe) =>
               datum + ": " + abotypBeschriebe.mkString(", ")
           }).mkString("; ")
-        logger.debug(s"handleLieferplanungLieferungenChanged: $lieferplanungId => abotypDepotTour=$abotypDates. $lieferungen")
         val copy = lp.copy(abotypDepotTour = abotypDates)
         stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
       }
@@ -989,20 +988,15 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleLieferungChanged(entity: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      val lieferungVorher = stammdatenWriteRepository.getGeplanteLieferungVorher(orig.vertriebId, entity.datum)
-      val aktuell = Some(entity)
-      val lieferungenNachher = stammdatenWriteRepository.getGeplanteLieferungenNachher(orig.vertriebId, entity.datum) map { Some(_) }
-
-      if (!lieferungenNachher.isEmpty) {
-        recalculateLieferungOffen(lieferungenNachher.head.get, aktuell)
+      //Berechnung für erste Lieferung durchführen um sicher zu stellen, dass durchschnittspreis auf 0 gesetzt ist
+      if (entity.anzahlLieferungen == 1) {
+        recalculateLieferungOffen(entity, None)
       }
-
-      //val lieferungenAktuellBisEnde = List(aktuell, lieferungenNachher.head)
-      //val lieferungenVorherBisEnde = List(lieferungVorher, aktuell, lieferungenNachher.head)
-
-      //(lieferungenVorherBisEnde zip lieferungenAktuellBisEnde).map {
-      //  case (vorher, lieferung) => recalculateLieferplanungOffen(lieferung.get, vorher)
-      //}
+      val lieferungVorher = stammdatenWriteRepository.getGeplanteLieferungVorher(orig.vertriebId, entity.datum)
+      stammdatenWriteRepository.getGeplanteLieferungNachher(orig.vertriebId, entity.datum) match {
+        case Some(lieferungNach) => recalculateLieferungOffen(lieferungNach, Some(entity))
+        case _ =>
+      }
     }
   }
 
@@ -1010,7 +1004,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       val (newDurchschnittspreis, newAnzahlLieferungen) = lieferungVorher match {
         case Some(lieferung) =>
-          val durchschnittspreisBisher = calcDurchschnittspreis(lieferung.durchschnittspreis, lieferung.anzahlLieferungen, lieferung.preisTotal)
+          val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(entity.vertriebId, entity.datum).getOrElse(BigDecimal(0))
+
+          val durchschnittspreisBisher: BigDecimal = lieferung.anzahlLieferungen match {
+            case 0 => BigDecimal(0)
+            case _ => sum / lieferung.anzahlLieferungen
+          }
 
           val anzahlLieferungenNeu = lieferung.anzahlLieferungen + 1
           (durchschnittspreisBisher, anzahlLieferungenNeu)
@@ -1019,8 +1018,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       }
 
       val scaled = newDurchschnittspreis.setScale(2, HALF_UP)
-      val equals = entity.durchschnittspreis == scaled
-      logger.debug(s"recalculateLieferplanungOffen: ${entity.id} ${entity.durchschnittspreis} => ${scaled} => $equals")
 
       if (entity.durchschnittspreis != scaled || entity.anzahlLieferungen != newAnzahlLieferungen) {
         val updatedLieferung = entity.copy(

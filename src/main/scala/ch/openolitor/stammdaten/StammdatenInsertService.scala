@@ -606,9 +606,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, data.lieferplanungId) map { lieferplanung =>
         stammdatenWriteRepository.getById(lieferungMapping, data.id) map { lieferung =>
-          val newValues = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
+          val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
             case Some(lieferungVorher) =>
-              val durchschnittspreisBisher = calcDurchschnittspreis(lieferungVorher.durchschnittspreis, lieferungVorher.anzahlLieferungen, lieferungVorher.preisTotal)
+              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum).getOrElse(BigDecimal(0))
+
+              val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
+                case 0 => BigDecimal(0)
+                case _ => sum / lieferungVorher.anzahlLieferungen
+              }
               val anzahlLieferungenNeu = lieferungVorher.anzahlLieferungen + 1
               (durchschnittspreisBisher, anzahlLieferungenNeu)
             case None =>
@@ -619,8 +624,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           val updatedLieferung = lieferung.copy(
             lieferplanungId = lpId,
             status = Offen,
-            durchschnittspreis = newValues._1,
-            anzahlLieferungen = newValues._2,
+            durchschnittspreis = newDurchschnittspreis,
+            anzahlLieferungen = newAnzahlLieferungen,
             modifidat = meta.timestamp,
             modifikator = personId
           )
