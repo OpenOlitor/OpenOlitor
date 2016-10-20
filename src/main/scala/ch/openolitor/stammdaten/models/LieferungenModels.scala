@@ -150,8 +150,6 @@ case class LieferungModify(
   vertriebsartBeschrieb: Option[String],
   status: LieferungStatus,
   datum: DateTime,
-  durchschnittspreis: BigDecimal,
-  anzahlLieferungen: Int,
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId]
 ) extends JSONSerializable
@@ -206,6 +204,7 @@ case class LieferpositionModify(
 ) extends JSONSerializable
 
 case class LieferpositionenModify(
+  preisTotal: Option[BigDecimal],
   lieferpositionen: List[LieferpositionModify]
 ) extends JSONSerializable
 

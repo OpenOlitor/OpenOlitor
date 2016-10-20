@@ -45,6 +45,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val person = personMapping.syntax("pers")
   lazy val lieferplanung = lieferplanungMapping.syntax("lieferplanung")
   lazy val lieferung = lieferungMapping.syntax("lieferung")
+  lazy val lieferungJoin = lieferungMapping.syntax("lieferungJ")
   lazy val lieferposition = lieferpositionMapping.syntax("lieferposition")
   lazy val bestellung = bestellungMapping.syntax("bestellung")
   lazy val bestellposition = bestellpositionMapping.syntax("bestellposition")
@@ -834,6 +835,70 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(lieferungMapping as lieferung)
         .where.eq(lieferung.vertriebId, parameter(id))
     }.map(lieferungMapping(lieferung)).list
+  }
+
+  protected def sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
+    sql"""
+      select
+        sum(${lieferung.preisTotal})
+      from
+        ${lieferungMapping as lieferung}
+      where
+        ${lieferung.vertriebId} = ${vertriebId.id}
+        and ${lieferung.lieferplanungId} IS NOT NULL
+        and ${lieferung.datum} < ${datum}
+      """
+      .map(x => BigDecimal(x.bigDecimal(1))).single
+  }
+
+  protected def getGeplanteLieferungVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .where.eq(lieferung.vertriebId, parameter(vertriebId))
+        .and.not.isNull(lieferung.lieferplanungId)
+        .and.lt(lieferung.datum, parameter(datum))
+        .orderBy(lieferung.datum).desc
+        .limit(1)
+    }.map(lieferungMapping(lieferung)).single
+  }
+
+  protected def getGeplanteLieferungNachherQuery(vertriebId: VertriebId, datum: DateTime) = {
+    withSQL {
+      select
+        .from(lieferungMapping as lieferung)
+        .where.eq(lieferung.vertriebId, parameter(vertriebId))
+        .and.not.isNull(lieferung.lieferplanungId)
+        .and.gt(lieferung.datum, parameter(datum))
+        .orderBy(lieferung.datum).asc
+        .limit(1)
+    }.map(lieferungMapping(lieferung)).single
+  }
+
+  protected def countEarlierLieferungOffenQuery(id: LieferplanungId) = {
+    sql"""
+      select
+        count(${lieferung.datum})
+      from
+        ${lieferungMapping as lieferung}
+      left outer join
+        (
+         select
+          ${lieferung.vertriebId} as vertriebId, min(${lieferung.datum}) as mindat
+         from
+          ${lieferungMapping as lieferung}
+         where
+          ${lieferung.status} = 'Offen'
+         group by
+          ${lieferung.vertriebId}
+        )
+        as l1 on ${lieferung.vertriebId} = l1.vertriebId
+      where
+        ${lieferung.lieferplanungId} = ${id.id}
+        and ${lieferung.status} = 'Offen'
+        and ${lieferung.datum} > mindat
+      """
+      .map(_.int(1)).single
   }
 
   protected def getVerfuegbareLieferungenQuery(id: LieferplanungId) = {

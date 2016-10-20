@@ -59,7 +59,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     with LazyLogging
     with AsyncConnectionPoolContextAware
     with StammdatenDBMappings
-    with KorbHandler {
+    with KorbHandler
+    with LieferungHandler {
   self: StammdatenWriteRepositoryComponent =>
 
   val ZERO = 0
@@ -605,12 +606,26 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferplanungMapping, data.lieferplanungId) map { lieferplanung =>
         stammdatenWriteRepository.getById(lieferungMapping, data.id) map { lieferung =>
+          val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
+            case Some(lieferungVorher) =>
+              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum).getOrElse(BigDecimal(0))
 
+              val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
+                case 0 => BigDecimal(0)
+                case _ => sum / lieferungVorher.anzahlLieferungen
+              }
+              val anzahlLieferungenNeu = lieferungVorher.anzahlLieferungen + 1
+              (durchschnittspreisBisher, anzahlLieferungenNeu)
+            case None =>
+              (BigDecimal(0), 1)
+          }
           val lpId = Some(data.lieferplanungId)
 
           val updatedLieferung = lieferung.copy(
             lieferplanungId = lpId,
             status = Offen,
+            durchschnittspreis = newDurchschnittspreis,
+            anzahlLieferungen = newAnzahlLieferungen,
             modifidat = meta.timestamp,
             modifikator = personId
           )
