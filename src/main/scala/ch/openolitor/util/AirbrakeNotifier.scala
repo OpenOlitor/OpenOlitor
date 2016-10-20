@@ -56,7 +56,6 @@ class AirbrakeNotifier(system: ActorSystem, systemConfig: SystemConfig) extends 
   lazy val apiKey = config.getStringOption("airbrake.api-key") getOrElse { sys.error("Could not find Airbrake api-key in config") }
   lazy val ssl = config.getBooleanOption("airbrake.ssl") getOrElse (false)
   lazy val endpoint = config.getStringOption("airbrake.endpoint") getOrElse ("api.airbrake.io")
-  lazy val notifierJs = config.getStringOption("airbrake.notifier-js") getOrElse ("http://cdn.airbrake.io/notifier.min.js")
   lazy val mandantIdentifier = systemConfig.mandantConfiguration.name
 
   val pipeline: HttpRequest => Future[HttpResponse] = {
@@ -81,18 +80,6 @@ class AirbrakeNotifier(system: ActorSystem, systemConfig: SystemConfig) extends 
       pipeline(Post(s"$scheme://$endpoint/notifier_api/v2/notices", formatNotice(apiKey, request, th)))
     }
   }
-
-  def js = if (enabled) {
-    s"""
-    <script src="$notifierJs"></script>
-    <script type="text/javascript">
-      Airbrake.setKey('$apiKey');
-      Airbrake.setHost('$endpoint');
-      Airbrake.setEnvironment('${mandantIdentifier}');
-      Airbrake.setGuessFunctionName(true);
-    </script>
-    """
-  } else ""
 
   protected def formatNotice(apiKey: String, request: Option[HttpRequest], th: Throwable) = {
     <notice version="2.2">

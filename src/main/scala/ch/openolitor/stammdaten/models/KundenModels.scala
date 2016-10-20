@@ -376,6 +376,35 @@ case class PersonSummary(
   letzteAnmeldung: Option[DateTime]
 ) extends JSONSerializable
 
+case class PersonUebersicht(
+  id: PersonId,
+  kundeId: KundeId,
+  anrede: Option[Anrede],
+  name: String,
+  vorname: String,
+  email: Option[String],
+  emailAlternative: Option[String],
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
+  bemerkungen: Option[String],
+  loginAktiv: Boolean,
+  letzteAnmeldung: Option[DateTime],
+  rolle: Option[Rolle],
+  // kundendaten
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  kundentypen: Set[KundentypId],
+  kundenBemerkungen: Option[String],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class KundeSummary(id: KundeId, kunde: String) extends Product
 
 case class PersonModify(
