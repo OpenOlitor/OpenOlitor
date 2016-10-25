@@ -117,7 +117,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ lieferantenRoute ~ vorlagenRoute
     }
 
-  def kundenRoute(implicit subject: Subject) =
+  def kundenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
     path("kunden" ~ exportFormatPath.?) { exportFormat =>
       get(list(stammdatenReadRepository.getKundenUebersicht, exportFormat)) ~
         post(create[KundeModify, KundeId](KundeId.apply _))

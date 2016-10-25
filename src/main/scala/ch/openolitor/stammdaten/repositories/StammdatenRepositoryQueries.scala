@@ -96,11 +96,12 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(kundeMapping(kunde)).list
   }
 
-  protected def getKundenUebersichtQuery = {
+  protected def getKundenUebersichtQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(kundeMapping as kunde)
         .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, kunde))
         .orderBy(person.sort)
     }.one(kundeMapping(kunde))
       .toMany(

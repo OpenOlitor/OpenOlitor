@@ -54,7 +54,7 @@ trait StammdatenReadRepository {
   def getVertriebsarten(vertriebId: VertriebId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[VertriebsartDetail]]
 
   def getKunden(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kunde]]
-  def getKundenUebersicht(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[KundeUebersicht]]
+  def getKundenUebersicht(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[KundeUebersicht]]
   def getKundeDetail(id: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KundeDetail]]
   def getKundeDetailReport(kundeId: KundeId, projekt: ProjektReport)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KundeDetailReport]]
 
@@ -144,8 +144,8 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     getKundenQuery.future
   }
 
-  def getKundenUebersicht(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[KundeUebersicht]] = {
-    getKundenUebersichtQuery.future
+  def getKundenUebersicht(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[KundeUebersicht]] = {
+    getKundenUebersichtQuery(filter).future
   }
 
   def getKundentypen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kundentyp]] = {
