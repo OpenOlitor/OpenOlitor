@@ -694,7 +694,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(tourMapping as tour)
-    }.map(tourMapping(tour)(_)).list
+    }.map(tourMapping(tour)).list
   }
 
   protected def getTourDetailQuery(id: TourId) = {
