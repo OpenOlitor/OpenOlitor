@@ -77,24 +77,21 @@ trait EntityParser {
 
   def parseImpl[E <: BaseEntity[_], P, R](name: String, table: Table, idCol: String, colNames: Seq[String])(entityFactory: Long => Seq[Int] => Row => P)(resultHandler: (Long, P) => Option[R])(implicit loggingAdapter: LoggingAdapter): List[R] = {
     loggingAdapter.debug(s"Parse $name")
-    val rows = table.getRowList().toList take (1000)
-    val header = rows.head
-    val data = rows.tail
+    val header = table.getRowByIndex(0)
+    val data = table.getRowIterator().toStream drop (1)
 
     //match column indexes
     val indexes = columnIndexes(header, name, Seq(idCol) ++ colNames)
     val indexId = indexes.head
     val otherIndexes = indexes.tail
 
-    (for {
-      row <- data
-    } yield {
-      val optId = row.value[Option[Long]](indexId)
-      optId map { id =>
-        val result = entityFactory(id)(otherIndexes)(row)
-        resultHandler(id, result)
-      } getOrElse (None)
-    }).flatten
+    (data takeWhile { row =>
+      row.value[Option[Long]](indexId).isDefined
+    } flatMap { row =>
+      val id = row.value[Long](indexId)
+      val result = entityFactory(id)(otherIndexes)(row)
+      resultHandler(id, result)
+    }).toList
   }
 
   def columnIndexes(header: Row, sheet: String, names: Seq[String], maxCols: Option[Int] = None)(implicit loggingAdapter: LoggingAdapter) = {
