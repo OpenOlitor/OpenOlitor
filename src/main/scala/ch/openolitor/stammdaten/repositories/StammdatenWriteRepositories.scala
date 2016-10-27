@@ -42,6 +42,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
+  def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo]
 
   def getProjekt(implicit session: DBSession): Option[Projekt]
   def getKunden(implicit session: DBSession): List[Kunde]
@@ -72,11 +73,16 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def countAbwesend(aboId: AboId, datum: DateTime)(implicit session: DBSession): Option[Int]
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getLieferungen(id: VertriebId)(implicit session: DBSession): List[Lieferung]
+  def sumPreisTotalGeplanteLieferungenVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[BigDecimal]
+  def getGeplanteLieferungVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[Lieferung]
+  def getGeplanteLieferungNachher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[Lieferung]
+  def countEarlierLieferungOffen(id: LieferplanungId)(implicit session: DBSession): Option[Int]
   def getBestellungen(id: LieferplanungId)(implicit session: DBSession): List[Bestellung]
   def getBestellpositionen(id: BestellungId)(implicit session: DBSession): List[Bestellposition]
   def getVertriebsarten(vertriebId: VertriebId)(implicit session: DBSession): List[VertriebsartDetail]
   def getVertrieb(vertriebId: VertriebId)(implicit session: DBSession): Option[Vertrieb]
   def getKundeDetail(kundeId: KundeId)(implicit session: DBSession): Option[KundeDetail]
+  def getLieferungenOffenByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung]
 
   def getTourlieferungenByKunde(id: KundeId)(implicit session: DBSession): List[Tourlieferung]
 
@@ -159,6 +165,22 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getPostlieferungAbos(abotypId: AbotypId)(implicit session: DBSession): List[PostlieferungAbo] = {
     getPostlieferungAbosQuery(abotypId).apply()
+  }
+
+  def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo] = {
+    getDepotlieferungAbosByVertrieb(vertriebId) ::: getHeimlieferungAbosByVertrieb(vertriebId) ::: getPostlieferungAbosByVertrieb(vertriebId)
+  }
+
+  def getDepotlieferungAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[DepotlieferungAbo] = {
+    getDepotlieferungAbosByVertriebQuery(vertriebId).apply()
+  }
+
+  def getHeimlieferungAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[HeimlieferungAbo] = {
+    getHeimlieferungAbosByVertriebQuery(vertriebId).apply()
+  }
+
+  def getPostlieferungAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[PostlieferungAbo] = {
+    getPostlieferungAbosByVertriebQuery(vertriebId).apply()
   }
 
   def getProjekt(implicit session: DBSession): Option[Projekt] = {
@@ -323,6 +345,22 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getLieferungenQuery(id).apply()
   }
 
+  def sumPreisTotalGeplanteLieferungenVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[BigDecimal] = {
+    sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId, datum).apply()
+  }
+
+  def getGeplanteLieferungVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[Lieferung] = {
+    getGeplanteLieferungVorherQuery(vertriebId, datum).apply()
+  }
+
+  def getGeplanteLieferungNachher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[Lieferung] = {
+    getGeplanteLieferungNachherQuery(vertriebId, datum).apply()
+  }
+
+  def countEarlierLieferungOffen(id: LieferplanungId)(implicit session: DBSession): Option[Int] = {
+    countEarlierLieferungOffenQuery(id).apply()
+  }
+
   def getBestellungen(id: LieferplanungId)(implicit session: DBSession): List[Bestellung] = {
     getBestellungenQuery(id).apply()
   }
@@ -389,5 +427,9 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
     getSingleDepotlieferungAbo(id)() orElse getSingleHeimlieferungAbo(id)() orElse getSinglePostlieferungAbo(id)()
+  }
+
+  def getLieferungenOffenByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung] = {
+    getLieferungenOffenByAbotypQuery(abotypId)()
   }
 }

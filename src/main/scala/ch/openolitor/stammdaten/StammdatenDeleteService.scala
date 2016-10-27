@@ -55,6 +55,8 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   self: StammdatenWriteRepositoryComponent =>
   import EntityStore._
 
+  val ZERO = 0
+
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: AbotypId) => deleteAbotyp(meta, id)
     case EntityDeletedEvent(meta, id: AbwesenheitId) => deleteAbwesenheit(meta, id)
@@ -187,6 +189,11 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyTo[Lieferung, Lieferung](
           lieferung,
+          "durchschnittspreis" -> ZERO,
+          "anzahlLieferungen" -> ZERO,
+          "anzahlKoerbeZuLiefern" -> ZERO,
+          "anzahlAbwesenheiten" -> ZERO,
+          "anzahlSaldoZuTief" -> ZERO,
           "lieferplanungId" -> None,
           "status" -> Ungeplant,
           "modifidat" -> meta.timestamp,

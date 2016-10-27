@@ -97,6 +97,32 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         val copy = copyFrom(vertrieb, update)
         stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
       }
+
+      stammdatenWriteRepository.getAbosByVertrieb(id) map { abo =>
+        abo match {
+          case dlAbo: DepotlieferungAbo =>
+            logger.debug(s"Update abo with data -> vertriebBeschrieb")
+            val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
+              dlAbo,
+              "vertriebBeschrieb" -> update.beschrieb
+            )
+            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+          case hlAbo: HeimlieferungAbo =>
+            logger.debug(s"Update abo with data -> vertriebBeschrieb")
+            val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
+              hlAbo,
+              "vertriebBeschrieb" -> update.beschrieb
+            )
+            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+          case plAbo: PostlieferungAbo =>
+            logger.debug(s"Update abo with data -> vertriebBeschrieb")
+            val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
+              plAbo,
+              "vertriebBeschrieb" -> update.beschrieb
+            )
+            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+        }
+      }
     }
   }
 
@@ -546,6 +572,14 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
       stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
+
+        positionen.preisTotal match {
+          case Some(preis) =>
+            val copy = lieferung.copy(preisTotal = preis, modifidat = meta.timestamp, modifikator = personId)
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+          case _ =>
+        }
+
         //save Lieferpositionen
         positionen.lieferpositionen map { create =>
           val lpId = LieferpositionId(IdUtil.positiveRandomId)

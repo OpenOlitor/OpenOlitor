@@ -20,10 +20,15 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db
+package ch.openolitor.stammdaten
 
-trait DbNameFixer {
-  def fixDbName(url: String): String = {
-    if (url.indexOf('?') > 0) url.substring(0, url.indexOf('?')) else url
-  }
+import ch.openolitor.stammdaten.models._
+
+trait LieferungHandler {
+  def calcDurchschnittspreis(durchschnittspreis: BigDecimal, anzahlLieferungen: Int, neuerPreis: BigDecimal): BigDecimal =
+    if (anzahlLieferungen == 0) {
+      0
+    } else {
+      ((durchschnittspreis * (anzahlLieferungen - 1)) + neuerPreis) / anzahlLieferungen
+    }
 }

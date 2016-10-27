@@ -23,13 +23,17 @@
 #                                                                             #
  #                                                                           #
 
-while [[ $# -gt 1 ]]
+while [[ $# -gt 0 ]]
 do
   key="$1"
 
   case $key in
     -v|--version)
       VERSION="$2"
+      shift
+      ;;
+    -c|--commit)
+      COMMIT=true
       shift
       ;;
     *)
@@ -41,8 +45,11 @@ shift
 done
 
 VERSION_REGEX="version.*?\K(\d+)\.(\d+)\.(\d+)"
+MANIFEST_REGEX="openolitor-server-\K(\d+).(\d+).(\d+)"
 
-CURRENT_VERSION="$(grep -Po $VERSION_REGEX project/Build.scala)"
+BUILD_FILE='project/Build.scala'
+
+CURRENT_VERSION="$(grep -Po $VERSION_REGEX $BUILD_FILE)"
 echo "Current version is: "$CURRENT_VERSION
 
 IFS=. read V1 V2 V3 <<< $CURRENT_VERSION
@@ -50,19 +57,37 @@ IFS=. read V1 V2 V3 <<< $CURRENT_VERSION
 NEXT_VERSION="$V1.$V2."$(($V3 + 1))
 
 VERSION=${VERSION:-$NEXT_VERSION}
+COMMIT=${COMMIT:-false}
 
+shopt -s nullglob
+MANIFEST_FILES=(manifest*.yml);
+shopt -u nullglob
 
-BUILD_SCALA=$(cat project/Build.scala | perl -pe 's/'$VERSION_REGEX'/'$VERSION'/g')
+for MANIFEST_FILE in "${MANIFEST_FILES[@]}"
+do
+  OUT=$(cat $MANIFEST_FILE | perl -pe 's/'$MANIFEST_REGEX'/'$VERSION'/g')
 
-echo "$BUILD_SCALA" > project/Build.scala
+  echo "$OUT" > $MANIFEST_FILE
+done
+
+BUILD_OUT=$(cat $BUILD_FILE | perl -pe 's/'$VERSION_REGEX'/'$VERSION'/g')
+
+echo "$BUILD_OUT" > $BUILD_FILE
 
 echo "Updated the version to: $VERSION"
 
-MESSAGE="bumped version to $VERSION"
+MESSAGE="Bumped version to $VERSION"
 
 echo $MESSAGE
 
-( git commit -am "$MESSAGE" && git tag -a $VERSION -m "$MESSAGE" )
+if [[ $COMMIT == true ]]
+then
+  ( git commit -am "$MESSAGE" && git tag -a $VERSION -m "$MESSAGE" )
+  echo "You may now do 'git push && git push origin $VERSION'"
+else
+  echo "The changes have been made to $BUILD_FILE and ${MANIFEST_FILES[@]}"
+  echo "Commit your changes 'git commit -a -m \"$MESSAGE\" && git tag -a $VERSION -m \"$MESSAGE\"'"
+  echo "After that use 'git push && git push origin $VERSION' to push everything to origin"
+fi
 
-echo "You may now do 'git push && git push origin $VERSION'"
 
