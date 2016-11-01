@@ -41,6 +41,9 @@ object OpenOlitorRejectionHandler extends LazyLogging with BaseJsonProtocol {
   def apply(corsSupport: CORSSupport): RejectionHandler = RejectionHandler {
     case rejections if rejections.find(_.isInstanceOf[AuthenticatorRejection]).isDefined =>
       val reason = rejections.find(_.isInstanceOf[AuthenticatorRejection]).get.asInstanceOf[AuthenticatorRejection].reason
+
+      logger.debug(s"AuthenticatorRejection: $reason")
+
       complete(HttpResponse(Unauthorized).withHeaders(
         corsSupport.allowCredentialsHeader :: corsSupport.allowOriginHeader :: corsSupport.exposeHeaders :: corsSupport.optionsCorsHeaders
       ).withEntity(marshalling.marshalUnsafe(RejectionMessage("Unauthorized", ""))))
