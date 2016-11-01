@@ -113,8 +113,12 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
   implicit val vorlageTypeFormat = enumFormat(VorlageTyp.apply)
 
   implicit val idResponseFormat = jsonFormat1(BaseJsonProtocol.IdResponse)
+
+  implicit val rejectionMessageFormat = jsonFormat2(RejectionMessage)
 }
 
 object BaseJsonProtocol {
   case class IdResponse(id: Long)
+
+  case class RejectionMessage(message: String, cause: String)
 }

@@ -26,6 +26,7 @@ import scalikejdbc.config._
 import scalikejdbc._
 import scalikejdbc.async._
 import ch.openolitor.core.MandantConfiguration
+import ch.openolitor.util.ConfigUtil._
 
 /**
  * Mandant specific dbs for async scalikejdbc framework
@@ -37,12 +38,13 @@ case class AsyncMandantDBs(mandantConfiguration: MandantConfiguration) extends D
     with DbNameFixer {
 
   override lazy val config = mandantConfiguration.config
+  lazy val maxQueueSize = config.getIntOption("db.default.maxQueueSize") getOrElse 1000
 
   def connectionPool(name: Any, url: String, user: String, password: String,
     settings: AsyncConnectionPoolSettings = AsyncConnectionPoolSettings()): AsyncConnectionPool =
     AsyncConnectionPoolFactory.apply(url, user, password, settings)
 
-  implicit def toAsyncConnectionPoolSettings(cpSettings: ConnectionPoolSettings): AsyncConnectionPoolSettings = AsyncConnectionPoolSettings(maxPoolSize = cpSettings.maxSize)
+  implicit def toAsyncConnectionPoolSettings(cpSettings: ConnectionPoolSettings): AsyncConnectionPoolSettings = AsyncConnectionPoolSettings(maxPoolSize = cpSettings.maxSize, maxQueueSize)
 
   def loadConnectionPool(dbName: Symbol = ConnectionPool.DEFAULT_NAME): AsyncConnectionPool = {
     val JDBCSettings(url, user, password, driver) = readJDBCSettings(dbName)
