@@ -75,6 +75,8 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
   import ReportSystem._
   type ServiceResult[T] = EitherT[Future, ServiceFailed, T]
 
+  val dateFormat = new java.text.SimpleDateFormat("yyyyMMddssS")
+
   /**
    *
    */
