@@ -42,6 +42,8 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
   import ReportProcessorActor._
   import ReportSystem._
 
+  val dateFormat = new java.text.SimpleDateFormat("yyyyMMddssS")
+
   var stats = GenerateReportsStats(Boot.systemPersonId, None, 0, 0, 0)
   var origSender: Option[ActorRef] = None
 
@@ -92,7 +94,7 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
     for {
       (row, index) <- data.rows.zipWithIndex
     } yield {
-      context.actorOf(f(row), s"report-$index-${System.currentTimeMillis}") ! GenerateReport(row.id, file, row.value)
+      context.actorOf(f(row), s"report-$index-${dateFormat.format(new java.util.Date())}") ! GenerateReport(row.id, file, row.value)
     }
 
     context become collectingResults
