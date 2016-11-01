@@ -1000,34 +1000,32 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def recalculateLieferungOffen(entity: Lieferung, lieferungVorher: Option[Lieferung])(implicit personId: PersonId) = {
-    DB autoCommit { implicit session =>
-      val (newDurchschnittspreis, newAnzahlLieferungen) = lieferungVorher match {
-        case Some(lieferung) =>
-          val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(entity.vertriebId, entity.datum).getOrElse(BigDecimal(0))
+  def recalculateLieferungOffen(entity: Lieferung, lieferungVorher: Option[Lieferung])(implicit personId: PersonId, session: DBSession) = {
+    val (newDurchschnittspreis, newAnzahlLieferungen) = lieferungVorher match {
+      case Some(lieferung) =>
+        val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(entity.vertriebId, entity.datum).getOrElse(BigDecimal(0))
 
-          val durchschnittspreisBisher: BigDecimal = lieferung.anzahlLieferungen match {
-            case 0 => BigDecimal(0)
-            case _ => sum / lieferung.anzahlLieferungen
-          }
+        val durchschnittspreisBisher: BigDecimal = lieferung.anzahlLieferungen match {
+          case 0 => BigDecimal(0)
+          case _ => sum / lieferung.anzahlLieferungen
+        }
 
-          val anzahlLieferungenNeu = lieferung.anzahlLieferungen + 1
-          (durchschnittspreisBisher, anzahlLieferungenNeu)
-        case None =>
-          (BigDecimal(0), 1)
-      }
+        val anzahlLieferungenNeu = lieferung.anzahlLieferungen + 1
+        (durchschnittspreisBisher, anzahlLieferungenNeu)
+      case None =>
+        (BigDecimal(0), 1)
+    }
 
-      val scaled = newDurchschnittspreis.setScale(2, HALF_UP)
+    val scaled = newDurchschnittspreis.setScale(2, HALF_UP)
 
-      if (entity.durchschnittspreis != scaled || entity.anzahlLieferungen != newAnzahlLieferungen) {
-        val updatedLieferung = entity.copy(
-          durchschnittspreis = newDurchschnittspreis,
-          anzahlLieferungen = newAnzahlLieferungen,
-          modifidat = DateTime.now,
-          modifikator = personId
-        )
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
-      }
+    if (entity.durchschnittspreis != scaled || entity.anzahlLieferungen != newAnzahlLieferungen) {
+      val updatedLieferung = entity.copy(
+        durchschnittspreis = newDurchschnittspreis,
+        anzahlLieferungen = newAnzahlLieferungen,
+        modifidat = DateTime.now,
+        modifikator = personId
+      )
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
     }
   }
 
