@@ -27,32 +27,21 @@ import spray.http._
 import spray.http.StatusCodes._
 import spray.http.ContentTypes._
 import spray.json.DefaultJsonProtocol._
-import Directives._
 import spray.httpx.SprayJsonSupport._
+import spray.routing.ExceptionHandler
+import Directives._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.security.AuthenticatorRejection
+import ch.openolitor.util.AirbrakeNotifier.AirbrakeNotification
 
-case class RejectionMessage(message: String, cause: String)
-
-/** Custom RejectionHandler for dealing with AuthenticatorRejections. */
-object OpenOlitorRejectionHandler extends LazyLogging with BaseJsonProtocol {
+object OpenOlitorExceptionHandler extends LazyLogging with BaseJsonProtocol {
   import spray.httpx.marshalling
 
-  def apply(corsSupport: CORSSupport): RejectionHandler = RejectionHandler {
-    case rejections if rejections.find(_.isInstanceOf[AuthenticatorRejection]).isDefined =>
-      val reason = rejections.find(_.isInstanceOf[AuthenticatorRejection]).get.asInstanceOf[AuthenticatorRejection].reason
-      complete(HttpResponse(Unauthorized).withHeaders(
-        corsSupport.allowCredentialsHeader :: corsSupport.allowOriginHeader :: corsSupport.exposeHeaders :: corsSupport.optionsCorsHeaders
-      ).withEntity(marshalling.marshalUnsafe(RejectionMessage("Unauthorized", ""))))
-
-    case others if RejectionHandler.Default.isDefinedAt(others) =>
-      ctx => RejectionHandler.Default(others) {
-        ctx.withHttpResponseMapped {
-          case resp @ HttpResponse(_, HttpEntity.NonEmpty(_, msg), _, _) =>
-            resp.withHeaders(
-              corsSupport.allowCredentialsHeader :: corsSupport.allowOriginHeader :: corsSupport.exposeHeaders :: corsSupport.optionsCorsHeaders
-            ).withEntity(marshalling.marshalUnsafe(RejectionMessage(msg.asString, "")))
-        }
-      }
+  def apply(routeService: CORSSupport with AirbrakeNotifierReference): ExceptionHandler = ExceptionHandler {
+    case th => ctx =>
+      routeService.airbrakeNotifier ! AirbrakeNotification(th, Some(ctx.request))
+      ctx.complete(HttpResponse(InternalServerError).withHeaders(
+        routeService.allowCredentialsHeader :: routeService.allowOriginHeader :: routeService.exposeHeaders :: routeService.optionsCorsHeaders
+      ).withEntity(marshalling.marshalUnsafe(RejectionMessage(th.getMessage, s"${th.getCause}"))))
   }
 }
