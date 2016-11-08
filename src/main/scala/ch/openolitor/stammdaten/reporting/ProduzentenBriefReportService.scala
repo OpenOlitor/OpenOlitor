@@ -35,36 +35,36 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.filestore._
 
-trait DepotBriefReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
+trait ProduzentenBriefReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
-  def generateDepotBriefReports(fileType: FileType)(config: ReportConfig[DepotId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[DepotId]]] = {
-    generateReports[DepotId, DepotDetailReport](
+  def generateProduzentenBriefReports(fileType: FileType)(config: ReportConfig[ProduzentId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[ProduzentId]]] = {
+    generateReports[ProduzentId, ProduzentDetailReport](
       config,
-      depotById,
+      produzentById,
       fileType,
       None,
       _.id,
-      GeneriertDepotbrief,
+      GeneriertProduzentenbrief,
       x => Some(x.id.id.toString),
       name(fileType),
       _.projekt.sprache
     )
   }
 
-  def name(fileType: FileType)(depot: DepotDetailReport) = s"depot_nr_${depot.id.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
+  def name(fileType: FileType)(Produzent: ProduzentDetailReport) = s"Produzent_nr_${Produzent.id.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
 
-  def depotById(ids: Seq[DepotId]): Future[(Seq[ValidationError[DepotId]], Seq[DepotDetailReport])] = {
+  def produzentById(ids: Seq[ProduzentId]): Future[(Seq[ValidationError[ProduzentId]], Seq[ProduzentDetailReport])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
         val results = Future.sequence(ids.map { id =>
-          stammdatenReadRepository.getDepotDetailReport(id, projektReport).map(_.map { Right(_) }
-            .getOrElse(Left(ValidationError[DepotId](id, s"Depot konnte nicht geladen werden"))))
+          stammdatenReadRepository.getProduzentDetailReport(id, projektReport).map(_.map { Right(_) }
+            .getOrElse(Left(ValidationError[ProduzentId](id, s"Produzent konnte nicht geladen werden"))))
         })
         results.map(_.partition(_.isLeft) match {
           case (a, b) => (a.map(_.left.get), b.map(_.right.get))
         })
-      } getOrElse Future { (Seq(ValidationError[DepotId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
+      } getOrElse Future { (Seq(ValidationError[ProduzentId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
     }
   }
 }

@@ -20,29 +20,10 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.core
 
-import ch.openolitor.core.filestore._
-import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.format.DateTimeFormat
 
-trait VorlageTyp extends FileType
-
-object VorlageTyp extends LazyLogging {
-  val AlleVorlageTypen = List(
-    VorlageRechnung,
-    VorlageDepotLieferschein,
-    VorlageTourLieferschein,
-    VorlagePostLieferschein,
-    VorlageDepotLieferetiketten,
-    VorlageTourLieferetiketten,
-    VorlagePostLieferetiketten,
-    VorlageKundenbrief,
-    VorlageDepotbrief,
-    VorlageProduzentenbrief
-  )
-
-  def apply(value: String): VorlageTyp = {
-    logger.debug(s"Vorlagetyp.apply:$value")
-    AlleVorlageTypen.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
-  }
+trait DateFormats {
+  val filenameDateFormat = DateTimeFormat.forPattern("yyyyMMddssS")
 }
