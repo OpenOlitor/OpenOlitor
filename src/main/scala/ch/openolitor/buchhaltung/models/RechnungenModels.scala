@@ -71,6 +71,7 @@ object RechnungStatus {
 
 case class RechnungId(id: Long) extends BaseId
 
+// rechnungsdatum sind Zeitstempel um für ISO 20022 gerüstet zu sein.
 case class Rechnung(
   id: RechnungId,
   kundeId: KundeId,

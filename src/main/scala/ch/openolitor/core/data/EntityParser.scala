@@ -30,6 +30,7 @@ import scala.reflect.runtime.universe.{ Try => UTry, _ }
 import akka.event.LoggingAdapter
 import java.io.InputStream
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
 import org.odftoolkit.simple._
@@ -160,6 +161,8 @@ object EntityParser {
           case t if t =:= typeOf[Date] => self.getDateValue
           case t if t =:= typeOf[DateTime] => tryParseDate(self.getStringValue)
           case t if t =:= typeOf[Option[DateTime]] => self.getStringOptionValue map (s => tryParseDate(s))
+          case t if t =:= typeOf[LocalDate] => tryParseDate(self.getStringValue).toLocalDate
+          case t if t =:= typeOf[Option[LocalDate]] => self.getStringOptionValue map (s => tryParseDate(s).toLocalDate)
           case t if t =:= typeOf[Int] => self.getStringValue.toInt
           case t if t =:= typeOf[Option[Int]] => getStringOptionValue map (_.toInt)
           case t if t =:= typeOf[Long] => self.getStringValue.toLong
