@@ -51,7 +51,7 @@ trait DepotBriefReportService extends AsyncConnectionPoolContextAware with Repor
     )
   }
 
-  def name(fileType: FileType)(depot: DepotDetailReport) = s"depot_nr_${depot.id.id}_${dateFormat.format(new java.util.Date())}"
+  def name(fileType: FileType)(depot: DepotDetailReport) = s"depot_nr_${depot.id.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
 
   def depotById(ids: Seq[DepotId]): Future[(Seq[ValidationError[DepotId]], Seq[DepotDetailReport])] = {
     stammdatenReadRepository.getProjekt flatMap {
