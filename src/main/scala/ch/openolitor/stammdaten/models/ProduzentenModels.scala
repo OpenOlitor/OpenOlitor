@@ -34,6 +34,28 @@ case class BaseProduzentId(id: String) extends BaseStringId
 
 case class ProduzentId(id: Long) extends BaseId
 
+trait IProduzent extends BaseEntity[ProduzentId] {
+  val id: ProduzentId
+  val name: String
+  val vorname: Option[String]
+  val kurzzeichen: String
+  val strasse: Option[String]
+  val hausNummer: Option[String]
+  val adressZusatz: Option[String]
+  val plz: String
+  val ort: String
+  val bemerkungen: Option[String]
+  val email: String
+  val telefonMobil: Option[String]
+  val telefonFestnetz: Option[String]
+  val iban: Option[String] //maybe use dedicated type
+  val bank: Option[String]
+  val mwst: Boolean
+  val mwstSatz: Option[BigDecimal]
+  val mwstNr: Option[String]
+  val aktiv: Boolean
+}
+
 case class Produzent(
   id: ProduzentId,
   name: String,
@@ -59,7 +81,7 @@ case class Produzent(
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends BaseEntity[ProduzentId]
+) extends IProduzent
 
 object Produzent {
   def unapply(p: Produzent) = {
@@ -112,3 +134,43 @@ case class ProduzentModify(
   mwstNr: Option[String],
   aktiv: Boolean
 ) extends JSONSerializable
+
+case class ProduzentDetailReport(
+  id: ProduzentId,
+  name: String,
+  vorname: Option[String],
+  kurzzeichen: String,
+  strasse: Option[String],
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  bemerkungen: Option[String],
+  email: String,
+  telefonMobil: Option[String],
+  telefonFestnetz: Option[String],
+  iban: Option[String], //maybe use dedicated type
+  bank: Option[String],
+  mwst: Boolean,
+  mwstSatz: Option[BigDecimal],
+  mwstNr: Option[String],
+  aktiv: Boolean,
+  //Report infos
+  projekt: ProjektReport,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[ProduzentId] with IProduzentReport with JSONSerializable
+
+trait IProduzentReport extends IProduzent {
+  lazy val strasseUndNummer = strasse.map(_ + hausNummer.map(" " + _).getOrElse(""))
+  lazy val plzOrt = plz + " " + ort
+
+  lazy val adresszeilen = Seq(
+    Some(name),
+    strasseUndNummer,
+    Some(plzOrt)
+  ).flatten.padTo(6, "")
+}

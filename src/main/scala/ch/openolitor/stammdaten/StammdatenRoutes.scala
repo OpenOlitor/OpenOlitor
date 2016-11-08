@@ -73,6 +73,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with AuslieferungLieferscheinReportService
     with KundenBriefReportService
     with DepotBriefReportService
+    with ProduzentenBriefReportService
     with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
@@ -129,6 +130,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / "berichte" / "kundenbrief") {
         implicit val personId = subject.personId
+        implicit val timeout = Timeout(600.seconds) //generating documents might take a lot longer
         generateReport[KundeId](None, generateKundenBriefReports(VorlageKundenbrief) _)(KundeId.apply)
       } ~
       path("kunden" / kundeIdPath / "abos") { kundeId =>
@@ -317,6 +319,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("depots" / "berichte" / "depotbrief") {
         implicit val personId = subject.personId
+        implicit val timeout = Timeout(600.seconds) //generating documents might take a lot longer
         generateReport[DepotId](None, generateDepotBriefReports(VorlageDepotbrief) _)(DepotId.apply)
       } ~
       path("depots" / depotIdPath) { id =>
@@ -381,6 +384,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(detail(stammdatenReadRepository.getProduzentDetail(id))) ~
           (put | post)(update[ProduzentModify, ProduzentId](id)) ~
           delete(remove(id))
+      } ~
+      path("produzenten" / "berichte" / "produzentenbrief") {
+        implicit val personId = subject.personId
+        implicit val timeout = Timeout(600.seconds) //generating documents might take a lot longer
+        generateReport[ProduzentId](None, generateProduzentenBriefReports(VorlageProduzentenbrief) _)(ProduzentId.apply)
       }
 
   def tourenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
