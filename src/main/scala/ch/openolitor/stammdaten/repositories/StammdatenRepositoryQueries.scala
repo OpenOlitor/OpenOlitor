@@ -690,6 +690,17 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(produzentMapping(produzent)).single
   }
 
+  protected def getProduzentDetailReportQuery(id: ProduzentId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(produzentMapping as produzent)
+        .where.eq(produzent.id, parameter(id))
+    }.map { rs =>
+      val p = produzentMapping(produzent)(rs)
+      copyTo[Produzent, ProduzentDetailReport](p, "projekt" -> projekt)
+    }.single
+  }
+
   protected def getTourenQuery = {
     withSQL {
       select

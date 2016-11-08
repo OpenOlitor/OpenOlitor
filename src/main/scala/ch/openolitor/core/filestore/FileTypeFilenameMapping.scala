@@ -39,6 +39,7 @@ trait FileTypeFilenameMapping extends LazyLogging {
       case VorlageBestellung => "Bestellung.odt"
       case VorlageKundenbrief => "Kundenbrief.odt"
       case VorlageDepotbrief => "Depotbrief.odt"
+      case VorlageProduzentenbrief => "Produzentenbrief.odt"
       case _ => "undefined.odt"
     }
   }
