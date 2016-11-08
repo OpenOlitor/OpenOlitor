@@ -36,22 +36,39 @@ object OO461_DBScripts extends DefaultDBScripts {
       logger.debug(s"update ende from last midnight to next start of day for depotlieferungabo")
       sql"""update ${depotlieferungAboMapping.table} 
         set ende = TIMESTAMP(DATE_ADD(DATE(ende), INTERVAL 1 DAY)) 
-        where TIME(ende) = '22:00:00'""".execute.apply()
+        where TIME(ende) = '22:00:00' OR TIME(ende) = '23:00:00'""".execute.apply()
+      logger.debug(s"update start from last midnight to next start of day for depotlieferungabo")
+      sql"""update ${depotlieferungAboMapping.table} 
+        set start = TIMESTAMP(DATE_ADD(DATE(start), INTERVAL 1 DAY)) 
+        where TIME(start) = '22:00:00' OR TIME(start) = '23:00:00'""".execute.apply()
 
       logger.debug(s"update ende from last midnight to next start of day for heimlieferungabo")
       sql"""update ${heimlieferungAboMapping.table} 
         set ende = TIMESTAMP(DATE_ADD(DATE(ende), INTERVAL 1 DAY)) 
-        where TIME(ende) = '22:00:00'""".execute.apply()
+        where TIME(ende) = '22:00:00' OR TIME(ende) = '23:00:00'""".execute.apply()
+      logger.debug(s"update start from last midnight to next start of day for heimlieferungabo")
+      sql"""update ${heimlieferungAboMapping.table} 
+        set start = TIMESTAMP(DATE_ADD(DATE(start), INTERVAL 1 DAY)) 
+        where TIME(start) = '22:00:00' OR TIME(start) = '23:00:00'""".execute.apply()
 
       logger.debug(s"update ende from last midnight to next start of day for postlieferungabo")
       sql"""update ${postlieferungAboMapping.table} 
         set ende = TIMESTAMP(DATE_ADD(DATE(ende), INTERVAL 1 DAY)) 
-        where TIME(ende) = '22:00:00'""".execute.apply()
+        where TIME(ende) = '22:00:00' OR TIME(ende) = '23:00:00'""".execute.apply()
+      logger.debug(s"update start from last midnight to next start of day for postlieferungabo")
+      sql"""update ${postlieferungAboMapping.table} 
+        set start = TIMESTAMP(DATE_ADD(DATE(start), INTERVAL 1 DAY)) 
+        where TIME(start) = '22:00:00' OR TIME(start) = '23:00:00'""".execute.apply()
 
       logger.debug(s"update datum from last midnight to next start of day for abwesenheit")
       sql"""update ${abwesenheitMapping.table} 
         set datum = TIMESTAMP(DATE_ADD(DATE(datum), INTERVAL 1 DAY)) 
-        where TIME(datum) = '22:00:00'""".execute.apply()
+        where TIME(datum) = '22:00:00' OR TIME(datum) = '23:00:00'""".execute.apply()
+
+      logger.debug(s"update datum from last midnight to next noon of day for lieferung")
+      sql"""update ${lieferungMapping.table} 
+        set datum = DATE_ADD(TIMESTAMP(DATE_ADD(DATE(datum), INTERVAL 1 DAY)), INTERVAL 12 HOUR) 
+        where TIME(datum) = '22:00:00' OR TIME(datum) = '23:00:00'""".execute.apply()
 
       Success(true)
     }
