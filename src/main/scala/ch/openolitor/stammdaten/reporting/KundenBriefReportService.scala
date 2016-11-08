@@ -52,7 +52,7 @@ trait KundenBriefReportService extends AsyncConnectionPoolContextAware with Repo
     )
   }
 
-  def name(fileType: FileType)(kunde: KundeDetailReport) = s"kunden_nr_${kunde.id.id}_${dateFormat.format(new java.util.Date())}"
+  def name(fileType: FileType)(kunde: KundeDetailReport) = s"kunden_nr_${kunde.id.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
 
   def kundenById(kundeIds: Seq[KundeId]): Future[(Seq[ValidationError[KundeId]], Seq[KundeDetailReport])] = {
     stammdatenReadRepository.getProjekt flatMap {

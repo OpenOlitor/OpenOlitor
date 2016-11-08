@@ -140,7 +140,7 @@ trait RouteServiceActor
     with AirbrakeNotifierReference {
   self: RouteServiceComponent =>
 
-  //initially run db evolution  
+  //initially run db evolution
   override def preStart() = {
     runDBEvolution()
   }
@@ -219,7 +219,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     with FileStoreComponent
     with LazyLogging
     with SprayDeserializers
-    with ReportJsonProtocol {
+    with ReportJsonProtocol
+    with DateFormats {
 
   implicit val timeout = Timeout(5.seconds)
 
@@ -560,9 +561,9 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
               case ZipReportResult(_, errors, zip) if zip.isDefined =>
                 //TODO: send error to client as well
                 errors.map(error => logger.warn(s"Coulnd't generate report document: $error"))
-                zip.map(result => streamZip("Report_" + System.currentTimeMillis + ".zip", result)) getOrElse (complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden, es wurden keine Dateien erzeugt"))
+                zip.map(result => streamZip("Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip", result)) getOrElse (complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden, es wurden keine Dateien erzeugt"))
               case BatchStoredPdfReportResult(_, errors, results) if downloadFile =>
-                downloadAsZip("Report_" + System.currentTimeMillis + ".zip", results)
+                downloadAsZip("Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip", results)
               case result: BatchStoredPdfReportResult =>
                 //complete(result)
                 complete("")
