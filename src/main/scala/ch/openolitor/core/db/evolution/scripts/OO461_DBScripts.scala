@@ -22,29 +22,40 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts ++
-      OO297_DBScripts.scripts ++
-      OO311_DBScripts.scripts ++
-      OO314_DBScripts.scripts ++
-      OO325_DBScripts.scripts ++
-      OO326_DBScripts.scripts ++
-      OO328_DBScripts.scripts ++
-      OO327_DBScripts.scripts ++
-      OO254_DBScripts.scripts ++
-      OO152_DBScripts.scripts ++
-      OO330_DBScripts.scripts ++
-      OO337_DBScripts.scripts ++
-      OO382_DBScripts.scripts ++
-      OO106_DBScripts_Mahnungen.scripts ++
-      OO374_DBScripts.scripts ++
-      OO374_DBScripts_aktiv_to_abo.scripts ++
-      OO461_DBScripts.scripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+
+object OO461_DBScripts extends DefaultDBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"update ende from last midnight to next start of day for depotlieferungabo")
+      sql"""update ${depotlieferungAboMapping.table} 
+        set ende = TIMESTAMP(DATE_ADD(DATE(ende), INTERVAL 1 DAY)) 
+        where TIME(ende) = '22:00:00'""".execute.apply()
+
+      logger.debug(s"update ende from last midnight to next start of day for heimlieferungabo")
+      sql"""update ${heimlieferungAboMapping.table} 
+        set ende = TIMESTAMP(DATE_ADD(DATE(ende), INTERVAL 1 DAY)) 
+        where TIME(ende) = '22:00:00'""".execute.apply()
+
+      logger.debug(s"update ende from last midnight to next start of day for postlieferungabo")
+      sql"""update ${postlieferungAboMapping.table} 
+        set ende = TIMESTAMP(DATE_ADD(DATE(ende), INTERVAL 1 DAY)) 
+        where TIME(ende) = '22:00:00'""".execute.apply()
+
+      logger.debug(s"update datum from last midnight to next start of day for abwesenheit")
+      sql"""update ${abwesenheitMapping.table} 
+        set datum = TIMESTAMP(DATE_ADD(DATE(datum), INTERVAL 1 DAY)) 
+        where TIME(datum) = '22:00:00'""".execute.apply()
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts)
 }
