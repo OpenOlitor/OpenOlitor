@@ -25,6 +25,7 @@ package ch.openolitor.stammdaten.models
 import java.util.UUID
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
 import java.util.Locale
@@ -37,8 +38,8 @@ case class Geschaeftsjahr(monat: Int, tag: Int) {
   /**
    * Errechnet den Start des Geschäftsjahres aufgrund eines Datums
    */
-  def start(date: DateTime = DateTime.now): DateTime = {
-    val geschaftsjahrInJahr = new DateTime(date.year.get, monat, tag, 0, 0, 0, 0)
+  def start(date: LocalDate = LocalDate.now): LocalDate = {
+    val geschaftsjahrInJahr = new LocalDate(date.year.get, monat, tag)
     date match {
       case d if d.isBefore(geschaftsjahrInJahr) =>
         //Wir sind noch im "alten" Geschäftsjahr
@@ -54,7 +55,7 @@ case class Geschaeftsjahr(monat: Int, tag: Int) {
    * des Geschäftsjahres ab. Wird der Start des Geschäftsjahres auf den Start des Kalenderjahres gesetzt, wird das Kalenderjahr als
    * key benutzt, ansonsten setzt sich der Key aus Monat/Jahr zusammen
    */
-  def key(date: DateTime = DateTime.now): String = {
+  def key(date: LocalDate = LocalDate.now): String = {
     val startDate = start(date)
     if (monat == 1 && tag == 1) {
       startDate.year.getAsText

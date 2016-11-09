@@ -26,6 +26,7 @@ import scalikejdbc._
 import ch.openolitor.core.models.BaseId
 import java.util.UUID
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import ch.openolitor.core.models.PersonId
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.models.PersonId
@@ -80,8 +81,10 @@ trait DBMappings extends BaseParameter
   implicit val doubleSqlBinder = noConversionSqlBinder[Double]
   implicit val longSqlBinder = noConversionSqlBinder[Long]
   implicit val datetimeSqlBinder = noConversionSqlBinder[DateTime]
+  implicit val localDateSqlBinder = noConversionSqlBinder[LocalDate]
   implicit val optionStringSqlBinder = optionSqlBinder[String]
   implicit val optionDateTimeSqlBinder = optionSqlBinder[DateTime]
+  implicit val optionLocalDateSqlBinder = optionSqlBinder[LocalDate]
   implicit val optionIntSqlBinder = optionSqlBinder[Int]
   implicit val optionBigDecimalSqlBinder = optionSqlBinder[BigDecimal]
   implicit val localeTypeBinder: TypeBinder[Locale] = string.map(l => Locale.forLanguageTag(l))

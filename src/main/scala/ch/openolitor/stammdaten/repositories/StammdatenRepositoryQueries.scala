@@ -598,7 +598,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(_.int(1)).single
   }
 
-  protected def countAbwesendQuery(aboId: AboId, datum: DateTime) = {
+  protected def countAbwesendQuery(aboId: AboId, datum: LocalDate) = {
     withSQL {
       select(count(distinct(abwesenheit.id)))
         .from(abwesenheitMapping as abwesenheit)

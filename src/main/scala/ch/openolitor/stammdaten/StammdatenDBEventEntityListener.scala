@@ -40,6 +40,7 @@ import ch.openolitor.buchhaltung.models._
 import ch.openolitor.util.IdUtil
 import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import com.github.nscala_time.time.Imports._
 import scala.concurrent.Future
 import org.joda.time.format.DateTimeFormat
@@ -344,7 +345,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
       stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
         orig map { original =>
-          if (abo.ende map (_ <= (lieferung.datum - 1.day)) getOrElse false) {
+          if (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false) {
             deleteKorb(lieferung, abo)
           } else {
             upsertKorb(lieferung, abo, abotyp) match {
@@ -353,7 +354,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             }
           }
         } getOrElse {
-          if (abo.start <= lieferung.datum && abo.ende.map(_ >= lieferung.datum).getOrElse(true)) {
+          if (abo.start <= lieferung.datum.toLocalDate && abo.ende.map(_ >= lieferung.datum.toLocalDate).getOrElse(true)) {
             upsertKorb(lieferung, abo, abotyp) match {
               case (Some(korb), existingKorb) => updateLieferungWithKorbCounts(lieferung, korb, existingKorb)
               case _ => // nothing to update
@@ -756,7 +757,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         //update durchschnittspreis
         stammdatenWriteRepository.getProjekt map { projekt =>
           stammdatenWriteRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
-            val gjKey = projekt.geschaftsjahr.key(lieferung.datum)
+            val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
 
             val lieferungen = vertrieb.anzahlLieferungen.get(gjKey).getOrElse(0)
             val durchschnittspreis: BigDecimal = vertrieb.durchschnittspreis.get(gjKey).getOrElse(0)

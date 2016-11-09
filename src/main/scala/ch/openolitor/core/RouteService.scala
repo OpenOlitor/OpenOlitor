@@ -292,7 +292,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
           sheet.setCellStyleInheritance(false)
 
           result match {
-            case list: List[Product] =>
+            case list: List[Product @unchecked] =>
               if (list.nonEmpty) {
 
                 val row = sheet.getRowByIndex(0);
@@ -333,7 +333,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
                     }
                 }
               }
-            case x: Any => sheet.getRowByIndex(0).getCellByIndex(0).setStringValue("Data of type" + x.toString() + " could not be transfered to ODS file.")
+            case x => sheet.getRowByIndex(0).getCellByIndex(0).setStringValue("Data of type" + x.toString + " could not be transfered to ODS file.")
           }
 
           sheet.getColumnList.asScala map { _.setUseOptimalWidth(true) }

@@ -27,6 +27,7 @@ import scalikejdbc._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import ch.openolitor.stammdaten.models._
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import akka.actor.ActorSystem
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.AkkaEventStream
@@ -70,7 +71,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb]
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo]
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
-  def countAbwesend(aboId: AboId, datum: DateTime)(implicit session: DBSession): Option[Int]
+  def countAbwesend(aboId: AboId, datum: LocalDate)(implicit session: DBSession): Option[Int]
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getLieferungen(id: VertriebId)(implicit session: DBSession): List[Lieferung]
   def sumPreisTotalGeplanteLieferungenVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[BigDecimal]
@@ -333,7 +334,7 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     countAbwesendQuery(lieferungId, aboId).apply()
   }
 
-  def countAbwesend(aboId: AboId, datum: DateTime)(implicit session: DBSession): Option[Int] = {
+  def countAbwesend(aboId: AboId, datum: LocalDate)(implicit session: DBSession): Option[Int] = {
     countAbwesendQuery(aboId, datum).apply()
   }
 

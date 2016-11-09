@@ -46,8 +46,8 @@ object StammdatenCommandHandler {
   case class BestellungAnProduzentenVersenden(originator: PersonId, id: BestellungId) extends UserCommand
   case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char], einladung: Option[EinladungId]) extends UserCommand
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
-  case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
-  case class CreateBisGuthabenRechnungenCommand(originator: PersonId, rechnungCreate: AboRechnungCreate) extends UserCommand
+  case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, aboRechnungCreate: AboRechnungCreate) extends UserCommand
+  case class CreateBisGuthabenRechnungenCommand(originator: PersonId, aboRechnungCreate: AboRechnungCreate) extends UserCommand
   case class LoginDeaktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class LoginAktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class EinladungSendenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
@@ -193,11 +193,11 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    case CreateAnzahlLieferungenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
-      createAboRechnungen(idFactory, meta, rechnungCreate)
+    case CreateAnzahlLieferungenRechnungenCommand(originator, aboRechnungCreate) => idFactory => meta =>
+      createAboRechnungen(idFactory, meta, aboRechnungCreate)
 
-    case CreateBisGuthabenRechnungenCommand(originator, rechnungCreate) => idFactory => meta =>
-      createAboRechnungen(idFactory, meta, rechnungCreate)
+    case CreateBisGuthabenRechnungenCommand(originator, aboRechnungCreate) => idFactory => meta =>
+      createAboRechnungen(idFactory, meta, aboRechnungCreate)
 
     case PasswortWechselCommand(originator, personId, pwd, einladungId) => idFactory => meta =>
       Success(Seq(PasswortGewechseltEvent(meta, personId, pwd, einladungId)))
@@ -378,9 +378,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }
   }
 
-  def createAboRechnungen(idFactory: IdFactory, meta: EventMetadata, rechnungCreate: AboRechnungCreate) = {
+  def createAboRechnungen(idFactory: IdFactory, meta: EventMetadata, aboRechnungCreate: AboRechnungCreate) = {
     DB readOnly { implicit session =>
-      val (events, failures) = rechnungCreate.ids map { id =>
+      val (events, failures) = aboRechnungCreate.ids map { id =>
         stammdatenWriteRepository.getAboDetail(id) flatMap { aboDetail =>
           stammdatenWriteRepository.getById(abotypMapping, aboDetail.abotypId) flatMap { abotyp =>
             stammdatenWriteRepository.getById(kundeMapping, aboDetail.kundeId) map { kunde =>
@@ -390,23 +390,23 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                 Failure(new InvalidStateException(s"Für den Abotyp dieses Abos ($id) kann keine Guthabenrechnung erstellt werden"))
               } else {
                 // has to be refactored as soon as more modes are available
-                val anzahlLieferungen = rechnungCreate.anzahlLieferungen getOrElse {
-                  math.max(((rechnungCreate.bisGuthaben getOrElse aboDetail.guthaben) - aboDetail.guthaben), 0)
+                val anzahlLieferungen = aboRechnungCreate.anzahlLieferungen getOrElse {
+                  math.max(((aboRechnungCreate.bisGuthaben getOrElse aboDetail.guthaben) - aboDetail.guthaben), 0)
                 }
 
                 if (anzahlLieferungen > 0) {
-                  val betrag = rechnungCreate.betrag getOrElse abotyp.preis * anzahlLieferungen
+                  val betrag = aboRechnungCreate.betrag getOrElse abotyp.preis * anzahlLieferungen
 
                   val rechnung = RechnungCreate(
                     aboDetail.kundeId,
                     id,
-                    rechnungCreate.titel,
+                    aboRechnungCreate.titel,
                     anzahlLieferungen,
-                    rechnungCreate.waehrung,
+                    aboRechnungCreate.waehrung,
                     betrag,
                     None,
-                    rechnungCreate.rechnungsDatum,
-                    rechnungCreate.faelligkeitsDatum,
+                    aboRechnungCreate.rechnungsDatum,
+                    aboRechnungCreate.faelligkeitsDatum,
                     None,
                     kunde.strasseLieferung getOrElse kunde.strasse,
                     kunde.hausNummerLieferung orElse kunde.hausNummer,

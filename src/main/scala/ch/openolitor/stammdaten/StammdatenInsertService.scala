@@ -37,6 +37,7 @@ import ch.openolitor.core.Macros._
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import ch.openolitor.core.Macros._
 import scala.collection.immutable.TreeMap
 import scalaz._
@@ -310,7 +311,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[DateTime], Boolean) = {
+  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[LocalDate], Boolean) = {
     abotyp.laufzeiteinheit match {
       case Unbeschraenkt =>
         (None, None, IAbo.calculateAktiv(create.start, None))

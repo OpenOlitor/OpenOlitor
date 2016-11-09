@@ -28,6 +28,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.data.ParseException
 import java.util.Locale
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import akka.event.LoggingAdapter
 
 object AboParser extends EntityParser {
@@ -48,8 +49,8 @@ object AboParser extends EntityParser {
 
         val kundeIdInt = row.value[Long](kundeIdIndex)
         val vertriebsartIdInt = row.value[Long](vertriebsartIdIndex)
-        val start = row.value[DateTime](startIndex)
-        val ende = row.value[Option[DateTime]](endeIndex)
+        val start = row.value[LocalDate](startIndex)
+        val ende = row.value[Option[LocalDate]](endeIndex)
         val aboId = AboId(id)
 
         val guthabenVertraglich = row.value[Option[Int]](guthabenVertraglichIndex)
