@@ -253,7 +253,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
     }
   }
 
-  // json formatter which adds calculated boolean field  
+  // json formatter which adds calculated boolean field
   def enhanceWithBooleanFlag[E <: AktivRange](flag: String)(implicit defaultFormat: JsonFormat[E]): RootJsonFormat[E] = new RootJsonFormat[E] {
     def write(obj: E): JsValue = {
       JsObject(defaultFormat.write(obj)
@@ -476,6 +476,22 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val depotlieferungAboReportFormat = autoProductFormat[DepotlieferungAboReport]
   implicit val enhancedDepotReportFormat: RootJsonFormat[DepotReport] = enhancedDepotReportFormatDef(autoProductFormat[DepotReport])
   implicit val enhancedDepotDetailReportFormat: RootJsonFormat[DepotDetailReport] = enhancedDepotReportFormatDef(autoProductFormat[DepotDetailReport])
+
+  def enhancedProduzentReportFormatDef[D <: IProduzentReport](defaultFormat: JsonFormat[D]): RootJsonFormat[D] = new RootJsonFormat[D] {
+    def write(obj: D): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "strasseUndNummer" -> JsString(obj.strasseUndNummer.getOrElse("")),
+          "plzOrt" -> JsString(obj.plzOrt),
+          "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector)
+        ))
+    }
+
+    def read(json: JsValue): D = defaultFormat.read(json)
+  }
+
+  implicit val enhancedProduzentDetailReportFormat: RootJsonFormat[ProduzentDetailReport] = enhancedProduzentReportFormatDef(autoProductFormat[ProduzentDetailReport])
 
   implicit val depotAuslieferungReportFormat = autoProductFormat[DepotAuslieferungReport]
   implicit val tourAuslieferungReportFormat = autoProductFormat[TourAuslieferungReport]

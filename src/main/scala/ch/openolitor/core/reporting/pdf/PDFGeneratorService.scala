@@ -47,7 +47,7 @@ trait PDFGeneratorService {
   import system.dispatcher
 
   def uSendReceive(implicit refFactory: ActorRefFactory, executionContext: ExecutionContext,
-    futureTimeout: Timeout = 60.seconds): SendReceive =
+    futureTimeout: Timeout = 600.seconds): SendReceive =
     sendReceive(IO(UHttp)(actorSystem))
 
   val pipeline: HttpRequest => Future[HttpResponse] = uSendReceive
@@ -65,7 +65,7 @@ trait PDFGeneratorService {
           throw new RequestProcessingException(StatusCodes.InternalServerError, s"PDF konnte nicht generiert werden ${other}")
       }
 
-      Await.result(result, 5 seconds)
+      Await.result(result, 600 seconds)
     }
   }
 }

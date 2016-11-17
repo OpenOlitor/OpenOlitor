@@ -20,29 +20,28 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.core
 
-import ch.openolitor.core.filestore._
+import spray.routing._
+import spray.http._
+import spray.http.StatusCodes._
+import spray.http.ContentTypes._
+import spray.json.DefaultJsonProtocol._
+import spray.httpx.SprayJsonSupport._
+import spray.routing.ExceptionHandler
+import Directives._
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.security.AuthenticatorRejection
+import ch.openolitor.util.AirbrakeNotifier.AirbrakeNotification
 
-trait VorlageTyp extends FileType
+object OpenOlitorExceptionHandler extends LazyLogging with BaseJsonProtocol {
+  import spray.httpx.marshalling
 
-object VorlageTyp extends LazyLogging {
-  val AlleVorlageTypen = List(
-    VorlageRechnung,
-    VorlageDepotLieferschein,
-    VorlageTourLieferschein,
-    VorlagePostLieferschein,
-    VorlageDepotLieferetiketten,
-    VorlageTourLieferetiketten,
-    VorlagePostLieferetiketten,
-    VorlageKundenbrief,
-    VorlageDepotbrief,
-    VorlageProduzentenbrief
-  )
-
-  def apply(value: String): VorlageTyp = {
-    logger.debug(s"Vorlagetyp.apply:$value")
-    AlleVorlageTypen.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
+  def apply(routeService: CORSSupport with AirbrakeNotifierReference): ExceptionHandler = ExceptionHandler {
+    case th => ctx =>
+      routeService.airbrakeNotifier ! AirbrakeNotification(th, Some(ctx.request))
+      ctx.complete(HttpResponse(InternalServerError).withHeaders(
+        routeService.allowCredentialsHeader :: routeService.allowOriginHeader :: routeService.exposeHeaders :: routeService.optionsCorsHeaders
+      ).withEntity(marshalling.marshalUnsafe(RejectionMessage(th.getMessage, s"${th.getCause}"))))
   }
 }

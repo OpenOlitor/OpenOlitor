@@ -37,6 +37,7 @@ import ch.openolitor.core.filestore._
 
 trait KundenBriefReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
+
   def generateKundenBriefReports(fileType: FileType)(config: ReportConfig[KundeId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[KundeId]]] = {
     generateReports[KundeId, KundeDetailReport](
       config,
@@ -51,7 +52,7 @@ trait KundenBriefReportService extends AsyncConnectionPoolContextAware with Repo
     )
   }
 
-  def name(fileType: FileType)(kunde: KundeDetailReport) = s"kunden_nr_${kunde.id.id}_${System.currentTimeMillis}"
+  def name(fileType: FileType)(kunde: KundeDetailReport) = s"kunden_nr_${kunde.id.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
 
   def kundenById(kundeIds: Seq[KundeId]): Future[(Seq[ValidationError[KundeId]], Seq[KundeDetailReport])] = {
     stammdatenReadRepository.getProjekt flatMap {

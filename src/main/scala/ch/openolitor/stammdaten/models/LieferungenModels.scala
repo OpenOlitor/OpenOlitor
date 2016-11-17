@@ -93,6 +93,7 @@ case class LieferungOnLieferplanungId(id: Long) extends BaseLieferungId {
 
 case class LieferplanungCreated(id: LieferplanungId) extends Product with JSONSerializable
 
+// datum entspricht einem Zeitpunkt
 case class Lieferung(
   id: LieferungId,
   abotypId: AbotypId,

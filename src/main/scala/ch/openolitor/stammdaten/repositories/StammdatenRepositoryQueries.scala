@@ -598,7 +598,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(_.int(1)).single
   }
 
-  protected def countAbwesendQuery(aboId: AboId, datum: DateTime) = {
+  protected def countAbwesendQuery(aboId: AboId, datum: LocalDate) = {
     withSQL {
       select(count(distinct(abwesenheit.id)))
         .from(abwesenheitMapping as abwesenheit)
@@ -688,6 +688,17 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(produzentMapping as produzent)
         .where.eq(produzent.id, parameter(id))
     }.map(produzentMapping(produzent)).single
+  }
+
+  protected def getProduzentDetailReportQuery(id: ProduzentId, projekt: ProjektReport) = {
+    withSQL {
+      select
+        .from(produzentMapping as produzent)
+        .where.eq(produzent.id, parameter(id))
+    }.map { rs =>
+      val p = produzentMapping(produzent)(rs)
+      copyTo[Produzent, ProduzentDetailReport](p, "projekt" -> projekt)
+    }.single
   }
 
   protected def getTourenQuery = {

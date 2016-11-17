@@ -109,12 +109,47 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
   }
 
   implicit val optionDateTimeFormat = new OptionFormat[DateTime]
+
+  /*
+   * joda LocalDate format
+   */
+  implicit val localDateFormat = new JsonFormat[LocalDate] {
+
+    val formatter = ISODateTimeFormat.dateTime
+
+    def write(obj: LocalDate): JsValue = {
+      JsString(formatter.print(obj.toDateTimeAtStartOfDay))
+    }
+
+    def read(json: JsValue): LocalDate = json match {
+      case JsString(s) =>
+        try {
+          formatter.parseLocalDate(s)
+        } catch {
+          case t: Throwable => error(s)
+        }
+      case _ =>
+        error(json.toString())
+    }
+
+    def error(v: Any): LocalDate = {
+      val example = "yyyy-MM-dd"
+      deserializationError(f"'$v' is not a valid date value. Dates must be in compact ISO-8601 format '$example'")
+    }
+  }
+
+  implicit val optionLocalDateFormat = new OptionFormat[LocalDate]
+
   implicit val personIdFormat = baseIdFormat(PersonId.apply)
   implicit val vorlageTypeFormat = enumFormat(VorlageTyp.apply)
 
   implicit val idResponseFormat = jsonFormat1(BaseJsonProtocol.IdResponse)
+
+  implicit val rejectionMessageFormat = jsonFormat2(RejectionMessage)
 }
 
 object BaseJsonProtocol {
   case class IdResponse(id: Long)
+
+  case class RejectionMessage(message: String, cause: String)
 }
