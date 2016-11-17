@@ -1,7 +1,7 @@
 ---
 applications:
 - name: openolitor-server-int
-  memory: 1024M
+  memory: 1536M
   instances: 1
   host: openolitorint
   domain: applicationcloud.io
@@ -14,4 +14,3 @@ applications:
     application_config: openolitor-server-int
     JAVA_OPTS: "-Dconfig.resource=openolitor-server-int.conf -Dlogback.configurationFile=openolitor-server-int-logback.xml"
     application_buildnr: "${env.BUILD_NUMBER?notDefined}"
-    
