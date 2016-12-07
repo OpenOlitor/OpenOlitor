@@ -928,26 +928,19 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def countEarlierLieferungOffenQuery(id: LieferplanungId) = {
     sql"""
-      select
-        count(${lieferung.datum})
-      from
-        ${lieferungMapping as lieferung}
-      left outer join
+        SELECT
+        count(*)
+        FROM ${lieferungMapping as lieferung}
+        WHERE ${lieferung.status} = 'Offen'
+        AND ${lieferung.lieferplanungId} <> ${id.id}
+        AND ${lieferung.datum} <
         (
-         select
-          ${lieferung.vertriebId} as vertriebId, min(${lieferung.datum}) as mindat
-         from
-          ${lieferungMapping as lieferung}
-         where
-          ${lieferung.status} = 'Offen'
-         group by
-          ${lieferung.vertriebId}
+          SELECT
+          MIN(${lieferung.datum})
+          FROM ${lieferungMapping as lieferung}
+          WHERE ${lieferung.status} = 'Offen'
+          AND ${lieferung.lieferplanungId} = ${id.id}
         )
-        as l1 on ${lieferung.vertriebId} = l1.vertriebId
-      where
-        ${lieferung.lieferplanungId} = ${id.id}
-        and ${lieferung.status} = 'Offen'
-        and ${lieferung.datum} > mindat
       """
       .map(_.int(1)).single
   }

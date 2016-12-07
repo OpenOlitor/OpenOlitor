@@ -56,11 +56,11 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
  * Listen on DBEvents and adjust calculated fields within this module
  */
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
-    with StammdatenDBMappings
-    with ConnectionPoolContextAware
-    with KorbHandler
-    with AboAktivChangeHandler
-    with LieferungHandler {
+  with StammdatenDBMappings
+  with ConnectionPoolContextAware
+  with KorbHandler
+  with AboAktivChangeHandler
+  with LieferungHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
@@ -387,8 +387,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         // -1 on existing status, +1 on new status
         val copy = updateLieferungWithCount(
           updateLieferungWithCount(lieferung, existing, -1),
-          korb, 1
-        )
+          korb, 1)
         stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
       }
     } getOrElse {
@@ -401,8 +400,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     lieferung.copy(
       anzahlKoerbeZuLiefern = if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern,
       anzahlAbwesenheiten = if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten,
-      anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
-    )
+      anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief)
   }
 
   def handleKundeModified(kunde: Kunde, orig: Kunde)(implicit personId: PersonId) = {
@@ -555,8 +553,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     val copy = lieferung.copy(
       anzahlKoerbeZuLiefern = lieferung.anzahlKoerbeZuLiefern + zuLiefernDiff,
       anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + abwDiff,
-      anzahlSaldoZuTief = lieferung.anzahlSaldoZuTief + saldoDiff
-    )
+      anzahlSaldoZuTief = lieferung.anzahlSaldoZuTief + saldoDiff)
     log.debug(s"Recalculate Lieferung as Korb-Status: was modified : ${lieferung.id} status form ${korbStatusAlt} to ${korbStatusNeu}. zu lieferung:$zuLiefernDiff, Abw: $abwDiff, Saldo: $saldoDiff\nfrom:$lieferung\nto:$copy")
     copy
 
@@ -638,22 +635,19 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         abo.copy(
           guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
           guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
-        )
+          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
       })
       modifyEntity[PostlieferungAbo, AboId](rechnung.aboId, { abo =>
         abo.copy(
           guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
           guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
-        )
+          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
       })
       modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId, { abo =>
         abo.copy(
           guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
           guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
-        )
+          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None))
       })
     }
   }
@@ -667,18 +661,15 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   private def adjustGuthabenInRechnung(aboId: AboId, diff: Int)(implicit personId: PersonId, session: DBSession) = {
     modifyEntity[DepotlieferungAbo, AboId](aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung + diff
-      )
+        guthabenInRechnung = abo.guthabenInRechnung + diff)
     })
     modifyEntity[PostlieferungAbo, AboId](aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung + diff
-      )
+        guthabenInRechnung = abo.guthabenInRechnung + diff)
     })
     modifyEntity[HeimlieferungAbo, AboId](aboId, { abo =>
       abo.copy(
-        guthabenInRechnung = abo.guthabenInRechnung + diff
-      )
+        guthabenInRechnung = abo.guthabenInRechnung + diff)
     })
   }
 
@@ -746,7 +737,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           }
         }
       }
-
+      logger.debug(s"######################################### Calculate new Values for Lieferungen $session")
+      // TODO fix 469 adjusting status here
       //calculate new values
       lieferungen map { lieferung =>
         //calculate total of lieferung
@@ -765,8 +757,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             val neuerDurchschnittspreis = calcDurchschnittspreis(durchschnittspreis, lieferungen, total)
             val copy = vertrieb.copy(
               anzahlLieferungen = vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
-              durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
-            )
+              durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis))
 
             stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
           }
@@ -803,8 +794,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       DateTime.now,
       personId,
       DateTime.now,
-      personId
-    )
+      personId)
     stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
     setOrderingOnKoerbe(result.id, tourId)
 
@@ -826,8 +816,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           DateTime.now,
           personId,
           DateTime.now,
-          personId
-        )
+          personId)
         stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
         Some(result.id)
 
@@ -840,8 +829,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           DateTime.now,
           personId,
           DateTime.now,
-          personId
-        )
+          personId)
         stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
         Some(result.id)
       case _ =>
@@ -906,8 +894,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       DB autoCommit { implicit session =>
         stammdatenWriteRepository.getDepotlieferungAbosByDepot(depot.id) map { abo =>
           val copy = abo.copy(
-            depotName = depot.name
-          )
+            depotName = depot.name)
           stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
         }
       }
@@ -935,8 +922,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           DateTime.now,
           personId,
           DateTime.now,
-          personId
-        )
+          personId)
 
         stammdatenWriteRepository.getById(tourlieferungMapping, entity.id) map { tourlieferung =>
           stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](updated.copy(sort = tourlieferung.sort))
@@ -956,8 +942,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           hausNummer = kunde.hausNummerLieferung orElse kunde.hausNummer,
           adressZusatz = kunde.adressZusatzLieferung orElse kunde.adressZusatz,
           plz = kunde.plzLieferung getOrElse kunde.plz,
-          ort = kunde.ortLieferung getOrElse kunde.ort
-        ))
+          ort = kunde.ortLieferung getOrElse kunde.ort))
       }
     }
   }
@@ -989,6 +974,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleLieferungChanged(entity: Lieferung, orig: Lieferung)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
+      logger.debug(s"######################################### Handle Lieferung Changed $session")
       //Berechnung für erste Lieferung durchführen um sicher zu stellen, dass durchschnittspreis auf 0 gesetzt ist
       if (entity.anzahlLieferungen == 1) {
         recalculateLieferungOffen(entity, None)
@@ -1024,8 +1010,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         durchschnittspreis = newDurchschnittspreis,
         anzahlLieferungen = newAnzahlLieferungen,
         modifidat = DateTime.now,
-        modifikator = personId
-      )
+        modifikator = personId)
       stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
     }
   }
