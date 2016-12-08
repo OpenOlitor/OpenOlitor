@@ -746,12 +746,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           }
         }
       }
-
       //calculate new values
       lieferungen map { lieferung =>
         //calculate total of lieferung
         val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
-        val lieferungCopy = lieferung.copy(preisTotal = total)
+        val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
         stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy)
 
         //update durchschnittspreis
@@ -770,6 +769,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
             stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
           }
+        }
+      }
+
+      stammdatenWriteRepository.getBestellungen(lieferplanung.id) map { bestellung =>
+        if (Offen == bestellung.status) {
+          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
         }
       }
     }
