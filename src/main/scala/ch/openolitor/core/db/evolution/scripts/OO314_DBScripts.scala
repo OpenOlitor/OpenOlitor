@@ -68,7 +68,7 @@ object OO314_DBScripts {
           }.
             map(lieferungMapping(l)).list.apply() map { lieferung =>
 
-              val gjKey = projekt.geschaftsjahr.key(lieferung.datum)
+              val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
               (gjKey, lieferung)
             } groupBy (_._1)
 
@@ -80,7 +80,7 @@ object OO314_DBScripts {
 
           //update lieferungen
           withSQL { select.from(lieferungMapping as l).where.eq(l.vertriebId, parameter(vertrieb.id)) }.map(lieferungMapping(l)).list.apply() map { lieferung =>
-            val gjKey = projekt.geschaftsjahr.key(lieferung.datum)
+            val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
             val anzahl = anzahlLieferungenMap.get(gjKey).getOrElse(0)
             val dpreis: BigDecimal = durchschnittspreisMap.get(gjKey).getOrElse(0)
 

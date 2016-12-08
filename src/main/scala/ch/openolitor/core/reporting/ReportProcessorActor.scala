@@ -28,6 +28,7 @@ import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.filestore.FileStore
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.Boot
+import ch.openolitor.core.DateFormats
 
 object ReportProcessorActor {
   def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportProcessorActor], fileStore, sysConfig)
@@ -38,7 +39,7 @@ object ReportProcessorActor {
  * object. The same report template object should be shared across all reports. As a result the actor returns a list of successful
  * and unsuccessful sources which might then get processed further
  */
-class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extends Actor with ActorLogging {
+class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extends Actor with ActorLogging with DateFormats {
   import ReportProcessorActor._
   import ReportSystem._
 
@@ -92,7 +93,7 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
     for {
       (row, index) <- data.rows.zipWithIndex
     } yield {
-      context.actorOf(f(row), s"report-$index-${System.currentTimeMillis}") ! GenerateReport(row.id, file, row.value)
+      context.actorOf(f(row), s"report-$index-${filenameDateFormat.print(System.currentTimeMillis())}") ! GenerateReport(row.id, file, row.value)
     }
 
     context become collectingResults

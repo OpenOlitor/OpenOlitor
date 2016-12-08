@@ -48,6 +48,7 @@ import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import spray.json.JsArray
+import ch.openolitor.core.DateFormats
 
 sealed trait BerichtsVorlage extends Product
 case object DatenExtrakt extends BerichtsVorlage
@@ -67,7 +68,7 @@ case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[Validation
   val hasErrors = !validationErrors.isEmpty
 }
 
-trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware with FileTypeFilenameMapping {
+trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware with FileTypeFilenameMapping with DateFormats {
   self: ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
 
   implicit val actorSystem = system

@@ -106,16 +106,6 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
         }
       }
-      stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
-        if (Offen == lieferung.status) {
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Abgeschlossen))
-        }
-      }
-      stammdatenWriteRepository.getBestellungen(id) map { bestellung =>
-        if (Offen == bestellung.status) {
-          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
-        }
-      }
     }
   }
 
@@ -222,7 +212,6 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
 
   def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate, baseText: String, baseLink: String)(implicit originator: PersonId): Unit = {
     DB localTx { implicit session =>
-      // TODO bereits hängige Einladungen expires auf jetzt setzen
       stammdatenWriteRepository.getById(personMapping, einladungCreate.personId) map { person =>
 
         // existierende einladung überprüfen
@@ -239,7 +228,7 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
           inserted
         }
 
-        if (einladung.datumVersendet.isEmpty || einladung.datumVersendet.get.isBefore(meta.timestamp)) {
+        if ((einladung.datumVersendet.isEmpty || einladung.datumVersendet.get.isBefore(meta.timestamp)) && einladung.expires.isAfter(DateTime.now)) {
           setLoginAktiv(meta, einladung.personId)
 
           val text = s"""

@@ -28,6 +28,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.data.ParseException
 import java.util.Locale
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import akka.event.LoggingAdapter
 
 object AbwesenheitParser extends EntityParser {
@@ -43,7 +44,7 @@ object AbwesenheitParser extends EntityParser {
         id = AbwesenheitId(id),
         aboId = AboId(row.value[Long](indexAboId)),
         lieferungId = LieferungId(row.value[Long](indexLieferungId)),
-        datum = row.value[DateTime](indexDatum),
+        datum = row.value[LocalDate](indexDatum),
         bemerkung = row.value[Option[String]](indexBemerkung),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),

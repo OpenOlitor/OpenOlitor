@@ -23,22 +23,39 @@
 package ch.openolitor.core
 
 import spray.routing._
+import spray.http._
+import spray.http.StatusCodes._
+import spray.http.ContentTypes._
+import spray.json.DefaultJsonProtocol._
 import Directives._
+import spray.httpx.SprayJsonSupport._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.security.AuthenticatorRejection
 
-/** Custom RejectionHandler for dealing with AuthenticatorRejections. */
-object OpenOlitorRejectionHandler extends LazyLogging {
-  import spray.http.StatusCodes._
+case class RejectionMessage(message: String, cause: String)
 
-  def apply(): RejectionHandler = RejectionHandler {
+/** Custom RejectionHandler for dealing with AuthenticatorRejections. */
+object OpenOlitorRejectionHandler extends LazyLogging with BaseJsonProtocol {
+  import spray.httpx.marshalling
+
+  def apply(corsSupport: CORSSupport): RejectionHandler = RejectionHandler {
     case rejections if rejections.find(_.isInstanceOf[AuthenticatorRejection]).isDefined =>
       val reason = rejections.find(_.isInstanceOf[AuthenticatorRejection]).get.asInstanceOf[AuthenticatorRejection].reason
-      logger.debug(s"Request unauthorized ${reason}")
-      complete(Unauthorized)
-    case rejections =>
-      ctx =>
-        logger.debug(s"Request rejected: $rejections")
-        ctx.reject(rejections: _*)
+
+      logger.debug(s"AuthenticatorRejection: $reason")
+
+      complete(HttpResponse(Unauthorized).withHeaders(
+        corsSupport.allowCredentialsHeader :: corsSupport.allowOriginHeader :: corsSupport.exposeHeaders :: corsSupport.optionsCorsHeaders
+      ).withEntity(marshalling.marshalUnsafe(RejectionMessage("Unauthorized", ""))))
+
+    case others if RejectionHandler.Default.isDefinedAt(others) =>
+      ctx => RejectionHandler.Default(others) {
+        ctx.withHttpResponseMapped {
+          case resp @ HttpResponse(_, HttpEntity.NonEmpty(_, msg), _, _) =>
+            resp.withHeaders(
+              corsSupport.allowCredentialsHeader :: corsSupport.allowOriginHeader :: corsSupport.exposeHeaders :: corsSupport.optionsCorsHeaders
+            ).withEntity(marshalling.marshalUnsafe(RejectionMessage(msg.asString, "")))
+        }
+      }
   }
 }
