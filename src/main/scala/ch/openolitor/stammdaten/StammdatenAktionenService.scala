@@ -101,22 +101,9 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
 
   def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      logger.debug(s"######################################### Lieferplanung Abschliessen")
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Offen == lieferplanung.status) {
-          logger.debug(s"######################################### Updating Lieferplanung Abgeschlossen")
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
-        }
-      }
-      stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
-        if (Offen == lieferung.status) {
-          logger.debug(s"######################################### Updating Lieferung Abgeschlossen $session")
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Abgeschlossen))
-        }
-      }
-      stammdatenWriteRepository.getBestellungen(id) map { bestellung =>
-        if (Offen == bestellung.status) {
-          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
         }
       }
     }
