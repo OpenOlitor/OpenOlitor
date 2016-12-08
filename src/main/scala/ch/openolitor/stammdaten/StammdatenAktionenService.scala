@@ -106,16 +106,6 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
         }
       }
-      stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
-        if (Offen == lieferung.status) {
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Abgeschlossen))
-        }
-      }
-      stammdatenWriteRepository.getBestellungen(id) map { bestellung =>
-        if (Offen == bestellung.status) {
-          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
-        }
-      }
     }
   }
 
