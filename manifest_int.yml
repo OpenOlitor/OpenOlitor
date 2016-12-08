@@ -5,7 +5,7 @@ applications:
   instances: 1
   host: openolitorint
   domain: applicationcloud.io
-  path: universal/openolitor-server-1.0.1.zip
+  path: universal/openolitor-server-1.0.2.zip
   buildpack: https://github.com/cloudfoundry/java-buildpack.git
   stack: cflinuxfs2
   env:
