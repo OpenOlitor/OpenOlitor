@@ -344,21 +344,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     // koerbe erstellen, modifizieren, loeschen falls noetig
     stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
       stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
-        orig map { original =>
-          if (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false) {
-            deleteKorb(lieferung, abo)
-          } else {
-            upsertKorb(lieferung, abo, abotyp) match {
-              case (Some(korb), existingKorb) => updateLieferungWithKorbCounts(lieferung, korb, existingKorb)
-              case _ => // nothing to update
-            }
-          }
-        } getOrElse {
-          if (abo.start <= lieferung.datum.toLocalDate && abo.ende.map(_ >= lieferung.datum.toLocalDate).getOrElse(true)) {
-            upsertKorb(lieferung, abo, abotyp) match {
-              case (Some(korb), existingKorb) => updateLieferungWithKorbCounts(lieferung, korb, existingKorb)
-              case _ => // nothing to update
-            }
+        if (orig.isDefined && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
+          deleteKorb(lieferung, abo)
+        } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
+          upsertKorb(lieferung, abo, abotyp) match {
+            case (Some(korb), existingKorb) => updateLieferungWithKorbCounts(lieferung, korb, existingKorb)
+            case _ => // nothing to update
           }
         }
       }
