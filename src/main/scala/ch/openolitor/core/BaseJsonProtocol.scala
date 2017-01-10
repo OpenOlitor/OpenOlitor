@@ -124,7 +124,7 @@ trait BaseJsonProtocol extends DefaultJsonProtocol with AutoProductFormats[JSONS
     def read(json: JsValue): LocalDate = json match {
       case JsString(s) =>
         try {
-          formatter.parseLocalDate(s)
+          formatter.parseDateTime(s).toLocalDate
         } catch {
           case t: Throwable => error(s)
         }
