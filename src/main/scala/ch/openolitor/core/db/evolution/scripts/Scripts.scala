@@ -47,5 +47,6 @@ object Scripts {
       OO374_DBScripts.scripts ++
       OO374_DBScripts_aktiv_to_abo.scripts ++
       OO461_DBScripts.scripts ++
-      OO468_DBScripts.scripts
+      OO468_DBScripts.scripts ++
+      OO433_DBScripts.scripts
 }
