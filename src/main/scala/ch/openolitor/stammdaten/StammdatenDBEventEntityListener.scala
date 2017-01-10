@@ -116,6 +116,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(personId, entity: Kunde) => handleKundeDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Kunde, orig: Kunde) => handleKundeModified(entity, orig)(personId)
 
+    case e @ EntityDeleted(personId, entity: Person) => handlePersonDeleted(entity)(personId)
+
     case e @ EntityCreated(personId, entity: Pendenz) => handlePendenzCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Pendenz) => handlePendenzDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Pendenz, orig: Pendenz) => handlePendenzModified(entity, orig)(personId)
@@ -420,6 +422,19 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleKundeCreated(kunde: Kunde)(implicit personId: PersonId) = {
     handleKundentypenChanged(Set(), kunde.typen)
+  }
+
+  def handlePersonDeleted(person: Person)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      val personen = stammdatenWriteRepository.getPersonen(person.kundeId)
+      if (personen.size == 1) {
+        stammdatenWriteRepository.getById(kundeMapping, person.kundeId) map { kunde =>
+          val copy = kunde.copy(bezeichnung = personen.head.fullName)
+          log.debug(s"Kunde-Bezeichnung set to empty as there is just one Person: ${kunde.id}")
+          stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
+        }
+      }
+    }
   }
 
   def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit personId: PersonId) = {
