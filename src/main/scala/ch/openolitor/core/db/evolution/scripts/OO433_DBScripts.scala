@@ -38,6 +38,6 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Boot
 import ch.openolitor.core.db.evolution.scripts.recalculations.RecalculateAnzahlAbwesenheiten
 
-object OO337_DBScripts {
+object OO433_DBScripts {
   val scripts = Seq(RecalculateAnzahlAbwesenheiten.scripts)
 }
