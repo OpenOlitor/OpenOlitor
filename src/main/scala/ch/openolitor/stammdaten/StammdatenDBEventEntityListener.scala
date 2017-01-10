@@ -136,6 +136,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
 
+    case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) =>
+      handleLieferplanungModified(entity, orig)(personId)
     case e @ EntityModified(personId, entity: Lieferung, orig: Lieferung) //Die Lieferung wird von der Lieferplanung entfernt
     if (orig.lieferplanungId.isEmpty && entity.lieferplanungId.isDefined) =>
       handleLieferplanungLieferungenChanged(entity.lieferplanungId.get)(personId)
@@ -978,18 +980,30 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleLieferplanungLieferungenChanged(lieferplanungId: LieferplanungId)(implicit personId: PersonId) = {
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
-        val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanungId)
-        val abotypDates = (lieferungen.map(l => (dateFormat.print(l.datum), l.abotypBeschrieb))
-          .groupBy(_._1).mapValues(_ map { _._2 }) map {
-            case (datum, abotypBeschriebe) =>
-              datum + ": " + abotypBeschriebe.mkString(", ")
-          }).mkString("; ")
-        val copy = lp.copy(abotypDepotTour = abotypDates)
+  def updateLieferplanungAbotypenListing(lieferplanungId: LieferplanungId)(implicit session: DBSession, personId: PersonId) = {
+    stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
+      val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanungId)
+      val abotypDates = (lieferungen.map(l => (dateFormat.print(l.datum), l.abotypBeschrieb))
+        .groupBy(_._1).mapValues(_ map { _._2 }) map {
+          case (datum, abotypBeschriebe) =>
+            datum + ": " + abotypBeschriebe.mkString(", ")
+        }).mkString("; ")
+      val copy = lp.copy(abotypDepotTour = abotypDates)
+      if (lp.abotypDepotTour != abotypDates) {
         stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
       }
+    }
+  }
+
+  def handleLieferplanungLieferungenChanged(lieferplanungId: LieferplanungId)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      updateLieferplanungAbotypenListing(lieferplanungId)
+    }
+  }
+
+  def handleLieferplanungModified(entity: Lieferplanung, orig: Lieferplanung)(implicit personId: PersonId) = {
+    DB autoCommit { implicit session =>
+      updateLieferplanungAbotypenListing(entity.id)
     }
   }
 
