@@ -319,29 +319,31 @@ object Rolle {
 }
 
 case class Person(
-  id: PersonId,
-  kundeId: KundeId,
-  anrede: Option[Anrede],
-  name: String,
-  vorname: String,
-  email: Option[String],
-  emailAlternative: Option[String],
-  telefonMobil: Option[String],
-  telefonFestnetz: Option[String],
-  bemerkungen: Option[String],
-  sort: Int,
-  // security data
-  loginAktiv: Boolean,
-  passwort: Option[Array[Char]],
-  letzteAnmeldung: Option[DateTime],
-  passwortWechselErforderlich: Boolean,
-  rolle: Option[Rolle],
-  // modification flags
-  erstelldat: DateTime,
-  ersteller: PersonId,
-  modifidat: DateTime,
-  modifikator: PersonId
-) extends BaseEntity[PersonId]
+    id: PersonId,
+    kundeId: KundeId,
+    anrede: Option[Anrede],
+    name: String,
+    vorname: String,
+    email: Option[String],
+    emailAlternative: Option[String],
+    telefonMobil: Option[String],
+    telefonFestnetz: Option[String],
+    bemerkungen: Option[String],
+    sort: Int,
+    // security data
+    loginAktiv: Boolean,
+    passwort: Option[Array[Char]],
+    letzteAnmeldung: Option[DateTime],
+    passwortWechselErforderlich: Boolean,
+    rolle: Option[Rolle],
+    // modification flags
+    erstelldat: DateTime,
+    ersteller: PersonId,
+    modifidat: DateTime,
+    modifikator: PersonId
+) extends BaseEntity[PersonId] {
+  def fullName = vorname + ' ' + name
+}
 
 case class PersonDetail(
   id: PersonId,
