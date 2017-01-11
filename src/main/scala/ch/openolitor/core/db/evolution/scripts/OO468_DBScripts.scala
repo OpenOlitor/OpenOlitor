@@ -29,15 +29,9 @@ import ch.openolitor.core.SystemConfig
 import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
-import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
-import ch.openolitor.core.NoPublishEventStream
-import ch.openolitor.stammdaten.models.Abwesenheit
-import scala.collection.immutable.TreeMap
-import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.Boot
-import ch.openolitor.core.db.evolution.scripts.recalculations.RecalculateAnzahlAbwesenheiten
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateAnzahlAktiveAbosCounter
 
-object OO337_DBScripts {
-  val scripts = Seq(RecalculateAnzahlAbwesenheiten.scripts)
+object OO468_DBScripts {
+  val scripts = Seq(RecalulateAnzahlAktiveAbosCounter.scripts)
 }

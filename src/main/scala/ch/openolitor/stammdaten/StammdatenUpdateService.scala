@@ -237,32 +237,30 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       case _ => update.bezeichnung.getOrElse("")
     }
 
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getKundeDetail(kundeId) map { kunde =>
-        kunde.abos.map { updateAbo =>
-          updateAbo match {
-            case dlAbo: DepotlieferungAbo =>
-              logger.debug(s"Update abo with data -> kundeBez")
-              val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
-                dlAbo,
-                "kunde" -> kundeBez
-              )
-              stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
-            case hlAbo: HeimlieferungAbo =>
-              logger.debug(s"Update abo with data -> kundeBez")
-              val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
-                hlAbo,
-                "kunde" -> kundeBez
-              )
-              stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
-            case plAbo: PostlieferungAbo =>
-              logger.debug(s"Update abo with data -> kundeBez")
-              val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
-                plAbo,
-                "kunde" -> kundeBez
-              )
-              stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
-          }
+    stammdatenWriteRepository.getKundeDetail(kundeId) map { kunde =>
+      kunde.abos.map { updateAbo =>
+        updateAbo match {
+          case dlAbo: DepotlieferungAbo =>
+            logger.debug(s"Update abo with data -> kundeBez")
+            val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
+              dlAbo,
+              "kunde" -> kundeBez
+            )
+            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+          case hlAbo: HeimlieferungAbo =>
+            logger.debug(s"Update abo with data -> kundeBez")
+            val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
+              hlAbo,
+              "kunde" -> kundeBez
+            )
+            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+          case plAbo: PostlieferungAbo =>
+            logger.debug(s"Update abo with data -> kundeBez")
+            val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
+              plAbo,
+              "kunde" -> kundeBez
+            )
+            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
         }
       }
     }
