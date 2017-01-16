@@ -180,18 +180,23 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
     DB autoCommit { implicit session =>
       entity.zahlungsEingaenge map { eingang =>
-        buchhaltungWriteRepository.getRechnungByReferenznummer(eingang.referenzNummer) match {
-          case Some(rechnung) =>
-            val state = if (rechnung.status == Bezahlt) {
-              BereitsVerarbeitet
-            } else if (rechnung.betrag != eingang.betrag) {
-              BetragNichtKorrekt
-            } else {
-              Ok
-            }
-            createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
+        buchhaltungWriteRepository.getZahlungsEingangByReferenznummer(eingang.referenzNummer) match {
+          case Some(existingEingang) =>
+            createZahlungsEingang(eingang.copy(rechnungId = existingEingang.rechnungId, status = BereitsVerarbeitet))
           case None =>
-            createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
+            buchhaltungWriteRepository.getRechnungByReferenznummer(eingang.referenzNummer) match {
+              case Some(rechnung) =>
+                val state = if (rechnung.status == Bezahlt) {
+                  BereitsVerarbeitet
+                } else if (rechnung.betrag != eingang.betrag) {
+                  BetragNichtKorrekt
+                } else {
+                  Ok
+                }
+                createZahlungsEingang(eingang.copy(rechnungId = Some(rechnung.id), status = state))
+              case None =>
+                createZahlungsEingang(eingang.copy(status = ReferenznummerNichtGefunden))
+            }
         }
       }
       buchhaltungWriteRepository.insertEntity[ZahlungsImport, ZahlungsImportId](zahlungsImport)
