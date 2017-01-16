@@ -921,7 +921,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .where.eq(lieferung.vertriebId, parameter(vertriebId))
         .and.not.isNull(lieferung.lieferplanungId)
         .and.gt(lieferung.datum, parameter(datum))
-        .orderBy(lieferung.datum).asc
+        .orderBy(lieferung.datum).desc
         .limit(1)
     }.map(lieferungMapping(lieferung)).single
   }
@@ -1092,6 +1092,22 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .where.eq(korb.lieferungId, parameter(lieferungId))
         .and.eq(korb.aboId, parameter(aboId)).and.not.eq(korb.status, parameter(Geliefert))
     }.map(korbMapping(korb)).single
+  }
+
+  protected def getKoerbeLieferungQuery(aboId: AboId) = {
+    withSQL {
+      select
+        .from(korbMapping as korb)
+        .innerJoin(lieferungMapping as lieferung).on(lieferung.id, korb.lieferungId)
+        .where.eq(korb.aboId, parameter(aboId)).and.not.eq(korb.status, parameter(WirdGeliefert))
+        .orderBy(lieferung.datum).asc
+    }.one(korbMapping(korb))
+      .toMany(
+        rs => lieferungMapping.opt(lieferung)(rs)
+      )
+      .map((korb, lieferung) => {
+        copyTo[Korb, KorbLieferung](korb, "lieferung" -> lieferung.head)
+      }).list
   }
 
   protected def getKoerbeQuery(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus) = {
