@@ -921,7 +921,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .where.eq(lieferung.vertriebId, parameter(vertriebId))
         .and.not.isNull(lieferung.lieferplanungId)
         .and.gt(lieferung.datum, parameter(datum))
-        .orderBy(lieferung.datum).desc
+        .orderBy(lieferung.datum).asc
         .limit(1)
     }.map(lieferungMapping(lieferung)).single
   }
