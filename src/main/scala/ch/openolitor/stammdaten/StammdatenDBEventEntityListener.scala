@@ -715,7 +715,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
               val auslieferung = createAuslieferungHeim(lieferdatum, tourId, tourName, koerbe.size)
 
               koerbe map { korb =>
-                val copy = korb.copy(auslieferungId = Some(auslieferung.id))
+                val tourlieferung = stammdatenWriteRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
+                val copy = korb.copy(auslieferungId = Some(auslieferung.id), sort = tourlieferung flatMap (_.sort))
                 stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
               }
             }
@@ -814,7 +815,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       personId
     )
     stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
-    setOrderingOnKoerbe(result.id, tourId)
 
     result
   }
@@ -855,19 +855,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       case _ =>
         //nothing to create for Tour, see createAuslieferungHeim
         None
-    }
-  }
-
-  private def setOrderingOnKoerbe(auslieferungId: AuslieferungId, tourId: TourId)(implicit personId: PersonId, session: DBSession) = {
-    val tourlieferungen = stammdatenWriteRepository.getTourlieferungen(tourId)
-    val koerbe = stammdatenWriteRepository.getKoerbe(auslieferungId)
-    val aboIds = koerbe map (_.aboId)
-    tourlieferungen /*.filter(l => aboIds.contains(l.id)).*/ .sortBy(_.sort).zipWithIndex.map {
-      case (tl, index) =>
-        koerbe.find(_.aboId == tl.id) map { korb =>
-          val copy = korb.copy(sort = Some(index))
-          stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
-        }
     }
   }
 
