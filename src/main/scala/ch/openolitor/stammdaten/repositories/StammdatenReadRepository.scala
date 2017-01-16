@@ -113,6 +113,7 @@ trait StammdatenReadRepository {
   def getAboIds(lieferungId: LieferungId, korbStatus: KorbStatus)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[AboId]]
 
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Korb]]
+  def getKoerbeLieferung(aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[KorbLieferung]]
 
   def getBestellungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Bestellung]]
   def getBestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Bestellung]]
@@ -461,6 +462,10 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
 
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Korb]] = {
     getKorbQuery(lieferungId, aboId).future
+  }
+
+  def getKoerbeLieferung(aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[KorbLieferung]] = {
+    getKoerbeLieferungQuery(aboId).future
   }
 
   def getDepotAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotAuslieferung]] = {
