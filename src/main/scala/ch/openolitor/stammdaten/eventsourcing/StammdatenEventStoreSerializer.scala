@@ -34,6 +34,9 @@ import ch.openolitor.stammdaten.models.LieferungPlanungRemove
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.core.eventsourcing.CoreEventStoreSerializer
 import java.util.Locale
+import org.joda.time.DateTime
+import org.joda.time.LocalDate
+import spray.json.JsValue
 
 trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityStoreJsonProtocol with CoreEventStoreSerializer {
   //V1 persisters
@@ -51,6 +54,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val personCreatePersister = persister[PersonCreate]("person-create")
 
   implicit val abwesenheitCreatePersister = persister[AbwesenheitCreate]("abwesenheit-create")
+  implicit val abwesenheitCreateV2Persister = persister[AbwesenheitCreate, V2]("abwesenheit-create", from[V1]
+    .to[V2](fixToLocalDate(_, 'datum)))
   implicit val abwesenheitIdPersister = persister[AbwesenheitId]("abwesenheit-id")
 
   implicit val vertriebModifyPersister = persister[VertriebModify]("vertrieb-modify")
@@ -67,9 +72,12 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val aboGuthabenModifyPersister = persister[AboGuthabenModify]("abo-guthaben-modify")
   implicit val aboVertriebsartModifyPersister = persister[AboVertriebsartModify]("abo-vertriebsart-modify")
-  implicit val aboDLPersister = persister[DepotlieferungAboModify]("depotlieferungabo-modify")
-  implicit val aboPLPersister = persister[PostlieferungAboModify]("postlieferungabo-modify")
-  implicit val aboHLPersister = persister[HeimlieferungAboModify]("heimlieferungabo-modify")
+  implicit val aboDLV2Persister = persister[DepotlieferungAboModify, V2]("depotlieferungabo-modify", from[V1]
+    .to[V2](in => fixToOptionLocalDate(fixToLocalDate(in, 'start), 'ende)))
+  implicit val aboPLV2Persister = persister[PostlieferungAboModify, V2]("postlieferungabo-modify", from[V1]
+    .to[V2](in => fixToOptionLocalDate(fixToLocalDate(in, 'start), 'ende)))
+  implicit val aboHLV2Persister = persister[HeimlieferungAboModify, V2]("heimlieferungabo-modify", from[V1]
+    .to[V2](in => fixToOptionLocalDate(fixToLocalDate(in, 'start), 'ende)))
 
   implicit val customKundetypCreatePersister = persister[CustomKundentypCreate]("custom-kundetyp-create")
   implicit val customKundetypModifyPersister = persister[CustomKundentypModify]("custom-kundetyp-modify")
@@ -166,9 +174,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     vertriebsartDLAbotypPersister,
     vertriebsartPLAbotypPersister,
     vertriebsartHLAbotypPersister,
-    aboDLPersister,
-    aboPLPersister,
-    aboHLPersister,
+    aboDLV2Persister,
+    aboPLV2Persister,
+    aboHLV2Persister,
     aboGuthabenModifyPersister,
     aboVertriebsartModifyPersister,
     customKundetypCreatePersister,
@@ -205,7 +213,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     tourIdPersister,
     projektModifyV2Persister,
     projektIdPersister,
-    abwesenheitCreatePersister,
+    abwesenheitCreateV2Persister,
     abwesenheitIdPersister,
     korbCreatePersister,
     tourAuslieferungModifyPersister,
@@ -233,4 +241,30 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     aboAktiviertEventPersister,
     aboDeaktiviertEventPersister
   )
+
+  def fixToOptionLocalDate(in: JsValue, attribute: Symbol): JsValue = {
+    // convert wrong date js values
+    val dateTimeOption = in.extract[DateTime](attribute.?)
+    dateTimeOption match {
+      case Some(dateTime) =>
+        val hour = dateTime.getHourOfDay
+        if (hour > 0) {
+          in.update(attribute ! set[Option[LocalDate]](Some(dateTime.plusHours(24 - hour).toLocalDate)))
+        } else {
+          in
+        }
+      case None =>
+        in
+    }
+  }
+  def fixToLocalDate(in: JsValue, attribute: Symbol): JsValue = {
+    // convert wrong date js values
+    val dateTime = in.extract[DateTime](attribute)
+    val hour = dateTime.getHourOfDay
+    if (hour > 0) {
+      in.update(attribute ! set[LocalDate](dateTime.plusHours(24 - hour).toLocalDate))
+    } else {
+      in
+    }
+  }
 }
