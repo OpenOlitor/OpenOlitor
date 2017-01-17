@@ -95,6 +95,8 @@ trait StammdatenReadRepository {
   def getProduzentDetailByKurzzeichen(kurzzeichen: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produzent]]
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]]
 
+  def getProduzentenabrechnungReport(bestellungIds: Seq[BestellungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduzentenabrechnungReport]]
+
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]]
   def getTourDetail(id: TourId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourDetail]]
 
@@ -386,6 +388,34 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
 
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Produktekategorie]] = {
     getProduktekategorieByBezeichnungQuery(bezeichnung).future
+  }
+
+  def getProduzentenabrechnungReport(bestellungIds: Seq[BestellungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduzentenabrechnungReport]] = {
+    getProduzentenabrechnungQuery(bestellungIds).future map { result =>
+      (result.groupBy(_.produzentId) map {
+        case (produzentId, bestellungen) => {
+          val sumPreis = bestellungen.map(_.preisTotal).sum
+          val sumSteuer = bestellungen.map(_.steuer).sum
+          val sumTotal = bestellungen.map(_.totalSteuer).sum
+
+          val produzent = bestellungen.head.produzent
+          val produzentId = produzent.id
+          val prodKurzzeichen = produzent.kurzzeichen
+          val prodSteuersatz = produzent.mwstSatz
+          ProduzentenabrechnungReport(
+            produzentId,
+            prodKurzzeichen,
+            produzent,
+            bestellungen,
+            sumPreis,
+            prodSteuersatz,
+            sumSteuer,
+            sumTotal,
+            projekt
+          )
+        }
+      }).toList
+    }
   }
 
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Produkt]] = {

@@ -308,6 +308,19 @@ case class BestellpositionModify(
   anzahl: Int
 ) extends JSONSerializable
 
+case class ProduzentenabrechnungReport(
+  produzentId: ProduzentId,
+  produzentKurzzeichen: String,
+  produzent: Produzent,
+  bestellungenDetails: Seq[BestellungDetail],
+  preisTotal: BigDecimal,
+  steuerSatz: Option[BigDecimal],
+  steuer: BigDecimal,
+  totalSteuer: BigDecimal,
+  //Zusatzinformationen
+  projekt: ProjektReport
+) extends JSONSerializable
+
 case class KorbId(id: Long) extends BaseId
 
 case class Korb(
