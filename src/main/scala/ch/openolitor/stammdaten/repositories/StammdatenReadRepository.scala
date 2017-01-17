@@ -391,30 +391,32 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
   }
 
   def getProduzentenabrechnungReport(bestellungIds: Seq[BestellungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduzentenabrechnungReport]] = {
-    getProduzentenabrechnungQuery(bestellungIds).future map { result =>
-      (result.groupBy(_.produzentId) map {
+    getProduzentenabrechnungQuery(bestellungIds).future flatMap { result =>
+      Future.sequence((result.groupBy(_.produzentId) map {
         case (produzentId, bestellungen) => {
           val sumPreis = bestellungen.map(_.preisTotal).sum
           val sumSteuer = bestellungen.map(_.steuer).sum
           val sumTotal = bestellungen.map(_.totalSteuer).sum
 
-          val produzent = bestellungen.head.produzent
-          val produzentId = produzent.id
-          val prodKurzzeichen = produzent.kurzzeichen
-          val prodSteuersatz = produzent.mwstSatz
-          ProduzentenabrechnungReport(
-            produzentId,
-            prodKurzzeichen,
-            produzent,
-            bestellungen,
-            sumPreis,
-            prodSteuersatz,
-            sumSteuer,
-            sumTotal,
-            projekt
-          )
+          getProduzentDetailReport(bestellungen.head.produzent.id, projekt) collect {
+            case Some(produzentDetailReport) =>
+              val produzentId = produzentDetailReport.id
+              val prodKurzzeichen = produzentDetailReport.kurzzeichen
+              val prodSteuersatz = produzentDetailReport.mwstSatz
+              ProduzentenabrechnungReport(
+                produzentId,
+                prodKurzzeichen,
+                produzentDetailReport,
+                bestellungen,
+                sumPreis,
+                prodSteuersatz,
+                sumSteuer,
+                sumTotal,
+                projekt
+              )
+          }
         }
-      }).toList
+      }).toList)
     }
   }
 

@@ -311,7 +311,7 @@ case class BestellpositionModify(
 case class ProduzentenabrechnungReport(
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
-  produzent: Produzent,
+  produzent: ProduzentDetailReport,
   bestellungenDetails: Seq[BestellungDetail],
   preisTotal: BigDecimal,
   steuerSatz: Option[BigDecimal],
