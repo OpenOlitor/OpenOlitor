@@ -522,16 +522,21 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createAbwesenheit(meta: EventMetadata, id: AbwesenheitId, create: AbwesenheitCreate)(implicit personId: PersonId = meta.originator) = {
-    val abw = copyTo[AbwesenheitCreate, Abwesenheit](
-      create,
-      "id" -> id,
-      "erstelldat" -> meta.timestamp,
-      "ersteller" -> meta.originator,
-      "modifidat" -> meta.timestamp,
-      "modifikator" -> meta.originator
-    )
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.insertEntity[Abwesenheit, AbwesenheitId](abw)
+      stammdatenWriteRepository.countAbwesend(create.lieferungId, create.aboId) match {
+        case Some(0) =>
+          val abw = copyTo[AbwesenheitCreate, Abwesenheit](
+            create,
+            "id" -> id,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator
+          )
+          stammdatenWriteRepository.insertEntity[Abwesenheit, AbwesenheitId](abw)
+        case _ =>
+          logger.debug("Eine Abwesenheit kann nur einmal erfasst werden")
+      }
     }
   }
 

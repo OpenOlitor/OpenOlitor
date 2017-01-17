@@ -123,4 +123,13 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
         copyTo[ZahlungsImport, ZahlungsImportDetail](zahlungsImport, "zahlungsEingaenge" -> zahlungsEingaenge)
       }).single
   }
+
+  protected def getZahlungsEingangByReferenznummerQuery(referenzNummer: String) = {
+    withSQL {
+      select
+        .from(zahlungsEingangMapping as zahlungsEingang)
+        .where.eq(zahlungsEingang.referenzNummer, parameter(referenzNummer))
+        .orderBy(zahlungsEingang.modifidat).desc
+    }.map(zahlungsEingangMapping(zahlungsEingang)).first
+  }
 }

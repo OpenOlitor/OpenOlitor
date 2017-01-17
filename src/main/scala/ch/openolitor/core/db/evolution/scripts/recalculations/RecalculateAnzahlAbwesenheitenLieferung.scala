@@ -20,35 +20,47 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.recalculations
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts ++
-      OO297_DBScripts.scripts ++
-      OO311_DBScripts.scripts ++
-      OO314_DBScripts.scripts ++
-      OO325_DBScripts.scripts ++
-      OO326_DBScripts.scripts ++
-      OO328_DBScripts.scripts ++
-      OO327_DBScripts.scripts ++
-      OO254_DBScripts.scripts ++
-      OO152_DBScripts.scripts ++
-      OO330_DBScripts.scripts ++
-      OO337_DBScripts.scripts ++
-      OO382_DBScripts.scripts ++
-      OO106_DBScripts_Mahnungen.scripts ++
-      OO374_DBScripts.scripts ++
-      OO374_DBScripts_aktiv_to_abo.scripts ++
-      OO461_DBScripts.scripts ++
-      OO468_DBScripts.scripts ++
-      OO433_DBScripts.scripts ++
-      OO476_DBScripts.scripts ++
-      OO499_DBScripts.scripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
+import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.stammdaten.models.Abwesenheit
+import scala.collection.immutable.TreeMap
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.Boot
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
+
+object RecalculateAnzahlAbwesenheitenLieferung {
+  val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
+
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      // recalculate abwesenheiten
+
+      val abw = abwesenheitMapping.syntax("abw")
+      implicit val personId = Boot.systemPersonId
+
+      getProjekt map { projekt =>
+        withSQL {
+          select.from(abwesenheitMapping as abw)
+        }.map(abwesenheitMapping(abw)).list.apply().groupBy(_.lieferungId) map {
+          case (lieferungId, abwesenheiten) =>
+            val abwCount = abwesenheiten.size
+            getById(lieferungMapping, lieferungId) map { lieferung =>
+              val copy = lieferung.copy(anzahlAbwesenheiten = abwCount)
+              updateEntity[Lieferung, LieferungId](copy)
+            }
+        }
+      }
+
+      Success(true)
+    }
+  }
 }
