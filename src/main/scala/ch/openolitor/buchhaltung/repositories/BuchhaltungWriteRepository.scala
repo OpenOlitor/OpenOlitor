@@ -55,6 +55,7 @@ trait BuchhaltungWriteRepository extends BaseWriteRepository with EventStream {
 
   def getZahlungsImports(implicit session: DBSession, cpContext: ConnectionPoolContext): List[ZahlungsImport]
   def getZahlungsImportDetail(id: ZahlungsImportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsImportDetail]
+  def getZahlungsEingangByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsEingang]
 }
 
 trait BuchhaltungWriteRepositoryImpl extends BuchhaltungWriteRepository with LazyLogging with BuchhaltungRepositoryQueries {
@@ -88,5 +89,9 @@ trait BuchhaltungWriteRepositoryImpl extends BuchhaltungWriteRepository with Laz
 
   def getZahlungsImportDetail(id: ZahlungsImportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsImportDetail] = {
     getZahlungsImportDetailQuery(id).apply()
+  }
+
+  def getZahlungsEingangByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsEingang] = {
+    getZahlungsEingangByReferenznummerQuery(referenzNummer)();
   }
 }
