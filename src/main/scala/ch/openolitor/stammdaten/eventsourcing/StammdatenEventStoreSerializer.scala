@@ -248,7 +248,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     dateTimeOption match {
       case Some(dateTime) =>
         val hour = dateTime.getHourOfDay
-        if (hour > 0) {
+        if (hour > 12) {
           in.update(attribute ! set[Option[LocalDate]](Some(dateTime.plusHours(24 - hour).toLocalDate)))
         } else {
           in
@@ -261,7 +261,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     // convert wrong date js values
     val dateTime = in.extract[DateTime](attribute)
     val hour = dateTime.getHourOfDay
-    if (hour > 0) {
+    if (hour > 12) {
       in.update(attribute ! set[LocalDate](dateTime.plusHours(24 - hour).toLocalDate))
     } else {
       in
