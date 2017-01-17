@@ -788,6 +788,23 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(produktekategorieMapping(produktekategorie)).single
   }
 
+  protected def getProduzentenabrechnungQuery(bestellungIds: Seq[BestellungId]) = {
+    withSQL {
+      select
+        .from(bestellungMapping as bestellung)
+        .join(produzentMapping as produzent).on(bestellung.produzentId, produzent.id)
+        .leftJoin(bestellpositionMapping as bestellposition).on(bestellposition.bestellungId, bestellung.id)
+        .where.in(bestellung.id, bestellungIds.map(_.id))
+    }.one(bestellungMapping(bestellung))
+      .toManies(
+        rs => produzentMapping.opt(produzent)(rs),
+        rs => bestellpositionMapping.opt(bestellposition)(rs)
+      )
+      .map((bestellung, produzenten, positionen) => {
+        copyTo[Bestellung, BestellungDetail](bestellung, "positionen" -> positionen, "produzent" -> produzenten.head)
+      }).list
+  }
+
   protected def getProdukteByProduktekategorieBezeichnungQuery(bezeichnung: String) = {
     withSQL {
       select
