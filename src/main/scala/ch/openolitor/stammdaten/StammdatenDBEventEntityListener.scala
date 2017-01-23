@@ -508,11 +508,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
           abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
         })
-
-        modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
-          log.debug(s"Add abwesenheit to lieferung:${lieferung.id}")
-          lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + 1)
-        })
       }
 
       stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
