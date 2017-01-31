@@ -559,12 +559,26 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
         val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map { lieferung =>
           logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
+          val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
+            case Some(lieferungVorher) =>
+              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum).getOrElse(BigDecimal(0))
 
+              val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
+                case 0 => BigDecimal(0)
+                case _ => sum / lieferungVorher.anzahlLieferungen
+              }
+              val anzahlLieferungenNeu = lieferungVorher.anzahlLieferungen + 1
+              (durchschnittspreisBisher, anzahlLieferungenNeu)
+            case None =>
+              (BigDecimal(0), 1)
+          }
           val lpId = Some(lieferplanung.id)
 
           val updatedLieferung = lieferung.copy(
             lieferplanungId = lpId,
             status = Offen,
+            durchschnittspreis = newDurchschnittspreis,
+            anzahlLieferungen = newAnzahlLieferungen,
             modifidat = lieferplanung.modifidat,
             modifikator = personId
           )
