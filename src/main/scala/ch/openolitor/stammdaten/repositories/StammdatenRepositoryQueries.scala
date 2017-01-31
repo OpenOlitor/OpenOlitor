@@ -589,6 +589,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
+  protected def countKoerbeQuery(auslieferungId: AuslieferungId) = {
+    withSQL {
+      select(count(distinct(korb.id)))
+        .from(korbMapping as korb)
+        .where.eq(korb.auslieferungId, parameter(auslieferungId))
+        .limit(1)
+    }.map(_.int(1)).single
+  }
+
   protected def countAbwesendQuery(lieferungId: LieferungId, aboId: AboId) = {
     withSQL {
       select(count(distinct(abwesenheit.id)))

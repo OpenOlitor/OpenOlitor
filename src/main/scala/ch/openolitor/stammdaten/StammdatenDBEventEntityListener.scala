@@ -727,19 +727,43 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
           log.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
           //create auslieferungen
-          stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
+          val auslieferungL = stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
 
-            if (!isAuslieferungExistingDepotPost(lieferungDatum, vertriebsart)) {
-              log.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
-              val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+            val auslieferungO = getAuslieferungDepotPost(lieferungDatum, vertriebsart)
 
-              if (!koerbe.isEmpty) {
-                val auslieferungId = createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size)
+            val auslieferungC = auslieferungO match {
+              case Some(auslieferung) => {
+                Some(auslieferung)
+              }
+              case None => {
+                log.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
+                createAuslieferungDepotPost(lieferungDatum, vertriebsart, 0)
+              }
+            }
 
-                koerbe map { korb =>
-                  val copy = korb.copy(auslieferungId = auslieferungId)
-                  stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+            val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+            if (!koerbe.isEmpty) {
+              koerbe map { korb =>
+                val copy = korb.copy(auslieferungId = Some(auslieferungC.head.id))
+                stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+              }
+            }
+            auslieferungC
+          }
+
+          auslieferungL.distinct.collect {
+            case Some(auslieferung) => {
+              val koerbeC = stammdatenWriteRepository.countKoerbe(auslieferung.id) getOrElse 0
+              auslieferung match {
+                case d: DepotAuslieferung => {
+                  val copy = d.copy(anzahlKoerbe = koerbeC)
+                  stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](copy)
                 }
+                case p: PostAuslieferung => {
+                  val copy = p.copy(anzahlKoerbe = koerbeC)
+                  stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](copy)
+                }
+                case _ =>
               }
             }
           }
@@ -783,14 +807,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     stammdatenWriteRepository.getTourAuslieferung(tourId, datum).isDefined
   }
 
-  private def isAuslieferungExistingDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Boolean = {
+  private def getAuslieferungDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Option[Auslieferung] = {
     vertriebsart match {
       case d: DepotlieferungDetail =>
-        stammdatenWriteRepository.getDepotAuslieferung(d.depotId, datum).isDefined
+        stammdatenWriteRepository.getDepotAuslieferung(d.depotId, datum)
       case p: PostlieferungDetail =>
-        stammdatenWriteRepository.getPostAuslieferung(datum).isDefined
+        stammdatenWriteRepository.getPostAuslieferung(datum)
       case _ =>
-        true
+        None
     }
   }
 
@@ -814,7 +838,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     result
   }
 
-  private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession): Option[AuslieferungId] = {
+  private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession): Option[Auslieferung] = {
     val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
 
     vertriebsart match {
@@ -832,7 +856,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           personId
         )
         stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
-        Some(result.id)
+        Some(result)
 
       case p: PostlieferungDetail =>
         val result = PostAuslieferung(
@@ -846,7 +870,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           personId
         )
         stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
-        Some(result.id)
+        Some(result)
       case _ =>
         //nothing to create for Tour, see createAuslieferungHeim
         None
