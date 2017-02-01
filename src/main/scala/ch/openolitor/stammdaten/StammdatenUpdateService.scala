@@ -87,6 +87,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       updateLieferpositionen(meta, id, lieferpositionen)
     case EntityUpdatedEvent(meta, id: ProjektVorlageId, entity: ProjektVorlageModify) => updateProjektVorlage(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektVorlageId, entity: ProjektVorlageUpload) => updateProjektVorlageDocument(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: AuslieferungId, entity: Auslieferung) => updateAuslieferungAusgeliefert(meta, id, entity)
     case e =>
   }
 
@@ -279,16 +280,44 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   def updateAboGuthaben(meta: EventMetadata, id: AboId, update: AboGuthabenModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
-        val copy = abo.copy(guthaben = update.guthabenNeu)
-        stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+        if (abo.guthaben == update.guthabenAlt) {
+          val copy = abo.copy(guthaben = update.guthabenNeu)
+          stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+          adjustGuthabenVorLieferung(id, update.guthabenNeu)
+        }
       }
       stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
-        val copy = abo.copy(guthaben = update.guthabenNeu)
-        stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+        if (abo.guthaben == update.guthabenAlt) {
+          val copy = abo.copy(guthaben = update.guthabenNeu)
+          stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+          adjustGuthabenVorLieferung(id, update.guthabenNeu)
+        }
       }
       stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
-        val copy = abo.copy(guthaben = update.guthabenNeu)
-        stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+        if (abo.guthaben == update.guthabenAlt) {
+          val copy = abo.copy(guthaben = update.guthabenNeu)
+          stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+          adjustGuthabenVorLieferung(id, update.guthabenNeu)
+        }
+      }
+    }
+  }
+
+  private def adjustGuthabenVorLieferung(id: AboId, guthaben: Int)(implicit personId: PersonId, session: DBSession) = {
+    stammdatenWriteRepository.getKoerbeNichtAusgeliefertByAbo(id) map { korb =>
+      stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.copy(guthabenVorLieferung = guthaben))
+    }
+  }
+
+  def updateAuslieferungAusgeliefert(meta: EventMetadata, id: AuslieferungId, update: Auslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      update match {
+        case u: DepotAuslieferung =>
+          stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](u)
+        case u: TourAuslieferung =>
+          stammdatenWriteRepository.updateEntity[TourAuslieferung, AuslieferungId](u)
+        case u: PostAuslieferung =>
+          stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](u)
       }
     }
   }

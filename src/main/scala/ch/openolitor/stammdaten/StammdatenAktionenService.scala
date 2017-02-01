@@ -263,6 +263,9 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
     }
   }
 
+  /**
+   * @deprecated handling already persisted events. auslieferungAusgeliefert is now done in update service.
+   */
   def auslieferungAusgeliefert(meta: EventMetadata, id: AuslieferungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(depotAuslieferungMapping, id) map { auslieferung =>
