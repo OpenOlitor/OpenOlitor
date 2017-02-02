@@ -71,6 +71,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with BuchhaltungJsonProtocol
     with Defaults
     with AuslieferungLieferscheinReportService
+    with AuslieferungEtikettenReportService
     with KundenBriefReportService
     with DepotBriefReportService
     with ProduzentenBriefReportService
@@ -592,7 +593,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("depotauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](None, generateAuslieferungEtikettenReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
       } ~
       path("depotauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
         implicit val personId = subject.personId
@@ -600,7 +601,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("depotauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungEtikettenReports(VorlageDepotLieferetiketten) _)(AuslieferungId.apply)
       } ~
       path("tourauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId
@@ -608,7 +609,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("tourauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](None, generateAuslieferungEtikettenReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
       } ~
       path("tourauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
         implicit val personId = subject.personId
@@ -616,7 +617,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("tourauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungEtikettenReports(VorlageTourLieferetiketten) _)(AuslieferungId.apply)
       } ~
       path("postauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId
@@ -624,7 +625,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("postauslieferungen" / "berichte" / "lieferetiketten") {
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](None, generateAuslieferungLieferscheinReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](None, generateAuslieferungEtikettenReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
       } ~
       path("postauslieferungen" / auslieferungIdPath / "berichte" / "lieferschein") { auslieferungId =>
         implicit val personId = subject.personId
@@ -632,7 +633,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("postauslieferungen" / auslieferungIdPath / "berichte" / "lieferetiketten") { auslieferungId =>
         implicit val personId = subject.personId
-        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungLieferscheinReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungEtikettenReports(VorlagePostLieferetiketten) _)(AuslieferungId.apply)
       }
 
   def auslieferungenAlsAusgeliefertMarkierenRoute(implicit subject: Subject) =
