@@ -458,6 +458,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         (put | post)(create[LieferungPlanungAdd, LieferungId]((x: Long) => lieferungId)) ~
           delete(remove(lieferungId.getLieferungOnLieferplanungId()))
       } ~
+      path("lieferplanungen" / lieferplanungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, korbStatus) =>
+        get(list(stammdatenReadRepository.getAboIds(lieferplanungId, korbStatus)))
+      } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, lieferungId, korbStatus) =>
         get(list(stammdatenReadRepository.getAboIds(lieferungId, korbStatus)))
       } ~
