@@ -141,10 +141,12 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
             stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
               val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
                 bestellposition =>
-                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung}"""
+                  val preisPos = bestellposition.preisEinheit.getOrElse(0: BigDecimal) * bestellposition.menge
+                  val mengeTotal = bestellposition.anzahl * bestellposition.menge
+                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} ≙ ${preisPos} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
               }
               val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.getOrElse("")}:
-              
+
 Lieferung: ${format.print(bestellung.datum)}
 
 Bestellpositionen:
@@ -233,9 +235,9 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
 
           val text = s"""
 	        ${person.vorname} ${person.name},
-	        
+
 	        ${baseText} ${baseLink}?token=${einladung.uid}
-	        
+
 	        """
 
           // email wurde bereits im CommandHandler überprüft
