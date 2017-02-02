@@ -882,19 +882,28 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       stammdatenWriteRepository.getKoerbe(entity.id) map { korb =>
         val copy = korb.copy(status = Geliefert)
         stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+        stammdatenWriteRepository.getProjekt map { projekt =>
+          val geschaeftsjahrKey = projekt.geschaftsjahr.key(entity.datum.toLocalDate)
 
-        modifyEntity[DepotlieferungAbo, AboId](korb.aboId, { abo =>
-          updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
-          abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)))
-        })
-        modifyEntity[HeimlieferungAbo, AboId](korb.aboId, { abo =>
-          updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
-          abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)))
-        })
-        modifyEntity[PostlieferungAbo, AboId](korb.aboId, { abo =>
-          updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
-          abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)))
-        })
+          modifyEntity[DepotlieferungAbo, AboId](korb.aboId, { abo =>
+            val value = abo.anzahlLieferungen.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+            updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
+            abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)),
+              anzahlLieferungen = abo.anzahlLieferungen.updated(geschaeftsjahrKey, value))
+          })
+          modifyEntity[HeimlieferungAbo, AboId](korb.aboId, { abo =>
+            val value = abo.anzahlLieferungen.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+            updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
+            abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)),
+              anzahlLieferungen = abo.anzahlLieferungen.updated(geschaeftsjahrKey, value))
+          })
+          modifyEntity[PostlieferungAbo, AboId](korb.aboId, { abo =>
+            val value = abo.anzahlLieferungen.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+            updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
+            abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)),
+              anzahlLieferungen = abo.anzahlLieferungen.updated(geschaeftsjahrKey, value))
+          })
+        }
       }
     }
   }
