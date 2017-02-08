@@ -159,7 +159,15 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             stammdatenWriteRepository.getById(postAuslieferungMapping, id) map { auslieferung =>
               auslieferung.status match {
                 case Erfasst =>
-                  Success(AuslieferungAlsAusgeliefertMarkierenEvent(meta, id))
+                  val copy = auslieferung match {
+                    case d: DepotAuslieferung =>
+                      d.copy(status = Ausgeliefert)
+                    case t: TourAuslieferung =>
+                      t.copy(status = Ausgeliefert)
+                    case p: PostAuslieferung =>
+                      p.copy(status = Ausgeliefert)
+                  }
+                  Success(EntityUpdatedEvent(meta, id, copy))
                 case _ =>
                   Failure(new InvalidStateException(s"Eine Auslieferung kann nur im Status 'Erfasst' als ausgeliefert markiert werden. Nr. $id"))
               }

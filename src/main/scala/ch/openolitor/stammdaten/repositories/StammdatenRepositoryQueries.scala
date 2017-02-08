@@ -1202,6 +1202,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       .list
   }
 
+  protected def getKoerbeNichtAusgeliefertByAboQuery(aboId: AboId) = {
+    withSQL {
+      select
+        .from(korbMapping as korb)
+        .where.eq(korb.aboId, parameter(aboId)).and.eq(korb.status, parameter(WirdGeliefert))
+    }.map(korbMapping(korb))
+      .list
+  }
+
   protected def getDepotAuslieferungenQuery = {
     withSQL {
       select
