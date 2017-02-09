@@ -741,11 +741,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
               }
             }
 
-            val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-            if (!koerbe.isEmpty) {
-              koerbe map { korb =>
-                val copy = korb.copy(auslieferungId = Some(auslieferungC.head.id))
-                stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+            auslieferungC map { _ =>
+              val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+              if (!koerbe.isEmpty) {
+                koerbe map { korb =>
+                  val copy = korb.copy(auslieferungId = Some(auslieferungC.head.id))
+                  stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                }
               }
             }
             auslieferungC
