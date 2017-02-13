@@ -172,6 +172,6 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityModified(userId, entity: TourAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[TourAuslieferung]])
     case e @ EntityModified(userId, entity: PostAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[PostAuslieferung]])
 
-    case x => log.debug(s"receive unknown event $x")
+    case x => // send nothing
   }
 }

@@ -62,6 +62,24 @@ trait AuslieferungReport extends Auslieferung {
   val projekt: ProjektReport
 }
 
+case class MultiAuslieferungId(id: Long) extends BaseId
+
+case class MultiAuslieferungReport(
+  id: MultiAuslieferungId,
+  entries: Seq[AuslieferungReportEntry],
+  projekt: ProjektReport
+) extends JSONSerializable
+
+case class AuslieferungReportEntry(
+  id: AuslieferungId,
+  status: AuslieferungStatus,
+  datum: DateTime,
+  projekt: ProjektReport,
+  korb: KorbReport,
+  depot: Option[DepotReport],
+  tour: Option[Tour]
+) extends JSONSerializable
+
 /**
  * Auslieferung pro Depot
  */

@@ -34,13 +34,14 @@ import ch.openolitor.core.models.PersonId
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.filestore._
+import org.joda.time.DateTime
 
-trait AuslieferungLieferscheinReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
+trait AuslieferungEtikettenReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
-  def generateAuslieferungLieferscheinReports(fileType: FileType)(config: ReportConfig[AuslieferungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[AuslieferungId]]] = {
-    generateReports[AuslieferungId, AuslieferungReport](
+  def generateAuslieferungEtikettenReports(fileType: FileType)(config: ReportConfig[AuslieferungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[AuslieferungId]]] = {
+    generateReports[AuslieferungId, MultiAuslieferungReport](
       config,
-      auslieferungById,
+      auslieferungenByIds,
       fileType,
       None,
       _.id,
@@ -51,28 +52,18 @@ trait AuslieferungLieferscheinReportService extends AsyncConnectionPoolContextAw
     )
   }
 
-  def name(fileType: FileType)(auslieferung: AuslieferungReport) = {
-    fileType match {
-      case VorlageDepotLieferschein => s"depot_lieferschein_nr_${auslieferung.id.id}_${auslieferung.datum}"
-      case VorlageTourLieferschein => s"tour_lieferschein_nr_${auslieferung.id.id}_${auslieferung.datum}"
-      case VorlagePostLieferschein => s"post_lieferschein_nr_${auslieferung.id.id}_${auslieferung.datum}"
-
-      case _ => s"auslieferung_nr_${auslieferung.id.id}_${auslieferung.datum}"
-    }
+  def name(fileType: FileType)(auslieferung: MultiAuslieferungReport) = {
+    val now = new DateTime()
+    s"lieferetiketten_${now}"
   }
 
-  def auslieferungById(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[AuslieferungReport])] = {
+  def auslieferungenByIds(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[MultiAuslieferungReport])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
-        val results = Future.sequence(auslieferungIds.map { auslieferungId =>
-          stammdatenReadRepository.getAuslieferungReport(auslieferungId, projektReport).map(_.map { auslieferung =>
-            Right(auslieferung)
-          }.getOrElse(Left(ValidationError[AuslieferungId](auslieferungId, s"Auslieferung konnte nicht gefunden werden"))))
-        })
-        results.map(_.partition(_.isLeft) match {
-          case (a, b) => (a.map(_.left.get), b.map(_.right.get))
-        })
+        stammdatenReadRepository.getMultiAuslieferungReport(auslieferungIds, projektReport) map { result =>
+          (Seq(), List(result))
+        }
       } getOrElse Future { (Seq(ValidationError[AuslieferungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
     }
   }

@@ -589,6 +589,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
+  protected def countKoerbeQuery(auslieferungId: AuslieferungId) = {
+    withSQL {
+      select(count(distinct(korb.id)))
+        .from(korbMapping as korb)
+        .where.eq(korb.auslieferungId, parameter(auslieferungId))
+        .limit(1)
+    }.map(_.int(1)).single
+  }
+
   protected def countAbwesendQuery(lieferungId: LieferungId, aboId: AboId) = {
     withSQL {
       select(count(distinct(abwesenheit.id)))
@@ -1067,6 +1076,16 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(res => AboId(res.long(1))).list
   }
 
+  protected def getAboIdsQuery(lieferplanungId: LieferplanungId, korbStatus: KorbStatus) = {
+    withSQL {
+      select(korb.aboId)
+        .from(korbMapping as korb)
+        .leftJoin(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
+        .and.eq(korb.status, parameter(korbStatus))
+    }.map(res => AboId(res.long(1))).list
+  }
+
   protected def getBestellpositionByBestellungProduktQuery(bestellungId: BestellungId, produktId: ProduktId) = {
     withSQL {
       select
@@ -1179,6 +1198,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(korbMapping as korb)
         .where.eq(korb.auslieferungId, parameter(auslieferungId))
+    }.map(korbMapping(korb))
+      .list
+  }
+
+  protected def getKoerbeNichtAusgeliefertByAboQuery(aboId: AboId) = {
+    withSQL {
+      select
+        .from(korbMapping as korb)
+        .where.eq(korb.aboId, parameter(aboId)).and.eq(korb.status, parameter(WirdGeliefert))
     }.map(korbMapping(korb))
       .list
   }

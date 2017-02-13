@@ -37,7 +37,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
-import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.util.IdUtil
 import ch.openolitor.util.parsing.FilterExpr
 
 trait StammdatenReadRepository {
@@ -113,6 +113,7 @@ trait StammdatenReadRepository {
   def getLieferpositionenByLieferplan(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getLieferpositionenByLieferant(id: ProduzentId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferposition]]
   def getAboIds(lieferungId: LieferungId, korbStatus: KorbStatus)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[AboId]]
+  def getAboIds(lieferplanungId: LieferplanungId, korbStatus: KorbStatus)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[AboId]]
 
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Korb]]
   def getKoerbeLieferung(aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[KorbLieferung]]
@@ -128,6 +129,7 @@ trait StammdatenReadRepository {
   def getTourAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[TourAuslieferung]]
   def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]]
   def getAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]]
+  def getMultiAuslieferungReport(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiAuslieferungReport]
 
   def getDepotAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotAuslieferungDetail]]
   def getTourAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourAuslieferungDetail]]
@@ -484,6 +486,10 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     getAboIdsQuery(lieferungId, korbStatus).future
   }
 
+  def getAboIds(lieferplanungId: LieferplanungId, korbStatus: KorbStatus)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[AboId]] = {
+    getAboIdsQuery(lieferplanungId, korbStatus).future
+  }
+
   def getBestellpositionByBestellungProdukt(bestellungId: BestellungId, produktId: ProduktId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Bestellposition]] = {
     getBestellpositionByBestellungProduktQuery(bestellungId, produktId).future
   }
@@ -531,6 +537,63 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     } yield (d orElse h orElse p)
   }
 
+  def getMultiAuslieferungReport(ids: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiAuslieferungReport] = {
+    for {
+      d <- getDepotAuslieferungReports(ids, projekt)
+      h <- getTourAuslieferungReports(ids, projekt)
+      p <- getPostAuslieferungReports(ids, projekt)
+    } yield {
+      val entriesD = (d flatMap {
+        _ map { report =>
+          report.koerbe map { korb =>
+            AuslieferungReportEntry(
+              report.id,
+              report.status,
+              report.datum,
+              projekt,
+              korb,
+              Some(report.depot),
+              None
+            )
+          }
+        }
+      }).flatten
+      val entriesH = (h flatMap {
+        _ map { report =>
+          report.koerbe map { korb =>
+            AuslieferungReportEntry(
+              report.id,
+              report.status,
+              report.datum,
+              projekt,
+              korb,
+              None,
+              Some(report.tour)
+            )
+          }
+        }
+      }).flatten
+      val entriesP = (p flatMap {
+        _ map { report =>
+          report.koerbe map { korb =>
+            AuslieferungReportEntry(
+              report.id,
+              report.status,
+              report.datum,
+              projekt,
+              korb,
+              None,
+              None
+            )
+          }
+        }
+      }).flatten
+      val entries = entriesD ++ entriesH ++ entriesP
+
+      MultiAuslieferungReport(MultiAuslieferungId(IdUtil.positiveRandomId), entries, projekt)
+    }
+  }
+
   def getDepotAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
     getDepotAuslieferungReportQuery(auslieferungId, projekt).future
   }
@@ -541,6 +604,24 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
 
   def getPostAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
     getPostAuslieferungReportQuery(auslieferungId, projekt).future
+  }
+
+  def getDepotAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[DepotAuslieferungReport]]] = {
+    Future.sequence((auslieferungIds map { auslieferungId =>
+      getDepotAuslieferungReportQuery(auslieferungId, projekt).future
+    }).toList)
+  }
+
+  def getTourAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[TourAuslieferungReport]]] = {
+    Future.sequence(auslieferungIds map { auslieferungId =>
+      getTourAuslieferungReportQuery(auslieferungId, projekt).future
+    })
+  }
+
+  def getPostAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[PostAuslieferungReport]]] = {
+    Future.sequence(auslieferungIds map { auslieferungId =>
+      getPostAuslieferungReportQuery(auslieferungId, projekt).future
+    })
   }
 
   def getProjektVorlagen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProjektVorlage]] = {

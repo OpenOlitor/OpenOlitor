@@ -508,11 +508,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           log.debug(s"Add abwesenheit to abo:${abo.id}, new value:$value, values:${abo.anzahlAbwesenheiten}")
           abo.copy(anzahlAbwesenheiten = abo.anzahlAbwesenheiten.updated(geschaeftsjahrKey, value))
         })
-
-        modifyEntity[Lieferung, LieferungId](abw.lieferungId, { lieferung =>
-          log.debug(s"Add abwesenheit to lieferung:${lieferung.id}")
-          lieferung.copy(anzahlAbwesenheiten = lieferung.anzahlAbwesenheiten + 1)
-        })
       }
 
       stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
@@ -732,19 +727,45 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
           log.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
           //create auslieferungen
-          stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
+          val auslieferungL = stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
 
-            if (!isAuslieferungExistingDepotPost(lieferungDatum, vertriebsart)) {
-              log.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
+            val auslieferungO = getAuslieferungDepotPost(lieferungDatum, vertriebsart)
+
+            val auslieferungC = auslieferungO match {
+              case Some(auslieferung) => {
+                Some(auslieferung)
+              }
+              case None => {
+                log.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
+                createAuslieferungDepotPost(lieferungDatum, vertriebsart, 0)
+              }
+            }
+
+            auslieferungC map { _ =>
               val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-
               if (!koerbe.isEmpty) {
-                val auslieferungId = createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size)
-
                 koerbe map { korb =>
-                  val copy = korb.copy(auslieferungId = auslieferungId)
+                  val copy = korb.copy(auslieferungId = Some(auslieferungC.head.id))
                   stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
                 }
+              }
+            }
+            auslieferungC
+          }
+
+          auslieferungL.distinct.collect {
+            case Some(auslieferung) => {
+              val koerbeC = stammdatenWriteRepository.countKoerbe(auslieferung.id) getOrElse 0
+              auslieferung match {
+                case d: DepotAuslieferung => {
+                  val copy = d.copy(anzahlKoerbe = koerbeC)
+                  stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](copy)
+                }
+                case p: PostAuslieferung => {
+                  val copy = p.copy(anzahlKoerbe = koerbeC)
+                  stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](copy)
+                }
+                case _ =>
               }
             }
           }
@@ -788,14 +809,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     stammdatenWriteRepository.getTourAuslieferung(tourId, datum).isDefined
   }
 
-  private def isAuslieferungExistingDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Boolean = {
+  private def getAuslieferungDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Option[Auslieferung] = {
     vertriebsart match {
       case d: DepotlieferungDetail =>
-        stammdatenWriteRepository.getDepotAuslieferung(d.depotId, datum).isDefined
+        stammdatenWriteRepository.getDepotAuslieferung(d.depotId, datum)
       case p: PostlieferungDetail =>
-        stammdatenWriteRepository.getPostAuslieferung(datum).isDefined
+        stammdatenWriteRepository.getPostAuslieferung(datum)
       case _ =>
-        true
+        None
     }
   }
 
@@ -819,7 +840,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     result
   }
 
-  private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession): Option[AuslieferungId] = {
+  private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession): Option[Auslieferung] = {
     val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
 
     vertriebsart match {
@@ -837,7 +858,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           personId
         )
         stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
-        Some(result.id)
+        Some(result)
 
       case p: PostlieferungDetail =>
         val result = PostAuslieferung(
@@ -851,7 +872,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           personId
         )
         stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
-        Some(result.id)
+        Some(result)
       case _ =>
         //nothing to create for Tour, see createAuslieferungHeim
         None
@@ -863,19 +884,28 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       stammdatenWriteRepository.getKoerbe(entity.id) map { korb =>
         val copy = korb.copy(status = Geliefert)
         stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+        stammdatenWriteRepository.getProjekt map { projekt =>
+          val geschaeftsjahrKey = projekt.geschaftsjahr.key(entity.datum.toLocalDate)
 
-        modifyEntity[DepotlieferungAbo, AboId](korb.aboId, { abo =>
-          updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
-          abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)))
-        })
-        modifyEntity[HeimlieferungAbo, AboId](korb.aboId, { abo =>
-          updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
-          abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)))
-        })
-        modifyEntity[PostlieferungAbo, AboId](korb.aboId, { abo =>
-          updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
-          abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)))
-        })
+          modifyEntity[DepotlieferungAbo, AboId](korb.aboId, { abo =>
+            val value = abo.anzahlLieferungen.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+            updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
+            abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)),
+              anzahlLieferungen = abo.anzahlLieferungen.updated(geschaeftsjahrKey, value))
+          })
+          modifyEntity[HeimlieferungAbo, AboId](korb.aboId, { abo =>
+            val value = abo.anzahlLieferungen.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+            updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
+            abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)),
+              anzahlLieferungen = abo.anzahlLieferungen.updated(geschaeftsjahrKey, value))
+          })
+          modifyEntity[PostlieferungAbo, AboId](korb.aboId, { abo =>
+            val value = abo.anzahlLieferungen.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+            updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
+            abo.copy(guthaben = korb.guthabenVorLieferung - 1, letzteLieferung = getLatestDate(abo.letzteLieferung, Some(entity.datum)),
+              anzahlLieferungen = abo.anzahlLieferungen.updated(geschaeftsjahrKey, value))
+          })
+        }
       }
     }
   }
