@@ -69,6 +69,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb]
   def getKoerbe(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus)(implicit session: DBSession): List[Korb]
   def getKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): List[Korb]
+  def getKoerbeNichtAusgeliefertByAbo(aboId: AboId)(implicit session: DBSession): List[Korb]
+  def countKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): Option[Int]
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo]
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
   def countAbwesend(aboId: AboId, datum: LocalDate)(implicit session: DBSession): Option[Int]
@@ -312,6 +314,10 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getKoerbeQuery(auslieferungId).apply()
   }
 
+  def getKoerbeNichtAusgeliefertByAbo(aboId: AboId)(implicit session: DBSession): List[Korb] = {
+    getKoerbeNichtAusgeliefertByAboQuery(aboId)()
+  }
+
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo] = {
     getAktiveDepotlieferungAbos(vertriebId, lieferdatum) :::
       getAktiveHeimlieferungAbos(vertriebId, lieferdatum) :::
@@ -328,6 +334,10 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getAktivePostlieferungAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[PostlieferungAbo] = {
     getAktivePostlieferungAbosQuery(vertriebId, lieferdatum).apply
+  }
+
+  def countKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): Option[Int] = {
+    countKoerbeQuery(auslieferungId).apply()
   }
 
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int] = {

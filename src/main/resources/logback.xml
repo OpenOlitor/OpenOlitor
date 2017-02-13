@@ -37,7 +37,23 @@
         <appender-ref ref="STDOUT"/>
     </logger>
     
-    <logger name="ch.openolitor.core.reporting.SingleDocumentReportProcessorActor" level="INFO">
+    <logger name="ch.openolitor.core.repositories" level="ERROR">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="ch.openolitor.stammdaten.repositories" level="ERROR">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="ch.openolitor.buchhaltung.repositories" level="ERROR">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    
+    <logger name="ch.openolitor.core.ws" level="ERROR">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    
+    <logger name="ch.openolitor.core.reporting.SingleDocumentReportProcessorActor" level="ERROR">
         <appender-ref ref="STDOUT"/>
     </logger>
 

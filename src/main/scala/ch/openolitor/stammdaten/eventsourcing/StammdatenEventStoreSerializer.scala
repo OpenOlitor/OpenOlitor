@@ -70,7 +70,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val vertriebsartPLPersister = persister[PostlieferungModify]("postlieferung-modify")
   implicit val vertriebsartHLPersister = persister[HeimlieferungModify]("heimlieferung-modify")
 
-  implicit val aboGuthabenModifyPersister = persister[AboGuthabenModify]("abo-guthaben-modify")
+  val aboGuthabenModifyPersister = persister[AboGuthabenModify]("abo-guthaben-modify")
+  implicit val aboGuthabenModifyV2Persister = persister[AboGuthabenModify, V2]("abo-guthaben-modify", from[V1]
+    .to[V2](in => in.update('guthabenAlt ! set[Int](in.extract[Int]('guthabenNeu)))))
   implicit val aboVertriebsartModifyPersister = persister[AboVertriebsartModify]("abo-vertriebsart-modify")
   implicit val aboDLV2Persister = persister[DepotlieferungAboModify, V2]("depotlieferungabo-modify", from[V1]
     .to[V2](in => fixToOptionLocalDate(fixToLocalDate(in, 'start), 'ende)))
@@ -141,6 +143,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
+  implicit val depotAuslieferungPersister = persister[DepotAuslieferung]("depot-auslieferung")
+  implicit val tourAuslieferungPersister = persister[TourAuslieferung]("tour-auslieferung")
+  implicit val postAuslieferungPersister = persister[PostAuslieferung]("post-auslieferung")
 
   implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
   implicit val bestellungAlsAbgerechnetMarkierenEventPersister = persister[BestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event")
@@ -177,7 +182,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     aboDLV2Persister,
     aboPLV2Persister,
     aboHLV2Persister,
-    aboGuthabenModifyPersister,
+    aboGuthabenModifyV2Persister,
     aboVertriebsartModifyPersister,
     customKundetypCreatePersister,
     customKundetypModifyPersister,
@@ -217,6 +222,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     abwesenheitIdPersister,
     korbCreatePersister,
     tourAuslieferungModifyPersister,
+    depotAuslieferungPersister,
+    tourAuslieferungPersister,
+    postAuslieferungPersister,
     auslieferungIdPersister,
     vorlageCreatePersister,
     vorlageModifyPersister,

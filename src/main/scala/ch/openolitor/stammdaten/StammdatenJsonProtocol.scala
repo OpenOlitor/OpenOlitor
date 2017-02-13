@@ -125,6 +125,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val tourIdFormat = baseIdFormat(TourId)
   implicit val auslieferungIdFormat = baseIdFormat(AuslieferungId)
   implicit val optionAuslieferungIdFormat = new OptionFormat[AuslieferungId]
+  implicit val multiAuslieferungIdFormat = baseIdFormat(MultiAuslieferungId)
   implicit val kundeIdFormat = baseIdFormat(KundeId)
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
   implicit val aboIdFormat = baseIdFormat(AboId)
@@ -249,6 +250,23 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
         json.convertTo[HeimlieferungAbotypModify]
       } else {
         json.convertTo[PostlieferungAbotypModify]
+      }
+    }
+  }
+
+  implicit val auslieferungFormat = new RootJsonFormat[Auslieferung] {
+    def write(obj: Auslieferung): JsValue =
+      JsObject((obj match {
+        case p: PostAuslieferung => p.toJson
+        case t: TourAuslieferung => t.toJson
+        case d: DepotAuslieferung => d.toJson
+      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
+
+    def read(json: JsValue): Auslieferung = {
+      json.asJsObject.getFields("typ") match {
+        case Seq(JsString("PostAuslieferung")) => json.convertTo[PostAuslieferung]
+        case Seq(JsString("TourAuslieferung")) => json.convertTo[TourAuslieferung]
+        case Seq(JsString("DepotAuslieferung")) => json.convertTo[DepotAuslieferung]
       }
     }
   }
