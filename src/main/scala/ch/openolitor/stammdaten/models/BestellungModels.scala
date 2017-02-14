@@ -27,21 +27,68 @@ import ch.openolitor.core.models._
 import java.util.UUID
 import ch.openolitor.core.JSONSerializable
 
-case class BestellungId(id: Long) extends BaseId
+case class SammelbestellungId(id: Long) extends BaseId
 
-case class Bestellung(
-  id: BestellungId,
+case class Sammelbestellung(
+  id: SammelbestellungId,
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
   lieferplanungId: LieferplanungId,
   status: LieferungStatus,
   datum: DateTime,
   datumAbrechnung: Option[DateTime],
+  datumVersendet: Option[DateTime],
   preisTotal: BigDecimal,
   steuerSatz: Option[BigDecimal],
   steuer: BigDecimal,
   totalSteuer: BigDecimal,
+
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[SammelbestellungId]
+
+case class SammelbestellungDetail(
+  id: SammelbestellungId,
+  produzentId: ProduzentId,
+  produzentKurzzeichen: String,
+  lieferplanungId: LieferplanungId,
+  status: LieferungStatus,
+  datum: DateTime,
+  datumAbrechnung: Option[DateTime],
   datumVersendet: Option[DateTime],
+  preisTotal: BigDecimal,
+  steuerSatz: Option[BigDecimal],
+  steuer: BigDecimal,
+  totalSteuer: BigDecimal,
+
+  produzent: Produzent,
+  bestellungen: Seq[BestellungDetail],
+
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
+case class BestellungId(id: Long) extends BaseId
+
+/**
+ * Eine Bestellung wird pro adminProzente unter Sammelbestellung gruppiert.
+ */
+case class Bestellung(
+  id: BestellungId,
+  sammelbestellungId: SammelbestellungId,
+  preisTotal: BigDecimal,
+  steuerSatz: Option[BigDecimal],
+  steuer: BigDecimal,
+  totalSteuer: BigDecimal,
+  adminProzente: BigDecimal,
+  totalNachAbzugAdminProzente: BigDecimal,
+
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -51,19 +98,11 @@ case class Bestellung(
 
 case class BestellungDetail(
   id: BestellungId,
-  produzentId: ProduzentId,
-  produzentKurzzeichen: String,
-  lieferplanungId: LieferplanungId,
-  status: LieferungStatus,
-  datum: DateTime,
-  datumAbrechnung: Option[DateTime],
   preisTotal: BigDecimal,
   steuerSatz: Option[BigDecimal],
   steuer: BigDecimal,
   totalSteuer: BigDecimal,
-  datumVersendet: Option[DateTime],
   positionen: Seq[Bestellposition],
-  produzent: Produzent,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -71,18 +110,15 @@ case class BestellungDetail(
   modifikator: PersonId
 ) extends BaseEntity[BestellungId]
 
+@Deprecated
 case class BestellungAusgeliefert(
   datum: DateTime,
   ids: Seq[BestellungId]
 ) extends JSONSerializable
 
-case class BestellungModify(
-  produzentId: ProduzentId,
-  produzentKurzzeichen: String,
-  lieferplanungId: LieferplanungId,
+case class SammelbestellungAusgeliefert(
   datum: DateTime,
-  datumAbrechnung: Option[DateTime],
-  preisTotal: BigDecimal
+  ids: Seq[SammelbestellungId]
 ) extends JSONSerializable
 
 @Deprecated
@@ -90,7 +126,14 @@ case class BestellungenCreate(
   lieferplanungId: LieferplanungId
 ) extends JSONSerializable
 
+@Deprecated
 case class BestellungCreate(
+  produzentId: ProduzentId,
+  lieferplanungId: LieferplanungId,
+  datum: DateTime
+) extends JSONSerializable
+
+case class SammelbestellungCreate(
   produzentId: ProduzentId,
   lieferplanungId: LieferplanungId,
   datum: DateTime
@@ -130,7 +173,7 @@ case class ProduzentenabrechnungReport(
   produzentId: ProduzentId,
   produzentKurzzeichen: String,
   produzent: ProduzentDetailReport,
-  bestellungenDetails: Seq[BestellungDetail],
+  bestellungenDetails: Seq[SammelbestellungDetail],
   preisTotal: BigDecimal,
   steuerSatz: Option[BigDecimal],
   steuer: BigDecimal,

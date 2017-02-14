@@ -92,6 +92,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   implicit val lieferplanungIdPath = long2BaseIdPathMatcher(LieferplanungId.apply)
   implicit val lieferpositionIdPath = long2BaseIdPathMatcher(LieferpositionId.apply)
   implicit val bestellungIdPath = long2BaseIdPathMatcher(BestellungId.apply)
+  implicit val sammelbestellungIdPath = long2BaseIdPathMatcher(SammelbestellungId.apply)
   implicit val produktIdPath = long2BaseIdPathMatcher(ProduktId.apply)
   implicit val produktekategorieIdPath = long2BaseIdPathMatcher(ProduktekategorieId.apply)
   implicit val produzentIdPath = long2BaseIdPathMatcher(ProduzentId.apply)
@@ -475,14 +476,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "verrechnen") { id =>
         (post)(lieferplanungVerrechnen(id))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "bestellungen") { lieferplanungId =>
-        get(list(stammdatenReadRepository.getBestellungen(lieferplanungId)))
+      path("lieferplanungen" / lieferplanungIdPath / "sammelbestellungen") { lieferplanungId =>
+        get(list(stammdatenReadRepository.getSammelbestellungen(lieferplanungId)))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, bestellungId) =>
-        get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
-      } ~
-      path("lieferplanungen" / lieferplanungIdPath / "bestellungen" / bestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, bestellungId) =>
-        (post)(bestellungErneutVersenden(bestellungId))
+      path("lieferplanungen" / lieferplanungIdPath / "sammelbestellungen" / sammelbestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, sammelbestellungId) =>
+        (post)(sammelbestellungErneutVersenden(sammelbestellungId))
       }
 
   def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {
@@ -490,11 +488,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
       case _ =>
-        stammdatenReadRepository.getBestellungen(id) map {
-          _ map { bestellung =>
-            onSuccess(entityStore ? StammdatenCommandHandler.BestellungAnProduzentenVersenden(subject.personId, bestellung.id)) {
+        stammdatenReadRepository.getSammelbestellungen(id) map {
+          _ map { sammelbestellung =>
+            onSuccess(entityStore ? StammdatenCommandHandler.SammelbestellungAnProduzentenVersendenCommand(subject.personId, sammelbestellung.id)) {
               case UserCommandFailed =>
-                complete(StatusCodes.BadRequest, s"Could not execute BestellungAnProduzentenVersenden on Bestellung")
+                complete(StatusCodes.BadRequest, s"Could not execute SammelbestellungAnProduzentenVersenden on Bestellung")
               case _ =>
                 complete("")
             }
@@ -523,8 +521,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
-  def bestellungErneutVersenden(bestellungId: BestellungId)(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.BestellungAnProduzentenVersenden(subject.personId, bestellungId)) {
+  def sammelbestellungErneutVersenden(id: SammelbestellungId)(implicit idPersister: Persister[SammelbestellungId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.SammelbestellungAnProduzentenVersendenCommand(subject.personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not execute neuBestellen on Lieferung")
       case _ =>
@@ -533,28 +531,28 @@ trait StammdatenRoutes extends HttpService with ActorReferences
   }
 
   def lieferantenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
-    path("lieferanten" / "bestellungen" ~ exportFormatPath.?) { exportFormat =>
-      get(list(stammdatenReadRepository.getBestellungen, exportFormat))
+    path("lieferanten" / "sammelbestellungen" ~ exportFormatPath.?) { exportFormat =>
+      get(list(stammdatenReadRepository.getSammelbestellungen, exportFormat))
     } ~
-      path("lieferanten" / "bestellungen" / "aktionen" / "abgerechnet") {
+      path("lieferanten" / "sammelbestellungen" / "aktionen" / "abgerechnet") {
         post {
           requestInstance { request =>
-            entity(as[BestellungAusgeliefert]) { entity =>
-              bestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
+            entity(as[SammelbestellungAusgeliefert]) { entity =>
+              sammelbestellungenAlsAbgerechnetMarkieren(entity.datum, entity.ids)
             }
           }
         }
       } ~
-      path("lieferanten" / "bestellungen" / bestellungIdPath) { (bestellungId) =>
-        get(list(stammdatenReadRepository.getBestellungDetail(bestellungId)))
+      path("lieferanten" / "sammelbestellungen" / sammelbestellungIdPath) { (sammelbestellungId) =>
+        get(list(stammdatenReadRepository.getSammelbestellungDetail(sammelbestellungId)))
       } ~
-      path("lieferanten" / "bestellungen" / "berichte" / "abrechnung") {
+      path("lieferanten" / "sammelbestellungen" / "berichte" / "abrechnung") {
         implicit val personId = subject.personId
-        generateReport[BestellungId](None, generateProduzentenabrechnungReports(VorlageProduzentenabrechnung) _)(BestellungId.apply)
+        generateReport[SammelbestellungId](None, generateProduzentenabrechnungReports(VorlageProduzentenabrechnung) _)(SammelbestellungId.apply)
       }
 
-  def bestellungenAlsAbgerechnetMarkieren(datum: DateTime, ids: Seq[BestellungId])(implicit idPersister: Persister[BestellungId, _], subject: Subject) = {
-    onSuccess(entityStore ? StammdatenCommandHandler.BestellungenAlsAbgerechnetMarkierenCommand(subject.personId, datum, ids)) {
+  def sammelbestellungenAlsAbgerechnetMarkieren(datum: DateTime, ids: Seq[SammelbestellungId])(implicit idPersister: Persister[SammelbestellungId, _], subject: Subject) = {
+    onSuccess(entityStore ? StammdatenCommandHandler.SammelbestellungenAlsAbgerechnetMarkierenCommand(subject.personId, datum, ids)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Bestellungen konnten nicht als abgerechnet markiert werden.")
       case _ =>
