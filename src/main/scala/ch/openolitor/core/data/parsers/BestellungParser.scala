@@ -36,7 +36,7 @@ object BestellungParser extends EntityParser {
   def parse(sammelbestellungen: List[Sammelbestellung])(implicit loggingAdapter: LoggingAdapter) = {
     parseEntity[Bestellung, BestellungId]("id", Seq("sammelbestellung_id", "preis_total", "steuer_satz", "steuer", "total_steuer", "admin_prozente", "total_nach_abzug_admin_prozente") ++ modifyColumns) { id => indexes => row =>
       //match column indexes
-      val Seq(indexSammelbestellungId, indexPreisTotal, indexSteuerSatz, indexSteuer, indexTotalSteuer, indexAdminProzente, indexTotalNachAbzugAdminProzente) = indexes take (7)
+      val Seq(indexSammelbestellungId, indexPreisTotal, indexSteuerSatz, indexSteuer, indexTotalSteuer, indexAdminProzente, indexAdminProzenteAbzug, indexTotalNachAbzugAdminProzente) = indexes take (7)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       val sammelbestellungId = SammelbestellungId(row.value[Long](indexSammelbestellungId))
@@ -50,6 +50,7 @@ object BestellungParser extends EntityParser {
         steuer = row.value[BigDecimal](indexSteuer),
         totalSteuer = row.value[BigDecimal](indexTotalSteuer),
         adminProzente = row.value[BigDecimal](indexAdminProzente),
+        adminProzenteAbzug = row.value[BigDecimal](indexAdminProzenteAbzug),
         totalNachAbzugAdminProzente = row.value[BigDecimal](indexTotalNachAbzugAdminProzente),
         //modification flags
         erstelldat = row.value[DateTime](indexErstelldat),

@@ -704,6 +704,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 0,
                 adminProzente,
                 0,
+                0,
                 DateTime.now,
                 personId,
                 DateTime.now,
@@ -744,11 +745,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 }
 
                 val total = positionen.map(_.preis).flatten.sum
-                val mwst = bestellung.steuerSatz.map(_ / 100 * total).getOrElse(BigDecimal(0))
-                val totalInkl = total + mwst
+                val adminProzenteAbzug = bestellung.adminProzente / 100 * total
+                val totalNachAbzugAdminProzente = total - adminProzenteAbzug
+                // mwst auf total ohne adminanteil
+                val mwst = bestellung.steuerSatz.map(_ / 100 * totalNachAbzugAdminProzente).getOrElse(BigDecimal(0))
+                val totalInkl = totalNachAbzugAdminProzente + mwst
 
                 //update total on bestellung, steuer and totalSteuer
-                val copy = bestellung.copy(preisTotal = total, steuer = mwst, totalSteuer = totalInkl)
+                val copy = bestellung.copy(preisTotal = total, steuer = mwst, totalSteuer = totalInkl, adminProzenteAbzug = adminProzenteAbzug, totalNachAbzugAdminProzente = totalNachAbzugAdminProzente)
                 stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
               }
           }

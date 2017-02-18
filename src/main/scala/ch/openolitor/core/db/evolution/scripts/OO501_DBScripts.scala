@@ -59,7 +59,9 @@ object OO501_DBScripts {
 
       alterTableAddColumnIfNotExists(bestellungMapping, "admin_prozente", "DECIMAL(4,2) not null default 0", "total_steuer")
 
-      alterTableAddColumnIfNotExists(bestellungMapping, "total_nach_abzug_admin_prozente", "DECIMAL(7,2) not null default 0", "admin_prozente")
+      alterTableAddColumnIfNotExists(bestellungMapping, "admin_prozente_abzug", "DECIMAL(7,2) not null default 0", "admin_prozente")
+
+      alterTableAddColumnIfNotExists(bestellungMapping, "total_nach_abzug_admin_prozente", "DECIMAL(7,2) not null default 0", "admin_prozente_abzug")
 
       // update admin_prozente
       sql"""update ${bestellungMapping.table} u 
@@ -72,7 +74,7 @@ object OO501_DBScripts {
 
       // calculate total_nach_abzug_admin_prozente
       sql"""update ${bestellungMapping.table} 
-        set total_nach_abzug_admin_prozente = preis_total - (preis_total * admin_prozente / 100)""".execute.apply()
+        set total_nach_abzug_admin_prozente = preis_total - (preis_total * admin_prozente / 100), admin_prozente_abzug = preis_total * admin_prozente / 100""".execute.apply()
 
       // re-calculate total_steuer
       sql"""update ${bestellungMapping.table} 

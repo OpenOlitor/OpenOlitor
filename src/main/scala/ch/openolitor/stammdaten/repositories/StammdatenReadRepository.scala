@@ -395,12 +395,12 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
   def getProduzentenabrechnungReport(sammelbestellungIds: Seq[SammelbestellungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduzentenabrechnungReport]] = {
     getProduzentenabrechnungQuery(sammelbestellungIds).future flatMap { result =>
       Future.sequence((result.groupBy(_.produzentId) map {
-        case (produzentId, bestellungen) => {
-          val sumPreis = bestellungen.map(_.preisTotal).sum
-          val sumSteuer = bestellungen.map(_.steuer).sum
-          val sumTotal = bestellungen.map(_.totalSteuer).sum
+        case (produzentId, sammelbestellungen) => {
+          val sumPreis = sammelbestellungen.map(_.preisTotal).sum
+          val sumSteuer = sammelbestellungen.map(_.steuer).sum
+          val sumTotal = sammelbestellungen.map(_.totalSteuer).sum
 
-          getProduzentDetailReport(bestellungen.head.produzent.id, projekt) collect {
+          getProduzentDetailReport(sammelbestellungen.head.produzent.id, projekt) collect {
             case Some(produzentDetailReport) =>
               val produzentId = produzentDetailReport.id
               val prodKurzzeichen = produzentDetailReport.kurzzeichen
@@ -409,7 +409,7 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
                 produzentId,
                 prodKurzzeichen,
                 produzentDetailReport,
-                bestellungen,
+                sammelbestellungen,
                 sumPreis,
                 prodSteuersatz,
                 sumSteuer,

@@ -87,6 +87,7 @@ case class Bestellung(
   steuer: BigDecimal,
   totalSteuer: BigDecimal,
   adminProzente: BigDecimal,
+  adminProzenteAbzug: BigDecimal,
   totalNachAbzugAdminProzente: BigDecimal,
 
   //modification flags
@@ -102,6 +103,9 @@ case class BestellungDetail(
   steuerSatz: Option[BigDecimal],
   steuer: BigDecimal,
   totalSteuer: BigDecimal,
+  adminProzente: BigDecimal,
+  adminProzenteAbzug: BigDecimal,
+  totalNachAbzugAdminProzente: BigDecimal,
   positionen: Seq[Bestellposition],
   //modification flags
   erstelldat: DateTime,

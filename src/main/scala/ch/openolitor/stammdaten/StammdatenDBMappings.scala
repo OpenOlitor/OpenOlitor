@@ -455,6 +455,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.steuer -> parameter(bestellung.steuer),
         column.totalSteuer -> parameter(bestellung.totalSteuer),
         column.adminProzente -> parameter(bestellung.adminProzente),
+        column.adminProzenteAbzug -> parameter(bestellung.adminProzenteAbzug),
         column.totalNachAbzugAdminProzente -> parameter(bestellung.totalNachAbzugAdminProzente)
       )
     }
