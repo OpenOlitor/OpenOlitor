@@ -47,7 +47,7 @@ object OO501_DBScripts {
         datum_abrechnung datetime default null,
         datum_versendet datetime,
         preis_total DECIMAL(7,2) not null,
-        steuer_satz DECIMAL(4,2) not null,
+        steuer_satz DECIMAL(4,2),
         steuer DECIMAL(7,2) not null,
         total_steuer DECIMAL(7,2) not null,
         erstelldat datetime not null,

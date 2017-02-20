@@ -137,7 +137,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent]("lieferplanung-abschliessen-event")
   implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
   implicit val abwesenheitCreateEventPersister = persister[AbwesenheitCreateEvent]("abwesenheit-create-event")
-  implicit val bestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
+  val bestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
+  implicit val sammelbestellungVersendenEventPersister = persister[SammelbestellungVersendenEvent]("lieferung-bestellen-event") // use the same identifier as the structure is the same
   implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent]("passwort-gewechselt")
   implicit val loginDeaktiviertEventPersister = persister[LoginDeaktiviertEvent]("login-deaktiviert")
   implicit val loginAktiviertEventPersister = persister[LoginAktiviertEvent]("login-aktiviert")
@@ -149,8 +150,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val postAuslieferungPersister = persister[PostAuslieferung]("post-auslieferung")
 
   implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
-  implicit val bestellungAlsAbgerechnetMarkierenEventPersister = persister[BestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event")
-  implicit val sammelbestellungAlsAbgerechnetMarkierenEventPersister = persister[BestellungAlsAbgerechnetMarkierenEvent]("sammelbestellung-als-ausgeliefert-markieren-event")
+  val bestellungAlsAbgerechnetMarkierenEventPersister = persister[BestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event")
+  implicit val sammelbestellungAlsAbgerechnetMarkierenEventPersister = persister[SammelbestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event")
 
   implicit val einladungIdPersister = persister[EinladungId]("einladung-id")
   implicit val einladungCreatePersister = persister[EinladungCreate]("einladung-create")
@@ -240,12 +241,12 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
     abwesenheitCreateEventPersister,
-    bestellungVersendenEventPersister,
+    sammelbestellungVersendenEventPersister,
     passwortGewechseltEventPersister,
     loginDeaktiviertEventPersister,
     loginAktiviertEventPersister,
     auslieferungAlsAusgeliefertMarkierenEventPersister,
-    bestellungAlsAbgerechnetMarkierenEventPersister,
+    sammelbestellungAlsAbgerechnetMarkierenEventPersister,
     einladungGesendetEventPersister,
     passwortResetGesendetEventPersister,
     rolleGewechseltEventPersister,
