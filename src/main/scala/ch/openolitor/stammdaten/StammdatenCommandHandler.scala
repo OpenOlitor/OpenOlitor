@@ -101,10 +101,10 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
                   val bestellEvents = distinctLieferpositionen.map {
                     case (produzentId, lieferplanungId, datum) =>
-                      val bestellungId = BestellungId(idFactory(classOf[BestellungId]))
-                      val insertEvent = EntityInsertedEvent(meta, bestellungId, BestellungCreate(produzentId, lieferplanungId, datum))
+                      val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
+                      val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, SammelbestellungCreate(produzentId, lieferplanungId, datum))
 
-                      val bestellungVersendenEvent = BestellungVersendenEvent(meta, bestellungId)
+                      val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
 
                       Seq(insertEvent, bestellungVersendenEvent)
                   }.toSeq.flatten
