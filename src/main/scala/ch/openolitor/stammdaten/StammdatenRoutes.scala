@@ -479,6 +479,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "sammelbestellungen") { lieferplanungId =>
         get(list(stammdatenReadRepository.getSammelbestellungen(lieferplanungId)))
       } ~
+      path("lieferplanungen" / lieferplanungIdPath / "sammelbestellungen" / sammelbestellungIdPath / "bestellungen" / bestellungIdPath / "positionen") { (lieferplanungId, sammelbestellungId, bestellungId) =>
+        get(list(stammdatenReadRepository.getBestellpositionen(bestellungId)))
+      } ~
       path("lieferplanungen" / lieferplanungIdPath / "sammelbestellungen" / sammelbestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, sammelbestellungId) =>
         (post)(sammelbestellungErneutVersenden(sammelbestellungId))
       }

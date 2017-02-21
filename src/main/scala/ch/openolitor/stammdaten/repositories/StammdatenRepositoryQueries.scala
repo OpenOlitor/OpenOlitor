@@ -1007,6 +1007,29 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }.list
   }
 
+  protected def getSammelbestellungDetailsQuery(id: LieferplanungId) = {
+    withSQL {
+      select
+        .from(sammelbestellungMapping as sammelbestellung)
+        .join(produzentMapping as produzent).on(sammelbestellung.produzentId, produzent.id)
+        .join(bestellungMapping as bestellung).on(bestellung.sammelbestellungId, sammelbestellung.id)
+        .leftJoin(bestellpositionMapping as bestellposition).on(bestellposition.bestellungId, bestellung.id)
+        .where.eq(sammelbestellung.lieferplanungId, parameter(id))
+    }.one(sammelbestellungMapping(sammelbestellung))
+      .toManies(
+        rs => produzentMapping.opt(produzent)(rs),
+        rs => bestellungMapping.opt(bestellung)(rs),
+        rs => bestellpositionMapping.opt(bestellposition)(rs)
+      )
+      .map((sammelbestellung, produzenten, bestellungen, positionen) => {
+        val bestellungenDetails = bestellungen map { b =>
+          val p = positionen.filter(_.bestellungId == b.id)
+          copyTo[Bestellung, BestellungDetail](b, "positionen" -> p)
+        }
+        copyTo[Sammelbestellung, SammelbestellungDetail](sammelbestellung, "produzent" -> produzenten.head, "bestellungen" -> bestellungenDetails)
+      }).list
+  }
+
   protected def getSammelbestellungenQuery(id: LieferplanungId) = {
     withSQL {
       select
