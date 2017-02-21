@@ -82,11 +82,14 @@ case class BestellungId(id: Long) extends BaseId
 case class Bestellung(
   id: BestellungId,
   sammelbestellungId: SammelbestellungId,
+  // Summe der Preise der Bestellpositionen
   preisTotal: BigDecimal,
   steuerSatz: Option[BigDecimal],
+  // Berechnete Steuer nach Abzug (adminProzenteAbzug)
   steuer: BigDecimal,
   totalSteuer: BigDecimal,
   adminProzente: BigDecimal,
+  // Berechneter Abzug auf preisTotal
   adminProzenteAbzug: BigDecimal,
   totalNachAbzugAdminProzente: BigDecimal,
 

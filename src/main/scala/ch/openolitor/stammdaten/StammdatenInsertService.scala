@@ -684,12 +684,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
         stammdatenWriteRepository.insertEntity[Sammelbestellung, SammelbestellungId](sammelbestellung) map { sammelbestellung =>
 
-          // TODO do we have to do this?: delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
-          /*
-          stammdatenWriteRepository.getBestellpositionen(id) foreach {
+          // delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
+          stammdatenWriteRepository.getBestellpositionenBySammelbestellung(id) foreach {
             position => stammdatenWriteRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)
           }
-          */
 
           stammdatenWriteRepository.getLieferungenDetails(create.lieferplanungId) groupBy (_.abotyp.get.adminProzente) map {
             case (adminProzente, lieferungen) =>

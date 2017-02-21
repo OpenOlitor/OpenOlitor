@@ -84,6 +84,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getSammelbestellungen(id: LieferplanungId)(implicit session: DBSession): List[Sammelbestellung]
   def getBestellungen(id: SammelbestellungId)(implicit session: DBSession): List[Bestellung]
   def getBestellpositionen(id: BestellungId)(implicit session: DBSession): List[Bestellposition]
+  def getBestellpositionenBySammelbestellung(id: SammelbestellungId)(implicit session: DBSession): List[Bestellposition]
   def getVertriebsarten(vertriebId: VertriebId)(implicit session: DBSession): List[VertriebsartDetail]
   def getVertrieb(vertriebId: VertriebId)(implicit session: DBSession): Option[Vertrieb]
   def getKundeDetail(kundeId: KundeId)(implicit session: DBSession): Option[KundeDetail]
@@ -388,6 +389,10 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getBestellpositionen(id: BestellungId)(implicit session: DBSession): List[Bestellposition] = {
     getBestellpositionenQuery(id).apply()
+  }
+
+  def getBestellpositionenBySammelbestellung(id: SammelbestellungId)(implicit session: DBSession): List[Bestellposition] = {
+    getBestellpositionenBySammelbestellungQuery(id).apply()
   }
 
   def getTourlieferungenByKunde(id: KundeId)(implicit session: DBSession): List[Tourlieferung] = {

@@ -149,7 +149,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
                     s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} ≙ ${preisPos} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
                 }
 
-                s"""${bestellung.adminProzente}:
+                s"""Adminprozente: ${bestellung.adminProzente}%:
                 ${bestellpositionen.mkString("\n")}
                 """
 
