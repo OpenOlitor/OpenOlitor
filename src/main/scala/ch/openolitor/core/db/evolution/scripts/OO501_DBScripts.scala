@@ -78,7 +78,7 @@ object OO501_DBScripts {
 
       // re-calculate total_steuer
       sql"""update ${bestellungMapping.table} 
-        set total_steuer = total_nach_abzug_admin_prozente + (steuer_satz / 100 * total_nach_abzug_admin_prozente), steuer = steuer_satz / 100 * total_nach_abzug_admin_prozente""".execute.apply()
+        set total_steuer = total_nach_abzug_admin_prozente + (coalesce(steuer_satz, 0) / 100 * total_nach_abzug_admin_prozente), steuer = coalesce(steuer_satz, 0) / 100 * total_nach_abzug_admin_prozente""".execute.apply()
 
       // set sammelbestellung_id to self.id
       sql"""update ${bestellungMapping.table} 
