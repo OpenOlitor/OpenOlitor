@@ -37,8 +37,8 @@ import ch.openolitor.core.filestore._
 
 trait ProduzentenabrechnungReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
-  def generateProduzentenabrechnungReports(fileType: FileType)(config: ReportConfig[BestellungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[BestellungId]]] = {
-    generateReports[BestellungId, ProduzentenabrechnungReport](
+  def generateProduzentenabrechnungReports(fileType: FileType)(config: ReportConfig[SammelbestellungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[SammelbestellungId]]] = {
+    generateReports[SammelbestellungId, ProduzentenabrechnungReport](
       config,
       bestellungById,
       fileType,
@@ -53,14 +53,14 @@ trait ProduzentenabrechnungReportService extends AsyncConnectionPoolContextAware
 
   def name(fileType: FileType)(la: ProduzentenabrechnungReport) = s"la_prod_${la.produzentKurzzeichen}_${filenameDateFormat.print(System.currentTimeMillis())}"
 
-  def bestellungById(ids: Seq[BestellungId]): Future[(Seq[ValidationError[BestellungId]], Seq[ProduzentenabrechnungReport])] = {
+  def bestellungById(ids: Seq[SammelbestellungId]): Future[(Seq[ValidationError[SammelbestellungId]], Seq[ProduzentenabrechnungReport])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
         stammdatenReadRepository.getProduzentenabrechnungReport(ids, projektReport) map { results =>
           (Seq(), results)
         }
-      } getOrElse Future { (Seq(ValidationError[BestellungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
+      } getOrElse Future { (Seq(ValidationError[SammelbestellungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
     }
   }
 }

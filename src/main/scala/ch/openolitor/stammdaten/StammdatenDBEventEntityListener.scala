@@ -797,9 +797,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         }
       }
 
-      stammdatenWriteRepository.getBestellungen(lieferplanung.id) map { bestellung =>
-        if (Offen == bestellung.status) {
-          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Abgeschlossen))
+      stammdatenWriteRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
+        if (Offen == sammelbestellung.status) {
+          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Abgeschlossen))
         }
       }
     }

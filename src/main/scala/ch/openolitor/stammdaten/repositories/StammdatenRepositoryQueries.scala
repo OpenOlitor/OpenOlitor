@@ -48,6 +48,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val lieferungJoin = lieferungMapping.syntax("lieferungJ")
   lazy val lieferposition = lieferpositionMapping.syntax("lieferposition")
   lazy val bestellung = bestellungMapping.syntax("bestellung")
+  lazy val sammelbestellung = sammelbestellungMapping.syntax("sammelbestellung")
   lazy val bestellposition = bestellpositionMapping.syntax("bestellposition")
   lazy val kunde = kundeMapping.syntax("kunde")
   lazy val pendenz = pendenzMapping.syntax("pendenz")
@@ -797,20 +798,26 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(produktekategorieMapping(produktekategorie)).single
   }
 
-  protected def getProduzentenabrechnungQuery(bestellungIds: Seq[BestellungId]) = {
+  protected def getProduzentenabrechnungQuery(sammelbestellungIds: Seq[SammelbestellungId]) = {
     withSQL {
       select
-        .from(bestellungMapping as bestellung)
-        .join(produzentMapping as produzent).on(bestellung.produzentId, produzent.id)
+        .from(sammelbestellungMapping as sammelbestellung)
+        .join(produzentMapping as produzent).on(sammelbestellung.produzentId, produzent.id)
+        .join(bestellungMapping as bestellung).on(bestellung.sammelbestellungId, sammelbestellung.id)
         .leftJoin(bestellpositionMapping as bestellposition).on(bestellposition.bestellungId, bestellung.id)
-        .where.in(bestellung.id, bestellungIds.map(_.id))
-    }.one(bestellungMapping(bestellung))
+        .where.in(sammelbestellung.id, sammelbestellungIds.map(_.id))
+    }.one(sammelbestellungMapping(sammelbestellung))
       .toManies(
         rs => produzentMapping.opt(produzent)(rs),
+        rs => bestellungMapping.opt(bestellung)(rs),
         rs => bestellpositionMapping.opt(bestellposition)(rs)
       )
-      .map((bestellung, produzenten, positionen) => {
-        copyTo[Bestellung, BestellungDetail](bestellung, "positionen" -> positionen, "produzent" -> produzenten.head)
+      .map((sammelbestellung, produzenten, bestellungen, positionen) => {
+        val bestellungenDetails = bestellungen map { b =>
+          val p = positionen.filter(_.bestellungId == b.id)
+          copyTo[Bestellung, BestellungDetail](b, "positionen" -> p)
+        }
+        copyTo[Sammelbestellung, SammelbestellungDetail](sammelbestellung, "produzent" -> produzenten.head, "bestellungen" -> bestellungenDetails)
       }).list
   }
 
@@ -1000,12 +1007,43 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }.list
   }
 
-  protected def getBestellungenQuery(id: LieferplanungId) = {
+  protected def getSammelbestellungDetailsQuery(id: LieferplanungId) = {
     withSQL {
       select
-        .from(bestellungMapping as bestellung)
-        .where.eq(bestellung.lieferplanungId, parameter(id))
-    }.map(bestellungMapping(bestellung)).list
+        .from(sammelbestellungMapping as sammelbestellung)
+        .join(produzentMapping as produzent).on(sammelbestellung.produzentId, produzent.id)
+        .join(bestellungMapping as bestellung).on(bestellung.sammelbestellungId, sammelbestellung.id)
+        .leftJoin(bestellpositionMapping as bestellposition).on(bestellposition.bestellungId, bestellung.id)
+        .where.eq(sammelbestellung.lieferplanungId, parameter(id))
+    }.one(sammelbestellungMapping(sammelbestellung))
+      .toManies(
+        rs => produzentMapping.opt(produzent)(rs),
+        rs => bestellungMapping.opt(bestellung)(rs),
+        rs => bestellpositionMapping.opt(bestellposition)(rs)
+      )
+      .map((sammelbestellung, produzenten, bestellungen, positionen) => {
+        val bestellungenDetails = bestellungen map { b =>
+          val p = positionen.filter(_.bestellungId == b.id)
+          copyTo[Bestellung, BestellungDetail](b, "positionen" -> p)
+        }
+        copyTo[Sammelbestellung, SammelbestellungDetail](sammelbestellung, "produzent" -> produzenten.head, "bestellungen" -> bestellungenDetails)
+      }).list
+  }
+
+  protected def getSammelbestellungenQuery(id: LieferplanungId) = {
+    withSQL {
+      select
+        .from(sammelbestellungMapping as sammelbestellung)
+        .where.eq(sammelbestellung.lieferplanungId, parameter(id))
+    }.map(sammelbestellungMapping(sammelbestellung)).list
+  }
+
+  protected def getSammelbestellungenQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(sammelbestellungMapping as sammelbestellung)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, sammelbestellung))
+    }.map(sammelbestellungMapping(sammelbestellung)).list
   }
 
   protected def getBestellungenQuery(filter: Option[FilterExpr]) = {
@@ -1016,14 +1054,22 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(bestellungMapping(bestellung)).list
   }
 
-  protected def getBestellungByProduzentLieferplanungDatumQuery(produzentId: ProduzentId, lieferplanungId: LieferplanungId, datum: DateTime) = {
+  protected def getSammelbestellungByProduzentLieferplanungDatumQuery(produzentId: ProduzentId, lieferplanungId: LieferplanungId, datum: DateTime) = {
+    withSQL {
+      select
+        .from(sammelbestellungMapping as sammelbestellung)
+        .where.eq(sammelbestellung.produzentId, parameter(produzentId))
+        .and.eq(sammelbestellung.lieferplanungId, parameter(lieferplanungId))
+        .and.eq(sammelbestellung.datum, parameter(datum))
+    }.map(sammelbestellungMapping(sammelbestellung)).single
+  }
+
+  protected def getBestellungenQuery(id: SammelbestellungId) = {
     withSQL {
       select
         .from(bestellungMapping as bestellung)
-        .where.eq(bestellung.produzentId, parameter(produzentId))
-        .and.eq(bestellung.lieferplanungId, parameter(lieferplanungId))
-        .and.eq(bestellung.datum, parameter(datum))
-    }.map(bestellungMapping(bestellung)).single
+        .where.eq(bestellung.sammelbestellungId, parameter(id))
+    }.map(bestellungMapping(bestellung)).list
   }
 
   protected def getBestellpositionenQuery(id: BestellungId) = {
@@ -1034,20 +1080,35 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(bestellpositionMapping(bestellposition)).list
   }
 
-  protected def getBestellungDetailQuery(id: BestellungId) = {
+  protected def getBestellpositionenBySammelbestellungQuery(id: SammelbestellungId) = {
     withSQL {
       select
-        .from(bestellungMapping as bestellung)
-        .join(produzentMapping as produzent).on(bestellung.produzentId, produzent.id)
+        .from(bestellpositionMapping as bestellposition)
+        .join(bestellungMapping as bestellung).on(bestellung.id, bestellposition.bestellungId)
+        .where.eq(bestellung.sammelbestellungId, parameter(id))
+    }.map(bestellpositionMapping(bestellposition)).list
+  }
+
+  protected def getSammelbestellungDetailQuery(id: SammelbestellungId) = {
+    withSQL {
+      select
+        .from(sammelbestellungMapping as sammelbestellung)
+        .join(produzentMapping as produzent).on(sammelbestellung.produzentId, produzent.id)
+        .join(bestellungMapping as bestellung).on(bestellung.sammelbestellungId, sammelbestellung.id)
         .leftJoin(bestellpositionMapping as bestellposition).on(bestellposition.bestellungId, bestellung.id)
-        .where.eq(bestellposition.bestellungId, parameter(id))
-    }.one(bestellungMapping(bestellung))
+        .where.eq(sammelbestellung.id, parameter(id))
+    }.one(sammelbestellungMapping(sammelbestellung))
       .toManies(
         rs => produzentMapping.opt(produzent)(rs),
+        rs => bestellungMapping.opt(bestellung)(rs),
         rs => bestellpositionMapping.opt(bestellposition)(rs)
       )
-      .map((bestellung, produzenten, positionen) => {
-        copyTo[Bestellung, BestellungDetail](bestellung, "positionen" -> positionen, "produzent" -> produzenten.head)
+      .map((sammelbestellung, produzenten, bestellungen, positionen) => {
+        val bestellungenDetails = bestellungen map { b =>
+          val p = positionen.filter(_.bestellungId == b.id)
+          copyTo[Bestellung, BestellungDetail](b, "positionen" -> p)
+        }
+        copyTo[Sammelbestellung, SammelbestellungDetail](sammelbestellung, "produzent" -> produzenten.head, "bestellungen" -> bestellungenDetails)
       }).single
   }
 

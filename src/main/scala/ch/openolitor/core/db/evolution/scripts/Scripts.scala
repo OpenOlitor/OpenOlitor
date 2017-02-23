@@ -51,5 +51,6 @@ object Scripts {
       OO433_DBScripts.scripts ++
       OO476_DBScripts.scripts ++
       OO499_DBScripts.scripts ++
-      OO506_DBScripts.scripts
+      OO506_DBScripts.scripts ++
+      OO501_DBScripts.scripts
 }

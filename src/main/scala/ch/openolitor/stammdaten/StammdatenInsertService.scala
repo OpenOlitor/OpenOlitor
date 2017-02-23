@@ -108,8 +108,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createLieferplanung(meta, id, lieferplanungCreateData)
     case EntityInsertedEvent(meta, id: LieferungId, entity: LieferungPlanungAdd) =>
       addLieferungToPlanung(meta, id, entity)
-    case EntityInsertedEvent(meta, id: BestellungId, bestellungCreateData: BestellungCreate) =>
-      createBestellungen(meta, id, bestellungCreateData)
+    case EntityInsertedEvent(meta, id: SammelbestellungId, entity: SammelbestellungCreate) =>
+      createSammelbestellungen(meta, id, entity)
     case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
       createProjektVorlage(meta, id, vorlage)
     case e =>
@@ -660,10 +660,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createBestellungen(meta: EventMetadata, id: BestellungId, create: BestellungCreate)(implicit personId: PersonId = meta.originator) = {
+  def createSammelbestellungen(meta: EventMetadata, id: SammelbestellungId, create: SammelbestellungCreate)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(produzentMapping, create.produzentId) map { produzent =>
-        val bestellung = Bestellung(
+        val sammelbestellung = Sammelbestellung(
           id,
           create.produzentId,
           produzent.kurzzeichen,
@@ -671,62 +671,89 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           Abgeschlossen,
           create.datum,
           None,
+          None,
           0,
           produzent.mwstSatz,
           0,
           0,
-          None,
           DateTime.now,
           personId,
           DateTime.now,
           personId
         )
-        stammdatenWriteRepository.insertEntity[Bestellung, BestellungId](bestellung) map { bestellung =>
-          val anzahlKoerbeZuLiefern = stammdatenWriteRepository.getLieferungen(create.lieferplanungId).map(l => (l.id, l.anzahlKoerbeZuLiefern)).toMap
-          val positionen = stammdatenWriteRepository.getLieferpositionenByLieferplanAndProduzent(create.lieferplanungId, create.produzentId).
-            //group by same produkt, menge and preis
-            groupBy(x => (x.produktId, x.menge, x.preis)).map {
-              case ((produktId, menge, preis), positionen) =>
-                positionen.map(lp => anzahlKoerbeZuLiefern.get(lp.lieferungId).getOrElse(0)).sum match {
-                  case 0 => //don't add position
-                    None
-                  case anzahl =>
-                    positionen.headOption map { lieferposition =>
-                      Bestellposition(
-                        BestellpositionId(IdUtil.positiveRandomId),
-                        bestellung.id,
-                        lieferposition.produktId,
-                        lieferposition.produktBeschrieb,
-                        lieferposition.preisEinheit,
-                        lieferposition.einheit,
-                        menge.getOrElse(0),
-                        preis.map(_ * anzahl),
-                        anzahl,
-                        DateTime.now,
-                        personId,
-                        DateTime.now,
-                        personId
-                      )
-                    }
-                }
-            }.flatten
 
-          //delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
-          stammdatenWriteRepository.getBestellpositionen(id) foreach {
+        stammdatenWriteRepository.insertEntity[Sammelbestellung, SammelbestellungId](sammelbestellung) map { sammelbestellung =>
+
+          // delete all Bestellpositionen from Bestellungen (Bestellungen are maintained even if nothing is ordered/bestellt)
+          stammdatenWriteRepository.getBestellpositionenBySammelbestellung(id) foreach {
             position => stammdatenWriteRepository.deleteEntity[Bestellposition, BestellpositionId](position.id)
           }
 
-          positionen.map { bestellposition =>
-            stammdatenWriteRepository.insertEntity[Bestellposition, BestellpositionId](bestellposition)
+          stammdatenWriteRepository.getLieferungenDetails(create.lieferplanungId) groupBy (_.abotyp.get.adminProzente) map {
+            case (adminProzente, lieferungen) =>
+              val anzahlKoerbeZuLiefern = lieferungen.map(l => (l.id, l.anzahlKoerbeZuLiefern)).toMap
+
+              val bestellung = Bestellung(
+                BestellungId(IdUtil.positiveRandomId),
+                id,
+                0,
+                produzent.mwstSatz,
+                0,
+                0,
+                adminProzente,
+                0,
+                0,
+                DateTime.now,
+                personId,
+                DateTime.now,
+                personId
+              )
+
+              stammdatenWriteRepository.insertEntity[Bestellung, BestellungId](bestellung) map { bestellung =>
+                val positionen = stammdatenWriteRepository.getLieferpositionenByLieferplanAndProduzent(create.lieferplanungId, create.produzentId).
+                  //group by same produkt, menge and preis
+                  groupBy(x => (x.produktId, x.menge, x.preis)).map {
+                    case ((produktId, menge, preis), positionen) =>
+                      positionen.map(lp => anzahlKoerbeZuLiefern.get(lp.lieferungId).getOrElse(0)).sum match {
+                        case 0 => //don't add position
+                          None
+                        case anzahl =>
+                          positionen.headOption map { lieferposition =>
+                            Bestellposition(
+                              BestellpositionId(IdUtil.positiveRandomId),
+                              bestellung.id,
+                              lieferposition.produktId,
+                              lieferposition.produktBeschrieb,
+                              lieferposition.preisEinheit,
+                              lieferposition.einheit,
+                              menge.getOrElse(0),
+                              preis.map(_ * anzahl),
+                              anzahl,
+                              DateTime.now,
+                              personId,
+                              DateTime.now,
+                              personId
+                            )
+                          }
+                      }
+                  }.flatten
+
+                positionen.map { bestellposition =>
+                  stammdatenWriteRepository.insertEntity[Bestellposition, BestellpositionId](bestellposition)
+                }
+
+                val total = positionen.map(_.preis).flatten.sum
+                val adminProzenteAbzug = bestellung.adminProzente / 100 * total
+                val totalNachAbzugAdminProzente = total - adminProzenteAbzug
+                // mwst auf total ohne adminanteil
+                val mwst = bestellung.steuerSatz.map(_ / 100 * totalNachAbzugAdminProzente).getOrElse(BigDecimal(0))
+                val totalInkl = totalNachAbzugAdminProzente + mwst
+
+                //update total on bestellung, steuer and totalSteuer
+                val copy = bestellung.copy(preisTotal = total, steuer = mwst, totalSteuer = totalInkl, adminProzenteAbzug = adminProzenteAbzug, totalNachAbzugAdminProzente = totalNachAbzugAdminProzente)
+                stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
+              }
           }
-
-          val total = positionen.map(_.preis).flatten.sum
-          val mwst = bestellung.steuerSatz.map(_ / 100 * total).getOrElse(BigDecimal(0))
-          val totalInkl = total + mwst
-
-          //update total on bestellung, steuer and totalSteuer
-          val copy = bestellung.copy(preisTotal = total, steuer = mwst, totalSteuer = totalInkl)
-          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](copy)
         }
       }
     }
