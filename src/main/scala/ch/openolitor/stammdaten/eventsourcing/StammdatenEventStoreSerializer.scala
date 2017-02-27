@@ -102,10 +102,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferpositionModifyPersister = persister[LieferpositionModify]("lieferposition-modify")
   implicit val lieferpositionenCreatePersister = persister[LieferpositionenModify]("lieferpositionen-create")
   implicit val lieferpositionIdPersister = persister[LieferpositionId]("lieferposition-id")
-  implicit val bestellungenCreatePersister = persister[BestellungenCreate]("bestellungen-create")
-  implicit val bestellungCreatePersister = persister[BestellungCreate]("bestellung-create")
-  implicit val bestellungModifyPersister = persister[BestellungModify]("bestellung-modify")
   implicit val bestellungIdPersister = persister[BestellungId]("bestellung-id")
+  implicit val sammelbestellungIdPersister = persister[SammelbestellungId]("sammelbestellung-id")
+  implicit val sammelbestellungCreatePersister = persister[SammelbestellungCreate]("bestellung-create") // use the same identifier as before with bestellung; the structure is the same
   implicit val bestellpositionModifyPersister = persister[BestellpositionModify]("bestellposition-modify")
   implicit val bestellpositionIdPersister = persister[BestellpositionId]("bestellposition-id")
   implicit val auslieferungIdPersister = persister[AuslieferungId]("auslieferung-id")
@@ -136,7 +135,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent]("lieferplanung-abschliessen-event")
   implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
   implicit val abwesenheitCreateEventPersister = persister[AbwesenheitCreateEvent]("abwesenheit-create-event")
-  implicit val bestellungVersendenEventPersister = persister[BestellungVersendenEvent]("lieferung-bestellen-event")
+  implicit val sammelbestellungVersendenEventPersister = persister[SammelbestellungVersendenEvent]("lieferung-bestellen-event") // use the same identifier as before with bestellung; the structure is the same
   implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent]("passwort-gewechselt")
   implicit val loginDeaktiviertEventPersister = persister[LoginDeaktiviertEvent]("login-deaktiviert")
   implicit val loginAktiviertEventPersister = persister[LoginAktiviertEvent]("login-aktiviert")
@@ -148,7 +147,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val postAuslieferungPersister = persister[PostAuslieferung]("post-auslieferung")
 
   implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
-  implicit val bestellungAlsAbgerechnetMarkierenEventPersister = persister[BestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event")
+  implicit val sammelbestellungAlsAbgerechnetMarkierenEventPersister = persister[SammelbestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event") // use the same identifier as before with bestellung; the structure is the same
 
   implicit val einladungIdPersister = persister[EinladungId]("einladung-id")
   implicit val einladungCreatePersister = persister[EinladungCreate]("einladung-create")
@@ -201,10 +200,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferpositionModifyPersister,
     lieferpositionenCreatePersister,
     lieferpositionIdPersister,
-    bestellungenCreatePersister,
-    bestellungCreatePersister,
-    bestellungModifyPersister,
     bestellungIdPersister,
+    sammelbestellungIdPersister,
+    sammelbestellungCreatePersister,
     bestellpositionModifyPersister,
     bestellpositionIdPersister,
     produktIdPersister,
@@ -237,12 +235,12 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferplanungAbschliessenEventPersister,
     lieferplanungAbrechnenEventPersister,
     abwesenheitCreateEventPersister,
-    bestellungVersendenEventPersister,
+    sammelbestellungVersendenEventPersister,
     passwortGewechseltEventPersister,
     loginDeaktiviertEventPersister,
     loginAktiviertEventPersister,
     auslieferungAlsAusgeliefertMarkierenEventPersister,
-    bestellungAlsAbgerechnetMarkierenEventPersister,
+    sammelbestellungAlsAbgerechnetMarkierenEventPersister,
     einladungGesendetEventPersister,
     passwortResetGesendetEventPersister,
     rolleGewechseltEventPersister,

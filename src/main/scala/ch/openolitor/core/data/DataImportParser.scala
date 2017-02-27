@@ -92,7 +92,8 @@ class DataImportParser extends Actor with ActorLogging {
       (produktProduktekategorien, _) <- Try(doc.withSheet("ProduktProduktkategorien")(ProduktProduktekategorieParser.parse))
       (produkte, _) <- Try(doc.withSheet("Produkte")(ProduktParser.parse(produzenten, produktProduzenten, produktkategorien, produktProduktekategorien)))
       (lieferpositionen, _) <- Try(doc.withSheet("Lieferpositionen")(LieferpositionParser.parse(produkte, produzenten)))
-      (bestellungen, _) <- Try(doc.withSheet("Bestellungen")(BestellungParser.parse(produzenten, lieferplanungen)))
+      (sammelbestellungen, _) <- Try(doc.withSheet("Sammelbestellungen")(SammelbestellungParser.parse(produzenten, lieferplanungen)))
+      (bestellungen, _) <- Try(doc.withSheet("Bestellungen")(BestellungParser.parse(sammelbestellungen)))
       (bestellpositionen, _) <- Try(doc.withSheet("Bestellpositionen")(BestellpositionParser.parse(produkte)))
       (customKundentypen, _) <- Try(doc.withSheet("Kundentypen")(CustomKundentypParser.parse))
       (tourlieferungen, _) <- Try(doc.withSheet("Tourlieferungen")(TourlieferungParser.parse(abos, kunden)))
@@ -118,6 +119,7 @@ class DataImportParser extends Actor with ActorLogging {
         produktProduktekategorien,
         produzenten,
         produktProduzenten,
+        sammelbestellungen,
         bestellungen,
         bestellpositionen,
         tourlieferungen
@@ -152,6 +154,7 @@ object DataImportParser {
     produktProduktekategorien: List[ProduktProduktekategorie],
     produzenten: List[Produzent],
     produktProduzenten: List[ProduktProduzent],
+    sammelbestellungen: List[Sammelbestellung],
     bestellungen: List[Bestellung],
     bestellpositionen: List[Bestellposition],
     tourlieferung: List[Tourlieferung]

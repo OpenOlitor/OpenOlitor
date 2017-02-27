@@ -62,6 +62,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val optionLieferplanungIdBinder: TypeBinder[Option[LieferplanungId]] = optionBaseIdTypeBinder(LieferplanungId.apply _)
   implicit val lieferpositionIdBinder: TypeBinder[LieferpositionId] = baseIdTypeBinder(LieferpositionId.apply _)
   implicit val bestellungIdBinder: TypeBinder[BestellungId] = baseIdTypeBinder(BestellungId.apply _)
+  implicit val sammelbestellungIdBinder: TypeBinder[SammelbestellungId] = baseIdTypeBinder(SammelbestellungId.apply _)
   implicit val bestellpositionIdBinder: TypeBinder[BestellpositionId] = baseIdTypeBinder(BestellpositionId.apply _)
   implicit val customKundentypIdBinder: TypeBinder[CustomKundentypId] = baseIdTypeBinder(CustomKundentypId.apply _)
   implicit val kundentypIdBinder: TypeBinder[KundentypId] = string.map(KundentypId)
@@ -145,6 +146,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val lieferplanungIdSqlBinder = baseIdSqlBinder[LieferplanungId]
   implicit val lieferpositionIdSqlBinder = baseIdSqlBinder[LieferpositionId]
   implicit val bestellungIdSqlBinder = baseIdSqlBinder[BestellungId]
+  implicit val sammelbestellungIdSqlBinder = baseIdSqlBinder[SammelbestellungId]
   implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
   implicit val korbIdSqlBinder = baseIdSqlBinder[KorbId]
   implicit val auslieferungIdSqlBinder = baseIdSqlBinder[AuslieferungId]
@@ -408,6 +410,33 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
+  implicit val sammelbestellungMapping = new BaseEntitySQLSyntaxSupport[Sammelbestellung] {
+    override val tableName = "Sammelbestellung"
+
+    override lazy val columns = autoColumns[Sammelbestellung]()
+
+    def apply(rn: ResultName[Sammelbestellung])(rs: WrappedResultSet): Sammelbestellung =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Sammelbestellung): Seq[Any] = parameters(Sammelbestellung.unapply(entity).get)
+
+    override def updateParameters(sammelbestellung: Sammelbestellung) = {
+      super.updateParameters(sammelbestellung) ++ Seq(
+        column.produzentId -> parameter(sammelbestellung.produzentId),
+        column.produzentKurzzeichen -> parameter(sammelbestellung.produzentKurzzeichen),
+        column.lieferplanungId -> parameter(sammelbestellung.lieferplanungId),
+        column.status -> parameter(sammelbestellung.status),
+        column.datum -> parameter(sammelbestellung.datum),
+        column.datumAbrechnung -> parameter(sammelbestellung.datumAbrechnung),
+        column.preisTotal -> parameter(sammelbestellung.preisTotal),
+        column.steuerSatz -> parameter(sammelbestellung.steuerSatz),
+        column.steuer -> parameter(sammelbestellung.steuer),
+        column.totalSteuer -> parameter(sammelbestellung.totalSteuer),
+        column.datumVersendet -> parameter(sammelbestellung.datumVersendet)
+      )
+    }
+  }
+
   implicit val bestellungMapping = new BaseEntitySQLSyntaxSupport[Bestellung] {
     override val tableName = "Bestellung"
 
@@ -420,17 +449,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override def updateParameters(bestellung: Bestellung) = {
       super.updateParameters(bestellung) ++ Seq(
-        column.produzentId -> parameter(bestellung.produzentId),
-        column.produzentKurzzeichen -> parameter(bestellung.produzentKurzzeichen),
-        column.lieferplanungId -> parameter(bestellung.lieferplanungId),
-        column.status -> parameter(bestellung.status),
-        column.datum -> parameter(bestellung.datum),
-        column.datumAbrechnung -> parameter(bestellung.datumAbrechnung),
+        column.sammelbestellungId -> parameter(bestellung.sammelbestellungId),
         column.preisTotal -> parameter(bestellung.preisTotal),
         column.steuerSatz -> parameter(bestellung.steuerSatz),
         column.steuer -> parameter(bestellung.steuer),
         column.totalSteuer -> parameter(bestellung.totalSteuer),
-        column.datumVersendet -> parameter(bestellung.datumVersendet)
+        column.adminProzente -> parameter(bestellung.adminProzente),
+        column.adminProzenteAbzug -> parameter(bestellung.adminProzenteAbzug),
+        column.totalNachAbzugAdminProzente -> parameter(bestellung.totalNachAbzugAdminProzente)
       )
     }
   }

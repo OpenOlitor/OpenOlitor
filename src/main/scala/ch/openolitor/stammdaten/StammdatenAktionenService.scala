@@ -77,12 +77,12 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       lieferplanungAbschliessen(meta, id)
     case LieferplanungAbrechnenEvent(meta, id: LieferplanungId) =>
       lieferplanungVerrechnet(meta, id)
-    case BestellungVersendenEvent(meta, id: BestellungId) =>
-      bestellungVersenden(meta, id)
+    case SammelbestellungVersendenEvent(meta, id: SammelbestellungId) =>
+      sammelbestellungVersenden(meta, id)
     case AuslieferungAlsAusgeliefertMarkierenEvent(meta, id: AuslieferungId) =>
       auslieferungAusgeliefert(meta, id)
-    case BestellungAlsAbgerechnetMarkierenEvent(meta, datum, id: BestellungId) =>
-      bestellungAbgerechnet(meta, datum, id)
+    case SammelbestellungAlsAbgerechnetMarkierenEvent(meta, datum, id: SammelbestellungId) =>
+      sammelbestellungAbgerechnet(meta, datum, id)
     case PasswortGewechseltEvent(meta, personId, pwd, einladungId) =>
       updatePasswort(meta, personId, pwd, einladungId)
     case LoginDeaktiviertEvent(meta, _, personId) =>
@@ -121,39 +121,48 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
           stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Verrechnet))
         }
       }
-      stammdatenWriteRepository.getBestellungen(id) map { bestellung =>
-        if (Abgeschlossen == bestellung.status) {
-          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Verrechnet, datumAbrechnung = Some(DateTime.now)))
+      stammdatenWriteRepository.getSammelbestellungen(id) map { sammelbestellung =>
+        if (Abgeschlossen == sammelbestellung.status) {
+          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Verrechnet, datumAbrechnung = Some(DateTime.now)))
         }
       }
     }
   }
 
-  def bestellungVersenden(meta: EventMetadata, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
+  def sammelbestellungVersenden(meta: EventMetadata, id: SammelbestellungId)(implicit personId: PersonId = meta.originator) = {
     val format = DateTimeFormat.forPattern("dd.MM.yyyy")
 
     DB autoCommit { implicit session =>
       //send mails to Produzenten
       stammdatenWriteRepository.getProjekt map { projekt =>
-        stammdatenWriteRepository.getById(bestellungMapping, id) map {
+        stammdatenWriteRepository.getById(sammelbestellungMapping, id) map {
           //send mails only if current event timestamp is past the timestamp of last delivered mail
-          case bestellung if (bestellung.datumVersendet.isEmpty || bestellung.datumVersendet.get.isBefore(meta.timestamp)) =>
-            stammdatenWriteRepository.getProduzentDetail(bestellung.produzentId) map { produzent =>
-              val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
-                bestellposition =>
-                  val preisPos = bestellposition.preisEinheit.getOrElse(0: BigDecimal) * bestellposition.menge
-                  val mengeTotal = bestellposition.anzahl * bestellposition.menge
-                  s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} ≙ ${preisPos} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
+          case sammelbestellung if (sammelbestellung.datumVersendet.isEmpty || sammelbestellung.datumVersendet.get.isBefore(meta.timestamp)) =>
+            stammdatenWriteRepository.getProduzentDetail(sammelbestellung.produzentId) map { produzent =>
+
+              val bestellungen = stammdatenWriteRepository.getBestellungen(sammelbestellung.id) map { bestellung =>
+
+                val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
+                  bestellposition =>
+                    val preisPos = bestellposition.preisEinheit.getOrElse(0: BigDecimal) * bestellposition.menge
+                    val mengeTotal = bestellposition.anzahl * bestellposition.menge
+                    s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} ≙ ${preisPos} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
+                }
+
+                s"""Adminprozente: ${bestellung.adminProzente}%:
+                ${bestellpositionen.mkString("\n")}
+                """
+
               }
               val text = s"""Bestellung von ${projekt.bezeichnung} an ${produzent.name} ${produzent.vorname.getOrElse("")}:
 
-Lieferung: ${format.print(bestellung.datum)}
+Lieferung: ${format.print(sammelbestellung.datum)}
 
 Bestellpositionen:
-${bestellpositionen.mkString("\n")}
+${bestellungen.mkString("\n")}
 
-Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
-              val mail = Mail(1, produzent.email, None, None, "Bestellung " + format.print(bestellung.datum), text)
+Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
+              val mail = Mail(1, produzent.email, None, None, "Bestellung " + format.print(sammelbestellung.datum), text)
 
               mailService ? SendMailCommandWithCallback(SystemEvents.SystemPersonId, mail, Some(5 minutes), id) map {
                 case _: SendMailEvent =>
@@ -288,11 +297,11 @@ Summe [${projekt.waehrung}]: ${bestellung.preisTotal}"""
     }
   }
 
-  def bestellungAbgerechnet(meta: EventMetadata, datum: DateTime, id: BestellungId)(implicit personId: PersonId = meta.originator) = {
+  def sammelbestellungAbgerechnet(meta: EventMetadata, datum: DateTime, id: SammelbestellungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(bestellungMapping, id) map { bestellung =>
-        if (Abgeschlossen == bestellung.status) {
-          stammdatenWriteRepository.updateEntity[Bestellung, BestellungId](bestellung.copy(status = Verrechnet, datumAbrechnung = Some(datum)))
+      stammdatenWriteRepository.getById(sammelbestellungMapping, id) map { sammelbestellung =>
+        if (Abgeschlossen == sammelbestellung.status) {
+          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Verrechnet, datumAbrechnung = Some(datum)))
         }
       }
     }
