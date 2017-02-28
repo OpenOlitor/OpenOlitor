@@ -166,7 +166,8 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
               mailService ? SendMailCommandWithCallback(SystemEvents.SystemPersonId, mail, Some(5 minutes), id) map {
                 case _: SendMailEvent =>
-                // ok
+                  val updated = sammelbestellung.copy(datumVersendet = Some(new DateTime()))
+                  stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](updated)
                 case other =>
                   logger.debug(s"Sending Mail failed resulting in $other")
               }
@@ -254,7 +255,8 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
           mailService ? SendMailCommandWithCallback(originator, mail, Some(5 minutes), einladung.id) map {
             case _: SendMailEvent =>
-            // ok
+              val updated = einladung.copy(datumVersendet = Some(new DateTime()))
+              stammdatenWriteRepository.updateEntity[Einladung, EinladungId](updated)
             case other =>
               logger.debug(s"Sending Mail failed resulting in $other")
           }
