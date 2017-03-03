@@ -455,7 +455,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             id,
             personId,
             UUID.randomUUID.toString,
-            DateTime.now.plusDays(3),
+            DateTime.now.plusDays(90),
             None
           )
 
@@ -479,7 +479,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             id,
             personId,
             UUID.randomUUID.toString,
-            DateTime.now.plusMinutes(20),
+            DateTime.now.plusMinutes(120),
             None
           )
 

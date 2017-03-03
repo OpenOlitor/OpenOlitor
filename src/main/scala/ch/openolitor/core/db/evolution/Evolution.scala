@@ -79,6 +79,7 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current)
           adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping),
           adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping),
           adjustSeed[Person, PersonId](seeds, personMapping),
+          adjustSeed[Einladung, EinladungId](seeds, einladungMapping),
           adjustSeed[Produzent, ProduzentId](seeds, produzentMapping),
           adjustSeed[Produkt, ProduktId](seeds, produktMapping),
           adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping),

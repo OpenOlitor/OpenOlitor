@@ -166,8 +166,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
               mailService ? SendMailCommandWithCallback(SystemEvents.SystemPersonId, mail, Some(5 minutes), id) map {
                 case _: SendMailEvent =>
-                  val updated = sammelbestellung.copy(datumVersendet = Some(new DateTime()))
-                  stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](updated)
+                //ok
                 case other =>
                   logger.debug(s"Sending Mail failed resulting in $other")
               }
@@ -187,7 +186,10 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
       }
 
       einladungId map { id =>
-        stammdatenWriteRepository.deleteEntity[Einladung, EinladungId](id)
+        stammdatenWriteRepository.getById(einladungMapping, id) map { einladung =>
+          val updated = einladung.copy(expires = new DateTime())
+          stammdatenWriteRepository.updateEntity[Einladung, EinladungId](updated)
+        }
       }
     }
   }
@@ -215,11 +217,11 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def sendPasswortReset(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator): Unit = {
-    sendEinladung(meta, einladungCreate, "Sie können ihr Passwort mit folgendem Link neu setzten:", BasePasswortResetLink)
+    sendEinladung(meta, einladungCreate, "Sie können Ihr Passwort mit folgendem Link neu setzten:", BasePasswortResetLink)
   }
 
   def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator): Unit = {
-    sendEinladung(meta, einladungCreate, "Aktivieren Sie ihren Zugang mit folgendem Link:", BaseZugangLink)
+    sendEinladung(meta, einladungCreate, "Aktivieren Sie Ihren Zugang mit folgendem Link:", BaseZugangLink)
   }
 
   def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate, baseText: String, baseLink: String)(implicit originator: PersonId): Unit = {
@@ -240,7 +242,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
           inserted
         }
 
-        if ((einladung.datumVersendet.isEmpty || einladung.datumVersendet.get.isBefore(meta.timestamp)) && einladung.expires.isAfter(DateTime.now)) {
+        if (einladung.erstelldat.isAfter(new DateTime(2017, 3, 2, 12, 0)) && (einladung.datumVersendet.isEmpty || einladung.datumVersendet.get.isBefore(meta.timestamp)) && einladung.expires.isAfter(DateTime.now)) {
           setLoginAktiv(meta, einladung.personId)
 
           val text = s"""
@@ -255,11 +257,12 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
           mailService ? SendMailCommandWithCallback(originator, mail, Some(5 minutes), einladung.id) map {
             case _: SendMailEvent =>
-              val updated = einladung.copy(datumVersendet = Some(new DateTime()))
-              stammdatenWriteRepository.updateEntity[Einladung, EinladungId](updated)
+            //ok
             case other =>
               logger.debug(s"Sending Mail failed resulting in $other")
           }
+        } else {
+          logger.debug(s"Don't send Einladung, has been send earlier: ${einladungCreate.id}")
         }
       }
     }
