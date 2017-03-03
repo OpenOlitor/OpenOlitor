@@ -116,7 +116,7 @@ class LoginRouteServiceSpec extends Specification with Mockito with NoTimeConver
 
       val result = service.validateLogin(LoginForm("anyEmail", pwd)).run
 
-      result.map { _.toEither must beLeft(RequestFailed("Benutzername oder Passwort stimmen nicht überein")) }.await(3, timeout)
+      result.map { _.toEither must beLeft(RequestFailed("Person konnte nicht gefunden werden")) }.await(3, timeout)
     }
   }
 
