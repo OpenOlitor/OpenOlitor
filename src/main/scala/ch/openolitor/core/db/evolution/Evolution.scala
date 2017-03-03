@@ -79,7 +79,6 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current)
           adjustSeed[Lieferung, LieferungId](seeds, lieferungMapping),
           adjustSeed[Pendenz, PendenzId](seeds, pendenzMapping),
           adjustSeed[Person, PersonId](seeds, personMapping),
-          adjustSeed[Einladung, EinladungId](seeds, einladungMapping),
           adjustSeed[Produzent, ProduzentId](seeds, produzentMapping),
           adjustSeed[Produkt, ProduktId](seeds, produktMapping),
           adjustSeed[ProduktProduktekategorie, ProduktProduktekategorieId](seeds, produktProduktekategorieMapping),
@@ -94,7 +93,8 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current)
           adjustSeed[Abwesenheit, AbwesenheitId](seeds, abwesenheitMapping),
           adjustSeed[Rechnung, RechnungId](seeds, rechnungMapping),
           adjustSeed[ZahlungsImport, ZahlungsImportId](seeds, zahlungsImportMapping),
-          adjustSeed[ZahlungsEingang, ZahlungsEingangId](seeds, zahlungsEingangMapping)
+          adjustSeed[ZahlungsEingang, ZahlungsEingangId](seeds, zahlungsEingangMapping),
+          adjustSeed[Einladung, EinladungId](seeds, einladungMapping)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)
