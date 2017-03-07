@@ -150,7 +150,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case Offen | Abgeschlossen =>
               Success(Seq(SammelbestellungVersendenEvent(meta, id)))
             case _ =>
-              Failure(new InvalidStateException("Eine Bestellung kann nur in den Stati 'Offen' oder 'Abgeschlossen' versendet werden"))
+              Failure(new InvalidStateException("Eine Bestellung kann nur in den Status 'Offen' oder 'Abgeschlossen' versendet werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
       }
