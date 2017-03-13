@@ -94,7 +94,8 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current)
           adjustSeed[Rechnung, RechnungId](seeds, rechnungMapping),
           adjustSeed[ZahlungsImport, ZahlungsImportId](seeds, zahlungsImportMapping),
           adjustSeed[ZahlungsEingang, ZahlungsEingangId](seeds, zahlungsEingangMapping),
-          adjustSeed[Einladung, EinladungId](seeds, einladungMapping)
+          adjustSeed[Einladung, EinladungId](seeds, einladungMapping),
+          adjustSeed[Sammelbestellung, SammelbestellungId](seeds, sammelbestellungMapping)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)
