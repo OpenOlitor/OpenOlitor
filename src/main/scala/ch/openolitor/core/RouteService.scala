@@ -183,6 +183,11 @@ trait RouteServiceActor
         authorize(hasRole(AdministratorZugang)) {
           systemRouteService.adminRoutes
         }
+      } ~
+      authenticate(loginRouteService.openOlitorAuthenticator) { implicit subject =>
+        authorize(hasRole(AdministratorZugang)) {
+          systemRouteService.adminRoutes
+        }
       }
   ))
 

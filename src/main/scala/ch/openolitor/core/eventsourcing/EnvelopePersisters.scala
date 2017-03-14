@@ -45,8 +45,9 @@ package events {
     }
 
     def unpersist(p: Persisted): T = {
-      if (canUnpersist(p)) fromBytes(p.bytes)
-      else throw new IllegalArgumentException(s"Cannot unpersist")
+      if (canUnpersist(p)) {
+        fromBytes(p.bytes)
+      } else throw new IllegalArgumentException(s"Cannot unpersist")
     }
 
     def toBytes(t: T): ByteString
