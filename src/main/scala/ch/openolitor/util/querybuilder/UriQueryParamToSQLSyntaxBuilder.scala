@@ -29,16 +29,17 @@ import com.typesafe.scalalogging.LazyLogging
 
 object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
 
-  def build[T](maybeExpr: Option[FilterExpr], sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T]): Option[SQLSyntax] = {
+  def build[T](maybeExpr: Option[FilterExpr], sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], exclude: Seq[String] = Seq()): Option[SQLSyntax] = {
     maybeExpr match {
       case None => None
-      case Some(expr) => build(expr, sqlSyntax)
+      case Some(expr) => build(expr, sqlSyntax, exclude)
     }
   }
 
-  def build[T](expr: FilterExpr, sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T]): Option[SQLSyntax] = {
+  def build[T](expr: FilterExpr, sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], exclude: Seq[String]): Option[SQLSyntax] = {
     expr match {
-      case FilterAttributeList(filterAttributes) => sqls.toAndConditionOpt((filterAttributes map (build(_, sqlSyntax))): _*)
+      case FilterAttributeList(filterAttributes) => sqls.toAndConditionOpt((filterAttributes map (build(_, sqlSyntax, exclude))): _*)
+      case FilterAttribute(attribute, _) if exclude.contains(attribute.value) => None
       case FilterAttribute(attribute, ValueComparison(LongNumberValue(value), None) :: Nil) => usingEq(sqlSyntax, attribute, value)
       case FilterAttribute(attribute, ValueComparison(DecimalNumberValue(value), None) :: Nil) => usingEq(sqlSyntax, attribute, value)
       case FilterAttribute(attribute, ValueComparison(BooleanValue(value), None) :: Nil) => usingEq(sqlSyntax, attribute, value)
@@ -61,7 +62,7 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
       case FilterAttribute(attribute, ValueComparison(RangeValue(DateValue(from), DateValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
       case FilterAttribute(attribute, ValueComparison(RangeValue(RegexValue(from), RegexValue(to)), Some(ValueComparator(NOT))) :: Nil) => usingNotBetween(sqlSyntax, attribute, from, to)
       case FilterAttribute(attribute, ValueComparison(RangeValue(from, to), Some(ValueComparator(NOT))) :: Nil) => None
-      case FilterAttribute(attribute, values) => sqls.toOrConditionOpt((values map (v => build(FilterAttribute(attribute, List(v)), sqlSyntax)): _*))
+      case FilterAttribute(attribute, values) => sqls.toOrConditionOpt((values map (v => build(FilterAttribute(attribute, List(v)), sqlSyntax, exclude)): _*))
     }
   }
 
