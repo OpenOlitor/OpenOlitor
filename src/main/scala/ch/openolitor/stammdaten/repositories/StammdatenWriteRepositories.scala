@@ -74,6 +74,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo]
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
   def countAbwesend(aboId: AboId, datum: LocalDate)(implicit session: DBSession): Option[Int]
+  def getLieferung(id: AbwesenheitId)(implicit session: DBSession): Option[Lieferung]
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getLieferungen(id: VertriebId)(implicit session: DBSession): List[Lieferung]
   def getLieferungenDetails(id: LieferplanungId)(implicit session: DBSession): List[LieferungDetail]
@@ -247,6 +248,10 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
 
   def getLatestLieferplanung(implicit session: DBSession): Option[Lieferplanung] = {
     getLatestLieferplanungQuery.apply()
+  }
+
+  def getLieferung(id: AbwesenheitId)(implicit session: DBSession): Option[Lieferung] = {
+    getLieferungQuery(id).apply()
   }
 
   def getLieferungenNext()(implicit session: DBSession): List[Lieferung] = {

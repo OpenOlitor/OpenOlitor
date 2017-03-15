@@ -183,7 +183,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         }
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (_, aboId, abwesenheitId) =>
-        delete(remove(abwesenheitId))
+        deleteAbwesenheit(abwesenheitId)
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(stammdatenReadRepository.getPendenzen(kundeId))) ~
@@ -653,6 +653,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess(entityStore ? StammdatenCommandHandler.AuslieferungenAlsAusgeliefertMarkierenCommand(subject.personId, ids)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Auslieferungen konnten nicht als ausgeliefert markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def deleteAbwesenheit(abwesenheitId: AbwesenheitId)(implicit idPersister: Persister[AuslieferungId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.DeleteAbwesenheitCommand(subject.personId, abwesenheitId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Abwesenheit kann nicht gelöscht werden. Die Lieferung ist bereits abgeschlossen.")
       case _ =>
         complete("")
     }
