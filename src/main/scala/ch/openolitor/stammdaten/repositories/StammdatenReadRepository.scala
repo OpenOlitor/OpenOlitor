@@ -66,8 +66,11 @@ trait StammdatenReadRepository {
   def getPerson(id: PersonId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Person]]
   def getPersonenUebersicht(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonUebersicht]]
   def getPersonenByDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]]
+  def getPersonenAboAktivByDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]]
   def getPersonenByTouren(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]]
+  def getPersonenAboAktivByTouren(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]]
   def getPersonenByAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]]
+  def getPersonenAboAktivByAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]]
 
   def getDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Depot]]
   def getDepotDetail(id: DepotId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Depot]]
@@ -202,12 +205,24 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     getPersonenByDepotsQuery(filter).future
   }
 
+  def getPersonenAboAktivByDepots(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]] = {
+    getPersonenAboAktivByDepotsQuery(filter).future
+  }
+
   def getPersonenByTouren(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]] = {
     getPersonenByTourenQuery(filter).future
   }
 
+  def getPersonenAboAktivByTouren(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]] = {
+    getPersonenAboAktivByTourenQuery(filter).future
+  }
+
   def getPersonenByAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]] = {
     getPersonenByAbotypenQuery(filter).future
+  }
+
+  def getPersonenAboAktivByAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PersonSummary]] = {
+    getPersonenAboAktivByAbotypenQuery(filter).future
   }
 
   override def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]] = {

@@ -246,8 +246,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getAbotypen)) ~
         post(create[AbotypModify, AbotypId](AbotypId.apply _))
     } ~
-      path("abotypen" / "personen") {
+      path("abotypen" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByAbotypen))
+      } ~
+      path("abotypen" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByAbotypen))
       } ~
       path("abotypen" / abotypIdPath) { id =>
         get(detail(stammdatenReadRepository.getAbotypDetail(id))) ~
@@ -320,8 +323,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getDepots)) ~
         post(create[DepotModify, DepotId](DepotId.apply _))
     } ~
-      path("depots" / "personen") {
+      path("depots" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByDepots))
+      } ~
+      path("depots" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByDepots))
       } ~
       path("depots" / "berichte" / "depotbrief") {
         implicit val personId = subject.personId
@@ -402,8 +408,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getTouren, exportFormat)) ~
         post(create[TourCreate, TourId](TourId.apply _))
     } ~
-      path("touren" / "personen") {
+      path("touren" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByTouren))
+      } ~
+      path("touren" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByTouren))
       } ~
       path("touren" / tourIdPath) { id =>
         get(detail(stammdatenReadRepository.getTourDetail(id))) ~

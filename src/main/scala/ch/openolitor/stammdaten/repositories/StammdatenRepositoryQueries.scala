@@ -431,6 +431,18 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.list
   }
 
+  protected def getPersonenAboAktivByDepotsQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(depotlieferungAbo.kundeId, person.kundeId)
+        .leftJoin(depotMapping as depot).on(depotlieferungAbo.depotId, depot.id)
+        .where.eq(depotlieferungAbo.aktiv, parameter(true)).and(UriQueryParamToSQLSyntaxBuilder.build(filter, depot))
+    }.map { rs =>
+      copyTo[Person, PersonSummary](personMapping(person)(rs))
+    }.list
+  }
+
   protected def getPersonenByTourenQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
@@ -438,6 +450,18 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(heimlieferungAbo.kundeId, person.kundeId)
         .leftJoin(tourMapping as tour).on(heimlieferungAbo.tourId, tour.id)
         .where(UriQueryParamToSQLSyntaxBuilder.build(filter, tour))
+    }.map { rs =>
+      copyTo[Person, PersonSummary](personMapping(person)(rs))
+    }.list
+  }
+
+  protected def getPersonenAboAktivByTourenQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(heimlieferungAbo.kundeId, person.kundeId)
+        .leftJoin(tourMapping as tour).on(heimlieferungAbo.tourId, tour.id)
+        .where.eq(heimlieferungAbo.aktiv, parameter(true)).and(UriQueryParamToSQLSyntaxBuilder.build(filter, tour))
     }.map { rs =>
       copyTo[Person, PersonSummary](personMapping(person)(rs))
     }.list
@@ -452,6 +476,25 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(postlieferungAboMapping as postlieferungAbo).on(postlieferungAbo.kundeId, person.kundeId)
         .leftJoin(abotypMapping as aboTyp).on(sqls.eq(depotlieferungAbo.abotypId, aboTyp.id).or.eq(heimlieferungAbo.abotypId, aboTyp.id).or.eq(postlieferungAbo.abotypId, aboTyp.id))
         .where(UriQueryParamToSQLSyntaxBuilder.build(filter, aboTyp))
+    }.map { rs =>
+      copyTo[Person, PersonSummary](personMapping(person)(rs))
+    }.list
+  }
+
+  protected def getPersonenAboAktivByAbotypenQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(depotlieferungAbo.kundeId, person.kundeId)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(heimlieferungAbo.kundeId, person.kundeId)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(postlieferungAbo.kundeId, person.kundeId)
+        .leftJoin(abotypMapping as aboTyp).on(sqls.eq(depotlieferungAbo.abotypId, aboTyp.id).or.eq(heimlieferungAbo.abotypId, aboTyp.id).or.eq(postlieferungAbo.abotypId, aboTyp.id))
+        .where(
+          sqls.
+            or.eq(depotlieferungAbo.aktiv, parameter(true))
+            .or.eq(heimlieferungAbo.aktiv, parameter(true))
+            .or.eq(postlieferungAbo.aktiv, parameter(true))
+        ).and(UriQueryParamToSQLSyntaxBuilder.build(filter, aboTyp))
     }.map { rs =>
       copyTo[Person, PersonSummary](personMapping(person)(rs))
     }.list
