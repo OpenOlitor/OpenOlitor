@@ -50,6 +50,7 @@ import ch.openolitor.core.mailservice.MailService._
 import org.joda.time.format.DateTimeFormat
 import ch.openolitor.util.ConfigUtil._
 import scalikejdbc.DBSession
+import BigDecimal.RoundingMode._
 
 object StammdatenAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem, mailService: ActorRef): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system, mailService)
@@ -144,13 +145,20 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
 
                 val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
                   bestellposition =>
-                    val preisPos = bestellposition.preisEinheit.getOrElse(0: BigDecimal) * bestellposition.menge
+                    val preisPos = (bestellposition.preisEinheit.getOrElse(0: BigDecimal) * bestellposition.menge).setScale(2, HALF_UP)
                     val mengeTotal = bestellposition.anzahl * bestellposition.menge
-                    s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} ≙ ${preisPos} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
+                    val detail = if (bestellposition.preisEinheit.getOrElse(0: BigDecimal).compare(preisPos) == 0) "" else s""" ≙ ${preisPos}"""
+                    s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")}${detail} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
                 }
 
-                s"""Adminprozente: ${bestellung.adminProzente}%:
-                ${bestellpositionen.mkString("\n")}
+                val infoAdminproz = bestellung.adminProzente match {
+                  case x if x == 0 => ""
+                  case _ => s"""Adminprozente: ${bestellung.adminProzente}%:"""
+                }
+
+                s"""${infoAdminproz}
+
+${bestellpositionen.mkString("\n")}
                 """
 
               }
