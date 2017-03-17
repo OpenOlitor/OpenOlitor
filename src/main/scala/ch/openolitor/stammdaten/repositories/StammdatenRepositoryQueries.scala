@@ -489,12 +489,13 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(heimlieferungAbo.kundeId, person.kundeId)
         .leftJoin(postlieferungAboMapping as postlieferungAbo).on(postlieferungAbo.kundeId, person.kundeId)
         .leftJoin(abotypMapping as aboTyp).on(sqls.eq(depotlieferungAbo.abotypId, aboTyp.id).or.eq(heimlieferungAbo.abotypId, aboTyp.id).or.eq(postlieferungAbo.abotypId, aboTyp.id))
-        .where(
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, aboTyp))
+        .having(
           sqls.
-            or.eq(depotlieferungAbo.aktiv, parameter(true))
+            eq(depotlieferungAbo.aktiv, parameter(true))
             .or.eq(heimlieferungAbo.aktiv, parameter(true))
             .or.eq(postlieferungAbo.aktiv, parameter(true))
-        ).and(UriQueryParamToSQLSyntaxBuilder.build(filter, aboTyp))
+        )
     }.map { rs =>
       copyTo[Person, PersonSummary](personMapping(person)(rs))
     }.list
