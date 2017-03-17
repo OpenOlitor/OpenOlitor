@@ -60,6 +60,7 @@ case object Bund extends Liefereinheit
 case object Gramm extends Liefereinheit
 case object Kilogramm extends Liefereinheit
 case object Liter extends Liefereinheit
+case object Portion extends Liefereinheit
 
 object Liefereinheit {
   def apply(value: String): Liefereinheit = {
@@ -139,4 +140,3 @@ case class ProduktProduktekategorie(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[ProduktProduktekategorieId]
-
