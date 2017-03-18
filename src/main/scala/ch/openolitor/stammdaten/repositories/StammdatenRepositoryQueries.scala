@@ -1091,6 +1091,16 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(sammelbestellungMapping(sammelbestellung)).list
   }
 
+  protected def getSammelbestellungenQuery(id: LieferungId) = {
+    withSQL {
+      select
+        .from(sammelbestellungMapping as sammelbestellung)
+        .join(lieferplanungMapping as lieferplanung).on(sammelbestellung.lieferplanungId, lieferplanung.id)
+        .join(lieferungMapping as lieferung).on(lieferung.lieferplanungId, lieferplanung.id)
+        .where.eq(lieferplanung.id, parameter(id))
+    }.map(sammelbestellungMapping(sammelbestellung)).list
+  }
+
   protected def getSammelbestellungenQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select

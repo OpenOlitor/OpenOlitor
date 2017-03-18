@@ -60,7 +60,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     with ConnectionPoolContextAware
     with KorbHandler
     with AboAktivChangeHandler
-    with LieferungHandler {
+    with LieferungHandler
+    with SammelbestellungenHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
@@ -1032,6 +1033,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       stammdatenWriteRepository.getGeplanteLieferungNachher(orig.vertriebId, entity.datum) match {
         case Some(lieferungNach) => recalculateLieferungOffen(lieferungNach, Some(entity))
         case _ =>
+      }
+
+      //Bestellungen neu ausrechnen wenn Lieferung in Status Abgeschlossen
+      if (entity.status == Abgeschlossen) {
+        stammdatenWriteRepository.getSammelbestellungen(entity.id) map { sammelbestellung =>
+          createOrUpdateSammelbestellungen(sammelbestellung.id, SammelbestellungCreate(sammelbestellung.produzentId, sammelbestellung.lieferplanungId, sammelbestellung.datum))
+        }
       }
     }
   }
