@@ -6,7 +6,7 @@ Falls du Fragen hast oder dich mit uns über OpenOlitor austauschen möchtest: K
 
 # OpenOlitor - Willkommen | Bienvenue | Welcome
 
-[Deutsch](https://github.com/OpenOlitor/OpenOlitor/wiki#willkommen-bei-openolitor-1) | [Français](https://github.com/OpenOlitor/OpenOlitor/wiki#bienvenue-sur-le-site-github-de-openolitor-1) | [English](https://github.com/OpenOlitor/OpenOlitor/wiki#welcome-1)
+[Deutsch](#willkommen-bei-openolitor) | [Français](#bienvenue-chez-openolitor) | [English](#welcome-at-openolitor)
 
 
 ## Willkommen bei OpenOlitor
