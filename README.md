@@ -4,10 +4,35 @@ Falls du Fragen hast oder dich mit uns über OpenOlitor austauschen möchtest: K
 
 [![Gitter](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/OpenOlitor/Discussion)
 
-# OpenOlitor
-Administrationsplattform für Vertragslandwirtschaftsprojekte. Weitere Informationen auf [www.openolitor.org](http://openolitor.livinglines.at/de/)
+# OpenOlitor - Willkommen | Bienvenue | Welcome
 
-Plateforme d'administration pour des projets d’agriculture contractuelle de proximité. Plus d'informations sur [www.openolitor.org](http://openolitor.livinglines.at/fr/)
+[Deutsch](https://github.com/OpenOlitor/OpenOlitor/wiki#willkommen-bei-openolitor-1) | [Français](https://github.com/OpenOlitor/OpenOlitor/wiki#bienvenue-sur-le-site-github-de-openolitor-1) | [English](https://github.com/OpenOlitor/OpenOlitor/wiki#welcome-1)
 
-A software platform to help you administer your community supported agriculture–CSA, Solawi, RVL and other subscription based projects. More informations: [www.openolitor.org](http://openolitor.livinglines.at/en/)
+
+## Willkommen bei OpenOlitor
+
+Zu OpenOlitor sind die folgenden Online-Informationen verfügbar:
+
+* [www.openolitor.org](http://www.openolitor.org/de/): Die Webseite von OpenOlitor enthält Information zur Software, zur Organisation und zur Finanzierung sowie aktuelle Informationen, Kontaktdaten, Vorschläge zur Mitarbeit und die Anmeldung für den Newsletter.
+
+* Die Dokumentation zu OpenOlitor befindet sich auf (dem GitHub-Wiki)[https://github.com/OpenOlitor/OpenOlitor/wiki].
+
+* Das Wiki des OpenOlitor-Teams (Zugriff beschränkt für das Team von OpenOlitor) dokumentiert die Arbeiten des Teams (Besprechungen, Erarbeitung von Texten) und dient als Job-Verwaltung.
+
+## Bienvenue chez OpenOlitor
+
+La traduction va suivre....
+
+## Welcome at OpenOlitor
+
+The following sites provide useful information about OpenOplitor:
+
+* [www.openolitor.org](http://www.openolitor.org/en/): The main website contains general information about the product, explains the organizational structure and financing. Furthermore it provides current news, contact details and information about how to get involved as well as the newsletter subscription.
+
+* The main documentation is available on the (GitHub-Wiki)[https://github.com/OpenOlitor/OpenOlitor/wiki].
+
+* There is another, internal Wiki where the active OpenOplito team manages the planed work.
+
+
+
 
