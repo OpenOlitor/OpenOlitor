@@ -38,9 +38,11 @@ import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
 import org.joda.time.DateTime
 import java.util.UUID
+import scalikejdbc.DBSession
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
+  case class LieferplanungAktualisierenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class AbwesenheitCreateCommand(originator: PersonId, abw: AbwesenheitCreate) extends UserCommand
   case class SammelbestellungAnProduzentenVersendenCommand(originator: PersonId, id: SammelbestellungId) extends UserCommand
@@ -108,20 +110,15 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case Offen =>
               stammdatenWriteRepository.countEarlierLieferungOffen(id) match {
                 case Some(0) =>
-                  val distinctLieferpositionen = stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id).map { lieferposition =>
-                    stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
-                      (lieferposition.produzentId, lieferplanung.id, lieferung.datum)
-                    }
-                  }.flatten.toSet
+                  val distinctSammelbestellungen = getDistinctSammelbestellungCreateByLieferplan(lieferplanung.id)
 
-                  val bestellEvents = distinctLieferpositionen.map {
-                    case (produzentId, lieferplanungId, datum) =>
-                      val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
-                      val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, SammelbestellungCreate(produzentId, lieferplanungId, datum))
+                  val bestellEvents = distinctSammelbestellungen.map { sammelbestellungCreate =>
+                    val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
+                    val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, sammelbestellungCreate)
 
-                      val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
+                    val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
 
-                      Seq(insertEvent, bestellungVersendenEvent)
+                    Seq(insertEvent, bestellungVersendenEvent)
                   }.toSeq.flatten
 
                   val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
@@ -132,6 +129,40 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               }
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
+          }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
+      }
+
+    case LieferplanungAktualisierenCommand(personId, id) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
+          lieferplanung.status match {
+            case (Offen | Abgeschlossen) =>
+              stammdatenWriteRepository.countEarlierLieferungOffen(id) match {
+                case Some(0) =>
+                  // get existing sammelbestellungen
+                  val existingSammelbestellungen = (stammdatenWriteRepository.getSammelbestellungen(id) map { sammelbestellung =>
+                    SammelbestellungCreate(sammelbestellung.produzentId, lieferplanung.id, sammelbestellung.datum)
+                  }).toSet
+
+                  // get distinct sammelbestellungen by lieferplanung
+                  val distinctSammelbestellungen = getDistinctSammelbestellungCreateByLieferplan(lieferplanung.id)
+
+                  // evaluate which sammelbestellungen are missing and have to be inserted
+                  // they will be used in handleLieferungChanged afterwards
+                  val missingSammelbestellungen = distinctSammelbestellungen -- existingSammelbestellungen
+
+                  val insertEvents = missingSammelbestellungen.map { sammelbestellungCreate =>
+                    val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
+                    EntityInsertedEvent(meta, sammelbestellungId, sammelbestellungCreate)
+                  }.toSeq
+
+                  Success(insertEvents)
+                case _ =>
+                  Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
+              }
+            case _ =>
+              Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' oder 'Abgeschlossen' aktualisiert werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
       }
@@ -524,6 +555,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
       }
     }
+  }
+
+  private def getDistinctSammelbestellungCreateByLieferplan(lieferplanungId: LieferplanungId)(implicit session: DBSession): Set[SammelbestellungCreate] = {
+    stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanungId).map { lieferposition =>
+      stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+        SammelbestellungCreate(lieferposition.produzentId, lieferplanungId, lieferung.datum)
+      }
+    }.flatten.toSet
   }
 }
 

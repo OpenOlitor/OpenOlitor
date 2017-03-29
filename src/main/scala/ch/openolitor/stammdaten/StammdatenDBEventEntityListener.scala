@@ -1036,6 +1036,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       }
 
       //Bestellungen neu ausrechnen wenn Lieferung in Status Abgeschlossen
+      // TODO aktuell werden so sammelbestellungen mehrfach aktualisiert
       if (entity.status == Abgeschlossen) {
         stammdatenWriteRepository.getSammelbestellungen(entity.id) map { sammelbestellung =>
           createOrUpdateSammelbestellungen(sammelbestellung.id, SammelbestellungCreate(sammelbestellung.produzentId, sammelbestellung.lieferplanungId, sammelbestellung.datum))
