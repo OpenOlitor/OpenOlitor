@@ -1097,7 +1097,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(sammelbestellungMapping as sammelbestellung)
         .join(lieferplanungMapping as lieferplanung).on(sammelbestellung.lieferplanungId, lieferplanung.id)
         .join(lieferungMapping as lieferung).on(lieferung.lieferplanungId, lieferplanung.id)
-        .where.eq(lieferplanung.id, parameter(id))
+        .where.eq(lieferung.id, parameter(id))
     }.map(sammelbestellungMapping(sammelbestellung)).list
   }
 
@@ -1133,6 +1133,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(bestellungMapping as bestellung)
         .where.eq(bestellung.sammelbestellungId, parameter(id))
     }.map(bestellungMapping(bestellung)).list
+  }
+
+  protected def getBestellungQuery(id: SammelbestellungId, adminProzente: BigDecimal) = {
+    withSQL {
+      select
+        .from(bestellungMapping as bestellung)
+        .where.eq(bestellung.sammelbestellungId, parameter(id)).and.eq(bestellung.adminProzente, parameter(adminProzente))
+    }.map(bestellungMapping(bestellung)).single
   }
 
   protected def getBestellpositionenQuery(id: BestellungId) = {
