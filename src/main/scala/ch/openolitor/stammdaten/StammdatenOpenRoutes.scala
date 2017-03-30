@@ -121,7 +121,7 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
 
   def lieferplanungRoute =
     path("lieferplanungen") {
-      get(list(stammdatenReadRepository.getLastClosedLieferungenDetail)) ~
+      get(list(stammdatenReadRepository.getLastClosedLieferungenDetail))
     }
 }
 
