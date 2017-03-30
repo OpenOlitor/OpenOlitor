@@ -191,6 +191,16 @@ case class LieferpositionModify(
   anzahl: Int
 ) extends JSONSerializable
 
+case class LieferplanungPositionenModify(
+  id: LieferplanungId,
+  lieferungen: Set[LieferungPositionenModify]
+) extends JSONSerializable
+
+case class LieferungPositionenModify(
+  id: LieferungId,
+  lieferpositionen: LieferpositionenModify
+) extends JSONSerializable
+
 case class LieferpositionenModify(
   preisTotal: Option[BigDecimal],
   lieferpositionen: List[LieferpositionModify]
