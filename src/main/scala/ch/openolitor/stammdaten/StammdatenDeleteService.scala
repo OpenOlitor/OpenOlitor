@@ -88,11 +88,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteAbwesenheit(meta: EventMetadata, id: AbwesenheitId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Abwesenheit, AbwesenheitId](id, { abw: Abwesenheit =>
-        stammdatenWriteRepository.getById(lieferungMapping, abw.lieferungId).map { lieferung: Lieferung =>
-          lieferung.status.eq(Offen) || lieferung.status.eq(Ungeplant)
-        }.getOrElse(false)
-      })
+      stammdatenWriteRepository.deleteEntity[Abwesenheit, AbwesenheitId](id)
     }
   }
 

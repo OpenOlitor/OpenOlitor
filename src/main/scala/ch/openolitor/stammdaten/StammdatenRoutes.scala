@@ -183,7 +183,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         }
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (_, aboId, abwesenheitId) =>
-        delete(remove(abwesenheitId))
+        deleteAbwesenheit(abwesenheitId)
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(stammdatenReadRepository.getPendenzen(kundeId))) ~
@@ -246,8 +246,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getAbotypen)) ~
         post(create[AbotypModify, AbotypId](AbotypId.apply _))
     } ~
-      path("abotypen" / "personen") {
+      path("abotypen" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByAbotypen))
+      } ~
+      path("abotypen" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByAbotypen))
       } ~
       path("abotypen" / abotypIdPath) { id =>
         get(detail(stammdatenReadRepository.getAbotypDetail(id))) ~
@@ -320,8 +323,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getDepots)) ~
         post(create[DepotModify, DepotId](DepotId.apply _))
     } ~
-      path("depots" / "personen") {
+      path("depots" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByDepots))
+      } ~
+      path("depots" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByDepots))
       } ~
       path("depots" / "berichte" / "depotbrief") {
         implicit val personId = subject.personId
@@ -402,8 +408,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getTouren, exportFormat)) ~
         post(create[TourCreate, TourId](TourId.apply _))
     } ~
-      path("touren" / "personen") {
+      path("touren" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByTouren))
+      } ~
+      path("touren" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByTouren))
       } ~
       path("touren" / tourIdPath) { id =>
         get(detail(stammdatenReadRepository.getTourDetail(id))) ~
@@ -653,6 +662,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess(entityStore ? StammdatenCommandHandler.AuslieferungenAlsAusgeliefertMarkierenCommand(subject.personId, ids)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Auslieferungen konnten nicht als ausgeliefert markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def deleteAbwesenheit(abwesenheitId: AbwesenheitId)(implicit idPersister: Persister[AuslieferungId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.DeleteAbwesenheitCommand(subject.personId, abwesenheitId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Abwesenheit kann nicht gelöscht werden. Die Lieferung ist bereits abgeschlossen.")
       case _ =>
         complete("")
     }

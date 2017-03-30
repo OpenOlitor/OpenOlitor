@@ -52,6 +52,11 @@ import ch.openolitor.core.Boot
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.filestore.FileStore
 import ch.openolitor.core.security.Subject
+import ch.openolitor.core.repositories._
+import ch.openolitor.core.db.AsyncConnectionPoolContextAware
+import ch.openolitor.core.eventsourcing._
+import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.util.parsing.UriQueryParamFilterParser
 
 class DefaultSystemRouteService(
   override val entityStore: ActorRef,
@@ -63,10 +68,17 @@ class DefaultSystemRouteService(
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory,
   override val airbrakeNotifier: ActorRef
-) extends SystemRouteService
+) extends SystemRouteService with DefaultCoreReadRepositoryComponent
 
 trait SystemRouteService extends HttpService with ActorReferences
-    with ConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging with StatusRoutes with SystemJsonProtocol {
+    with ConnectionPoolContextAware with SprayDeserializers
+    with DefaultRouteService
+    with LazyLogging
+    with StatusRoutes
+    with SystemJsonProtocol
+    with AsyncConnectionPoolContextAware
+    with PersistenceJsonProtocol {
+  self: CoreReadRepositoryComponent =>
 
   private var error: Option[Throwable] = None
   val system: ActorSystem
@@ -128,6 +140,18 @@ trait SystemRouteService extends HttpService with ActorReferences
                   complete(StatusCodes.BadRequest)
               }
             }.getOrElse(complete(StatusCodes.BadRequest, "No file found"))
+          }
+        }
+      } ~
+      path("events") {
+        get {
+          parameters('f.?, 'limit ? 100) { (f: Option[String], limit: Int) =>
+            implicit val filter = f flatMap { filterString =>
+              UriQueryParamFilterParser.parse(filterString)
+            }
+            onSuccess(coreReadRepository.queryPersistenceJournal(limit)) {
+              case result => complete(result)
+            }
           }
         }
       }

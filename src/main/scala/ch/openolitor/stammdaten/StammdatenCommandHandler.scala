@@ -59,6 +59,8 @@ object StammdatenCommandHandler {
   case class AboAktivierenCommand(aboId: AboId, originator: PersonId = PersonId(100)) extends UserCommand
   case class AboDeaktivierenCommand(aboId: AboId, originator: PersonId = PersonId(100)) extends UserCommand
 
+  case class DeleteAbwesenheitCommand(originator: PersonId, id: AbwesenheitId) extends UserCommand
+
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class AbwesenheitCreateEvent(meta: EventMetadata, id: AbwesenheitId, abw: AbwesenheitCreate) extends PersistentEvent with JSONSerializable
@@ -86,6 +88,19 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   import EntityStore._
 
   override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
+
+    case DeleteAbwesenheitCommand(personId, id) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        stammdatenWriteRepository.getLieferung(id) map { lieferung =>
+          lieferung.status match {
+            case (Offen | Ungeplant) =>
+              Success(Seq(EntityDeletedEvent(meta, id)))
+            case _ =>
+              Failure(new InvalidStateException("Die der Abwesenheit zugeordnete Lieferung muss Offen oder Ungeplant sein."))
+          }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferung zu Abwesenheit Nr. $id gefunden")))
+      }
+
     case LieferplanungAbschliessenCommand(personId, id) => idFactory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
@@ -150,7 +165,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case Offen | Abgeschlossen =>
               Success(Seq(SammelbestellungVersendenEvent(meta, id)))
             case _ =>
-              Failure(new InvalidStateException("Eine Bestellung kann nur in den Stati 'Offen' oder 'Abgeschlossen' versendet werden"))
+              Failure(new InvalidStateException("Eine Bestellung kann nur in den Status 'Offen' oder 'Abgeschlossen' versendet werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
       }
