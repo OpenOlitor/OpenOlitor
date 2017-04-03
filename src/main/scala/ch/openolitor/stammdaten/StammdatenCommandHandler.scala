@@ -38,9 +38,12 @@ import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
 import org.joda.time.DateTime
 import java.util.UUID
+import scalikejdbc.DBSession
+import ch.openolitor.util.IdUtil
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
+  case class LieferplanungModifyCommand(originator: PersonId, lieferplanungModify: LieferplanungPositionenModify) extends UserCommand
   case class LieferplanungAbrechnenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
   case class AbwesenheitCreateCommand(originator: PersonId, abw: AbwesenheitCreate) extends UserCommand
   case class SammelbestellungAnProduzentenVersendenCommand(originator: PersonId, id: SammelbestellungId) extends UserCommand
@@ -63,6 +66,7 @@ object StammdatenCommandHandler {
 
   case class LieferplanungAbschliessenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
   case class LieferplanungAbrechnenEvent(meta: EventMetadata, id: LieferplanungId) extends PersistentEvent with JSONSerializable
+  case class LieferplanungDataModifiedEvent(meta: EventMetadata, result: LieferplanungDataModify) extends PersistentEvent with JSONSerializable
   case class AbwesenheitCreateEvent(meta: EventMetadata, id: AbwesenheitId, abw: AbwesenheitCreate) extends PersistentEvent with JSONSerializable
   @Deprecated
   case class BestellungVersendenEvent(meta: EventMetadata, id: BestellungId) extends PersistentEvent with JSONSerializable
@@ -108,20 +112,15 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case Offen =>
               stammdatenWriteRepository.countEarlierLieferungOffen(id) match {
                 case Some(0) =>
-                  val distinctLieferpositionen = stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanung.id).map { lieferposition =>
-                    stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
-                      (lieferposition.produzentId, lieferplanung.id, lieferung.datum)
-                    }
-                  }.flatten.toSet
+                  val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
 
-                  val bestellEvents = distinctLieferpositionen.map {
-                    case (produzentId, lieferplanungId, datum) =>
-                      val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
-                      val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, SammelbestellungCreate(produzentId, lieferplanungId, datum))
+                  val bestellEvents = distinctSammelbestellungen.map { sammelbestellungCreate =>
+                    val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
+                    val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, sammelbestellungCreate)
 
-                      val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
+                    val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
 
-                      Seq(insertEvent, bestellungVersendenEvent)
+                    Seq(insertEvent, bestellungVersendenEvent)
                   }.toSeq.flatten
 
                   val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
@@ -134,6 +133,42 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
+      }
+
+    case LieferplanungModifyCommand(personId, lieferplanungPositionenModify) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungPositionenModify.id) map { lieferplanung =>
+          lieferplanung.status match {
+            case state @ (Offen | Abgeschlossen) =>
+              stammdatenWriteRepository.countEarlierLieferungOffen(lieferplanungPositionenModify.id) match {
+                case Some(0) =>
+                  val missingSammelbestellungen = if (state == Abgeschlossen) {
+                    // get existing sammelbestellungen
+                    val existingSammelbestellungen = (stammdatenWriteRepository.getSammelbestellungen(lieferplanungPositionenModify.id) map { sammelbestellung =>
+                      SammelbestellungModify(sammelbestellung.produzentId, lieferplanung.id, sammelbestellung.datum)
+                    }).toSet
+
+                    // get distinct sammelbestellungen by lieferplanung
+                    val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
+
+                    // evaluate which sammelbestellungen are missing and have to be inserted
+                    // they will be used in handleLieferungChanged afterwards
+                    (distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
+                      val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
+                      SammelbestellungCreate(sammelbestellungId, s.produzentId, s.lieferplanungId, s.datum)
+                    }.toSeq
+                  } else {
+                    Nil
+                  }
+
+                  Success(LieferplanungDataModifiedEvent(meta, LieferplanungDataModify(lieferplanungPositionenModify.id, missingSammelbestellungen.toSet, lieferplanungPositionenModify.lieferungen)) :: Nil)
+                case _ =>
+                  Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
+              }
+            case _ =>
+              Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' oder 'Abgeschlossen' aktualisiert werden"))
+          }
+        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. ${lieferplanungPositionenModify.id} gefunden")))
       }
 
     case LieferplanungAbrechnenCommand(personId, id: LieferplanungId) => idFactory => meta =>
@@ -524,6 +559,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
       }
     }
+  }
+
+  private def getDistinctSammelbestellungModifyByLieferplan(lieferplanungId: LieferplanungId)(implicit session: DBSession): Set[SammelbestellungModify] = {
+    stammdatenWriteRepository.getLieferpositionenByLieferplan(lieferplanungId).map { lieferposition =>
+      stammdatenWriteRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+        SammelbestellungModify(lieferposition.produzentId, lieferplanungId, lieferung.datum)
+      }
+    }.flatten.toSet
   }
 }
 

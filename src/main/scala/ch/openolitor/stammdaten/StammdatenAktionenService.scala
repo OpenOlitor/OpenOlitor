@@ -63,8 +63,14 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
 /**
  * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
  */
-class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
-    with StammdatenDBMappings with MailServiceReference with StammdatenEventStoreSerializer {
+class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent]
+    with LazyLogging
+    with AsyncConnectionPoolContextAware
+    with StammdatenDBMappings
+    with MailServiceReference
+    with StammdatenEventStoreSerializer
+    with SammelbestellungenHandler
+    with LieferungHandler {
   self: StammdatenWriteRepositoryComponent =>
 
   implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
@@ -78,6 +84,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       lieferplanungAbschliessen(meta, id)
     case LieferplanungAbrechnenEvent(meta, id: LieferplanungId) =>
       lieferplanungVerrechnet(meta, id)
+    case LieferplanungDataModifiedEvent(meta, result: LieferplanungDataModify) =>
+      lieferplanungDataModified(meta, result)
     case SammelbestellungVersendenEvent(meta, id: SammelbestellungId) =>
       sammelbestellungVersenden(meta, id)
     case AuslieferungAlsAusgeliefertMarkierenEvent(meta, id: AuslieferungId) =>
@@ -125,6 +133,29 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       stammdatenWriteRepository.getSammelbestellungen(id) map { sammelbestellung =>
         if (Abgeschlossen == sammelbestellung.status) {
           stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Verrechnet, datumAbrechnung = Some(DateTime.now)))
+        }
+      }
+    }
+  }
+
+  def lieferplanungDataModified(meta: EventMetadata, result: LieferplanungDataModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferplanungMapping, result.id) map { lieferplanung =>
+        if (Offen == lieferplanung.status || Abgeschlossen == lieferplanung.status) {
+          // lieferungen mit positionen anpassen
+          result.lieferungen map { l =>
+            recreateLieferpositionen(meta, l.id, l.lieferpositionen)
+          }
+
+          // existierende Sammelbestellungen neu ausrechnen
+          stammdatenWriteRepository.getSammelbestellungen(result.id) map { s =>
+            createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
+          }
+
+          // neue sammelbestellungen erstellen
+          result.newSammelbestellungen map { s =>
+            createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
+          }
         }
       }
     }
