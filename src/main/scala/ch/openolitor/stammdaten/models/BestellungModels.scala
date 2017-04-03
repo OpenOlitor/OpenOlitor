@@ -140,7 +140,14 @@ case class BestellungCreate(
   datum: DateTime
 ) extends JSONSerializable
 
+case class SammelbestellungModify(
+  produzentId: ProduzentId,
+  lieferplanungId: LieferplanungId,
+  datum: DateTime
+) extends JSONSerializable
+
 case class SammelbestellungCreate(
+  id: SammelbestellungId,
   produzentId: ProduzentId,
   lieferplanungId: LieferplanungId,
   datum: DateTime
