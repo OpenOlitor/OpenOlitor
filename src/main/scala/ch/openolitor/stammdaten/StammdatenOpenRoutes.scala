@@ -116,12 +116,20 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
       implicit val filter = f flatMap { filterString =>
         UriQueryParamFilterParser.parse(filterString)
       }
-      lieferplanungRoute
+      pathPrefix("open") {
+        projectsRoute ~ lieferplanungRoute
+      }
+
+    }
+
+  def projectsRoute =
+    path("projekt") {
+      get(detail(stammdatenReadRepository.getProjektPublik))
     }
 
   def lieferplanungRoute =
-    path("lieferplanungen") {
-      get(list(stammdatenReadRepository.getLastClosedLieferungenDetail))
+    path("lastlieferplanungen") {
+      get(list(stammdatenReadRepository.getLastClosedLieferplanungenDetail))
     }
 }
 
