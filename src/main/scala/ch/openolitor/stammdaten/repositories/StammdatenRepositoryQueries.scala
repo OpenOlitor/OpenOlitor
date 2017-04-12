@@ -1679,4 +1679,27 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .and.eq(lieferung.status, parameter(Offen))
     }.map(lieferungMapping(lieferung)).list
   }
+
+  protected def getLastClosedLieferplanungenDetailQuery = {
+    withSQL {
+      select
+        .from(lieferplanungMapping as lieferplanung)
+        .leftJoin(lieferungMapping as lieferung).on(lieferung.lieferplanungId, lieferplanung.id)
+        .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
+        .where.withRoundBracket { _.eq(lieferplanung.status, parameter(Abgeschlossen)).or.eq(lieferplanung.status, parameter(Verrechnet)) }
+        .orderBy(lieferplanung.id).desc
+    }
+      .one(lieferplanungMapping(lieferplanung))
+      .toManies(
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => lieferpositionMapping.opt(lieferposition)(rs)
+      )
+      .map((lieferplanung, lieferungen, lieferpositionen) => {
+        val lieferungenDetails = lieferungen map { l =>
+          val p = lieferpositionen.filter(_.lieferungId == l.id).map(p => copyTo[Lieferposition, LieferpositionOpen](p)).toSeq
+          copyTo[Lieferung, LieferungOpenDetail](l, "lieferpositionen" -> p)
+        }
+        copyTo[Lieferplanung, LieferplanungOpenDetail](lieferplanung, "lieferungen" -> lieferungenDetails)
+      }).list
+  }
 }
