@@ -45,6 +45,7 @@ import java.util.Locale
 import java.text.DecimalFormat
 import scala.annotation.tailrec
 import ch.openolitor.core.reporting.odf.NestedTextboxIterator
+import org.odftoolkit.odfdom.dom.element.draw.DrawTextBoxElement
 
 case class Value(jsValue: JsValue, value: String)
 
@@ -127,6 +128,7 @@ trait DocumentProcessor extends LazyLogging {
       _ <- Try(processVariables(doc, props))
       _ <- Try(processTables(doc, props, locale, Nil))
       _ <- Try(processLists(doc, props, locale, Nil))
+      _ <- Try(processFrames(doc, props, locale))
       _ <- Try(processSections(doc, props, locale))
       _ <- Try(processTextboxes(doc, props, locale, Nil))
       _ <- Try(registerVariables(doc, props))
@@ -311,12 +313,44 @@ trait DocumentProcessor extends LazyLogging {
   }
 
   /**
+   * Process frames which are part of the property map and append it to the document
+   */
+  private def processFrames(doc: TextDocument, props: Map[String, Value], locale: Locale) = {
+    for {
+      p <- doc.getParagraphIterator
+      f <- p.getFrameIterator
+    } processFrame(p, f, props, locale)
+  }
+
+  private def processFrame(p: Paragraph, frame: Frame, props: Map[String, Value], locale: Locale) = {
+    props.get(frame.getName) map {
+      case Value(JsArray(values), _) =>
+        processFrameWithValues(p, frame, props, values, locale)
+    } getOrElse logger.debug(s"Frame not mapped to property, will be processed statically:${frame.getName}")
+  }
+
+  private def processFrameWithValues(p: Paragraph, frame: Frame, props: Map[String, Value], values: Vector[JsValue], locale: Locale) = {
+    for (index <- 0 to values.length - 1) {
+      val key = s"${frame.getName}.$index"
+      logger.debug(s"processFrame:$key")
+      // process textboxes starting below first child which has to be a <text-box>
+      val firstTextBox = OdfElement.findFirstChildNode(classOf[DrawTextBoxElement], frame.getOdfElement())
+      val container = new GenericParagraphContainerImpl(firstTextBox)
+      processTextboxes(container, props, locale, Seq(key))
+      //append section
+      p.appendFrame(frame)
+    }
+    //remove template
+    frame.remove()
+  }
+
+  /**
    * Process textboxes and fill in content based on
    */
   private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
       p <- cont.getParagraphIterator
-      t <- new NestedTextboxIterator(p)
+      t <- new NestedTextboxIterator(p.getFrameContainerElement)
     } {
       val (name, formats) = parseFormats(t.getName)
       val propertyKey = parsePropertyKey(name, pathPrefixes)
@@ -463,58 +497,6 @@ trait DocumentProcessor extends LazyLogging {
         Map(prefix -> Value(j, convertedDate))
       case j @ JsString(value) => Map(prefix -> Value(j, value))
       case value => Map(prefix -> Value(value, value.toString))
-    }
-  }
-}
-
-object OdfToolkitUtils {
-  implicit class MyTextbox(self: Textbox) {
-    /**
-     * Remove style declared on draw textbox, otherwise styles applied on template won't get applied
-     */
-    def removeCommonStyle() = {
-      self.getDrawFrameElement().setDrawTextStyleNameAttribute(null)
-    }
-
-    def setTextContentStyleAware(content: String) = {
-      val p = self.getParagraphIterator.next()
-      val lastNode = p.getOdfElement.getLastChild()
-      if (lastNode != null && lastNode.getNodeName() != null
-        && (lastNode.getNodeName().equals("text:span"))) {
-        //set text content on span element
-        val span = lastNode.asInstanceOf[TextSpanElement]
-        span.setTextContent(content)
-      } else {
-        self.setTextContent(content)
-      }
-    }
-
-    def setFontColor(color: Color) = {
-      val p = self.getParagraphIterator.next()
-      p.getStyleHandler.getTextPropertiesForWrite().setFontColor(color)
-      val styleName = p.getStyleName()
-
-      val lastNode = p.getOdfElement.getLastChild();
-      // create new style element to support coloring of font
-      val content = self.getTextContent
-      //remove last node (current text node)
-      p.getOdfElement.removeChild(lastNode)
-      val textP = p.getOdfElement.asInstanceOf[TextPElement]
-      val span = textP.newTextSpanElement()
-
-      val dom = self.getOdfElement.getOwnerDocument
-      val styles = if (dom.isInstanceOf[OdfContentDom]) {
-        dom.asInstanceOf[OdfContentDom].getAutomaticStyles
-      } else {
-        dom.asInstanceOf[OdfStylesDom].getAutomaticStyles
-      }
-      val textStyle = styles.newStyle(OdfStyleFamily.Text)
-      val styleTextPropertiesElement = textStyle.newStyleTextPropertiesElement(null)
-      styleTextPropertiesElement.setFoColorAttribute(color.toString)
-
-      // set comment content
-      span.setStyleName(textStyle.getStyleNameAttribute)
-      span.setTextContent(content)
     }
   }
 }
