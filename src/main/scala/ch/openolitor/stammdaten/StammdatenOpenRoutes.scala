@@ -79,36 +79,6 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
     with FileTypeFilenameMapping {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
-  implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
-  implicit val kundeIdPath = long2BaseIdPathMatcher(KundeId.apply)
-  implicit val pendenzIdPath = long2BaseIdPathMatcher(PendenzId.apply)
-  implicit val personIdPath = long2BaseIdPathMatcher(PersonId.apply)
-  implicit val kundentypIdPath = long2BaseIdPathMatcher(CustomKundentypId.apply)
-  implicit val depotIdPath = long2BaseIdPathMatcher(DepotId.apply)
-  implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
-  implicit val vertriebIdPath = long2BaseIdPathMatcher(VertriebId.apply)
-  implicit val vertriebsartIdPath = long2BaseIdPathMatcher(VertriebsartId.apply)
-  implicit val lieferungIdPath = long2BaseIdPathMatcher(LieferungId.apply)
-  implicit val lieferplanungIdPath = long2BaseIdPathMatcher(LieferplanungId.apply)
-  implicit val lieferpositionIdPath = long2BaseIdPathMatcher(LieferpositionId.apply)
-  implicit val bestellungIdPath = long2BaseIdPathMatcher(BestellungId.apply)
-  implicit val sammelbestellungIdPath = long2BaseIdPathMatcher(SammelbestellungId.apply)
-  implicit val produktIdPath = long2BaseIdPathMatcher(ProduktId.apply)
-  implicit val produktekategorieIdPath = long2BaseIdPathMatcher(ProduktekategorieId.apply)
-  implicit val produzentIdPath = long2BaseIdPathMatcher(ProduzentId.apply)
-  implicit val tourIdPath = long2BaseIdPathMatcher(TourId.apply)
-  implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
-  implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
-  implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
-  implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
-  implicit val korbStatusPath = enumPathMatcher(KorbStatus.apply(_) match {
-    case x => Some(x)
-  })
-  implicit val vorlageTypePath = enumPathMatcher(VorlageTyp.apply(_) match {
-    case UnknownFileType => None
-    case x => Some(x)
-  })
-
   import EntityStore._
 
   def stammdatenOpenRoute =
@@ -126,9 +96,9 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
     path("projekt") {
       get(detail(stammdatenReadRepository.getProjektPublik))
     } ~
-      path("projekt" / projektIdPath / "logo") { id =>
-        get(download(ProjektStammdaten, "logo"))
-      }
+    path("projekt" / projektIdPath / "logo") { id =>
+      get(download(ProjektStammdaten, "logo"))
+    }
 
   def lieferplanungRoute =
     path("lastlieferplanungen") {
