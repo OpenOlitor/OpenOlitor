@@ -109,7 +109,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createLieferplanung(meta, id, lieferplanungCreateData)
     case EntityInsertedEvent(meta, id: LieferungId, entity: LieferungPlanungAdd) =>
       addLieferungToPlanung(meta, id, entity)
-    case EntityInsertedEvent(meta, id: SammelbestellungId, entity: SammelbestellungCreate) =>
+    case EntityInsertedEvent(meta, id: SammelbestellungId, entity: SammelbestellungModify) =>
       createSammelbestellungen(meta, id, entity)
     case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
       createProjektVorlage(meta, id, vorlage)
@@ -661,7 +661,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createSammelbestellungen(meta: EventMetadata, id: SammelbestellungId, create: SammelbestellungCreate)(implicit personId: PersonId = meta.originator) = {
+  def createSammelbestellungen(meta: EventMetadata, id: SammelbestellungId, create: SammelbestellungModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
       createOrUpdateSammelbestellungen(id, create)
     }

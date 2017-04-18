@@ -446,12 +446,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, lieferungId, korbStatus) =>
         get(list(stammdatenReadRepository.getAboIds(lieferungId, korbStatus)))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
-        get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~
-          (put | post)(update[LieferpositionenModify, LieferungId](lieferungId))
-      } ~
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "abschliessen") { id =>
         (post)(lieferplanungAbschliessen(id))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "modifizieren") { id =>
+        post {
+          requestInstance { request =>
+            entity(as[LieferplanungPositionenModify]) { lieferplanungModify =>
+              lieferplanungModifizieren(lieferplanungModify)
+            }
+          }
+        }
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "verrechnen") { id =>
         (post)(lieferplanungVerrechnen(id))
@@ -482,6 +487,16 @@ trait StammdatenRoutes extends HttpService with ActorReferences
           }
         }
 
+        complete("")
+    }
+  }
+
+  def lieferplanungModifizieren(lieferplanungModify: LieferplanungPositionenModify)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {
+    implicit val timeout = Timeout(30.seconds)
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungModifyCommand(subject.personId, lieferplanungModify)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not modify Lieferplanung")
+      case _ =>
         complete("")
     }
   }

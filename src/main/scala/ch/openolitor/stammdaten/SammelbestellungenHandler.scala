@@ -32,7 +32,7 @@ import ch.openolitor.util.IdUtil
 trait SammelbestellungenHandler extends StammdatenDBMappings {
   this: StammdatenWriteRepositoryComponent =>
 
-  def createOrUpdateSammelbestellungen(id: SammelbestellungId, create: SammelbestellungCreate)(implicit personId: PersonId, session: DBSession) = {
+  def createOrUpdateSammelbestellungen(id: SammelbestellungId, create: SammelbestellungModify)(implicit personId: PersonId, session: DBSession) = {
     stammdatenWriteRepository.getById(produzentMapping, create.produzentId) map { produzent =>
 
       val sammelbestellung = stammdatenWriteRepository.getById(sammelbestellungMapping, id) getOrElse {
