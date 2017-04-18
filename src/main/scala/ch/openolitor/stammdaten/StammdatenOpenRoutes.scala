@@ -96,7 +96,10 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
   def projectsRoute =
     path("projekt") {
       get(detail(stammdatenReadRepository.getProjektPublik))
-    }
+    } ~
+      path("projekt" / projektIdPath / "logo") { id =>
+        get(download(ProjektStammdaten, "logo"))
+      }
 
   def lieferplanungRoute =
     path("lastlieferplanungen") {
