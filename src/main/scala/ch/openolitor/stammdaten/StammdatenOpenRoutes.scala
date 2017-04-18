@@ -76,7 +76,8 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
     with DepotBriefReportService
     with ProduzentenBriefReportService
     with ProduzentenabrechnungReportService
-    with FileTypeFilenameMapping {
+    with FileTypeFilenameMapping
+    with StammdatenPaths {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
 
   import EntityStore._
@@ -96,9 +97,9 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
     path("projekt") {
       get(detail(stammdatenReadRepository.getProjektPublik))
     } ~
-    path("projekt" / projektIdPath / "logo") { id =>
-      get(download(ProjektStammdaten, "logo"))
-    }
+      path("projekt" / projektIdPath / "logo") { id =>
+        get(download(ProjektStammdaten, "logo"))
+      }
 
   def lieferplanungRoute =
     path("lastlieferplanungen") {
