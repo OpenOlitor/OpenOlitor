@@ -32,14 +32,15 @@ import org.odftoolkit.simple.draw.Textbox
 import org.odftoolkit.odfdom.dom.element.draw.DrawFrameElement
 import org.odftoolkit.odfdom.dom.element.draw.DrawTextBoxElement
 import org.odftoolkit.simple.draw.TextboxContainer
+import org.odftoolkit.simple.draw.FrameContainer
+import org.odftoolkit.simple.draw.Frame
 
 /**
- * This class is an enhanced implementation for finding all textboxes in a textbox container. The SimpleTextboxIterator only looks up
- * children directly attached to provided parent. In fact when you apply some styling to a paragaph the textbox
- * might get encapsulated into a <p><span><draw-frame></span></p>. In this case, the SimpleTextboxIterator won't find the textboxes accordingly
+ * This class is an enhanced implementation for finding all frames in a framecontainer
  */
-class NestedTextboxIterator(containerElement: OdfElement) extends Iterator[Textbox] {
+class FrameIterator(container: FrameContainer) extends Iterator[Frame] {
 
+  val containerElement: OdfElement = container.getFrameContainerElement
   var nextElement: Option[(Node, Textbox)] = None;
   var tempElement: Option[(Node, Textbox)] = None;
 
@@ -68,8 +69,7 @@ class NestedTextboxIterator(containerElement: OdfElement) extends Iterator[Textb
     findDeepFirstChildNode(classOf[DrawFrameElement], containerElement, node) flatMap {
       case (node, nextFrame) =>
         findDeepFirstChildNode(classOf[DrawTextBoxElement], nextFrame, None) map {
-          case (_, nextbox) =>
-            (node, Textbox.getInstanceof(nextbox.asInstanceOf[DrawTextBoxElement]))
+          case (_, nextbox) => (node, Textbox.getInstanceof(nextbox.asInstanceOf[DrawTextBoxElement]))
         }
     }
   }
