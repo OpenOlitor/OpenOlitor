@@ -1,7 +1,7 @@
 ---
 applications:
 - name: openolitor-server-prod
-  memory: 1024M
+  memory: 2048M
   instances: 1
   host: openolitor-server-prod
   domain: scapp.io
