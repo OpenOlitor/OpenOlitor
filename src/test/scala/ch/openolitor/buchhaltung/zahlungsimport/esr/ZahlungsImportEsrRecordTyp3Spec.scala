@@ -46,6 +46,25 @@ class ZahlungsImportEsrRecordTyp3Spec extends Specification {
         BigDecimal("0")
       )
     }
+
+    "extract esr line with spaces" in {
+      val EsrRecordTyp3(result) = "00200000000000000030784310007000319950000000384001125  627013112513112513112500000000000000000000000"
+
+      result === EsrRecordTyp3(
+        EsrRecordTyp3Transaktionsartcode(Esr, Beleglos, Gutschrift),
+        "000000000",
+        "000000307843100070003199500",
+        BigDecimal("384.00"),
+        "1125  6270",
+        new DateTime(2013, 11, 25, 0, 0, 0, 0),
+        new DateTime(2013, 11, 25, 0, 0, 0, 0),
+        new DateTime(2013, 11, 25, 0, 0, 0, 0),
+        "000000000",
+        Kein,
+        "000000000",
+        BigDecimal("0")
+      )
+    }
   }
 
   "EsrTotalRecordTyp3" should {
