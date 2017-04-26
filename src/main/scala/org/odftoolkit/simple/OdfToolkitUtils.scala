@@ -96,6 +96,7 @@ object OdfToolkitUtils {
             newFrameEle
           }
 
+        doc.updateNames(importedNode)
         doc.updateXMLIds(importedNode)
         val parent = self.getFrameContainerElement()
         parent.appendChild(importedNode)

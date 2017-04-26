@@ -65,16 +65,16 @@ class NestedTextboxIterator(containerElement: OdfElement) extends Iterator[Textb
 
   private def findNext(lastResult: Option[(Node, Textbox)]): Option[(Node, Textbox)] = {
     val node = lastResult map (_._1)
-    findDeepFirstChildNode(classOf[DrawFrameElement], containerElement, node) flatMap {
-      case (node, nextFrame) =>
-        findDeepFirstChildNode(classOf[DrawTextBoxElement], nextFrame, None) map {
-          case (_, nextbox) =>
-            (node, Textbox.getInstanceof(nextbox.asInstanceOf[DrawTextBoxElement]))
+    findDeepFirstChildNode[DrawFrameElement](DrawFrameElement.ELEMENT_NAME, containerElement, node) flatMap {
+      case (drawFrameNode, nextFrame) =>
+        findDeepFirstChildNode[DrawTextBoxElement](DrawTextBoxElement.ELEMENT_NAME, nextFrame, None) collect {
+          case (_, nextbox: DrawTextBoxElement) =>
+            (drawFrameNode, Textbox.getInstanceof(nextbox))
         }
     }
   }
 
-  private def findDeepFirstChildNode[T <: OdfElement](clazz: Class[T], parent: Node, refNode: Option[Node]): Option[(Node, Node)] = {
+  private def findDeepFirstChildNode[T <: OdfElement](name: OdfName, parent: Node, refNode: Option[Node]): Option[(Node, Node)] = {
     val startingNode = Option(refNode.map { node =>
       node.getNextSibling
     }.getOrElse {
@@ -82,22 +82,22 @@ class NestedTextboxIterator(containerElement: OdfElement) extends Iterator[Textb
     })
 
     startingNode.map { node =>
-      findDeepChildNode(clazz, node) match {
+      findDeepChildNode(name, node) match {
         case r @ Some(result) => r
-        case None => findDeepFirstChildNode(clazz, parent, Some(node))
+        case None => findDeepFirstChildNode(name, parent, Some(node))
       }
     }.getOrElse(None)
   }
 
   private def findDeepChildNode[T <: OdfElement](
-    clazz: Class[T],
+    name: OdfName,
     refNode: Node
   ): Option[(Node, Node)] = {
     refNode match {
-      case n: Node if clazz.isAssignableFrom(n.getClass) => Some((n, n))
-      case n: ParentNode =>
-        findDeepFirstChildNode(clazz, n, None) match {
-          case Some((p, c)) => Some((n, c))
+      case node: Node if node.getNodeName == name.getQName => Some((node, node))
+      case parent: ParentNode =>
+        findDeepFirstChildNode(name, parent, None) match {
+          case Some((_, c)) => Some((parent, c))
           case None => None
         }
       case _ => None

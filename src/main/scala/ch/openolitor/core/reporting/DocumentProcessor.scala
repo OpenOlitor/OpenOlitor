@@ -57,6 +57,7 @@ trait DocumentProcessor extends LazyLogging {
   val dateFormatPattern = """date:\s*"(.*)"""".r
   val numberFormatPattern = """number:\s*"(\[([#@]?[\w\.]+)\])?([#,.0]+)(;((\[([#@]?[\w\.]+)\])?-([#,.0]+)))?"""".r
   val backgroundColorFormatPattern = """bg-color:\s*"([#@]?[\w\.]+)"""".r
+  val foregroundColorFormatPattern = """fg-color:\s*"([#@]?[\w\.]+)"""".r
   val dateFormatter = ISODateTimeFormat.dateTime
   val libreOfficeDateFormat = DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss")
 
@@ -124,7 +125,7 @@ trait DocumentProcessor extends LazyLogging {
       footerContainer = new GenericParagraphContainerImpl(doc.getFooter.getOdfElement)
       _ <- Try(processTextboxes(footerContainer, props, locale, Nil))
 
-      // process content
+      // process content, order is important
       _ <- Try(processVariables(doc, props))
       _ <- Try(processTables(doc, props, locale, Nil))
       _ <- Try(processLists(doc, props, locale, Nil))
@@ -346,6 +347,8 @@ trait DocumentProcessor extends LazyLogging {
 
   /**
    * Process textboxes and fill in content based on
+   *
+   * If pathPrefixes is Nil, applyFormats will not be executed
    */
   private def processTextboxes(cont: ParagraphContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
     for {
@@ -358,12 +361,14 @@ trait DocumentProcessor extends LazyLogging {
 
       // resolve textbox content from properties, otherwise only apply formats to current content
       t.removeCommonStyle()
-      val value = props.get(propertyKey) map {
-        case Value(_, value) => value
-      } getOrElse (t.getTextContent())
-
-      //apply all formats
-      applyFormats(t, formats, value, props, locale, pathPrefixes)
+      props.get(propertyKey) map {
+        case Value(_, value) =>
+          applyFormats(t, formats, value, props, locale, pathPrefixes)
+      } getOrElse {
+        if (!pathPrefixes.isEmpty) {
+          applyFormats(t, formats, t.getTextContent, props, locale, pathPrefixes)
+        }
+      }
     }
   }
 
@@ -403,6 +408,12 @@ trait DocumentProcessor extends LazyLogging {
         // set background to textbox
         resolveColor(pattern, props, pathPrefixes) map { color =>
           textbox.setBackgroundColor(color)
+        }
+        value
+      case foregroundColorFormatPattern(pattern) =>
+        // set foreground to textbox (unfortunately resets font style to default)
+        resolveColor(pattern, props, pathPrefixes) map { color =>
+          textbox.setFontColor(color)
         }
         value
       case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
