@@ -26,13 +26,20 @@ import akka.actor._
 import ch.openolitor.core.models._
 import ch.openolitor.core.JSONSerializable
 import java.util.UUID
+import java.io.File
+import org.joda.time.DateTime
 
 object JobQueueService {
   def props: Props = Props(classOf[JobQueueService])
-  
-  case class JobId(id: String = UUID.randomUUID().toString) extends JSONSerializable
-  
-  case class JobProgress(personId: PersonId, jobId: Option[JobId], numberOfTasksInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) 
+
+  case class JobId(name: String, id: String = UUID.randomUUID().toString, startTime: DateTime = DateTime.now) extends JSONSerializable
+  case class GetPendingJobs(personId: PersonId) extends PersonReference
+  case class FetchJobResult(personId: PersonId, jobId: JobId) extends PersonReference
+  case class PendingJobs(personId: PersonId, progresses: Seq[JobProgress]) extends JSONSerializable
+
+  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, tmpFile: File)
+  case class JobResultUnavailable(personId: PersonId, jobId: JobId)
+  case class JobProgress(personId: PersonId, jobId: JobId, numberOfTasksInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int)
     extends JSONSerializable with PersonReference
 }
 
@@ -40,19 +47,19 @@ object JobQueueService {
  * This job queue service provides access to the user based job queue
  */
 class JobQueueService extends Actor with ActorLogging {
-  
+
   import JobQueueService._
-  
+
   /**
    * Implicit convertion from personid object model to string based representation used in akka system
    */
   implicit def userId2String(id: PersonId): String = id.id.toString
-  
+
   def receive: Receive = {
     case cmd: PersonReference =>
       child(cmd.personId) forward cmd
   }
-  
+
   protected def child(id: PersonId): ActorRef =
     context.child(id) getOrElse create(id)
 

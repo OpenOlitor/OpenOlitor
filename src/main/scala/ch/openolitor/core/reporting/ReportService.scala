@@ -49,6 +49,7 @@ import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import spray.json.JsArray
 import ch.openolitor.core.DateFormats
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
 sealed trait BerichtsVorlage extends Product
 case object DatenExtrakt extends BerichtsVorlage
@@ -89,7 +90,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
     ablageIdFactory: E => Option[String],
     nameFactory: E => String,
     localeFactory: E => Locale,
-    jobId: JobId = JobId()
+    jobId: JobId
   )(implicit personId: PersonId, jsonFormat: JsonFormat[E]): Future[Either[ServiceFailed, ReportServiceResult[I]]] = {
     logger.debug(s"Validate ids:${config.ids}")
     validationFunction(config.ids) flatMap {

@@ -20,49 +20,15 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.reporting
+package ch.openolitor.core.jobs
 
-import ch.openolitor.buchhaltung.models.RechnungId
-import scalaz._
-import scalaz.Scalaz._
-import scala.concurrent.Future
-import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.db.AsyncConnectionPoolContextAware
-import scala.concurrent.ExecutionContext.Implicits.global
-import ch.openolitor.core.filestore._
-import ch.openolitor.core.ActorReferences
-import ch.openolitor.core.reporting._
-import ch.openolitor.core.reporting.ReportSystem._
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.models.Projekt
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.models.ProjektReport
-import ch.openolitor.core.models.PersonId
-import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
-import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
-import scala.Left
-import scala.Right
+import ch.openolitor.core.BaseJsonProtocol
+import zangelo.spray.json.AutoProductFormats
+import spray.json._
+import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.jobs.JobQueueService.JobId
 
-trait RechnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol with RechnungReportData {
-  self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
-
-  def generateRechnungReports(config: ReportConfig[RechnungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
-    generateReports[RechnungId, RechnungDetailReport](
-      config,
-      rechungenById,
-      VorlageRechnung,
-      None,
-      _.id,
-      GeneriertRechnung,
-      x => Some(x.id.id.toString),
-      name,
-      _.projekt.sprache,
-      JobId("Rechnung(en)")
-    )
-  }
-
-  private def name(rechnung: RechnungDetailReport) = {
-    s"rechnung_nr_${rechnung.id.id}";
-  }
+trait JobJsonProtocol extends BaseJsonProtocol
+    with AutoProductFormats[JSONSerializable] {
+  implicit val jobIdFormat = jsonFormat3(JobId)
 }

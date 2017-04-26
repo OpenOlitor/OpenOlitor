@@ -34,6 +34,7 @@ import ch.openolitor.core.models.PersonId
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.filestore._
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
 trait DepotBriefReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
@@ -47,7 +48,8 @@ trait DepotBriefReportService extends AsyncConnectionPoolContextAware with Repor
       GeneriertDepotbrief,
       x => Some(x.id.id.toString),
       name(fileType),
-      _.projekt.sprache
+      _.projekt.sprache,
+      JobId("Depot-Brief(e)")
     )
   }
 

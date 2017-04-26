@@ -29,8 +29,8 @@ import ch.openolitor.core.reporting._
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.core.filestore.FileStoreJsonProtocol
+import ch.openolitor.core.jobs.JobJsonProtocol
 
-trait ReportJsonProtocol extends BaseJsonProtocol with FileStoreJsonProtocol
+trait ReportJsonProtocol extends BaseJsonProtocol with FileStoreJsonProtocol with JobJsonProtocol
     with AutoProductFormats[JSONSerializable] {
-  implicit val jobIdFormat = jsonFormat1(JobId)
 }

@@ -62,7 +62,7 @@ object ReportSystem {
   case class SingleReportResult(id: Any, stats: GenerateReportsStats, result: Either[ReportError, ReportResultWithId]) extends ReportResultWithId
   case class ZipReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Option[Array[Byte]]) extends ReportResult
   case class BatchStoredPdfReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Seq[FileStoreFileReference]) extends ReportResult with JSONSerializable
-  case class GenerateReportsStats(originator: PersonId, jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult 
+  case class GenerateReportsStats(originator: PersonId, jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult
     with JSONSerializable
 }
 
