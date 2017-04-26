@@ -29,12 +29,12 @@ import java.util.zip.ZipFile
 import java.util.Locale
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.models.PersonId
+import ch.openolitor.core.models._
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
 object ReportSystem {
   def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportSystem], fileStore, sysConfig)
 
-  case class JobId(id: Long = System.currentTimeMillis) extends JSONSerializable
   case class ReportDataRow(id: Any, value: JsObject, fileStoreId: Option[String], name: String, locale: Locale)
   case class ReportData[E: JsonFormat](jobId: JobId, rowsRaw: Seq[E], idFactory: E => Any, filestoreIdFactory: E => Option[String], nameFactory: E => String, localeFactory: E => Locale) {
     val rows = rowsRaw.map(row => ReportDataRow(idFactory(row), row.toJson.asJsObject, filestoreIdFactory(row), nameFactory(row), localeFactory(row)))
@@ -62,7 +62,8 @@ object ReportSystem {
   case class SingleReportResult(id: Any, stats: GenerateReportsStats, result: Either[ReportError, ReportResultWithId]) extends ReportResultWithId
   case class ZipReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Option[Array[Byte]]) extends ReportResult
   case class BatchStoredPdfReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Seq[FileStoreFileReference]) extends ReportResult with JSONSerializable
-  case class GenerateReportsStats(originator: PersonId, jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult with JSONSerializable
+  case class GenerateReportsStats(originator: PersonId, jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult 
+    with JSONSerializable
 }
 
 /**

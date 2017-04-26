@@ -20,47 +20,47 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.models
+package ch.openolitor.core.jobs
 
-import java.util.UUID
-import scalikejdbc.ParameterBinder
-import ch.openolitor.core.Macros
-import spray.json.DefaultJsonProtocol
-import org.joda.time.DateTime
+import akka.actor._
+import ch.openolitor.core.models._
 import ch.openolitor.core.JSONSerializable
+import java.util.UUID
 
-trait BaseId extends AnyRef {
-  val id: Long
+object JobQueueService {
+  def props: Props = Props(classOf[JobQueueService])
+  
+  case class JobId(id: String = UUID.randomUUID().toString) extends JSONSerializable
+  
+  case class JobProgress(personId: PersonId, jobId: Option[JobId], numberOfTasksInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) 
+    extends JSONSerializable with PersonReference
 }
 
-trait BaseStringId extends AnyRef with JSONSerializable {
-  val id: String
-}
+/**
+ * This job queue service provides access to the user based job queue
+ */
+class JobQueueService extends Actor with ActorLogging {
+  
+  import JobQueueService._
+  
+  /**
+   * Implicit convertion from personid object model to string based representation used in akka system
+   */
+  implicit def userId2String(id: PersonId): String = id.id.toString
+  
+  def receive: Receive = {
+    case cmd: PersonReference =>
+      child(cmd.personId) forward cmd
+  }
+  
+  protected def child(id: PersonId): ActorRef =
+    context.child(id) getOrElse create(id)
 
-case class PersonId(id: Long) extends BaseId
+  protected def create(id: PersonId): ActorRef = {
+    val agg = context.actorOf(childProps(id), id)
+    context watch agg
+    agg
+  }
 
-trait PersonReference {
-  val personId: PersonId
+  def childProps(id: PersonId): Props = UserJobQueue.props(id)
 }
-
-trait BaseEntity[T <: BaseId] extends Product with JSONSerializable {
-  val id: T
-  //modification flags on all entities
-  val erstelldat: DateTime
-  val ersteller: PersonId
-  val modifidat: DateTime
-  val modifikator: PersonId
-}
-
-sealed trait DBEvent[E <: Product] extends Product {
-  val originator: PersonId
-  val entity: E
-}
-sealed trait CRUDEvent[E <: BaseEntity[_ <: BaseId]] extends DBEvent[E] {
-}
-//events raised by this aggregateroot
-case class EntityCreated[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends CRUDEvent[E]
-case class EntityModified[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E, orig: E) extends CRUDEvent[E]
-case class EntityDeleted[E <: BaseEntity[_ <: BaseId]](originator: PersonId, entity: E) extends CRUDEvent[E]
-
-case class DataEvent[E <: Product](originator: PersonId, entity: E) extends DBEvent[E]
