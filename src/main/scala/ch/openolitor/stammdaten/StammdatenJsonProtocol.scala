@@ -467,7 +467,8 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
           "strasseUndNummerLieferung" -> JsString(obj.strasseUndNummerLieferung.getOrElse("")),
           "plzOrtLieferung" -> JsString(obj.plzOrtLieferung.getOrElse("")),
           "adresszeilen" -> JsArray(obj.adresszeilen.map(JsString(_)).toVector),
-          "lieferAdresszeilen" -> JsArray(obj.lieferAdresszeilen.map(JsString(_)).toVector)
+          "lieferAdresszeilen" -> JsArray(obj.lieferAdresszeilen.map(JsString(_)).toVector),
+          "telefonNummern" -> JsString(obj.telefonNummern)
         ))
     }
 
