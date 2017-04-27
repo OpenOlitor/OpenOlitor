@@ -22,13 +22,53 @@
 \*                                                                           */
 package ch.openolitor.core.jobs
 
-import ch.openolitor.core.BaseJsonProtocol
-import zangelo.spray.json.AutoProductFormats
+import spray.routing._
+import spray.http._
+import spray.http.MediaTypes._
+import spray.httpx.marshalling.ToResponseMarshallable._
+import spray.httpx.SprayJsonSupport._
+import spray.routing.Directive.pimpApply
 import spray.json._
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.jobs.JobQueueService.JobId
+import spray.json.DefaultJsonProtocol._
+import ch.openolitor.core._
+import scala.util.Properties
+import ch.openolitor.core.security.Subject
+import akka.pattern.ask
+import ch.openolitor.core.jobs.JobQueueService._
+import akka.util.Timeout
+import scala.concurrent.ExecutionContext
 
-trait JobJsonProtocol extends BaseJsonProtocol
-    with AutoProductFormats[JSONSerializable] {
-  implicit val jobIdFormat = jsonFormat3(JobId)
+trait JobQueueRoutes extends HttpService with DefaultRouteService with JobQueueJsonProtocol with JobQueueServiceReference {
+
+  implicit val timeout: Timeout
+
+  def jobQueueRoute(implicit subject: Subject, ec: ExecutionContext): Route =
+    pathPrefix("queue") {
+      path("jobs") {
+        get {
+          onSuccess(jobQueueService ? GetPendingJobs(subject.personId)) {
+            case result: PendingJobs =>
+              complete(result)
+            case x =>
+              logger.warn(s"Unexpected result:$x")
+              complete(StatusCodes.BadRequest)
+          }
+        }
+      } ~
+        path("job" / Segment / "result") { jobId =>
+          get {
+            onSuccess(jobQueueService ? FetchJobResult(subject.personId, jobId)) {
+              case result: JobResult =>
+                streamFile(result.fileName, result.mediaType, result.file, true)
+              case result: JobFileStoreResult =>
+                download(result.fileType, result.fileStoreId.id)
+              case result: JobResultUnavailable =>
+                complete(StatusCodes.NotFound, s"No job found for id:${result.jobId}")
+              case x =>
+                logger.warn(s"Unexpected result:$x")
+                complete(StatusCodes.BadRequest)
+            }
+          }
+        }
+    }
 }

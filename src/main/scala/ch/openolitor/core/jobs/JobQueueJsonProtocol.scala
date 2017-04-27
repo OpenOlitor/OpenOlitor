@@ -20,46 +20,15 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core
+package ch.openolitor.core.jobs
 
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
+import ch.openolitor.core.BaseJsonProtocol
+import zangelo.spray.json.AutoProductFormats
+import spray.json._
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
-trait EntityStoreReference {
-  val entityStore: ActorRef
-}
-
-trait EventStoreReference {
-  val eventStore: ActorRef
-}
-
-trait ReportSystemReference {
-  val reportSystem: ActorRef
-}
-
-trait MailServiceReference {
-  val mailService: ActorRef
-}
-
-trait ActorSystemReference {
-  val system: ActorSystem
-}
-
-trait AirbrakeNotifierReference {
-  val airbrakeNotifier: ActorRef
-}
-
-trait JobQueueServiceReference {
-  val jobQueueService: ActorRef
-}
-
-class DefaultActorSystemReference(override val system: ActorSystem) extends ActorSystemReference
-
-trait ActorReferences extends ActorSystemReference
-    with EntityStoreReference
-    with EventStoreReference
-    with ReportSystemReference
-    with MailServiceReference
-    with AirbrakeNotifierReference
-    with JobQueueServiceReference {
+trait JobQueueJsonProtocol extends BaseJsonProtocol
+    with AutoProductFormats[JSONSerializable] {
+  implicit val jobIdFormat = jsonFormat3(JobId)
 }

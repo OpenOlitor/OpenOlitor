@@ -28,17 +28,21 @@ import ch.openolitor.core.JSONSerializable
 import java.util.UUID
 import java.io.File
 import org.joda.time.DateTime
+import spray.http.MediaType
+import ch.openolitor.core.filestore.FileType
+import ch.openolitor.core.filestore.FileStoreFileId
 
 object JobQueueService {
   def props: Props = Props(classOf[JobQueueService])
 
   case class JobId(name: String, id: String = UUID.randomUUID().toString, startTime: DateTime = DateTime.now) extends JSONSerializable
   case class GetPendingJobs(personId: PersonId) extends PersonReference
-  case class FetchJobResult(personId: PersonId, jobId: JobId) extends PersonReference
+  case class FetchJobResult(personId: PersonId, jobId: String) extends PersonReference
   case class PendingJobs(personId: PersonId, progresses: Seq[JobProgress]) extends JSONSerializable
 
-  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, tmpFile: File)
-  case class JobResultUnavailable(personId: PersonId, jobId: JobId)
+  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, fileName: String, mediaType: MediaType, file: File)
+  case class JobFileStoreResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, fileType: FileType, fileStoreId: FileStoreFileId)
+  case class JobResultUnavailable(personId: PersonId, jobId: String)
   case class JobProgress(personId: PersonId, jobId: JobId, numberOfTasksInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int)
     extends JSONSerializable with PersonReference
 }

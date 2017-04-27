@@ -21,7 +21,7 @@ object UserJobQueue {
 class UserJobQueue(personId: PersonId) extends Actor
     with ActorLogging
     with ClientReceiver
-    with JobJsonProtocol
+    with JobQueueJsonProtocol
     with AkkaEventStream {
   import JobQueueService._
   import UserJobQueue._
@@ -43,12 +43,13 @@ class UserJobQueue(personId: PersonId) extends Actor
     case _: GetPendingJobs =>
       sender ! PendingJobs(personId, progressMap.values.toSeq)
     case r: FetchJobResult =>
-      jobResults.get(r.jobId) map { result =>
-        jobResults = jobResults - (r.jobId)
-        sender ! result
+      jobResults.find(_._1.id == r.jobId) map {
+        case (id, result) =>
+          jobResults = jobResults - (id)
+          sender ! result
 
-        // notify other users session that job result was already fetched
-        send(personId, JobFetched(personId, r.jobId))
+          // notify other users session that job result was already fetched
+          send(personId, JobFetched(personId, id))
       } getOrElse {
         sender ! JobResultUnavailable(personId, r.jobId)
       }
