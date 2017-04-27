@@ -1369,22 +1369,17 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   }
 
   /*
-   * TODO: Join Personen within Auslieferung queries.
+   * TODO: This is a temporary solution. Join Personen within Auslieferung queries.
    * The current ScalikeJdbc version supports only 5 resultset extractors.
    */
-  private def getAnsprechpersonenForReportsQuery[T](kunden: Seq[Kunde])(f: Seq[PersonDetail] => T) = {
+  protected def getAlleAnsprechpersonenForReportsQuery[T](kundeIds: Seq[KundeId]) = {
     withSQL {
       select
-        .from(kundeMapping as kunde)
-        .innerJoin(personMapping as person).on(person.kundeId, kunde.id)
-        .where.in(kunde.id, kunden map (_.id))
-    }.one(kundeMapping(kunde))
-      .toMany(
-        rs => personMapping.opt(person)(rs)
-      )
-      .map((kunde, personen) => {
-        f(personen map (p => copyTo[Person, PersonDetail](p)))
-      }).list
+        .from(personMapping as person)
+        .where.in(person.kundeId, kundeIds map (_.id))
+    }.map { rs =>
+      copyTo[Person, PersonDetail](personMapping(person)(rs))
+    }.list
   }
 
   protected def getDepotAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
@@ -1397,12 +1392,10 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def getDepotAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
     getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden) =>
-      getAnsprechpersonenForReportsQuery(kunden) { ansprechpersonen =>
-        val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, ansprechpersonen)
+      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden)
 
-        val depotReport = copyTo[Depot, DepotReport](depot)
-        copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depotReport, "koerbe" -> korbReports, "projekt" -> projekt)
-      }
+      val depotReport = copyTo[Depot, DepotReport](depot)
+      copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depotReport, "koerbe" -> korbReports, "projekt" -> projekt)
     }
   }
 
@@ -1439,11 +1432,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def getTourAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
     getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, kunden) =>
-      getAnsprechpersonenForReportsQuery(kunden) { ansprechpersonen =>
-        val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, ansprechpersonen)
+      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden)
 
-        copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour, "koerbe" -> korbReports, "projekt" -> projekt)
-      }
+      copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour, "koerbe" -> korbReports, "projekt" -> projekt)
     }
   }
 
@@ -1481,11 +1472,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def getPostAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
     getPostAuslieferungQuery(auslieferungId) { (auslieferung, koerbe, abos, abotypen, kunden) =>
-      getAnsprechpersonenForReportsQuery(kunden) { ansprechpersonen =>
-        val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, ansprechpersonen)
+      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden)
 
-        copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> korbReports, "projekt" -> projekt)
-      }
+      copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> korbReports, "projekt" -> projekt)
     }
   }
 
@@ -1520,17 +1509,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.flatten
   }
 
-  private def getKorbReports(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], kunden: Seq[Kunde], personen: Seq[PersonDetail]): Seq[KorbReport] = {
+  private def getKorbReports(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], kunden: Seq[Kunde]): Seq[KorbReport] = {
     koerbe.map { korb =>
       for {
         korbAbo <- abos.filter(_.id == korb.aboId).headOption
         abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
         kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
       } yield {
-        val ansprechpersonen = personen filter (_.kundeId == kunde.id)
-
-        val kundeReport = copyTo[Kunde, KundeReport](kunde, "personen" -> ansprechpersonen)
-
+        // TODO Nil until ScalikeJdbc migration
+        val kundeReport = copyTo[Kunde, KundeReport](kunde, "personen" -> Nil)
         copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kundeReport)
       }
     }.flatten

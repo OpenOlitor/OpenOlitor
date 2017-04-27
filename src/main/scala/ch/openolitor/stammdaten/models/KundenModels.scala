@@ -115,8 +115,8 @@ trait IKundeReport extends IKunde {
   }
 
   lazy val telefonNummern: String = (personen map { p =>
-    (p.telefonMobil :: p.telefonFestnetz :: Nil).mkString("/")
-  }).mkString
+    (p.telefonMobil :: p.telefonFestnetz :: Nil).flatten.mkString(" / ")
+  }).mkString(" / ")
 }
 
 case class KundeReport(
