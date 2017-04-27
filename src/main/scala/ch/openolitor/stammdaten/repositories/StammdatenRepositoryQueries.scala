@@ -393,17 +393,21 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(depotMapping as depot)
         .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(depotlieferungAbo.depotId, depot.id)
         .leftJoin(kundeMapping as kunde).on(depotlieferungAbo.kundeId, kunde.id)
+        .leftJoin(personMapping as person).on(kunde.id, person.kundeId)
         .where.eq(depot.id, parameter(id))
     }
       .one(depotMapping(depot))
       .toManies(
         rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
-        rs => kundeMapping.opt(kunde)(rs)
+        rs => kundeMapping.opt(kunde)(rs),
+        rs => personMapping.opt(person)(rs)
       )
-      .map((depot, abos, kunden) => {
+      .map((depot, abos, kunden, personen) => {
+        val personenWithoutPwd = personen map (p => copyTo[Person, PersonDetail](p))
         val abosReport = abos.map { abo =>
           kunden.filter(_.id == abo.kundeId).headOption map { kunde =>
-            val kundeReport = copyTo[Kunde, KundeReport](kunde)
+            val ansprechpersonen = personenWithoutPwd filter (_.kundeId == kunde.id)
+            val kundeReport = copyTo[Kunde, KundeReport](kunde, "personen" -> ansprechpersonen)
             copyTo[DepotlieferungAbo, DepotlieferungAboReport](abo, "kundeReport" -> kundeReport)
           }
         }.flatten
@@ -1364,6 +1368,25 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(postAuslieferungMapping(postAuslieferung)).list
   }
 
+  /*
+   * TODO: Join Personen within Auslieferung queries.
+   * The current ScalikeJdbc version supports only 5 resultset extractors.
+   */
+  private def getAnsprechpersonenForReportsQuery[T](kunden: Seq[Kunde])(f: Seq[PersonDetail] => T) = {
+    withSQL {
+      select
+        .from(kundeMapping as kunde)
+        .innerJoin(personMapping as person).on(person.kundeId, kunde.id)
+        .where.in(kunde.id, kunden map (_.id))
+    }.one(kundeMapping(kunde))
+      .toMany(
+        rs => personMapping.opt(person)(rs)
+      )
+      .map((kunde, personen) => {
+        f(personen map (p => copyTo[Person, PersonDetail](p)))
+      }).list
+  }
+
   protected def getDepotAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
     getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden) =>
       val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden)
@@ -1374,14 +1397,16 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def getDepotAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
     getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden) =>
-      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden)
+      getAnsprechpersonenForReportsQuery(kunden) { ansprechpersonen =>
+        val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, ansprechpersonen)
 
-      val depotReport = copyTo[Depot, DepotReport](depot)
-      copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depotReport, "koerbe" -> korbReports, "projekt" -> projekt)
+        val depotReport = copyTo[Depot, DepotReport](depot)
+        copyTo[DepotAuslieferung, DepotAuslieferungReport](auslieferung, "depot" -> depotReport, "koerbe" -> korbReports, "projekt" -> projekt)
+      }
     }
   }
 
-  private def getDepotAuslieferungQuery[A <: Auslieferung](auslieferungId: AuslieferungId)(f: (DepotAuslieferung, Depot, Seq[Korb], Seq[DepotlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
+  private def getDepotAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (DepotAuslieferung, Depot, Seq[Korb], Seq[DepotlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
     withSQL {
       select
         .from(depotAuslieferungMapping as depotAuslieferung)
@@ -1414,13 +1439,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def getTourAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
     getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, kunden) =>
-      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden)
+      getAnsprechpersonenForReportsQuery(kunden) { ansprechpersonen =>
+        val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, ansprechpersonen)
 
-      copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour, "koerbe" -> korbReports, "projekt" -> projekt)
+        copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour, "koerbe" -> korbReports, "projekt" -> projekt)
+      }
     }
   }
 
-  private def getTourAuslieferungQuery[A <: Auslieferung](auslieferungId: AuslieferungId)(f: (TourAuslieferung, Tour, Seq[Korb], Seq[HeimlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
+  private def getTourAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (TourAuslieferung, Tour, Seq[Korb], Seq[HeimlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
     withSQL {
       select
         .from(tourAuslieferungMapping as tourAuslieferung)
@@ -1454,13 +1481,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def getPostAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
     getPostAuslieferungQuery(auslieferungId) { (auslieferung, koerbe, abos, abotypen, kunden) =>
-      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden)
+      getAnsprechpersonenForReportsQuery(kunden) { ansprechpersonen =>
+        val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, ansprechpersonen)
 
-      copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> korbReports, "projekt" -> projekt)
+        copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> korbReports, "projekt" -> projekt)
+      }
     }
   }
 
-  private def getPostAuslieferungQuery[A <: Auslieferung](auslieferungId: AuslieferungId)(f: (PostAuslieferung, Seq[Korb], Seq[PostlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
+  private def getPostAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (PostAuslieferung, Seq[Korb], Seq[PostlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
     withSQL {
       select
         .from(postAuslieferungMapping as postAuslieferung)
@@ -1491,14 +1520,17 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.flatten
   }
 
-  private def getKorbReports(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], kunden: Seq[Kunde]): Seq[KorbReport] = {
+  private def getKorbReports(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], kunden: Seq[Kunde], personen: Seq[PersonDetail]): Seq[KorbReport] = {
     koerbe.map { korb =>
       for {
         korbAbo <- abos.filter(_.id == korb.aboId).headOption
         abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
         kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
       } yield {
-        val kundeReport = copyTo[Kunde, KundeReport](kunde)
+        val ansprechpersonen = personen filter (_.kundeId == kunde.id)
+
+        val kundeReport = copyTo[Kunde, KundeReport](kunde, "personen" -> ansprechpersonen)
+
         copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kundeReport)
       }
     }.flatten

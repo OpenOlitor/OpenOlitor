@@ -51,6 +51,7 @@ trait IKunde extends BaseEntity[KundeId] {
   val ortLieferung: Option[String]
   val zusatzinfoLieferung: Option[String]
   val typen: Set[KundentypId]
+  val personen: Seq[PersonDetail]
   //Zusatzinformationen
   val anzahlAbos: Int
   val anzahlAbosAktiv: Int
@@ -112,6 +113,10 @@ trait IKundeReport extends IKunde {
       ).flatten.padTo(6, "")
     case false => adresszeilen
   }
+
+  lazy val telefonNummern: String = (personen map { p =>
+    (p.telefonMobil :: p.telefonFestnetz :: Nil).mkString("/")
+  }).mkString
 }
 
 case class KundeReport(
@@ -132,6 +137,7 @@ case class KundeReport(
   ortLieferung: Option[String],
   zusatzinfoLieferung: Option[String],
   typen: Set[KundentypId],
+  personen: Seq[PersonDetail],
   //Zusatzinformationen
   anzahlAbos: Int,
   anzahlAbosAktiv: Int,
