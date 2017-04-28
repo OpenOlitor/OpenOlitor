@@ -476,15 +476,20 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
       case _ =>
-        stammdatenReadRepository.getSammelbestellungen(id) map {
-          _ map { sammelbestellung =>
-            onSuccess(entityStore ? StammdatenCommandHandler.SammelbestellungAnProduzentenVersendenCommand(subject.personId, sammelbestellung.id)) {
-              case UserCommandFailed =>
-                complete(StatusCodes.BadRequest, s"Could not execute SammelbestellungAnProduzentenVersenden on Bestellung")
-              case _ =>
-                complete("")
+        // TODO OO-589
+        if (false) {
+          stammdatenReadRepository.getSammelbestellungen(id) map {
+            _ map { sammelbestellung =>
+              onSuccess(entityStore ? StammdatenCommandHandler.SammelbestellungAnProduzentenVersendenCommand(subject.personId, sammelbestellung.id)) {
+                case UserCommandFailed =>
+                  complete(StatusCodes.BadRequest, s"Could not execute SammelbestellungAnProduzentenVersenden on Bestellung")
+                case _ =>
+                  complete("")
+              }
             }
           }
+        } else {
+          complete("")
         }
 
         complete("")
