@@ -254,6 +254,7 @@ class MockLoginRouteService(
     with MockStammdatenReadRepositoryComponent {
   override val entityStore: ActorRef = null
   override val reportSystem: ActorRef = null
+  override val jobQueueService: ActorRef = null
   implicit val system = ActorSystem("test")
   override val sysConfig: SystemConfig = SystemConfig(null, null, MultipleAsyncConnectionPoolContext())
   override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(null))
