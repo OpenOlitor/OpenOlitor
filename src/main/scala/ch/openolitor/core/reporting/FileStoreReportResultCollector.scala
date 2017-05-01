@@ -28,35 +28,38 @@ import java.io.ByteArrayOutputStream
 import scala.util._
 import ch.openolitor.util.ZipBuilder
 import ch.openolitor.core.filestore.FileStoreFileReference
+import ch.openolitor.core.jobs.JobQueueService
+import ch.openolitor.core.jobs.JobQueueService.FileStoreResultPayload
 
 object FileStoreReportResultCollector {
-  def props(reportSystem: ActorRef): Props = Props(classOf[FileStoreReportResultCollector], reportSystem)
+  def props(reportSystem: ActorRef, jobQueueService: ActorRef): Props = Props(classOf[FileStoreReportResultCollector], reportSystem, jobQueueService)
 }
 
 /**
  * Collect all results filestore id results
  */
-class FileStoreReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
+class FileStoreReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef) extends ResultCollector {
 
-  var origSender: Option[ActorRef] = None
   var storeResults: Seq[FileStoreFileReference] = Seq()
   var errors: Seq[ReportError] = Seq()
 
   val receive: Receive = {
     case request: GenerateReports[_] =>
-      origSender = Some(sender)
       reportSystem ! request
       context become waitingForResult
   }
 
   val waitingForResult: Receive = {
-    case SingleReportResult(_, _, Left(error)) =>
+    case SingleReportResult(_, stats, Left(error)) =>
       errors = errors :+ error
-    case SingleReportResult(_, _, Right(StoredPdfReportResult(_, fileType, id))) =>
+      notifyProgress(stats)
+    case SingleReportResult(_, stats, Right(StoredPdfReportResult(_, fileType, id))) =>
       storeResults = storeResults :+ FileStoreFileReference(fileType, id)
+      notifyProgress(stats)
     case result: GenerateReportsStats =>
-      //finished, send back collected result
-      origSender map (_ ! BatchStoredPdfReportResult(result, errors, storeResults))
+      //finished, send collected result to jobQueue
+      val payload = FileStoreResultPayload(storeResults)
+      jobFinished(result, Some(payload))
       self ! PoisonPill
   }
 }

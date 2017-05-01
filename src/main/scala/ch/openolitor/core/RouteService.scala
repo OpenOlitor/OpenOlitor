@@ -459,10 +459,10 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     }
   }
 
-  protected def streamZip(fileName: String, result: Array[Byte]) = {
+  protected def streamZip(fileName: String, result: File, deleteAfterStreaming: Boolean = false) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/zip`) {
-        stream(result)
+        stream(result, deleteAfterStreaming)
       }
     }
   }
@@ -575,25 +575,9 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
                 respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", s"${id}.json")))) {
                   complete(json)
                 }
-              case SingleReportResult(_, _, Left(ReportError(_, error))) => complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$error")
-              case SingleReportResult(_, _, Right(DocumentReportResult(_, result, name))) => streamOdt(name, result)
-              case SingleReportResult(_, _, Right(PdfReportResult(_, result, name))) => streamPdf(name, result)
-              case SingleReportResult(_, _, Right(StoredPdfReportResult(_, fileType, fileStoreId))) if downloadFile => download(fileType, fileStoreId.id)
-              case SingleReportResult(_, _, Right(result: StoredPdfReportResult)) =>
-                //complete(result)
-                complete("")
-              case ZipReportResult(_, errors, zip) if !zip.isDefined =>
-                val errorString: String = errors.map(_.error).mkString("\n")
-                complete(StatusCodes.BadRequest, errorString)
-              case ZipReportResult(_, errors, zip) if zip.isDefined =>
-                //TODO: send error to client as well
-                errors.map(error => logger.warn(s"Coulnd't generate report document: $error"))
-                zip.map(result => streamZip("Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip", result)) getOrElse (complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden, es wurden keine Dateien erzeugt"))
-              case BatchStoredPdfReportResult(_, errors, results) if downloadFile =>
-                downloadAsZip("Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip", results)
-              case result: BatchStoredPdfReportResult =>
-                //complete(result)
-                complete("")
+              case AsyncReportResult(jobId) =>
+                // async result, return jobId                
+                complete(jobId)
               case x =>
                 logger.error(s"Received unexpected result:$x")
                 complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden")

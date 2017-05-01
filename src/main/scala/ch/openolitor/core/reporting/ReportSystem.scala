@@ -31,6 +31,7 @@ import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.models._
 import ch.openolitor.core.jobs.JobQueueService.JobId
+import java.io.File
 
 object ReportSystem {
   def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportSystem], fileStore, sysConfig)
@@ -47,22 +48,23 @@ object ReportSystem {
   }
   trait ReportResultWithDocument {
     val name: String
-    val document: Array[Byte]
+    val document: File
   }
   trait ReportSuccess extends ReportResultWithId
   case class ReportDataResult(id: Any, data: JsArray) extends ReportSuccess
-  case class DocumentReportResult(id: Any, document: Array[Byte], name: String) extends ReportSuccess with ReportResultWithDocument
-  case class PdfReportResult(id: Any, document: Array[Byte], name: String) extends ReportSuccess with ReportResultWithDocument
+  case class AsyncReportResult(jobId: JobId) extends ReportResult
+  case class DocumentReportResult(id: Any, document: File, name: String) extends ReportSuccess with ReportResultWithDocument
+  case class PdfReportResult(id: Any, document: File, name: String) extends ReportSuccess with ReportResultWithDocument
   case class StoredPdfReportResult(id: Any, fileType: FileType, fileStoreId: FileStoreFileId) extends ReportSuccess with JSONSerializable
   case class ReportError(id: Option[Any], error: String) extends ReportResultWithId with JSONSerializable
 
   case class FileStoreParameters[E](fileType: FileType)
-  case class GenerateReports[E](originator: PersonId, file: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
+  case class GenerateReports[E](originator: PersonId, jobId: JobId, file: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])
   case class GenerateReport(id: Any, file: Array[Byte], data: JsObject)
   case class SingleReportResult(id: Any, stats: GenerateReportsStats, result: Either[ReportError, ReportResultWithId]) extends ReportResultWithId
   case class ZipReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Option[Array[Byte]]) extends ReportResult
   case class BatchStoredPdfReportResult(stats: GenerateReportsStats, errors: Seq[ReportError], results: Seq[FileStoreFileReference]) extends ReportResult with JSONSerializable
-  case class GenerateReportsStats(originator: PersonId, jobId: Option[JobId], numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult
+  case class GenerateReportsStats(originator: PersonId, jobId: JobId, numberOfReportsInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int) extends ReportResult
     with JSONSerializable
 }
 

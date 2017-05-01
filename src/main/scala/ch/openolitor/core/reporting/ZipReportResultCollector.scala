@@ -27,15 +27,19 @@ import ch.openolitor.core.reporting.ReportSystem._
 import java.io.ByteArrayOutputStream
 import scala.util._
 import ch.openolitor.util.ZipBuilder
+import ch.openolitor.core.jobs.JobQueueService
+import spray.http.MediaTypes
+import ch.openolitor.core.DateFormats
+import ch.openolitor.core.jobs.JobQueueService.FileResultPayload
 
 object ZipReportResultCollector {
-  def props(reportSystem: ActorRef): Props = Props(classOf[ZipReportResultCollector], reportSystem)
+  def props(reportSystem: ActorRef, jobQueueService: ActorRef): Props = Props(classOf[ZipReportResultCollector], reportSystem, jobQueueService)
 }
 
 /**
  * Collect all results into a zip file. Send back the zip result when all reports got generated
  */
-class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
+class ZipReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef) extends ResultCollector with DateFormats {
 
   var origSender: Option[ActorRef] = None
   val zipBuilder: ZipBuilder = new ZipBuilder
@@ -49,9 +53,10 @@ class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorL
   }
 
   val waitingForResult: Receive = {
-    case SingleReportResult(_, _, Left(error)) =>
+    case SingleReportResult(_, stats, Left(error)) =>
       errors = errors :+ error
-    case SingleReportResult(id, _, Right(result: ReportResultWithDocument)) =>
+      notifyProgress(stats)
+    case SingleReportResult(id, stats, Right(result: ReportResultWithDocument)) =>
       log.debug(s"Add Zip Entry:${result.name}")
       zipBuilder.addZipEntry(result.name, result.document) match {
         case Success(r) =>
@@ -59,10 +64,14 @@ class ZipReportResultCollector(reportSystem: ActorRef) extends Actor with ActorL
           log.warning(s"Coulnd't att document to  zip file:$error")
           errors = errors :+ ReportError(Some(id), s"Dokument konnte nicht zum Zip hinzugefügt werde:$error")
       }
+      notifyProgress(stats)
     case result: GenerateReportsStats =>
       //finished, send back zip result
-      val zip = zipBuilder.close()
-      origSender map (_ ! ZipReportResult(result, errors, zip))
+      zipBuilder.close() map { zip =>
+        val fileName = "Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip"
+        val payload = FileResultPayload(fileName, MediaTypes.`application/zip`, zip)
+        jobFinished(result, Some(payload))
+      }
       self ! PoisonPill
   }
 }

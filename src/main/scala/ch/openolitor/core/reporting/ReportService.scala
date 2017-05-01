@@ -104,32 +104,36 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
       case (errors, result) =>
         logger.debug(s"Validation errors:$errors, process result records:${result.length}")
         val ablageParams = if (config.pdfAblegen) Some(FileStoreParameters[E](ablageType)) else None
-        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, idFactory, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams).run map {
+        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, idFactory, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams, jobId).run map {
           case -\/(e) =>
             logger.warn(s"Failed generating report {}", e.getMessage)
             Left(e)
-          case \/-(result) => Right(ReportServiceResult(jobId, errors, result))
+          case \/-(result) => Right(ReportServiceResult(jobId, errors, AsyncReportResult(jobId)))
         }
     }
   }
 
   def generateDocument[I, E](vorlage: BerichtsVorlage, fileType: FileType, id: Option[String], data: ReportData[E],
-    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])(implicit personId: PersonId): ServiceResult[ReportResult] = {
+    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]], jobId: JobId)(implicit personId: PersonId): ServiceResult[JobId] = {
     for {
       temp <- loadBerichtsvorlage(vorlage, fileType, id)
-      source <- generateReport(temp, data, pdfGenerieren, pdfAblage)
+      source <- generateReport(temp, data, pdfGenerieren, pdfAblage, jobId)
     } yield source
   }
 
-  def generateReport[I, E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]])(implicit personId: PersonId): ServiceResult[ReportResult] = EitherT {
+  def generateReport[I, E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]], jobId: JobId)(implicit personId: PersonId): ServiceResult[JobId] = EitherT {
     implicit val timeout = Timeout(600 seconds)
     val collector =
-      if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem)
-      else if (pdfAblage.isDefined) FileStoreReportResultCollector.props(reportSystem)
-      else ZipReportResultCollector.props(reportSystem)
+      if (pdfAblage.isDefined) FileStoreReportResultCollector.props(reportSystem, jobQueueService)
+      else if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem, jobQueueService)
+      else ZipReportResultCollector.props(reportSystem, jobQueueService)
 
     val ref = actorSystem.actorOf(collector)
-    (ref ? GenerateReports(personId, vorlage, data, pdfGenerieren, pdfAblage)).map(_.asInstanceOf[ReportResult].right)
+
+    (ref ! GenerateReports(personId, jobId, vorlage, data, pdfGenerieren, pdfAblage))
+    Future {
+      jobId.right
+    }
   }
 
   def loadBerichtsvorlage(vorlage: BerichtsVorlage, fileType: FileType, id: Option[String]): ServiceResult[Array[Byte]] = {

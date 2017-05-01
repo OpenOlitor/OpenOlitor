@@ -58,10 +58,13 @@ trait JobQueueRoutes extends HttpService with DefaultRouteService with JobQueueJ
         path("job" / Segment / "result") { jobId =>
           get {
             onSuccess(jobQueueService ? FetchJobResult(subject.personId, jobId)) {
-              case result: JobResult =>
+              case JobResult(_, _, _, _, Some(result: FileResultPayload)) =>
                 streamFile(result.fileName, result.mediaType, result.file, true)
-              case result: JobFileStoreResult =>
-                download(result.fileType, result.fileStoreId.id)
+              case JobResult(_, _, _, _, Some(result: FileStoreResultPayload)) if result.fileStoreReferences.size == 1 =>
+                val file = result.fileStoreReferences.head
+                download(file.fileType, file.id.id)
+              case JobResult(_, _, _, _, Some(result: FileStoreResultPayload)) =>
+                downloadAsZip("Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip", result.fileStoreReferences)
               case result: JobResultUnavailable =>
                 complete(StatusCodes.NotFound, s"No job found for id:${result.jobId}")
               case x =>

@@ -20,38 +20,23 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.reporting
+package ch.openolitor.util
 
-import akka.actor._
-import ch.openolitor.core.reporting.ReportSystem._
-import ch.openolitor.core.jobs.JobQueueService
-import ch.openolitor.core.jobs.JobQueueService.FileResultPayload
-import spray.http.MediaTypes
+import java.io.File
+import java.io.FileOutputStream
+import java.io.BufferedOutputStream
 
-object HeadReportResultCollector {
-  def props(reportSystem: ActorRef, jobQueueService: ActorRef): Props = Props(classOf[HeadReportResultCollector], reportSystem, jobQueueService)
-}
+object FileUtil {
+  implicit class ByteArray2File(self: Array[Byte]) {
+    def asTempFile(name: String, extension: String) = {
+      val file = File.createTempFile(name, extension)
+      file.deleteOnExit()
 
-/**
- * after sending report request to reportsystem wait for only for first reportresult and send that back to the sender
- */
-class HeadReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef) extends ResultCollector {
+      val bos = new BufferedOutputStream(new FileOutputStream(file))
+      bos.write(self)
+      bos.close() // You may end up with 0 bytes file if not calling close.
 
-  val receive: Receive = {
-    case request: GenerateReports[_] =>
-      reportSystem ! request
-      context become waitingForResult
-  }
-
-  val waitingForResult: Receive = {
-    case SingleReportResult(_, stats, Left(ReportError(_, error))) =>
-      jobFinished(stats, None)
-      self ! PoisonPill
-    case SingleReportResult(_, stats, Right(DocumentReportResult(_, result, name))) =>
-      jobFinished(stats, Some(FileResultPayload(name, MediaTypes.`application/vnd.oasis.opendocument.text`, result)))
-      self ! PoisonPill
-    case SingleReportResult(_, stats, Right(PdfReportResult(_, result, name))) =>
-      jobFinished(stats, Some(FileResultPayload(name, MediaTypes.`application/pdf`, result)))
-      self ! PoisonPill
+      file
+    }
   }
 }

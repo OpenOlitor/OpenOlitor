@@ -31,6 +31,7 @@ import org.joda.time.DateTime
 import spray.http.MediaType
 import ch.openolitor.core.filestore.FileType
 import ch.openolitor.core.filestore.FileStoreFileId
+import ch.openolitor.core.filestore.FileStoreFileReference
 
 object JobQueueService {
   def props: Props = Props(classOf[JobQueueService])
@@ -40,8 +41,11 @@ object JobQueueService {
   case class FetchJobResult(personId: PersonId, jobId: String) extends PersonReference
   case class PendingJobs(personId: PersonId, progresses: Seq[JobProgress]) extends JSONSerializable
 
-  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, fileName: String, mediaType: MediaType, file: File)
-  case class JobFileStoreResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, fileType: FileType, fileStoreId: FileStoreFileId)
+  trait ResultPayload
+  case class FileResultPayload(fileName: String, mediaType: MediaType, file: File) extends ResultPayload
+  case class FileStoreResultPayload(fileStoreReferences: Seq[FileStoreFileReference]) extends ResultPayload
+
+  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, payload: Option[ResultPayload])
   case class JobResultUnavailable(personId: PersonId, jobId: String)
   case class JobProgress(personId: PersonId, jobId: JobId, numberOfTasksInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int)
     extends JSONSerializable with PersonReference

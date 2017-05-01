@@ -23,6 +23,7 @@
 package ch.openolitor.core.reporting.pdf
 
 import scala.util.Try
+
 import scala.util.{ Success, Failure }
 import ch.openolitor.core.SystemConfig
 import akka.actor.ActorSystem
@@ -37,6 +38,8 @@ import scala.concurrent.ExecutionContext
 import akka.util.Timeout
 import akka.io.IO
 import spray.can.server.UHttp
+import java.io.File
+import ch.openolitor.util.FileUtil._
 
 trait PDFGeneratorService {
   def sysConfig: SystemConfig
@@ -52,7 +55,7 @@ trait PDFGeneratorService {
 
   val pipeline: HttpRequest => Future[HttpResponse] = uSendReceive
 
-  def generatePDF(input: Array[Byte], name: String): Try[Array[Byte]] = synchronized {
+  def generatePDF(input: File, name: String): Try[File] = synchronized {
     Try {
       val uri = Uri(endpointUri)
       val formFile = FormFile(Some(name + ".odt"), HttpEntity(HttpData(input)).asInstanceOf[HttpEntity.NonEmpty])
@@ -60,7 +63,7 @@ trait PDFGeneratorService {
 
       val result = pipeline(Post(uri, formData)) map {
         case HttpResponse(StatusCodes.OK, entity, headers, _) =>
-          entity.data.toByteArray
+          entity.data.toByteArray.asTempFile("report_pdf", ".pdf")
         case other =>
           throw new RequestProcessingException(StatusCodes.InternalServerError, s"PDF konnte nicht generiert werden ${other}")
       }

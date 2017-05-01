@@ -63,14 +63,19 @@ class SingleDocumentReportProcessorActor(name: String, locale: Locale) extends A
       self ! PoisonPill
   }
 
-  private def generateReport(file: Array[Byte], data: JsObject): Try[Array[Byte]] = {
+  private def generateReport(file: Array[Byte], data: JsObject): Try[File] = {
     for {
       doc <- Try(TextDocument.loadDocument(new ByteArrayInputStream(file)))
       result <- processDocument(doc, data, locale)
     } yield {
-      val baos = new ByteArrayOutputStream()
-      doc.save(baos)
-      baos.toByteArray
+      val file = File.createTempFile("report", ".odt")
+      val os = new FileOutputStream(file)
+      try {
+        doc.save(os)
+        file
+      } finally {
+        os.close()
+      }
     }
   }
 }
