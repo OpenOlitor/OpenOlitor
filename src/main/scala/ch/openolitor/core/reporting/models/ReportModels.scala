@@ -20,19 +20,16 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.reporting
+package ch.openolitor.core.reporting.models
 
-import ch.openolitor.core.BaseJsonProtocol
-import zangelo.spray.json.AutoProductFormats
-import spray.json._
-import ch.openolitor.core.reporting._
-import ch.openolitor.core.reporting.models._
+import ch.openolitor.core.models._
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.reporting.ReportSystem._
-import ch.openolitor.core.filestore.FileStoreJsonProtocol
+import ch.openolitor.stammdaten.models.ProjektReport
 
-trait ReportJsonProtocol extends BaseJsonProtocol with FileStoreJsonProtocol
-    with AutoProductFormats[JSONSerializable] {
-  implicit val jobIdFormat = jsonFormat1(JobId)
-  implicit val multiReportIdFormat = baseIdFormat(MultiReportId)
-}
+case class MultiReportId(id: Long) extends BaseId
+
+case class MultiReport[T <% JSONSerializable](
+  id: MultiReportId,
+  entries: Seq[T],
+  projekt: ProjektReport
+) extends JSONSerializable
