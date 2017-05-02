@@ -29,6 +29,7 @@ import ch.openolitor.core.filestore.FileStore
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.Boot
 import ch.openolitor.core.DateFormats
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
 object ReportProcessorActor {
   def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportProcessorActor], fileStore, sysConfig)
@@ -43,16 +44,16 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
   import ReportProcessorActor._
   import ReportSystem._
 
-  var stats = GenerateReportsStats(Boot.systemPersonId, None, 0, 0, 0)
+  var stats = GenerateReportsStats(Boot.systemPersonId, JobId("Dummy"), 0, 0, 0)
   var origSender: Option[ActorRef] = None
 
   val receive: Receive = {
-    case GenerateReports(originator, file, data, false, None) =>
-      processReports(file, data, row => SingleDocumentReportProcessorActor.props(row.name, row.locale))(originator)
-    case GenerateReports(originator, file, data, true, None) =>
-      processReports(file, data, row => SingleDocumentReportPDFProcessorActor.props(sysConfig, row.name, row.locale))(originator)
-    case GenerateReports(originator, file, data, true, Some(option)) =>
-      processReports(file, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, sysConfig, option.fileType, row.fileStoreId, row.name, row.locale))(originator)
+    case GenerateReports(originator, jobId, file, data, false, None) =>
+      processReports(file, jobId, data, row => SingleDocumentReportProcessorActor.props(row.name, row.locale))(originator)
+    case GenerateReports(originator, jobId, file, data, true, None) =>
+      processReports(file, jobId, data, row => SingleDocumentReportPDFProcessorActor.props(sysConfig, row.name, row.locale))(originator)
+    case GenerateReports(originator, jobId, file, data, true, Some(option)) =>
+      processReports(file, jobId, data, row => SingleDocumentStoreReportPDFProcessorActor.props(fileStore, sysConfig, option.fileType, row.fileStoreId, row.name, row.locale))(originator)
   }
 
   val collectingResults: Receive = {
@@ -86,9 +87,9 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
     }
   }
 
-  def processReports(file: Array[Byte], data: ReportData[_], f: ReportDataRow => Props)(originator: PersonId) = {
+  def processReports(file: Array[Byte], jobId: JobId, data: ReportData[_], f: ReportDataRow => Props)(originator: PersonId) = {
     origSender = Some(sender)
-    stats = stats.copy(originator = originator, jobId = Some(data.jobId), numberOfReportsInProgress = data.rows.length)
+    stats = stats.copy(originator = originator, jobId = jobId, numberOfReportsInProgress = data.rows.length)
 
     for {
       (row, index) <- data.rows.zipWithIndex

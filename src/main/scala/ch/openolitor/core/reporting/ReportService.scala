@@ -104,7 +104,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
       case (errors, result) =>
         logger.debug(s"Validation errors:$errors, process result records:${result.length}")
         val ablageParams = if (config.pdfAblegen) Some(FileStoreParameters[E](ablageType)) else None
-        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(jobId, result, idFactory, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams, jobId).run map {
+        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(result, idFactory, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams, jobId).run map {
           case -\/(e) =>
             logger.warn(s"Failed generating report {}", e.getMessage)
             Left(e)

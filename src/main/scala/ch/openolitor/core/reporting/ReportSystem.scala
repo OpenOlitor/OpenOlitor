@@ -37,7 +37,7 @@ object ReportSystem {
   def props(fileStore: FileStore, sysConfig: SystemConfig): Props = Props(classOf[ReportSystem], fileStore, sysConfig)
 
   case class ReportDataRow(id: Any, value: JsObject, fileStoreId: Option[String], name: String, locale: Locale)
-  case class ReportData[E: JsonFormat](jobId: JobId, rowsRaw: Seq[E], idFactory: E => Any, filestoreIdFactory: E => Option[String], nameFactory: E => String, localeFactory: E => Locale) {
+  case class ReportData[E: JsonFormat](rowsRaw: Seq[E], idFactory: E => Any, filestoreIdFactory: E => Option[String], nameFactory: E => String, localeFactory: E => Locale) {
     val rows = rowsRaw.map(row => ReportDataRow(idFactory(row), row.toJson.asJsObject, filestoreIdFactory(row), nameFactory(row), localeFactory(row)))
   }
 
