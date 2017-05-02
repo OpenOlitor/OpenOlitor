@@ -23,6 +23,7 @@
 package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
+import ch.openolitor.core.repositories.ReportReadRepository
 import ch.openolitor.core.reporting.models._
 import scalikejdbc._
 import scalikejdbc.async._
@@ -44,7 +45,7 @@ import scalaz._
 import Scalaz._
 import scalaz.OptionT.optionT
 
-trait StammdatenReadRepository {
+trait StammdatenReadRepository extends ReportReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
 

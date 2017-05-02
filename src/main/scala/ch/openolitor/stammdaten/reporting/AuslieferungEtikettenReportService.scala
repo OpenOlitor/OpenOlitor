@@ -53,12 +53,12 @@ trait AuslieferungEtikettenReportService extends AsyncConnectionPoolContextAware
     )
   }
 
-  def name(fileType: FileType)(auslieferung: MultiReport[AuslieferungReportEntry]) = {
+  private def name(fileType: FileType)(auslieferung: MultiReport[AuslieferungReportEntry]) = {
     val now = new DateTime()
     s"lieferetiketten_${now}"
   }
 
-  def auslieferungenByIds(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[MultiReport[AuslieferungReportEntry]])] = {
+  private def auslieferungenByIds(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[MultiReport[AuslieferungReportEntry]])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
