@@ -188,15 +188,15 @@ trait DocumentProcessor extends LazyLogging {
    * duplicate all rows except header rows. Try to replace textbox values with value from property map
    */
   def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
-    val propertyKey = parsePropertyKey(table.getTableName, pathPrefixes)
+    val propertyKey = parsePropertyKey(table.getDotTableName, pathPrefixes)
     props.get(propertyKey) map {
       case Value(JsArray(values), _) =>
-        logger.debug(s"processTable (dynamic): ${table.getTableName}")
+        logger.debug(s"processTable (dynamic): ${table.getDotTableName}")
         processTableWithValues(doc, table, props, values, locale, pathPrefixes)
 
     } getOrElse {
       //static proccesing
-      logger.debug(s"processTable (static): ${table.getTableName}: $pathPrefixes, $propertyKey")
+      logger.debug(s"processTable (static): ${table.getDotTableName}: $pathPrefixes, $propertyKey")
       processStaticTable(table, props, locale, pathPrefixes)
     }
   }
@@ -235,14 +235,14 @@ trait DocumentProcessor extends LazyLogging {
     val rows = table.getRowList.toList
     val nonHeaderRows = rows.takeRight(rows.length - startIndex)
 
-    logger.debug(s"processTable: ${table.getTableName} -> Header rows: ${table.getHeaderRowCount}")
+    logger.debug(s"processTable: ${table.getDotTableName} -> Header rows: ${table.getHeaderRowCount}")
 
     for (index <- 0 to values.length - 1) {
-      val rowPathPrefix = findPathPrefixes(table.getTableName + s".$index", pathPrefixes)
+      val rowPathPrefix = findPathPrefixes(table.getDotTableName + s".$index", pathPrefixes)
 
       //copy rows
       val newRows = table.appendRows(nonHeaderRows.length).toList
-      logger.debug(s"processTable: ${table.getTableName} -> Appended rows: ${newRows.length}")
+      logger.debug(s"processTable: ${table.getDotTableName} -> Appended rows: ${newRows.length}")
       for (r <- 0 to newRows.length - 1) {
         //replace textfields
         for (cell <- 0 to table.getColumnCount - 1) {
@@ -259,7 +259,7 @@ trait DocumentProcessor extends LazyLogging {
     }
 
     //remove template rows
-    logger.debug(s"processTable: ${table.getTableName} -> Remove template rows from:$startIndex, count: ${nonHeaderRows.length}.")
+    logger.debug(s"processTable: ${table.getDotTableName} -> Remove template rows from:$startIndex, count: ${nonHeaderRows.length}.")
     if (nonHeaderRows.length == table.getRowCount) {
       //remove whole table
       table.remove()
