@@ -47,9 +47,10 @@ import ch.openolitor.stammdaten.models.ProjektVorlageId
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
-import spray.json.JsArray
+import spray.json._
 import ch.openolitor.core.DateFormats
 import ch.openolitor.core.jobs.JobQueueService.JobId
+import ch.openolitor.core.JSONSerializable
 
 sealed trait BerichtsVorlage extends Product
 case object DatenExtrakt extends BerichtsVorlage
@@ -58,14 +59,24 @@ case class ProjektBerichtsVorlage(id: ProjektVorlageId) extends BerichtsVorlage
 case class EinzelBerichtsVorlage(file: Array[Byte]) extends BerichtsVorlage
 case class ServiceFailed(msg: String, e: Throwable = null) extends Exception(msg, e)
 
-case class ReportForm[I](ids: Seq[I], pdfGenerieren: Boolean, pdfAblegen: Boolean) extends JSONSerializable {
+case class ReportForm[I](ids: Seq[I], pdfGenerieren: Boolean, pdfAblegen: Boolean, fileDownload: Boolean) extends JSONSerializable {
   def toConfig(vorlage: BerichtsVorlage): ReportConfig[I] = {
-    ReportConfig[I](ids, vorlage, pdfGenerieren, pdfAblegen)
+    ReportConfig[I](ids, vorlage, pdfGenerieren, pdfAblegen, fileDownload)
   }
 }
-case class ReportConfig[I](ids: Seq[I], vorlage: BerichtsVorlage, pdfGenerieren: Boolean, pdfAblegen: Boolean)
-case class ValidationError[I](id: I, message: String)
+case class ReportConfig[I](ids: Seq[I], vorlage: BerichtsVorlage, pdfGenerieren: Boolean, pdfAblegen: Boolean, downloadFile: Boolean)
+case class ValidationError[I](id: I, message: String)(implicit format: JsonFormat[I]) {
+  val jsonId = id.toJson
+
+  val asJson = JsObject(
+    "message" -> JsString(message),
+    "id" -> jsonId
+  )
+}
 case class ReportServiceResult[I](jobId: JobId, validationErrors: Seq[ValidationError[I]], result: ReportResult) {
+  val hasErrors = !validationErrors.isEmpty
+}
+case class AsyncReportServiceResult(jobId: JobId, validationErrors: Seq[JsValue]) extends JSONSerializable {
   val hasErrors = !validationErrors.isEmpty
 }
 
@@ -104,7 +115,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
       case (errors, result) =>
         logger.debug(s"Validation errors:$errors, process result records:${result.length}")
         val ablageParams = if (config.pdfAblegen) Some(FileStoreParameters[E](ablageType)) else None
-        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(result, idFactory, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams, jobId).run map {
+        generateDocument(config.vorlage, vorlageType, vorlageId, ReportData(result, idFactory, ablageIdFactory, nameFactory, localeFactory), config.pdfGenerieren, ablageParams, config.downloadFile, jobId).run map {
           case -\/(e) =>
             logger.warn(s"Failed generating report {}", e.getMessage)
             Left(e)
@@ -114,17 +125,18 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
   }
 
   def generateDocument[I, E](vorlage: BerichtsVorlage, fileType: FileType, id: Option[String], data: ReportData[E],
-    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]], jobId: JobId)(implicit personId: PersonId): ServiceResult[JobId] = {
+    pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]], downloadFile: Boolean, jobId: JobId)(implicit personId: PersonId): ServiceResult[JobId] = {
     for {
       temp <- loadBerichtsvorlage(vorlage, fileType, id)
-      source <- generateReport(temp, data, pdfGenerieren, pdfAblage, jobId)
+      source <- generateReport(temp, data, pdfGenerieren, pdfAblage, downloadFile, jobId)
     } yield source
   }
 
-  def generateReport[I, E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean, pdfAblage: Option[FileStoreParameters[E]], jobId: JobId)(implicit personId: PersonId): ServiceResult[JobId] = EitherT {
-    implicit val timeout = Timeout(600 seconds)
+  def generateReport[I, E](vorlage: Array[Byte], data: ReportData[E], pdfGenerieren: Boolean,
+    pdfAblage: Option[FileStoreParameters[E]], downloadFile: Boolean, jobId: JobId)(implicit personId: PersonId): ServiceResult[JobId] = EitherT {
+    logger.debug(s"generateReport: vorlage: $vorlage, pdfGenerieren: $pdfGenerieren, pdfAblage: $pdfAblage, downloadFile: $downloadFile, jobId: $jobId")
     val collector =
-      if (pdfAblage.isDefined) FileStoreReportResultCollector.props(reportSystem, jobQueueService)
+      if (pdfAblage.isDefined) FileStoreReportResultCollector.props(reportSystem, jobQueueService, downloadFile)
       else if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem, jobQueueService)
       else ZipReportResultCollector.props(reportSystem, jobQueueService)
 

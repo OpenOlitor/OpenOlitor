@@ -32,13 +32,13 @@ import ch.openolitor.core.jobs.JobQueueService
 import ch.openolitor.core.jobs.JobQueueService.FileStoreResultPayload
 
 object FileStoreReportResultCollector {
-  def props(reportSystem: ActorRef, jobQueueService: ActorRef): Props = Props(classOf[FileStoreReportResultCollector], reportSystem, jobQueueService)
+  def props(reportSystem: ActorRef, jobQueueService: ActorRef, downloadFile: Boolean): Props = Props(classOf[FileStoreReportResultCollector], reportSystem, jobQueueService, downloadFile)
 }
 
 /**
  * Collect all results filestore id results
  */
-class FileStoreReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef) extends ResultCollector {
+class FileStoreReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef, downloadFile: Boolean) extends ResultCollector {
 
   var storeResults: Seq[FileStoreFileReference] = Seq()
   var errors: Seq[ReportError] = Seq()
@@ -51,15 +51,22 @@ class FileStoreReportResultCollector(reportSystem: ActorRef, override val jobQue
 
   val waitingForResult: Receive = {
     case SingleReportResult(_, stats, Left(error)) =>
+      log.debug(s"Received error:${error}:$stats")
       errors = errors :+ error
       notifyProgress(stats)
     case SingleReportResult(_, stats, Right(StoredPdfReportResult(_, fileType, id))) =>
+      log.debug(s"Received resukt:${id}:$stats")
       storeResults = storeResults :+ FileStoreFileReference(fileType, id)
       notifyProgress(stats)
     case result: GenerateReportsStats =>
-      //finished, send collected result to jobQueue
-      val payload = FileStoreResultPayload(storeResults)
-      jobFinished(result, Some(payload))
+      log.debug(s"Job finished: $result, downloadFile:$downloadFile")
+      //finished, send collected result to jobQueue      
+      if (downloadFile) {
+        val payload = FileStoreResultPayload(storeResults)
+        jobFinished(result, Some(payload))
+      } else {
+        jobFinished(result, None)
+      }
       self ! PoisonPill
   }
 }

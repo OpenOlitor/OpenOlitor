@@ -68,26 +68,25 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
     origSender map (_ ! result)
   }
 
-  def receivedResult(result: ReportResult) = {
+  private def receivedResult(result: ReportResult) = {
     result match {
       case result: ReportSuccess =>
-        stats = stats.copy(numberOfSuccess = stats.numberOfSuccess + 1)
+        stats = stats.incSuccess
         publish(SingleReportResult(result.id, stats, Right(result)))
       case error: ReportError =>
-        stats = stats.copy(numberOfFailures = stats.numberOfFailures + 1)
+        stats = stats.incError
         publish(SingleReportResult(error.id, stats, Left(error)))
     }
 
-    stats = stats.copy(numberOfReportsInProgress = stats.numberOfReportsInProgress - 1)
-
-    if (stats.numberOfReportsInProgress <= 0) {
+    log.debug(s"receivedResult:$stats:${stats.isFinished}")
+    if (stats.isFinished) {
       //send completed result
       origSender map (_ ! stats)
       self ! PoisonPill
     }
   }
 
-  def processReports(file: Array[Byte], jobId: JobId, data: ReportData[_], f: ReportDataRow => Props)(originator: PersonId) = {
+  private def processReports(file: Array[Byte], jobId: JobId, data: ReportData[_], f: ReportDataRow => Props)(originator: PersonId) = {
     origSender = Some(sender)
     stats = stats.copy(originator = originator, jobId = jobId, numberOfReportsInProgress = data.rows.length)
 

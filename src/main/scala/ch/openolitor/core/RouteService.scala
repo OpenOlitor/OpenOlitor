@@ -555,20 +555,18 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
         downloadFile <- Try(!pdfAblegen || formData.fields.collectFirst {
           case b @ BodyPart(entity, headers) if b.name == Some("pdfDownloaden") =>
             entity.asString.toBoolean
-        }.getOrElse(true))
+        }.getOrElse(false))
         ids <- id.map(id => Success(Seq(id))).getOrElse(Try(formData.fields.collectFirst {
           case b @ BodyPart(entity, headers) if b.name == Some("ids") =>
             entity.asString.split(",").map(id => idFactory(id.toLong))
         }.getOrElse(Seq())))
       } yield {
-        val config = ReportConfig[I](ids, vorlage, pdfGenerieren, pdfAblegen)
+        logger.debug(s"generateReport: ids: $ids, pdfGenerieren: $pdfGenerieren, pdfAblegen: $pdfAblegen, downloadFile: $downloadFile")
+        val config = ReportConfig[I](ids, vorlage, pdfGenerieren, pdfAblegen, downloadFile)
 
         onSuccess(reportFunction(config)) {
           case Left(serviceError) =>
             complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:$serviceError")
-          case Right(result) if result.hasErrors =>
-            val errorString = result.validationErrors.map(_.message).mkString(",")
-            complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
           case Right(result) =>
             result.result match {
               case ReportDataResult(id, json) =>
@@ -576,8 +574,12 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
                   complete(json)
                 }
               case AsyncReportResult(jobId) =>
-                // async result, return jobId                
-                complete(jobId)
+                // async result, return jobId
+                val ayncResult = AsyncReportServiceResult(jobId, result.validationErrors.map(_.asJson))
+                complete(ayncResult)
+              case x if result.hasErrors =>
+                val errorString = result.validationErrors.map(_.message).mkString(",")
+                complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden:${errorString}")
               case x =>
                 logger.error(s"Received unexpected result:$x")
                 complete(StatusCodes.BadRequest, s"Der Bericht konnte nicht erzeugt werden")

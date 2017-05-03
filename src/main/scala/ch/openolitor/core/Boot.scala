@@ -53,7 +53,6 @@ import resource._
 import java.net.ServerSocket
 import spray.http.Uri
 import ch.openolitor.core.proxy.ProxyServiceActor
-import util.Properties
 import ch.openolitor.core.db.evolution.Evolution
 import ch.openolitor.core.domain.EntityStore.CheckDBEvolution
 import scala.util._

@@ -45,12 +45,15 @@ class HeadReportResultCollector(reportSystem: ActorRef, override val jobQueueSer
 
   val waitingForResult: Receive = {
     case SingleReportResult(_, stats, Left(ReportError(_, error))) =>
+      log.debug(s"Job finished: $stats: $error")
       jobFinished(stats, None)
       self ! PoisonPill
     case SingleReportResult(_, stats, Right(DocumentReportResult(_, result, name))) =>
+      log.debug(s"Job finished: $stats")
       jobFinished(stats, Some(FileResultPayload(name, MediaTypes.`application/vnd.oasis.opendocument.text`, result)))
       self ! PoisonPill
     case SingleReportResult(_, stats, Right(PdfReportResult(_, result, name))) =>
+      log.debug(s"Job finished: $stats")
       jobFinished(stats, Some(FileResultPayload(name, MediaTypes.`application/pdf`, result)))
       self ! PoisonPill
   }

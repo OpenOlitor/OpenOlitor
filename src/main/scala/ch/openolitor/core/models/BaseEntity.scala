@@ -28,6 +28,7 @@ import ch.openolitor.core.Macros
 import spray.json.DefaultJsonProtocol
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.ws.ClientMessages.ClientMessage
 
 trait BaseId extends AnyRef {
   val id: Long
@@ -52,7 +53,7 @@ trait BaseEntity[T <: BaseId] extends Product with JSONSerializable {
   val modifikator: PersonId
 }
 
-sealed trait DBEvent[E <: Product] extends Product {
+sealed trait DBEvent[E <: Product] extends ClientMessage {
   val originator: PersonId
   val entity: E
 }

@@ -66,12 +66,15 @@ class ZipReportResultCollector(reportSystem: ActorRef, override val jobQueueServ
       }
       notifyProgress(stats)
     case result: GenerateReportsStats =>
+      log.debug(s"Close Zip, job finished:${result}")
       //finished, send back zip result
       zipBuilder.close() map { zip =>
         val fileName = "Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip"
         val payload = FileResultPayload(fileName, MediaTypes.`application/zip`, zip)
+        log.debug(s"Send payload as result:${fileName}")
         jobFinished(result, Some(payload))
       }
+      log.debug(s"Stop collector PoisonPill")
       self ! PoisonPill
   }
 }

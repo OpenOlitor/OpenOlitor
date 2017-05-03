@@ -32,6 +32,7 @@ import spray.http.MediaType
 import ch.openolitor.core.filestore.FileType
 import ch.openolitor.core.filestore.FileStoreFileId
 import ch.openolitor.core.filestore.FileStoreFileReference
+import ch.openolitor.core.ws.ClientMessages.ClientMessage
 
 object JobQueueService {
   def props: Props = Props(classOf[JobQueueService])
@@ -39,13 +40,13 @@ object JobQueueService {
   case class JobId(name: String, id: String = UUID.randomUUID().toString, startTime: DateTime = DateTime.now) extends JSONSerializable
   case class GetPendingJobs(personId: PersonId) extends PersonReference
   case class FetchJobResult(personId: PersonId, jobId: String) extends PersonReference
-  case class PendingJobs(personId: PersonId, progresses: Seq[JobProgress]) extends JSONSerializable
+  case class PendingJobs(personId: PersonId, progresses: Seq[JobProgress]) extends JSONSerializable with ClientMessage
 
   trait ResultPayload
   case class FileResultPayload(fileName: String, mediaType: MediaType, file: File) extends ResultPayload
   case class FileStoreResultPayload(fileStoreReferences: Seq[FileStoreFileReference]) extends ResultPayload
 
-  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, payload: Option[ResultPayload])
+  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, payload: Option[ResultPayload]) extends PersonReference with ClientMessage
   case class JobResultUnavailable(personId: PersonId, jobId: String)
   case class JobProgress(personId: PersonId, jobId: JobId, numberOfTasksInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int)
     extends JSONSerializable with PersonReference
