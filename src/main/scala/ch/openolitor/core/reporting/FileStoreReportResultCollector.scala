@@ -58,7 +58,7 @@ class FileStoreReportResultCollector(reportSystem: ActorRef, override val jobQue
       log.debug(s"Received resukt:${id}:$stats")
       storeResults = storeResults :+ FileStoreFileReference(fileType, id)
       notifyProgress(stats)
-    case result: GenerateReportsStats =>
+    case result: GenerateReportsStats if result.numberOfReportsInProgress == 0 =>
       log.debug(s"Job finished: $result, downloadFile:$downloadFile")
       //finished, send collected result to jobQueue      
       if (downloadFile) {
@@ -68,5 +68,7 @@ class FileStoreReportResultCollector(reportSystem: ActorRef, override val jobQue
         jobFinished(result, None)
       }
       self ! PoisonPill
+    case stats: GenerateReportsStats =>
+      notifyProgress(stats)
   }
 }

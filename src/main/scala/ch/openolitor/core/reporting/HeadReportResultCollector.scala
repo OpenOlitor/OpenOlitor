@@ -44,6 +44,8 @@ class HeadReportResultCollector(reportSystem: ActorRef, override val jobQueueSer
   }
 
   val waitingForResult: Receive = {
+    case stats: GenerateReportsStats =>
+      notifyProgress(stats)
     case SingleReportResult(_, stats, Left(ReportError(_, error))) =>
       log.debug(s"Job finished: $stats: $error")
       jobFinished(stats, None)

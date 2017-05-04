@@ -57,6 +57,7 @@ import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import ch.openolitor.core.eventsourcing._
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
+import ch.openolitor.core.jobs.JobQueueRoutes
 
 class DefaultSystemRouteService(
   override val entityStore: ActorRef,
@@ -78,7 +79,8 @@ trait SystemRouteService extends HttpService with ActorReferences
     with StatusRoutes
     with SystemJsonProtocol
     with AsyncConnectionPoolContextAware
-    with PersistenceJsonProtocol {
+    with PersistenceJsonProtocol
+    with JobQueueRoutes {
   self: CoreReadRepositoryComponent =>
 
   private var error: Option[Throwable] = None

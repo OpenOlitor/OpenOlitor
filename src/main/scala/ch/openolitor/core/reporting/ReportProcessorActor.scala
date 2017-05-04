@@ -90,6 +90,9 @@ class ReportProcessorActor(fileStore: FileStore, sysConfig: SystemConfig) extend
     origSender = Some(sender)
     stats = stats.copy(originator = originator, jobId = jobId, numberOfReportsInProgress = data.rows.length)
 
+    // send already stats to notify client about progress 
+    sender ! stats
+
     for {
       (row, index) <- data.rows.zipWithIndex
     } yield {

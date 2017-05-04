@@ -65,7 +65,7 @@ class ZipReportResultCollector(reportSystem: ActorRef, override val jobQueueServ
           errors = errors :+ ReportError(Some(id), s"Dokument konnte nicht zum Zip hinzugefügt werde:$error")
       }
       notifyProgress(stats)
-    case result: GenerateReportsStats =>
+    case result: GenerateReportsStats if result.numberOfReportsInProgress == 0 =>
       log.debug(s"Close Zip, job finished:${result}")
       //finished, send back zip result
       zipBuilder.close() map { zip =>
@@ -76,5 +76,7 @@ class ZipReportResultCollector(reportSystem: ActorRef, override val jobQueueServ
       }
       log.debug(s"Stop collector PoisonPill")
       self ! PoisonPill
+    case stats: GenerateReportsStats =>
+      notifyProgress(stats)
   }
 }

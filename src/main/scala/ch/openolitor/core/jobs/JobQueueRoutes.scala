@@ -55,7 +55,18 @@ trait JobQueueRoutes extends HttpService with DefaultRouteService with JobQueueJ
           }
         }
       } ~
-        path("job" / Segment / "result") { jobId =>
+        path("results") {
+          get {
+            onSuccess(jobQueueService ? GetPendingJobResults(subject.personId)) {
+              case result: PendingJobResults =>
+                complete(result)
+              case x =>
+                logger.warn(s"Unexpected result:$x")
+                complete(StatusCodes.BadRequest)
+            }
+          }
+        } ~
+        path("job" / Segment) { jobId =>
           get {
             onSuccess(jobQueueService ? FetchJobResult(subject.personId, jobId)) {
               case JobResult(_, _, _, _, Some(result: FileResultPayload)) =>

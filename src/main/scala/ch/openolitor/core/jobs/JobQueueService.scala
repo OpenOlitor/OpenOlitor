@@ -33,20 +33,29 @@ import ch.openolitor.core.filestore.FileType
 import ch.openolitor.core.filestore.FileStoreFileId
 import ch.openolitor.core.filestore.FileStoreFileReference
 import ch.openolitor.core.ws.ClientMessages.ClientMessage
+import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.MandantConfiguration
 
 object JobQueueService {
-  def props: Props = Props(classOf[JobQueueService])
+  def props(mandantConfiguration: MandantConfiguration): Props = Props(classOf[JobQueueService], mandantConfiguration: MandantConfiguration)
 
   case class JobId(name: String, id: String = UUID.randomUUID().toString, startTime: DateTime = DateTime.now) extends JSONSerializable
   case class GetPendingJobs(personId: PersonId) extends PersonReference
+  case class GetPendingJobResults(personId: PersonId) extends PersonReference
   case class FetchJobResult(personId: PersonId, jobId: String) extends PersonReference
   case class PendingJobs(personId: PersonId, progresses: Seq[JobProgress]) extends JSONSerializable with ClientMessage
+  case class PendingJobResults(results: Seq[JobResultAvailable]) extends JSONSerializable with ClientMessage
+  case class JobResultAvailable(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int) extends JSONSerializable
+  case class JobFetched(personId: PersonId, jobId: JobId) extends JSONSerializable with ClientMessage
 
-  trait ResultPayload
+  sealed trait ResultPayload extends JSONSerializable
   case class FileResultPayload(fileName: String, mediaType: MediaType, file: File) extends ResultPayload
   case class FileStoreResultPayload(fileStoreReferences: Seq[FileStoreFileReference]) extends ResultPayload
 
-  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, payload: Option[ResultPayload]) extends PersonReference with ClientMessage
+  case class JobResult(personId: PersonId, jobId: JobId, numberOfSuccess: Int, numberOfFailures: Int, payload: Option[ResultPayload]) extends PersonReference with ClientMessage {
+    def toNotificatication =
+      JobResultAvailable(personId, jobId, numberOfSuccess, numberOfFailures)
+  }
   case class JobResultUnavailable(personId: PersonId, jobId: String)
   case class JobProgress(personId: PersonId, jobId: JobId, numberOfTasksInProgress: Int, numberOfSuccess: Int, numberOfFailures: Int)
     extends JSONSerializable with PersonReference
@@ -55,7 +64,7 @@ object JobQueueService {
 /**
  * This job queue service provides access to the user based job queue
  */
-class JobQueueService extends Actor with ActorLogging {
+class JobQueueService(mandantConfiguration: MandantConfiguration) extends Actor with ActorLogging {
 
   import JobQueueService._
 
@@ -78,5 +87,5 @@ class JobQueueService extends Actor with ActorLogging {
     agg
   }
 
-  def childProps(id: PersonId): Props = UserJobQueue.props(id)
+  def childProps(id: PersonId): Props = UserJobQueue.props(id, mandantConfiguration)
 }
