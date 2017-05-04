@@ -26,6 +26,7 @@ import akka.actor._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.reporting.pdf.PDFGeneratorActor
 import java.util.Locale
+import java.io.File
 
 object SingleDocumentReportPDFProcessorActor {
   def props(sysConfig: SystemConfig, name: String, locale: Locale): Props = Props(classOf[SingleDocumentReportPDFProcessorActor], sysConfig, name, locale)
@@ -43,6 +44,7 @@ class SingleDocumentReportPDFProcessorActor(sysConfig: SystemConfig, name: Strin
 
   var origSender: Option[ActorRef] = None
   var id: Any = null
+  var odtFile: File = null
 
   val receive: Receive = {
     case cmd: GenerateReport =>
@@ -54,12 +56,20 @@ class SingleDocumentReportPDFProcessorActor(sysConfig: SystemConfig, name: Strin
   val waitingForDocumentResult: Receive = {
     case DocumentReportResult(id, document, _) =>
       this.id = id
+      odtFile = document
       generatePdfActor ! GeneratePDF(document)
       context become waitingForPdfResult
     case e: ReportError =>
       //stop on error
       origSender map (_ ! e)
       self ! PoisonPill
+  }
+
+  override def postStop() = {
+    // cleanup
+    if (odtFile != null) {
+      odtFile.delete()
+    }
   }
 
   val waitingForPdfResult: Receive = {

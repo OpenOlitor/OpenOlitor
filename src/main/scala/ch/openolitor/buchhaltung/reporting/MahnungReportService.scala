@@ -42,6 +42,7 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
 import scala.Left
 import scala.Right
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
 trait MahnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol with RechnungReportData {
   self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
@@ -56,7 +57,8 @@ trait MahnungReportService extends AsyncConnectionPoolContextAware with ReportSe
       GeneriertMahnung,
       x => Some(x.id.id.toString),
       name,
-      _.projekt.sprache
+      _.projekt.sprache,
+      JobId("Mahnung(en)")
     )
   }
 

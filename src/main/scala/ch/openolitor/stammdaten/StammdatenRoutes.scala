@@ -792,7 +792,8 @@ class DefaultStammdatenRoutes(
   override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory,
-  override val airbrakeNotifier: ActorRef
+  override val airbrakeNotifier: ActorRef,
+  override val jobQueueService: ActorRef
 )
     extends StammdatenRoutes
     with DefaultStammdatenReadRepositoryComponent

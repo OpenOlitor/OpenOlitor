@@ -62,13 +62,21 @@ import akka.actor._
 import akka.util.ByteString
 
 trait StreamSupport {
-  def streamThenClose[T](stream: Stream[T], closeable: Option[Closeable])(implicit marshaller: Marshaller[T], refFactory: ActorRefFactory) =
+  def streamIt[T](stream: Stream[T])(implicit marshaller: Marshaller[T], refFactory: ActorRefFactory) =
+    streamThen(stream, () => ())
+
+  def streamThen[T](stream: Stream[T], afterStreamAction: () => Unit)(implicit marshaller: Marshaller[T], refFactory: ActorRefFactory) =
     new StandardRoute {
       val closingMarshaller = Marshaller[Stream[T]] {
         (value, ctx) =>
-          if (value.isEmpty) { closeable.map(_.close()); ctx.marshalTo(HttpEntity.Empty) }
-          else refFactory.actorOf(Props(new MetaMarshallers.ChunkingActor(marshaller, ctx) {
-            override def postStop() { closeable.map(_.close()); super.postStop() }
+          if (value.isEmpty) {
+            afterStreamAction()
+            ctx.marshalTo(HttpEntity.Empty)
+          } else refFactory.actorOf(Props(new MetaMarshallers.ChunkingActor(marshaller, ctx) {
+            override def postStop() {
+              afterStreamAction()
+              super.postStop()
+            }
           })) ! value
       }
 

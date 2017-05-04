@@ -28,11 +28,15 @@ import ch.openolitor.util.ByteBufferBackedInputStream
 import scala.concurrent.ExecutionContext
 import java.io.ByteArrayInputStream
 import scala.concurrent.Future
+import java.io.File
+import java.io.InputStream
+import java.io.FileInputStream
 
 object FileStoreActor {
   def props(fileStore: FileStore): Props = Props(classOf[FileStoreActor], fileStore)
 
-  case class StoreFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: Array[Byte])
+  case class StoreByteArray(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: Array[Byte])
+  case class StoreFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: File)
 }
 
 class FileStoreActor(fileStore: FileStore) extends Actor with ActorLogging {
@@ -43,15 +47,24 @@ class FileStoreActor(fileStore: FileStore) extends Actor with ActorLogging {
   val receive: Receive = {
     case StoreFile(bucket, id, metadata, file) =>
       val rec = sender
-      storeFile(bucket, id, metadata, file) map {
+      storeFile(bucket, id, metadata, new FileInputStream(file)) map {
+        case Left(e) => rec ! e
+        case Right(result) => rec ! result
+      }
+    case StoreByteArray(bucket, id, metadata, bytes) =>
+      val rec = sender
+      storeFile(bucket, id, metadata, new ByteArrayInputStream(bytes)) map {
         case Left(e) => rec ! e
         case Right(result) => rec ! result
       }
   }
 
-  def storeFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: Array[Byte]): Future[Either[FileStoreError, FileStoreFileMetadata]] = {
-    val name = id.getOrElse(UUID.randomUUID.toString)
-    val is = new ByteArrayInputStream(file)
-    fileStore.putFile(bucket, Some(name), metadata, is)
+  def storeFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, is: InputStream): Future[Either[FileStoreError, FileStoreFileMetadata]] = {
+    try {
+      val name = id.getOrElse(UUID.randomUUID.toString)
+      fileStore.putFile(bucket, Some(name), metadata, is)
+    } finally {
+      is.close()
+    }
   }
 }

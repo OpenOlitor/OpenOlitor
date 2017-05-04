@@ -42,8 +42,9 @@ import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
 import scala.Left
 import scala.Right
+import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 
-trait RechnungReportData extends AsyncConnectionPoolContextAware {
+trait RechnungReportData extends AsyncConnectionPoolContextAware with BuchhaltungJsonProtocol {
   self: BuchhaltungReadRepositoryComponent with ActorReferences with StammdatenReadRepositoryComponent =>
 
   def rechungenById(rechnungIds: Seq[RechnungId]): Future[(Seq[ValidationError[RechnungId]], Seq[RechnungDetailReport])] = {

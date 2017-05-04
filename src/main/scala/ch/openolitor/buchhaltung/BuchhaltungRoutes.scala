@@ -23,6 +23,7 @@
 package ch.openolitor.buchhaltung
 
 import spray.routing._
+
 import spray.http._
 import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
@@ -304,7 +305,8 @@ class DefaultBuchhaltungRoutes(
   override val system: ActorSystem,
   override val fileStore: FileStore,
   override val actorRefFactory: ActorRefFactory,
-  override val airbrakeNotifier: ActorRef
+  override val airbrakeNotifier: ActorRef,
+  override val jobQueueService: ActorRef
 )
     extends BuchhaltungRoutes
     with DefaultBuchhaltungReadRepositoryComponent
