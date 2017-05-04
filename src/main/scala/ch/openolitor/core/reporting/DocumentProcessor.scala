@@ -58,6 +58,7 @@ trait DocumentProcessor extends LazyLogging {
   val numberFormatPattern = """number:\s*"(\[([#@]?[\w\.]+)\])?([#,.0]+)(;((\[([#@]?[\w\.]+)\])?-([#,.0]+)))?"""".r
   val backgroundColorFormatPattern = """bg-color:\s*"([#@]?[\w\.]+)"""".r
   val foregroundColorFormatPattern = """fg-color:\s*"([#@]?[\w\.]+)"""".r
+  val replaceFormatPattern = """replace:\s*((\w+\s*\-\>\s*\w+\,?\s?)*)""".r
   val dateFormatter = ISODateTimeFormat.dateTime
   val libreOfficeDateFormat = DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss")
 
@@ -324,7 +325,7 @@ trait DocumentProcessor extends LazyLogging {
   }
 
   private def processFrame(p: Paragraph, frame: Frame, props: Map[String, Value], locale: Locale) = {
-    props.get(frame.getName) map {
+    props.get(frame.getName) collect {
       case Value(JsArray(values), _) =>
         processFrameWithValues(p, frame, props, values, locale)
     } getOrElse logger.debug(s"Frame not mapped to property, will be processed statically:${frame.getName}")
@@ -442,6 +443,9 @@ trait DocumentProcessor extends LazyLogging {
           }
           formattedValue
         }
+      case replaceFormatPattern(stringMap, _) =>
+        val replaceMap = (stringMap split ("\\s*,\\s*") map (_ split ("\\s*->\\s*")) map { case Array(k, v) => k -> v }).toMap
+        replaceMap find { case (k, v) => value.contains(k) } map { case (k, v) => value.replaceAll(k, v) } getOrElse (value)
       case x if format.length > 0 =>
         logger.warn(s"Unsupported format:$format")
         textbox.setTextContentStyleAware(value)
