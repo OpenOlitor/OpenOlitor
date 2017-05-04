@@ -989,5 +989,12 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     def parameterMappings(entity: Einladung): Seq[Any] =
       parameters(Einladung.unapply(entity).get)
+
+    override def updateParameters(entity: Einladung) = {
+      super.updateParameters(entity) ++ Seq(
+        column.expires -> parameter(entity.expires),
+        column.datumVersendet -> parameter(entity.datumVersendet)
+      )
+    }
   }
 }

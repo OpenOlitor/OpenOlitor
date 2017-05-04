@@ -64,7 +64,7 @@ class UserJobQueue(personId: PersonId, mandantConfiguration: MandantConfiguratio
       .build[JobId, JobResult]()
 
   def receive: Receive = {
-    case p: JobProgress =>
+    case p: JobProgress if p.numberOfTasksInProgress > 0 =>
       log.debug(s"Received JobProgress:$p")
       progressMap = progressMap + (p.jobId -> p)
       send(personId, PendingJobs(personId, progressMap.values.toSeq))

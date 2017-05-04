@@ -55,7 +55,11 @@ class DefaultStammdatenUpdateService(sysConfig: SystemConfig, override val syste
 /**
  * Actor zum Verarbeiten der Update Anweisungen innerhalb des Stammdaten Moduls
  */
-class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware with StammdatenDBMappings {
+class StammdatenUpdateService(override val sysConfig: SystemConfig) extends EventService[EntityUpdatedEvent[_, _]]
+    with LazyLogging
+    with AsyncConnectionPoolContextAware
+    with StammdatenDBMappings
+    with LieferungHandler {
   self: StammdatenWriteRepositoryComponent =>
 
   val FALSE = false
@@ -595,33 +599,10 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  @deprecated("Neu werden die Lieferungen mit ihren Lieferpositionen über den Command ModifyLieferplanung erstellt", "1.0.8")
   def updateLieferpositionen(meta: EventMetadata, lieferungId: LieferungId, positionen: LieferpositionenModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
-      stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
-
-        positionen.preisTotal match {
-          case Some(preis) =>
-            val copy = lieferung.copy(preisTotal = preis, modifidat = meta.timestamp, modifikator = personId)
-            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-          case _ =>
-        }
-
-        //save Lieferpositionen
-        positionen.lieferpositionen map { create =>
-          val lpId = LieferpositionId(IdUtil.positiveRandomId)
-          val newObj = copyTo[LieferpositionModify, Lieferposition](
-            create,
-            "id" -> lpId,
-            "lieferungId" -> lieferungId,
-            "erstelldat" -> meta.timestamp,
-            "ersteller" -> meta.originator,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> meta.originator
-          )
-          stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
-        }
-      }
+      recreateLieferpositionen(meta, lieferungId, positionen)
     }
   }
 

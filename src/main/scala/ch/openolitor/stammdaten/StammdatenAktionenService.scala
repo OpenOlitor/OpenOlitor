@@ -50,6 +50,7 @@ import ch.openolitor.core.mailservice.MailService._
 import org.joda.time.format.DateTimeFormat
 import ch.openolitor.util.ConfigUtil._
 import scalikejdbc.DBSession
+import BigDecimal.RoundingMode._
 
 object StammdatenAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem, mailService: ActorRef): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system, mailService)
@@ -62,8 +63,14 @@ class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val sys
 /**
  * Actor zum Verarbeiten der Aktionen für das Stammdaten Modul
  */
-class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
-    with StammdatenDBMappings with MailServiceReference with StammdatenEventStoreSerializer {
+class StammdatenAktionenService(override val sysConfig: SystemConfig, override val mailService: ActorRef) extends EventService[PersistentEvent]
+    with LazyLogging
+    with AsyncConnectionPoolContextAware
+    with StammdatenDBMappings
+    with MailServiceReference
+    with StammdatenEventStoreSerializer
+    with SammelbestellungenHandler
+    with LieferungHandler {
   self: StammdatenWriteRepositoryComponent =>
 
   implicit val timeout = Timeout(15.seconds) //sending mails might take a little longer
@@ -77,6 +84,8 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       lieferplanungAbschliessen(meta, id)
     case LieferplanungAbrechnenEvent(meta, id: LieferplanungId) =>
       lieferplanungVerrechnet(meta, id)
+    case LieferplanungDataModifiedEvent(meta, result: LieferplanungDataModify) =>
+      lieferplanungDataModified(meta, result)
     case SammelbestellungVersendenEvent(meta, id: SammelbestellungId) =>
       sammelbestellungVersenden(meta, id)
     case AuslieferungAlsAusgeliefertMarkierenEvent(meta, id: AuslieferungId) =>
@@ -129,6 +138,29 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
     }
   }
 
+  def lieferplanungDataModified(meta: EventMetadata, result: LieferplanungDataModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(lieferplanungMapping, result.id) map { lieferplanung =>
+        if (Offen == lieferplanung.status || Abgeschlossen == lieferplanung.status) {
+          // lieferungen mit positionen anpassen
+          result.lieferungen map { l =>
+            recreateLieferpositionen(meta, l.id, l.lieferpositionen)
+          }
+
+          // existierende Sammelbestellungen neu ausrechnen
+          stammdatenWriteRepository.getSammelbestellungen(result.id) map { s =>
+            createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
+          }
+
+          // neue sammelbestellungen erstellen
+          result.newSammelbestellungen map { s =>
+            createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
+          }
+        }
+      }
+    }
+  }
+
   def sammelbestellungVersenden(meta: EventMetadata, id: SammelbestellungId)(implicit personId: PersonId = meta.originator) = {
     val format = DateTimeFormat.forPattern("dd.MM.yyyy")
 
@@ -144,13 +176,20 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
 
                 val bestellpositionen = stammdatenWriteRepository.getBestellpositionen(bestellung.id) map {
                   bestellposition =>
-                    val preisPos = bestellposition.preisEinheit.getOrElse(0: BigDecimal) * bestellposition.menge
+                    val preisPos = (bestellposition.preisEinheit.getOrElse(0: BigDecimal) * bestellposition.menge).setScale(2, HALF_UP)
                     val mengeTotal = bestellposition.anzahl * bestellposition.menge
-                    s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")} ≙ ${preisPos} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
+                    val detail = if (bestellposition.preisEinheit.getOrElse(0: BigDecimal).compare(preisPos) == 0) "" else s""" ≙ ${preisPos}"""
+                    s"""${bestellposition.produktBeschrieb}: ${bestellposition.anzahl} x ${bestellposition.menge} ${bestellposition.einheit} à ${bestellposition.preisEinheit.getOrElse("")}${detail} = ${bestellposition.preis.getOrElse("")} ${projekt.waehrung} ⇒ ${mengeTotal} ${bestellposition.einheit}"""
                 }
 
-                s"""Adminprozente: ${bestellung.adminProzente}%:
-                ${bestellpositionen.mkString("\n")}
+                val infoAdminproz = bestellung.adminProzente match {
+                  case x if x == 0 => ""
+                  case _ => s"""Adminprozente: ${bestellung.adminProzente}%:"""
+                }
+
+                s"""${infoAdminproz}
+
+${bestellpositionen.mkString("\n")}
                 """
 
               }
@@ -166,7 +205,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
               mailService ? SendMailCommandWithCallback(SystemEvents.SystemPersonId, mail, Some(5 minutes), id) map {
                 case _: SendMailEvent =>
-                // ok
+                //ok
                 case other =>
                   logger.debug(s"Sending Mail failed resulting in $other")
               }
@@ -186,7 +225,10 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
       }
 
       einladungId map { id =>
-        stammdatenWriteRepository.deleteEntity[Einladung, EinladungId](id)
+        stammdatenWriteRepository.getById(einladungMapping, id) map { einladung =>
+          val updated = einladung.copy(expires = new DateTime())
+          stammdatenWriteRepository.updateEntity[Einladung, EinladungId](updated)
+        }
       }
     }
   }
@@ -214,11 +256,11 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def sendPasswortReset(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator): Unit = {
-    sendEinladung(meta, einladungCreate, "Sie können ihr Passwort mit folgendem Link neu setzten:", BasePasswortResetLink)
+    sendEinladung(meta, einladungCreate, "Sie können Ihr Passwort mit folgendem Link neu setzten:", BasePasswortResetLink)
   }
 
   def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator): Unit = {
-    sendEinladung(meta, einladungCreate, "Aktivieren Sie ihren Zugang mit folgendem Link:", BaseZugangLink)
+    sendEinladung(meta, einladungCreate, "Aktivieren Sie Ihren Zugang mit folgendem Link:", BaseZugangLink)
   }
 
   def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate, baseText: String, baseLink: String)(implicit originator: PersonId): Unit = {
@@ -239,7 +281,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
           inserted
         }
 
-        if ((einladung.datumVersendet.isEmpty || einladung.datumVersendet.get.isBefore(meta.timestamp)) && einladung.expires.isAfter(DateTime.now)) {
+        if (einladung.erstelldat.isAfter(new DateTime(2017, 3, 2, 12, 0)) && (einladung.datumVersendet.isEmpty || einladung.datumVersendet.get.isBefore(meta.timestamp)) && einladung.expires.isAfter(DateTime.now)) {
           setLoginAktiv(meta, einladung.personId)
 
           val text = s"""
@@ -254,10 +296,12 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
           mailService ? SendMailCommandWithCallback(originator, mail, Some(5 minutes), einladung.id) map {
             case _: SendMailEvent =>
-            // ok
+            //ok
             case other =>
               logger.debug(s"Sending Mail failed resulting in $other")
           }
+        } else {
+          logger.debug(s"Don't send Einladung, has been send earlier: ${einladungCreate.id}")
         }
       }
     }

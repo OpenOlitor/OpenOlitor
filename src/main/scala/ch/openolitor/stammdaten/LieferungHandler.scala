@@ -22,13 +22,49 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
+import ch.openolitor.core.Macros._
+import ch.openolitor.core.models._
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.stammdaten.repositories._
+import scalikejdbc._
+import ch.openolitor.util.IdUtil
+import ch.openolitor.core.domain.EventMetadata
 
-trait LieferungHandler {
+trait LieferungHandler extends StammdatenDBMappings {
+  this: StammdatenWriteRepositoryComponent =>
+
   def calcDurchschnittspreis(durchschnittspreis: BigDecimal, anzahlLieferungen: Int, neuerPreis: BigDecimal): BigDecimal =
     if (anzahlLieferungen == 0) {
       0
     } else {
       ((durchschnittspreis * (anzahlLieferungen - 1)) + neuerPreis) / anzahlLieferungen
     }
+
+  def recreateLieferpositionen(meta: EventMetadata, lieferungId: LieferungId, positionen: LieferpositionenModify)(implicit personId: PersonId, session: DBSession) = {
+    stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
+
+    stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
+      positionen.preisTotal match {
+        case Some(preis) =>
+          val copy = lieferung.copy(preisTotal = preis, modifidat = meta.timestamp, modifikator = personId)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+        case _ =>
+      }
+
+      //save Lieferpositionen
+      positionen.lieferpositionen map { create =>
+        val lpId = LieferpositionId(IdUtil.positiveRandomId)
+        val newObj = copyTo[LieferpositionModify, Lieferposition](
+          create,
+          "id" -> lpId,
+          "lieferungId" -> lieferungId,
+          "erstelldat" -> meta.timestamp,
+          "ersteller" -> meta.originator,
+          "modifidat" -> meta.timestamp,
+          "modifikator" -> meta.originator
+        )
+        stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
+      }
+    }
+  }
 }

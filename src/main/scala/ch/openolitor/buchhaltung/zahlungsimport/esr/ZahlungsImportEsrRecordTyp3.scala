@@ -103,7 +103,9 @@ case class EsrRecordTyp3(
 }
 
 object EsrRecordTyp3 {
-  private val R = """(\w{3})(\d{9})(\d{27})(\d{10})(\w{10})(\d{6})(\d{6})(\d{6})(\d{9})(\d{1})(\w{9})(\d{4})""".r
+  // Aufgabereferenzen ist im Dokument Recordstrukturen definiert als X(10) mit der Bemerkung 4 Zahlen, 2 SPACES und nochmals 4 Zahlen.
+  // Der String ist aber abhängig von der Bank mit 2 Spaces oder anderen Zeichen vorzufinden. Deshalb ([\w\s]{10})
+  private val R = """(\w{3})(\d{9})(\d{27})(\d{10})([\w\s]{10})(\d{6})(\d{6})(\d{6})(\d{9})(\d{1})(\w{9})(\d{4})""".r
 
   def unapply(line: String): Option[EsrRecordTyp3] = line match {
     case R(transaktionsartcode, teilnehmernummer, referenznummer, betrag, aufgabereferenzen, aufgabeDatum, verarbeitungsDatum, gutschriftsDatum, mikrofilmNummer, rejectCode, reserve, preiseFuerEinzahlungen) =>

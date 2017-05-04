@@ -295,7 +295,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     EitherT {
       stammdatenReadRepository.getPersonByEmail(email) map (_ map (_.right) getOrElse {
         logger.debug(s"No person found for email")
-        errorUsernameOrPasswordMismatch.left
+        errorPersonNotFound.left
       })
     }
   }
@@ -466,4 +466,3 @@ class DefaultLoginRouteService(
 )
     extends LoginRouteService
     with DefaultStammdatenReadRepositoryComponent
-

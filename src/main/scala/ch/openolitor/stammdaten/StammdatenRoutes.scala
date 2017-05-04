@@ -76,38 +76,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with DepotBriefReportService
     with ProduzentenBriefReportService
     with ProduzentenabrechnungReportService
-    with FileTypeFilenameMapping {
+    with FileTypeFilenameMapping
+    with StammdatenPaths {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
-
-  implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
-  implicit val kundeIdPath = long2BaseIdPathMatcher(KundeId.apply)
-  implicit val pendenzIdPath = long2BaseIdPathMatcher(PendenzId.apply)
-  implicit val personIdPath = long2BaseIdPathMatcher(PersonId.apply)
-  implicit val kundentypIdPath = long2BaseIdPathMatcher(CustomKundentypId.apply)
-  implicit val depotIdPath = long2BaseIdPathMatcher(DepotId.apply)
-  implicit val aboIdPath = long2BaseIdPathMatcher(AboId.apply)
-  implicit val vertriebIdPath = long2BaseIdPathMatcher(VertriebId.apply)
-  implicit val vertriebsartIdPath = long2BaseIdPathMatcher(VertriebsartId.apply)
-  implicit val lieferungIdPath = long2BaseIdPathMatcher(LieferungId.apply)
-  implicit val lieferplanungIdPath = long2BaseIdPathMatcher(LieferplanungId.apply)
-  implicit val lieferpositionIdPath = long2BaseIdPathMatcher(LieferpositionId.apply)
-  implicit val bestellungIdPath = long2BaseIdPathMatcher(BestellungId.apply)
-  implicit val sammelbestellungIdPath = long2BaseIdPathMatcher(SammelbestellungId.apply)
-  implicit val produktIdPath = long2BaseIdPathMatcher(ProduktId.apply)
-  implicit val produktekategorieIdPath = long2BaseIdPathMatcher(ProduktekategorieId.apply)
-  implicit val produzentIdPath = long2BaseIdPathMatcher(ProduzentId.apply)
-  implicit val tourIdPath = long2BaseIdPathMatcher(TourId.apply)
-  implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
-  implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
-  implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
-  implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
-  implicit val korbStatusPath = enumPathMatcher(KorbStatus.apply(_) match {
-    case x => Some(x)
-  })
-  implicit val vorlageTypePath = enumPathMatcher(VorlageTyp.apply(_) match {
-    case UnknownFileType => None
-    case x => Some(x)
-  })
 
   import EntityStore._
 
@@ -183,7 +154,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         }
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (_, aboId, abwesenheitId) =>
-        delete(remove(abwesenheitId))
+        deleteAbwesenheit(abwesenheitId)
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(stammdatenReadRepository.getPendenzen(kundeId))) ~
@@ -246,8 +217,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getAbotypen)) ~
         post(create[AbotypModify, AbotypId](AbotypId.apply _))
     } ~
-      path("abotypen" / "personen") {
+      path("abotypen" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByAbotypen))
+      } ~
+      path("abotypen" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByAbotypen))
       } ~
       path("abotypen" / abotypIdPath) { id =>
         get(detail(stammdatenReadRepository.getAbotypDetail(id))) ~
@@ -320,8 +294,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getDepots)) ~
         post(create[DepotModify, DepotId](DepotId.apply _))
     } ~
-      path("depots" / "personen") {
+      path("depots" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByDepots))
+      } ~
+      path("depots" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByDepots))
       } ~
       path("depots" / "berichte" / "depotbrief") {
         implicit val personId = subject.personId
@@ -402,8 +379,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getTouren, exportFormat)) ~
         post(create[TourCreate, TourId](TourId.apply _))
     } ~
-      path("touren" / "personen") {
+      path("touren" / "personen" / "alle") {
         get(list(stammdatenReadRepository.getPersonenByTouren))
+      } ~
+      path("touren" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenAboAktivByTouren))
       } ~
       path("touren" / tourIdPath) { id =>
         get(detail(stammdatenReadRepository.getTourDetail(id))) ~
@@ -466,12 +446,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, lieferungId, korbStatus) =>
         get(list(stammdatenReadRepository.getAboIds(lieferungId, korbStatus)))
       } ~
-      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / "lieferpositionen") { (lieferplanungId, lieferungId) =>
-        get(list(stammdatenReadRepository.getLieferpositionen(lieferungId))) ~
-          (put | post)(update[LieferpositionenModify, LieferungId](lieferungId))
-      } ~
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "abschliessen") { id =>
         (post)(lieferplanungAbschliessen(id))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "modifizieren") { id =>
+        post {
+          requestInstance { request =>
+            entity(as[LieferplanungPositionenModify]) { lieferplanungModify =>
+              lieferplanungModifizieren(lieferplanungModify)
+            }
+          }
+        }
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "verrechnen") { id =>
         (post)(lieferplanungVerrechnen(id))
@@ -491,17 +476,32 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
       case _ =>
-        stammdatenReadRepository.getSammelbestellungen(id) map {
-          _ map { sammelbestellung =>
-            onSuccess(entityStore ? StammdatenCommandHandler.SammelbestellungAnProduzentenVersendenCommand(subject.personId, sammelbestellung.id)) {
-              case UserCommandFailed =>
-                complete(StatusCodes.BadRequest, s"Could not execute SammelbestellungAnProduzentenVersenden on Bestellung")
-              case _ =>
-                complete("")
+        // TODO OO-589
+        if (false) {
+          stammdatenReadRepository.getSammelbestellungen(id) map {
+            _ map { sammelbestellung =>
+              onSuccess(entityStore ? StammdatenCommandHandler.SammelbestellungAnProduzentenVersendenCommand(subject.personId, sammelbestellung.id)) {
+                case UserCommandFailed =>
+                  complete(StatusCodes.BadRequest, s"Could not execute SammelbestellungAnProduzentenVersenden on Bestellung")
+                case _ =>
+                  complete("")
+              }
             }
           }
+        } else {
+          complete("")
         }
 
+        complete("")
+    }
+  }
+
+  def lieferplanungModifizieren(lieferplanungModify: LieferplanungPositionenModify)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {
+    implicit val timeout = Timeout(30.seconds)
+    onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungModifyCommand(subject.personId, lieferplanungModify)) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Could not modify Lieferplanung")
+      case _ =>
         complete("")
     }
   }
@@ -653,6 +653,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     onSuccess(entityStore ? StammdatenCommandHandler.AuslieferungenAlsAusgeliefertMarkierenCommand(subject.personId, ids)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Auslieferungen konnten nicht als ausgeliefert markiert werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def deleteAbwesenheit(abwesenheitId: AbwesenheitId)(implicit idPersister: Persister[AuslieferungId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.DeleteAbwesenheitCommand(subject.personId, abwesenheitId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Abwesenheit kann nicht gelöscht werden. Die Lieferung ist bereits abgeschlossen.")
       case _ =>
         complete("")
     }

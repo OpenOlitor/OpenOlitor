@@ -111,6 +111,7 @@ trait RouteServiceComponent extends ActorReferences {
   val actorRefFactory: ActorRefFactory
 
   val stammdatenRouteService: StammdatenRoutes
+  val stammdatenRouteOpenService: StammdatenOpenRoutes
   val buchhaltungRouteService: BuchhaltungRoutes
   val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
@@ -120,6 +121,7 @@ trait RouteServiceComponent extends ActorReferences {
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val stammdatenRouteOpenService = new DefaultStammdatenOpenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
@@ -166,6 +168,7 @@ trait RouteServiceActor
       systemRouteService.statusRoute ~
       nonAuthRessourcesRouteService.ressourcesRoutes ~
       loginRouteService.loginRoute ~
+      stammdatenRouteOpenService.stammdatenOpenRoute ~
 
       // secured routes by XSRF token authenticator
       authenticate(loginRouteService.openOlitorAuthenticator) { implicit subject =>

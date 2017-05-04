@@ -24,6 +24,7 @@ package ch.openolitor.stammdaten
 
 import akka.persistence.PersistentView
 import akka.actor._
+import scalikejdbc._
 import ch.openolitor.core._
 import ch.openolitor.core.Macros._
 import ch.openolitor.core._
@@ -34,7 +35,6 @@ import scala.concurrent.duration._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
-import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -88,18 +88,18 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteAbwesenheit(meta: EventMetadata, id: AbwesenheitId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Abwesenheit, AbwesenheitId](id, { abw: Abwesenheit =>
-        stammdatenWriteRepository.getById(lieferungMapping, abw.lieferungId).map { lieferung: Lieferung =>
-          lieferung.status.eq(Offen) || lieferung.status.eq(Ungeplant)
-        }.getOrElse(false)
-      })
+      stammdatenWriteRepository.deleteEntity[Abwesenheit, AbwesenheitId](id)
     }
   }
 
   def deletePerson(meta: EventMetadata, id: PersonId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Person, PersonId](id)
+      noSessionDeletePerson(id)
     }
+  }
+
+  private def noSessionDeletePerson(id: PersonId)(implicit personId: PersonId, session: DBSession) = {
+    stammdatenWriteRepository.deleteEntity[Person, PersonId](id)
   }
 
   def deleteKunde(meta: EventMetadata, kundeId: KundeId)(implicit personId: PersonId = meta.originator) = {
@@ -107,9 +107,9 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.deleteEntity[Kunde, KundeId](kundeId, { kunde: Kunde => kunde.anzahlAbos == 0 && kunde.anzahlAbosAktiv == 0 }) match {
         case Some(kunde) =>
           //delete all personen as well
-          stammdatenWriteRepository.getPersonen(kundeId).map(person => deletePerson(meta, person.id))
+          stammdatenWriteRepository.getPersonen(kundeId).map(person => noSessionDeletePerson(person.id))
           //delete all pendenzen as well
-          stammdatenWriteRepository.getPendenzen(kundeId).map(pendenz => deletePendenz(meta, pendenz.id))
+          stammdatenWriteRepository.getPendenzen(kundeId).map(pendenz => noSessionDeletePendenz(pendenz.id))
         case None =>
       }
 
@@ -128,8 +128,12 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deletePendenz(meta: EventMetadata, id: PendenzId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.deleteEntity[Pendenz, PendenzId](id)
+      noSessionDeletePendenz(id)
     }
+  }
+
+  private def noSessionDeletePendenz(id: PendenzId)(implicit personId: PersonId, session: DBSession) = {
+    stammdatenWriteRepository.deleteEntity[Pendenz, PendenzId](id)
   }
 
   def deleteAbo(meta: EventMetadata, id: AboId)(implicit personId: PersonId = meta.originator) = {
