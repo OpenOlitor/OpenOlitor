@@ -37,37 +37,37 @@ object OO597_DBScripts {
   val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"""ALTER TABLE ${bestellpositionMapping.table} MODIFY COLUMN bestellung_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS bestellung_id_index ON ${bestellpositionMapping.table} (bestellung_id)""".execute.apply()
+      sql"""CREATE INDEX bestellung_id_index ON ${bestellpositionMapping.table} (bestellung_id)""".execute.apply()
       sql"""ALTER TABLE ${bestellpositionMapping.table} MODIFY COLUMN produkt_id BIGINT(20) DEFAULT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS produkt_id_index ON ${bestellpositionMapping.table} (produkt_id)""".execute.apply()
+      sql"""CREATE INDEX produkt_id_index ON ${bestellpositionMapping.table} (produkt_id)""".execute.apply()
 
       sql"""ALTER TABLE ${korbMapping.table} MODIFY COLUMN lieferung_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS lieferung_id_index ON ${korbMapping.table} (lieferung_id)""".execute.apply()
+      sql"""CREATE INDEX lieferung_id_index ON ${korbMapping.table} (lieferung_id)""".execute.apply()
       sql"""ALTER TABLE ${korbMapping.table} MODIFY COLUMN abo_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS abo_id_index ON ${korbMapping.table} (abo_id)""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS status_index ON ${korbMapping.table} (status)""".execute.apply()
+      sql"""CREATE INDEX abo_id_index ON ${korbMapping.table} (abo_id)""".execute.apply()
+      sql"""CREATE INDEX status_index ON ${korbMapping.table} (status)""".execute.apply()
 
       sql"""ALTER TABLE ${lieferpositionMapping.table} MODIFY COLUMN lieferung_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS lieferung_id_index ON ${lieferpositionMapping.table} (lieferung_id)""".execute.apply()
+      sql"""CREATE INDEX lieferung_id_index ON ${lieferpositionMapping.table} (lieferung_id)""".execute.apply()
       sql"""ALTER TABLE ${lieferpositionMapping.table} MODIFY COLUMN produkt_id BIGINT(20) DEFAULT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS produkt_id_index ON ${lieferpositionMapping.table} (produkt_id)""".execute.apply()
+      sql"""CREATE INDEX produkt_id_index ON ${lieferpositionMapping.table} (produkt_id)""".execute.apply()
       sql"""ALTER TABLE ${lieferpositionMapping.table} MODIFY COLUMN produzent_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS produzent_id_index ON ${lieferpositionMapping.table} (produzent_id)""".execute.apply()
+      sql"""CREATE INDEX produzent_id_index ON ${lieferpositionMapping.table} (produzent_id)""".execute.apply()
 
       sql"""ALTER TABLE ${lieferungMapping.table} MODIFY COLUMN abotyp_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS abotyp_id_index ON ${lieferungMapping.table} (abotyp_id)""".execute.apply()
+      sql"""CREATE INDEX abotyp_id_index ON ${lieferungMapping.table} (abotyp_id)""".execute.apply()
       sql"""ALTER TABLE ${lieferungMapping.table} MODIFY COLUMN vertrieb_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS vertrieb_id_index ON ${lieferungMapping.table} (vertrieb_id)""".execute.apply()
+      sql"""CREATE INDEX vertrieb_id_index ON ${lieferungMapping.table} (vertrieb_id)""".execute.apply()
       sql"""ALTER TABLE ${lieferungMapping.table} MODIFY COLUMN lieferplanung_id BIGINT(20) DEFAULT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS lieferplanung_id_index ON ${lieferungMapping.table} (lieferplanung_id)""".execute.apply()
+      sql"""CREATE INDEX lieferplanung_id_index ON ${lieferungMapping.table} (lieferplanung_id)""".execute.apply()
 
       sql"""ALTER TABLE ${pendenzMapping.table} MODIFY COLUMN kunde_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS kunde_id_index ON ${pendenzMapping.table} (kunde_id)""".execute.apply()
+      sql"""CREATE INDEX kunde_id_index ON ${pendenzMapping.table} (kunde_id)""".execute.apply()
 
       sql"""ALTER TABLE ${personMapping.table} MODIFY COLUMN kunde_id BIGINT(20) NOT NULL""".execute.apply()
-      sql"""CREATE INDEX IF NOT EXISTS kunde_id_index ON ${personMapping.table} (kunde_id)""".execute.apply()
+      sql"""CREATE INDEX kunde_id_index ON ${personMapping.table} (kunde_id)""".execute.apply()
 
-      sql"""CREATE INDEX IF NOT EXISTS file_store_id_index ON ${projektVorlageMapping.table} (file_store_id)""".execute.apply()
+      sql"""CREATE INDEX file_store_id_index ON ${projektVorlageMapping.table} (file_store_id)""".execute.apply()
 
       Success(true)
     }
@@ -75,7 +75,7 @@ object OO597_DBScripts {
 
   val BuchhaltungScripts = new Script with LazyLogging with BuchhaltungDBMappings {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      sql"""CREATE INDEX IF NOT EXISTS file_store_id_index ON ${rechnungMapping.table} (file_store_id)""".execute.apply()
+      sql"""CREATE INDEX file_store_id_index ON ${rechnungMapping.table} (file_store_id)""".execute.apply()
 
       Success(true)
     }
