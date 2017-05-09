@@ -23,6 +23,8 @@
 package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
+import ch.openolitor.core.repositories.ReportReadRepository
+import ch.openolitor.core.reporting.models._
 import scalikejdbc._
 import scalikejdbc.async._
 import scala.concurrent.ExecutionContext
@@ -43,7 +45,7 @@ import scalaz._
 import Scalaz._
 import scalaz.OptionT.optionT
 
-trait StammdatenReadRepository {
+trait StammdatenReadRepository extends ReportReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
 
@@ -136,7 +138,7 @@ trait StammdatenReadRepository {
   def getTourAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[TourAuslieferung]]
   def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]]
   def getAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]]
-  def getMultiAuslieferungReport(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiAuslieferungReport]
+  def getMultiAuslieferungReport(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiReport[AuslieferungReportEntry]]
 
   def getDepotAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotAuslieferungDetail]]
   def getTourAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourAuslieferungDetail]]
@@ -562,7 +564,7 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     } yield (d orElse h orElse p)
   }
 
-  def getMultiAuslieferungReport(ids: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiAuslieferungReport] = {
+  def getMultiAuslieferungReport(ids: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiReport[AuslieferungReportEntry]] = {
     for {
       d <- getDepotAuslieferungReports(ids, projekt)
       h <- getTourAuslieferungReports(ids, projekt)
@@ -615,7 +617,7 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
       }).flatten
       val entries = entriesD ++ entriesH ++ entriesP
 
-      MultiAuslieferungReport(MultiAuslieferungId(IdUtil.positiveRandomId), entries, projekt)
+      MultiReport(MultiReportId(IdUtil.positiveRandomId), entries, projekt)
     }
   }
 

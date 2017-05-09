@@ -58,6 +58,7 @@ trait DocumentProcessor extends LazyLogging {
   val numberFormatPattern = """number:\s*"(\[([#@]?[\w\.]+)\])?([#,.0]+)(;((\[([#@]?[\w\.]+)\])?-([#,.0]+)))?"""".r
   val backgroundColorFormatPattern = """bg-color:\s*"([#@]?[\w\.]+)"""".r
   val foregroundColorFormatPattern = """fg-color:\s*"([#@]?[\w\.]+)"""".r
+  val replaceFormatPattern = """replace:\s*((\w+\s*\-\>\s*\w+\,?\s?)*)""".r
   val dateFormatter = ISODateTimeFormat.dateTime
   val libreOfficeDateFormat = DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss")
 
@@ -188,15 +189,15 @@ trait DocumentProcessor extends LazyLogging {
    * duplicate all rows except header rows. Try to replace textbox values with value from property map
    */
   def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
-    val propertyKey = parsePropertyKey(table.getTableName, pathPrefixes)
+    val propertyKey = parsePropertyKey(table.getDotTableName, pathPrefixes)
     props.get(propertyKey) map {
       case Value(JsArray(values), _) =>
-        logger.debug(s"processTable (dynamic): ${table.getTableName}")
+        logger.debug(s"processTable (dynamic): ${table.getDotTableName}")
         processTableWithValues(doc, table, props, values, locale, pathPrefixes)
 
     } getOrElse {
       //static proccesing
-      logger.debug(s"processTable (static): ${table.getTableName}: $pathPrefixes, $propertyKey")
+      logger.debug(s"processTable (static): ${table.getDotTableName}: $pathPrefixes, $propertyKey")
       processStaticTable(table, props, locale, pathPrefixes)
     }
   }
@@ -235,14 +236,14 @@ trait DocumentProcessor extends LazyLogging {
     val rows = table.getRowList.toList
     val nonHeaderRows = rows.takeRight(rows.length - startIndex)
 
-    logger.debug(s"processTable: ${table.getTableName} -> Header rows: ${table.getHeaderRowCount}")
+    logger.debug(s"processTable: ${table.getDotTableName} -> Header rows: ${table.getHeaderRowCount}")
 
     for (index <- 0 to values.length - 1) {
-      val rowPathPrefix = findPathPrefixes(table.getTableName + s".$index", pathPrefixes)
+      val rowPathPrefix = findPathPrefixes(table.getDotTableName + s".$index", pathPrefixes)
 
       //copy rows
       val newRows = table.appendRows(nonHeaderRows.length).toList
-      logger.debug(s"processTable: ${table.getTableName} -> Appended rows: ${newRows.length}")
+      logger.debug(s"processTable: ${table.getDotTableName} -> Appended rows: ${newRows.length}")
       for (r <- 0 to newRows.length - 1) {
         //replace textfields
         for (cell <- 0 to table.getColumnCount - 1) {
@@ -259,7 +260,7 @@ trait DocumentProcessor extends LazyLogging {
     }
 
     //remove template rows
-    logger.debug(s"processTable: ${table.getTableName} -> Remove template rows from:$startIndex, count: ${nonHeaderRows.length}.")
+    logger.debug(s"processTable: ${table.getDotTableName} -> Remove template rows from:$startIndex, count: ${nonHeaderRows.length}.")
     if (nonHeaderRows.length == table.getRowCount) {
       //remove whole table
       table.remove()
@@ -324,7 +325,7 @@ trait DocumentProcessor extends LazyLogging {
   }
 
   private def processFrame(p: Paragraph, frame: Frame, props: Map[String, Value], locale: Locale) = {
-    props.get(frame.getName) map {
+    props.get(frame.getName) collect {
       case Value(JsArray(values), _) =>
         processFrameWithValues(p, frame, props, values, locale)
     } getOrElse logger.debug(s"Frame not mapped to property, will be processed statically:${frame.getName}")
@@ -442,6 +443,9 @@ trait DocumentProcessor extends LazyLogging {
           }
           formattedValue
         }
+      case replaceFormatPattern(stringMap, _) =>
+        val replaceMap = (stringMap split ("\\s*,\\s*") map (_ split ("\\s*->\\s*")) map { case Array(k, v) => k -> v }).toMap
+        replaceMap find { case (k, v) => value.contains(k) } map { case (k, v) => value.replaceAll(k, v) } getOrElse (value)
       case x if format.length > 0 =>
         logger.warn(s"Unsupported format:$format")
         textbox.setTextContentStyleAware(value)

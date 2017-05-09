@@ -23,6 +23,7 @@
 package ch.openolitor.stammdaten.reporting
 
 import ch.openolitor.core.reporting._
+import ch.openolitor.core.reporting.models._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
@@ -38,27 +39,27 @@ import ch.openolitor.core.filestore._
 trait ProduzentenabrechnungReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
   def generateProduzentenabrechnungReports(fileType: FileType)(config: ReportConfig[SammelbestellungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[SammelbestellungId]]] = {
-    generateReports[SammelbestellungId, ProduzentenabrechnungReport](
+    generateReports[SammelbestellungId, MultiReport[ProduzentenabrechnungReport]](
       config,
       bestellungById,
       fileType,
       None,
-      _.produzentId,
+      _.id,
       GeneriertProduzentenabrechnung,
-      x => Some(x.produzentKurzzeichen),
+      x => Some(x.id.id.toString),
       name(fileType),
       _.projekt.sprache
     )
   }
 
-  def name(fileType: FileType)(la: ProduzentenabrechnungReport) = s"la_prod_${la.produzentKurzzeichen}_${filenameDateFormat.print(System.currentTimeMillis())}"
+  private def name(fileType: FileType)(la: MultiReport[ProduzentenabrechnungReport]) = s"la_${la.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
 
-  def bestellungById(ids: Seq[SammelbestellungId]): Future[(Seq[ValidationError[SammelbestellungId]], Seq[ProduzentenabrechnungReport])] = {
+  private def bestellungById(ids: Seq[SammelbestellungId]): Future[(Seq[ValidationError[SammelbestellungId]], Seq[MultiReport[ProduzentenabrechnungReport]])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
-        stammdatenReadRepository.getProduzentenabrechnungReport(ids, projektReport) map { results =>
-          (Seq(), results)
+        stammdatenReadRepository.getMultiReport(projektReport, stammdatenReadRepository.getProduzentenabrechnungReport(ids, projektReport)) map { results =>
+          (Seq(), Seq(results))
         }
       } getOrElse Future { (Seq(ValidationError[SammelbestellungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
     }

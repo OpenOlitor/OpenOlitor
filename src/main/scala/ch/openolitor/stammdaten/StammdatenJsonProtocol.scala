@@ -33,11 +33,12 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.JSONSerializable
 import zangelo.spray.json.AutoProductFormats
 import scala.collection.immutable.TreeMap
+import ch.openolitor.core.reporting.ReportJsonProtocol
 
 /**
  * JSON Format deklarationen für das Modul Stammdaten
  */
-trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] {
+trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] {
 
   //enum formats
   implicit val wochentagFormat = enumFormat(x => Wochentag.apply(x).getOrElse(Montag))
@@ -125,7 +126,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with LazyLogging with Auto
   implicit val tourIdFormat = baseIdFormat(TourId)
   implicit val auslieferungIdFormat = baseIdFormat(AuslieferungId)
   implicit val optionAuslieferungIdFormat = new OptionFormat[AuslieferungId]
-  implicit val multiAuslieferungIdFormat = baseIdFormat(MultiAuslieferungId)
   implicit val kundeIdFormat = baseIdFormat(KundeId)
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
   implicit val aboIdFormat = baseIdFormat(AboId)

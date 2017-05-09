@@ -8,6 +8,7 @@ import org.odftoolkit.odfdom.dom.element.text._
 import org.odftoolkit.odfdom.dom.element.draw._
 import org.odftoolkit.odfdom.dom.element.office._
 import org.odftoolkit.odfdom.`type`.Color
+import org.odftoolkit.simple.table._
 import org.odftoolkit.simple.text.Paragraph
 
 /**
@@ -69,6 +70,12 @@ object OdfToolkitUtils {
     def remove() = {
       Component.unregisterComponent(self.getOdfElement());
       self.getOdfElement().getParentNode().removeChild(self.getOdfElement());
+    }
+  }
+
+  implicit class TableExt(self: Table) {
+    def getDotTableName = {
+      self.getTableName.replaceAll("#", ".")
     }
   }
 
