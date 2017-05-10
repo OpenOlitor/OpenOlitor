@@ -24,29 +24,39 @@ package ch.openolitor.core.reporting
 
 import akka.actor._
 import ch.openolitor.core.reporting.ReportSystem._
+import ch.openolitor.core.jobs.JobQueueService
+import ch.openolitor.core.jobs.JobQueueService.FileResultPayload
+import spray.http.MediaTypes
 
 object HeadReportResultCollector {
-  def props(reportSystem: ActorRef): Props = Props(classOf[HeadReportResultCollector], reportSystem)
+  def props(reportSystem: ActorRef, jobQueueService: ActorRef): Props = Props(classOf[HeadReportResultCollector], reportSystem, jobQueueService)
 }
 
 /**
  * after sending report request to reportsystem wait for only for first reportresult and send that back to the sender
  */
-class HeadReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
-
-  var origSender: Option[ActorRef] = None
+class HeadReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef) extends ResultCollector {
 
   val receive: Receive = {
     case request: GenerateReports[_] =>
-      origSender = Some(sender)
       reportSystem ! request
       context become waitingForResult
   }
 
   val waitingForResult: Receive = {
-    case result: SingleReportResult =>
-      origSender map (_ ! result)
+    case stats: GenerateReportsStats =>
+      notifyProgress(stats)
+    case SingleReportResult(_, stats, Left(ReportError(_, error))) =>
+      log.debug(s"Job finished: $stats: $error")
+      jobFinished(stats, None)
+      self ! PoisonPill
+    case SingleReportResult(_, stats, Right(DocumentReportResult(_, result, name))) =>
+      log.debug(s"Job finished: $stats")
+      jobFinished(stats, Some(FileResultPayload(name, MediaTypes.`application/vnd.oasis.opendocument.text`, result)))
+      self ! PoisonPill
+    case SingleReportResult(_, stats, Right(PdfReportResult(_, result, name))) =>
+      log.debug(s"Job finished: $stats")
+      jobFinished(stats, Some(FileResultPayload(name, MediaTypes.`application/pdf`, result)))
       self ! PoisonPill
   }
-
 }

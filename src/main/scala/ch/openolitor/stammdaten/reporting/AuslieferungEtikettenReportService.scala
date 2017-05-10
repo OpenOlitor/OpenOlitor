@@ -36,6 +36,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.filestore._
 import org.joda.time.DateTime
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
 trait AuslieferungEtikettenReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
@@ -49,7 +50,8 @@ trait AuslieferungEtikettenReportService extends AsyncConnectionPoolContextAware
       GeneriertAuslieferung,
       x => Some(x.id.id.toString),
       name(fileType),
-      _.projekt.sprache
+      _.projekt.sprache,
+      JobId("Auslieferungs-Etikette(n)")
     )
   }
 

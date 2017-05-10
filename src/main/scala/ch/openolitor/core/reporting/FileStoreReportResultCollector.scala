@@ -28,35 +28,47 @@ import java.io.ByteArrayOutputStream
 import scala.util._
 import ch.openolitor.util.ZipBuilder
 import ch.openolitor.core.filestore.FileStoreFileReference
+import ch.openolitor.core.jobs.JobQueueService
+import ch.openolitor.core.jobs.JobQueueService.FileStoreResultPayload
 
 object FileStoreReportResultCollector {
-  def props(reportSystem: ActorRef): Props = Props(classOf[FileStoreReportResultCollector], reportSystem)
+  def props(reportSystem: ActorRef, jobQueueService: ActorRef, downloadFile: Boolean): Props = Props(classOf[FileStoreReportResultCollector], reportSystem, jobQueueService, downloadFile)
 }
 
 /**
  * Collect all results filestore id results
  */
-class FileStoreReportResultCollector(reportSystem: ActorRef) extends Actor with ActorLogging {
+class FileStoreReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef, downloadFile: Boolean) extends ResultCollector {
 
-  var origSender: Option[ActorRef] = None
   var storeResults: Seq[FileStoreFileReference] = Seq()
   var errors: Seq[ReportError] = Seq()
 
   val receive: Receive = {
     case request: GenerateReports[_] =>
-      origSender = Some(sender)
       reportSystem ! request
       context become waitingForResult
   }
 
   val waitingForResult: Receive = {
-    case SingleReportResult(_, _, Left(error)) =>
+    case SingleReportResult(_, stats, Left(error)) =>
+      log.debug(s"Received error:${error}:$stats")
       errors = errors :+ error
-    case SingleReportResult(_, _, Right(StoredPdfReportResult(_, fileType, id))) =>
+      notifyProgress(stats)
+    case SingleReportResult(_, stats, Right(StoredPdfReportResult(_, fileType, id))) =>
+      log.debug(s"Received resukt:${id}:$stats")
       storeResults = storeResults :+ FileStoreFileReference(fileType, id)
-    case result: GenerateReportsStats =>
-      //finished, send back collected result
-      origSender map (_ ! BatchStoredPdfReportResult(result, errors, storeResults))
+      notifyProgress(stats)
+    case result: GenerateReportsStats if result.numberOfReportsInProgress == 0 =>
+      log.debug(s"Job finished: $result, downloadFile:$downloadFile")
+      //finished, send collected result to jobQueue      
+      if (downloadFile) {
+        val payload = FileStoreResultPayload(storeResults)
+        jobFinished(result, Some(payload))
+      } else {
+        jobFinished(result, None)
+      }
       self ! PoisonPill
+    case stats: GenerateReportsStats =>
+      notifyProgress(stats)
   }
 }
