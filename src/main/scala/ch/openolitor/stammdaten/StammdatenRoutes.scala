@@ -76,6 +76,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with DepotBriefReportService
     with ProduzentenBriefReportService
     with ProduzentenabrechnungReportService
+    with LieferplanungReportService
     with FileTypeFilenameMapping
     with StammdatenPaths {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
@@ -469,6 +470,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "sammelbestellungen" / sammelbestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, sammelbestellungId) =>
         (post)(sammelbestellungErneutVersenden(sammelbestellungId))
+      } ~
+      path("lieferplanungen" / "berichte" / "lieferplanung") {
+        implicit val personId = subject.personId
+        generateReport[LieferplanungId](None, generateLieferplanungReports(VorlageLieferplanung) _)(LieferplanungId.apply)
       }
 
   def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {

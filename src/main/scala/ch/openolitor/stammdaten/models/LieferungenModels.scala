@@ -70,13 +70,11 @@ case class LieferplanungOpenDetail(
 ) extends BaseEntity[LieferplanungId]
 
 case class LieferplanungModify(
-  bemerkungen: Option[String],
-  status: LieferungStatus
+  bemerkungen: Option[String]
 ) extends JSONSerializable
 
 case class LieferplanungCreate(
-  bemerkungen: Option[String],
-  status: LieferungStatus
+  bemerkungen: Option[String]
 ) extends JSONSerializable
 
 trait BaseLieferungId extends BaseId
@@ -259,4 +257,13 @@ case class LieferungPositionenModify(
 case class LieferpositionenModify(
   preisTotal: Option[BigDecimal],
   lieferpositionen: List[LieferpositionModify]
+) extends JSONSerializable
+
+case class LieferplanungReport(
+  id: LieferplanungId,
+  bemerkungen: Option[String],
+  abotypDepotTour: String,
+  status: LieferungStatus,
+  lieferungen: Seq[LieferungDetail],
+  projekt: ProjektReport
 ) extends JSONSerializable

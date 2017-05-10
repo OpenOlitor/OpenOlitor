@@ -114,21 +114,21 @@ trait DocumentProcessor extends LazyLogging {
       props <- Try(extractProperties(data))
       // process header
       _ <- Try(processVariables(doc.getHeader, props))
-      _ <- Try(processTables(doc.getHeader, props, locale, Nil))
+      _ <- Try(processTables(doc.getHeader, props, locale, Nil, false))
       //_ <- Try(processLists(doc.getHeader, props, locale, ""))
       headerContainer = new GenericParagraphContainerImpl(doc.getHeader.getOdfElement)
       _ <- Try(processTextboxes(headerContainer, props, locale, Nil))
 
       // process footer
       _ <- Try(processVariables(doc.getFooter, props))
-      _ <- Try(processTables(doc.getFooter, props, locale, Nil))
+      _ <- Try(processTables(doc.getFooter, props, locale, Nil, false))
       //_ <- Try(processLists(doc.getFooter, props, locale, ""))
       footerContainer = new GenericParagraphContainerImpl(doc.getFooter.getOdfElement)
       _ <- Try(processTextboxes(footerContainer, props, locale, Nil))
 
       // process content, order is important
       _ <- Try(processVariables(doc, props))
-      _ <- Try(processTables(doc, props, locale, Nil))
+      _ <- Try(processTables(doc, props, locale, Nil, false))
       _ <- Try(processLists(doc, props, locale, Nil))
       _ <- Try(processFrames(doc, props, locale))
       _ <- Try(processSections(doc, props, locale))
@@ -180,20 +180,20 @@ trait DocumentProcessor extends LazyLogging {
     }
   }
 
-  def processTables(doc: TableContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
-    doc.getTableList map (table => processTable(doc, table, props, locale, pathPrefixes))
+  def processTables(doc: TableContainer, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String], withinContainer: Boolean) = {
+    doc.getTableList map (table => processTable(doc, table, props, locale, pathPrefixes, withinContainer))
   }
 
   /**
    * Process table:
    * duplicate all rows except header rows. Try to replace textbox values with value from property map
    */
-  def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String]) = {
+  def processTable(doc: TableContainer, table: Table, props: Map[String, Value], locale: Locale, pathPrefixes: Seq[String], withinContainer: Boolean) = {
     val propertyKey = parsePropertyKey(table.getDotTableName, pathPrefixes)
     props.get(propertyKey) map {
       case Value(JsArray(values), _) =>
         logger.debug(s"processTable (dynamic): ${table.getDotTableName}")
-        processTableWithValues(doc, table, props, values, locale, pathPrefixes)
+        processTableWithValues(doc, table, props, values, locale, pathPrefixes, withinContainer)
 
     } getOrElse {
       //static proccesing
@@ -231,7 +231,7 @@ trait DocumentProcessor extends LazyLogging {
     }
   }
 
-  def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, pathPrefixes: Seq[String]) = {
+  def processTableWithValues(doc: TableContainer, table: Table, props: Map[String, Value], values: Vector[JsValue], locale: Locale, pathPrefixes: Seq[String], withinContainer: Boolean) = {
     val startIndex = Math.max(table.getHeaderRowCount, 0)
     val rows = table.getRowList.toList
     val nonHeaderRows = rows.takeRight(rows.length - startIndex)
@@ -242,7 +242,7 @@ trait DocumentProcessor extends LazyLogging {
       val rowPathPrefix = findPathPrefixes(table.getDotTableName + s".$index", pathPrefixes)
 
       //copy rows
-      val newRows = table.appendRows(nonHeaderRows.length).toList
+      val newRows = if (withinContainer) table.appendRow() :: Nil else table.appendRows(nonHeaderRows.length).toList
       logger.debug(s"processTable: ${table.getDotTableName} -> Appended rows: ${newRows.length}")
       for (r <- 0 to newRows.length - 1) {
         //replace textfields
@@ -304,7 +304,7 @@ trait DocumentProcessor extends LazyLogging {
       val sectionKey = s"${section.getName}.$index"
       logger.debug(s"processSection:$sectionKey")
       processTextboxes(section, props, locale, Seq(sectionKey))
-      processTables(section, props, locale, Seq(sectionKey))
+      processTables(section, props, locale, Seq(sectionKey), true)
       processLists(section, props, locale, Seq(sectionKey))
       //append section
       doc.appendSection(section, false)
