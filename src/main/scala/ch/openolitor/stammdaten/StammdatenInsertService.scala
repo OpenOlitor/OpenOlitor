@@ -45,6 +45,7 @@ import Scalaz._
 import ch.openolitor.util.IdUtil
 import ch.openolitor.stammdaten.models.LieferpositionenModify
 import scalikejdbc.DBSession
+import org.joda.time.format.DateTimeFormat
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -64,6 +65,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     with SammelbestellungenHandler
     with LieferungHandler {
   self: StammdatenWriteRepositoryComponent =>
+
+  val dateFormat = DateTimeFormat.forPattern("dd.MM.yyyy")
 
   val ZERO = 0
   val FALSE = false
@@ -590,10 +593,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           //update Lieferung
           stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung)
 
-          adjustedLieferung.abotypBeschrieb
+          (dateFormat.print(adjustedLieferung.datum), adjustedLieferung.abotypBeschrieb)
         }
-        val abotypStr = abotypDepotTour.filter(_.nonEmpty).mkString(", ")
-        val updatedObj = lieferplanung.copy(abotypDepotTour = abotypStr)
+        val abotypDates = (abotypDepotTour.groupBy(_._1).mapValues(_ map { _._2 }) map {
+          case (datum, abotypBeschrieb) =>
+            datum + ": " + abotypBeschrieb.mkString(", ")
+        }).mkString("; ")
+
+        val updatedObj = lieferplanung.copy(abotypDepotTour = abotypDates)
 
         //update lieferplanung
         stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)

@@ -56,5 +56,7 @@ object Scripts {
       OO544_DBScripts.scripts ++
       OO564_DBScripts.scripts ++
       OO544_DBScripts.scripts ++
-      OO544_DBScripts.scripts
+      OO544_DBScripts.scripts ++
+      OO597_DBScripts.scripts ++
+      OO597_Index_DBScripts.scripts
 }
