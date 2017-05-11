@@ -1393,6 +1393,36 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(postAuslieferungMapping(postAuslieferung)).list
   }
 
+  protected def getDepotAuslieferungenQuery(lieferplanungId: LieferplanungId) = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+        .join(korbMapping as korb).on(korb.auslieferungId, depotAuslieferung.id)
+        .join(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
+    }.map(depotAuslieferungMapping(depotAuslieferung)).list
+  }
+
+  protected def getTourAuslieferungenQuery(lieferplanungId: LieferplanungId) = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+        .join(korbMapping as korb).on(korb.auslieferungId, tourAuslieferung.id)
+        .join(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
+    }.map(tourAuslieferungMapping(tourAuslieferung)).list
+  }
+
+  protected def getPostAuslieferungenQuery(lieferplanungId: LieferplanungId) = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+        .join(korbMapping as korb).on(korb.auslieferungId, postAuslieferung.id)
+        .join(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
+    }.map(postAuslieferungMapping(postAuslieferung)).list
+  }
+
   /*
    * TODO: This is a temporary solution. Join Personen within Auslieferung queries.
    * The current ScalikeJdbc version supports only 5 resultset extractors.

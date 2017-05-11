@@ -146,6 +146,8 @@ trait StammdatenReadRepository extends ReportReadRepository {
   def getTourAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourAuslieferungDetail]]
   def getPostAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostAuslieferungDetail]]
 
+  def getAuslieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Auslieferung]]
+
   def getProjektVorlagen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProjektVorlage]]
   def getProjektVorlage(id: ProjektVorlageId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektVorlage]]
 
@@ -560,6 +562,26 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
 
   def getPostAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostAuslieferungDetail]] = {
     getPostAuslieferungDetailQuery(auslieferungId).future
+  }
+
+  def getDepotAuslieferungen(lieferplanungId: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotAuslieferung]] = {
+    getDepotAuslieferungenQuery(lieferplanungId).future
+  }
+
+  def getTourAuslieferungen(lieferplanungId: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[TourAuslieferung]] = {
+    getTourAuslieferungenQuery(lieferplanungId).future
+  }
+
+  def getPostAuslieferungen(lieferplanungId: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]] = {
+    getPostAuslieferungenQuery(lieferplanungId).future
+  }
+
+  def getAuslieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Auslieferung]] = {
+    for {
+      d <- getDepotAuslieferungen(id)
+      h <- getTourAuslieferungen(id)
+      p <- getPostAuslieferungen(id)
+    } yield (d.distinct ::: h.distinct ::: p.distinct)
   }
 
   def getAuslieferungReport(id: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
