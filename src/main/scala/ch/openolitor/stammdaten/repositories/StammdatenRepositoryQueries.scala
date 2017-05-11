@@ -1372,24 +1372,57 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       .list
   }
 
-  protected def getDepotAuslieferungenQuery = {
+  protected def getDepotAuslieferungenQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(depotAuslieferungMapping as depotAuslieferung)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, depotAuslieferung))
     }.map(depotAuslieferungMapping(depotAuslieferung)).list
   }
 
-  protected def getTourAuslieferungenQuery = {
+  protected def getTourAuslieferungenQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(tourAuslieferungMapping as tourAuslieferung)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, tourAuslieferung))
     }.map(tourAuslieferungMapping(tourAuslieferung)).list
   }
 
-  protected def getPostAuslieferungenQuery = {
+  protected def getPostAuslieferungenQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(postAuslieferungMapping as postAuslieferung)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, postAuslieferung))
+    }.map(postAuslieferungMapping(postAuslieferung)).list
+  }
+
+  protected def getDepotAuslieferungenQuery(lieferplanungId: LieferplanungId) = {
+    withSQL {
+      select
+        .from(depotAuslieferungMapping as depotAuslieferung)
+        .join(korbMapping as korb).on(korb.auslieferungId, depotAuslieferung.id)
+        .join(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
+    }.map(depotAuslieferungMapping(depotAuslieferung)).list
+  }
+
+  protected def getTourAuslieferungenQuery(lieferplanungId: LieferplanungId) = {
+    withSQL {
+      select
+        .from(tourAuslieferungMapping as tourAuslieferung)
+        .join(korbMapping as korb).on(korb.auslieferungId, tourAuslieferung.id)
+        .join(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
+    }.map(tourAuslieferungMapping(tourAuslieferung)).list
+  }
+
+  protected def getPostAuslieferungenQuery(lieferplanungId: LieferplanungId) = {
+    withSQL {
+      select
+        .from(postAuslieferungMapping as postAuslieferung)
+        .join(korbMapping as korb).on(korb.auslieferungId, postAuslieferung.id)
+        .join(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
+        .where.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
     }.map(postAuslieferungMapping(postAuslieferung)).list
   }
 
