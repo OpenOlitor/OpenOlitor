@@ -93,11 +93,13 @@ object Boot extends App with LazyLogging {
   logger.debug(s"config-file java prop: " + sys.props.get("config-file"))
   logger.debug(s"port: " + sys.env.get("PORT"))
 
+  // This config represents the whole configuration and therefore includes the http configuration
   val config = ConfigLoader.loadConfig
 
   val systemPersonId = PersonId(0)
 
   // instanciate actor system per mandant, with mandantenspecific configuration
+  // This config is a subset of config (i.e. without http configuration)
   val ooConfig = config.getConfig("openolitor")
   val configs = getMandantConfiguration(ooConfig)
   implicit val timeout = Timeout(5.seconds)
@@ -112,9 +114,10 @@ object Boot extends App with LazyLogging {
 
   lazy val rootInterface = config.getStringOption("openolitor.interface").getOrElse("0.0.0.0")
   val proxyService = config.getBooleanOption("openolitor.run-proxy-service").getOrElse(false)
-  //start proxy service 
+
+  //start proxy service
   if (proxyService) {
-    startProxyService(mandanten, ooConfig)
+    startProxyService(mandanten, config)
   }
 
   def getMandantConfiguration(ooConfig: Config): NonEmptyList[MandantConfiguration] = {
