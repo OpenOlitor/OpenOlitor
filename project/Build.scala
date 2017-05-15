@@ -59,7 +59,7 @@ object BuildSettings {
 	    "ch.qos.logback"  	           %   "logback-classic"    		  		        % "1.1.3",
 	    "org.mariadb.jdbc"	           %   "mariadb-java-client"                  % "1.3.2",
 	    // Libreoffice document API
-	    "org.apache.odftoolkit"        %   "simple-odf"					                  % "0.8.1-incubating",
+	    "org.apache.odftoolkit"        %   "simple-odf"					          % "0.8.2-incubating" withSources(),
 	    "com.jsuereth"                 %%  "scala-arm"                            % "1.4",
 	    //simple websocket client
 	    "org.jfarcand"                 %   "wcs"                                  % "1.5",
@@ -68,7 +68,8 @@ object BuildSettings {
       "com.amazonaws"                %   "aws-java-sdk"                         % "1.11.4",
       "de.svenkubiak"                %   "jBCrypt"                              % "0.4.1",
       "me.lessis"                    %%  "courier"                              % "0.1.3",
-      "com.github.nscala-time"       %%  "nscala-time"                          % "2.14.0"
+      "com.github.nscala-time"       %%  "nscala-time"                          % "2.14.0",
+      "com.github.blemale"           %% "scaffeine"                             % "2.1.0"
 	  )
 	}
   )

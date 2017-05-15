@@ -25,7 +25,6 @@ package ch.openolitor.stammdaten.models
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
 
 case class AuslieferungId(id: Long) extends BaseId
 
@@ -61,14 +60,6 @@ trait AuslieferungReport extends Auslieferung {
   val koerbe: Seq[KorbReport]
   val projekt: ProjektReport
 }
-
-case class MultiAuslieferungId(id: Long) extends BaseId
-
-case class MultiAuslieferungReport(
-  id: MultiAuslieferungId,
-  entries: Seq[AuslieferungReportEntry],
-  projekt: ProjektReport
-) extends JSONSerializable
 
 case class AuslieferungReportEntry(
   id: AuslieferungId,

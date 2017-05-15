@@ -42,20 +42,21 @@ object ControlCommands {
 }
 
 trait ClientReceiver extends EventStream {
+  import ClientMessagesJsonProtocol._
 
-  def broadcast[M >: ClientMessage](senderPersonId: PersonId, msg: M)(implicit writer: RootJsonWriter[M]) =
-    publish(SendToClient(senderPersonId, msgToString(msg)))
+  def broadcast[M <: ClientMessage](senderPersonId: PersonId, msg: M)(implicit writer: RootJsonWriter[M]) =
+    publish(SendToClient(senderPersonId, msgToString(ClientMessageWrapper(msg))))
 
   /**
    * Send OutEvent to a list of receiving clients exclusing sender itself
    */
-  def send[M](senderPersonId: PersonId, msg: M, receivers: List[PersonId])(implicit writer: RootJsonWriter[M]) =
-    publish(SendToClient(senderPersonId, msgToString(msg), receivers))
+  def send[M <: ClientMessage](senderPersonId: PersonId, msg: M, receivers: List[PersonId])(implicit writer: RootJsonWriter[M]) =
+    publish(SendToClient(senderPersonId, msgToString(ClientMessageWrapper(msg)), receivers))
 
-  def send[M](senderPersonId: PersonId, msg: M)(implicit writer: RootJsonWriter[M]): Unit =
+  def send[M <: ClientMessage](senderPersonId: PersonId, msg: M)(implicit writer: RootJsonWriter[M]): Unit =
     send(senderPersonId, msg, List(senderPersonId))
 
-  def msgToString[M](msg: M)(implicit writer: RootJsonWriter[M]) =
+  def msgToString[M <: ClientMessage](msg: ClientMessageWrapper[M])(implicit writer: RootJsonWriter[ClientMessageWrapper[M]]) =
     writer.write(msg).compactPrint
 }
 

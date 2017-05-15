@@ -28,6 +28,9 @@ import ch.openolitor.core.BaseJsonProtocol
 
 object ClientMessages {
   trait ClientMessage extends Product
+  case class ClientMessageWrapper[E <: ClientMessage](msg: E) {
+    val `type`: String = msg.productPrefix
+  }
 
   case class HelloClient(personId: PersonId) extends ClientMessage
 }
@@ -36,4 +39,11 @@ object ClientMessagesJsonProtocol extends BaseJsonProtocol {
   import ClientMessages._
 
   implicit val helloClientFormat = jsonFormat1(HelloClient.apply)
+
+  implicit def messageWriter[E <: ClientMessage](implicit writer: JsonWriter[E]) = new RootJsonWriter[ClientMessageWrapper[E]] {
+    def write(obj: ClientMessageWrapper[E]): JsValue = {
+      val fields: Map[String, JsValue] = writer.write(obj.msg).asJsObject.fields + ("type" -> JsString(obj.`type`))
+      JsObject(fields)
+    }
+  }
 }

@@ -49,6 +49,10 @@ trait AirbrakeNotifierReference {
   val airbrakeNotifier: ActorRef
 }
 
+trait JobQueueServiceReference {
+  val jobQueueService: ActorRef
+}
+
 class DefaultActorSystemReference(override val system: ActorSystem) extends ActorSystemReference
 
 trait ActorReferences extends ActorSystemReference
@@ -56,5 +60,6 @@ trait ActorReferences extends ActorSystemReference
     with EventStoreReference
     with ReportSystemReference
     with MailServiceReference
-    with AirbrakeNotifierReference {
+    with AirbrakeNotifierReference
+    with JobQueueServiceReference {
 }

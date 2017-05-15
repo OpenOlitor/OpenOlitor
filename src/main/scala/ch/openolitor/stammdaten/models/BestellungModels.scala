@@ -195,3 +195,4 @@ case class ProduzentenabrechnungReport(
   //Zusatzinformationen
   projekt: ProjektReport
 ) extends JSONSerializable
+

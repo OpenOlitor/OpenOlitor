@@ -1,0 +1,3 @@
+export OO_SERVICES="{   \"buchhaltung\": [ {  \"referenznummer-prefix\": \"123456\",  \"teilnehmernummer\": \"333333\", \"name\": \"integration1\" } ],   \"smtp\": [ {   \"credentials\": { \"hostname\": \"asmtp.mail.hostpoint.ch\", \"port\": 587, \"username\": \"openolitor@soliterre.ch\", \"password\": \"Mg2w6ILXR88a\" }, \"from\": \"pflanzplatz@dunkelhoelzli.ch\", \"number-of-retries\": 3, \"send-email\": true, \"name\": \"integration3\" }, {   \"credentials\": { \"hostname\": \"asmtp.mail.hostpoint.ch\", \"port\": 587, \"username\": \"openolitor@soliterre.ch\", \"password\": \"Mg2w6ILXR88a\" }, \"from\": \"pflanzplatz@dunkelhoelzli.ch\", \"number-of-retries\": 3, \"send-email\": true, \"name\": \"m1\" } ]  }"
+printenv | grep OO_
+sbt run

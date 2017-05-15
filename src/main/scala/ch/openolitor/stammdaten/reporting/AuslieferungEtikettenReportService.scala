@@ -23,6 +23,7 @@
 package ch.openolitor.stammdaten.reporting
 
 import ch.openolitor.core.reporting._
+import ch.openolitor.core.reporting.models._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
@@ -35,11 +36,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.filestore._
 import org.joda.time.DateTime
+import ch.openolitor.core.jobs.JobQueueService.JobId
 
 trait AuslieferungEtikettenReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
   def generateAuslieferungEtikettenReports(fileType: FileType)(config: ReportConfig[AuslieferungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[AuslieferungId]]] = {
-    generateReports[AuslieferungId, MultiAuslieferungReport](
+    generateReports[AuslieferungId, MultiReport[AuslieferungReportEntry]](
       config,
       auslieferungenByIds,
       fileType,
@@ -48,16 +50,17 @@ trait AuslieferungEtikettenReportService extends AsyncConnectionPoolContextAware
       GeneriertAuslieferung,
       x => Some(x.id.id.toString),
       name(fileType),
-      _.projekt.sprache
+      _.projekt.sprache,
+      JobId("Auslieferungs-Etikette(n)")
     )
   }
 
-  def name(fileType: FileType)(auslieferung: MultiAuslieferungReport) = {
+  private def name(fileType: FileType)(auslieferung: MultiReport[AuslieferungReportEntry]) = {
     val now = new DateTime()
     s"lieferetiketten_${now}"
   }
 
-  def auslieferungenByIds(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[MultiAuslieferungReport])] = {
+  private def auslieferungenByIds(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[MultiReport[AuslieferungReportEntry]])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)

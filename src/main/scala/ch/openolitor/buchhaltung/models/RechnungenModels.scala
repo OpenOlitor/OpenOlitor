@@ -25,7 +25,6 @@ package ch.openolitor.buchhaltung.models
 import ch.openolitor.buchhaltung._
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
-import ch.openolitor.core.JSONSerializable
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.scalax.Tuple24
 import java.text.DecimalFormat

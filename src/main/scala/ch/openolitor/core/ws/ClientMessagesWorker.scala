@@ -57,7 +57,7 @@ class ClientMessagesWorker(val serverConnection: ActorRef, loginTokenCache: Cach
     case Push(receivers, msg) =>
       personId map { id =>
         receivers.find(_ == id).headOption.map { rec =>
-          log.debug(s"Push to client:$msg")
+          log.debug(s"Push to client:$msg: $rec")
           send(TextFrame(msg))
         }
       }

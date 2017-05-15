@@ -258,3 +258,12 @@ case class LieferpositionenModify(
   preisTotal: Option[BigDecimal],
   lieferpositionen: List[LieferpositionModify]
 ) extends JSONSerializable
+
+case class LieferplanungReport(
+  id: LieferplanungId,
+  bemerkungen: Option[String],
+  abotypDepotTour: String,
+  status: LieferungStatus,
+  lieferungen: Seq[LieferungDetail],
+  projekt: ProjektReport
+) extends JSONSerializable

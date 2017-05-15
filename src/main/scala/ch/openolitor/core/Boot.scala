@@ -23,6 +23,7 @@
 package ch.openolitor.core
 
 import scalikejdbc.config._
+
 import akka.actor.{ ActorSystem, Props, ActorRef }
 import akka.pattern.ask
 import akka.io.IO
@@ -52,7 +53,6 @@ import resource._
 import java.net.ServerSocket
 import spray.http.Uri
 import ch.openolitor.core.proxy.ProxyServiceActor
-import util.Properties
 import ch.openolitor.core.db.evolution.Evolution
 import ch.openolitor.core.domain.EntityStore.CheckDBEvolution
 import scala.util._
@@ -68,6 +68,7 @@ import ch.openolitor.buchhaltung.BuchhaltungReportEventListener
 import ch.openolitor.core.calculations.OpenOlitorCalculations
 import ch.openolitor.core.calculations.Calculations.InitializeCalculation
 import ch.openolitor.util.AirbrakeNotifier
+import ch.openolitor.core.jobs.JobQueueService
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -185,6 +186,7 @@ object Boot extends App with LazyLogging {
       val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props(mailService, entityStore), "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
       val fileStoreComponent = new DefaultFileStoreComponent(cfg.name, sysCfg, app)
       val reportSystem = Await.result(system ? SystemActor.Child(ReportSystem.props(fileStoreComponent.fileStore, sysCfg), "report-system"), duration).asInstanceOf[ActorRef]
+      val jobQueueService = Await.result(system ? SystemActor.Child(JobQueueService.props(cfg), "job-queue"), duration).asInstanceOf[ActorRef]
 
       //start actor listening events
       val stammdatenDBEventListener = Await.result(system ? SystemActor.Child(StammdatenDBEventEntityListener.props, "stammdaten-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
@@ -210,7 +212,7 @@ object Boot extends App with LazyLogging {
       buchhaltungEntityStoreView ? DefaultMessages.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, airbrakeNotifier, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, airbrakeNotifier, jobQueueService, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler

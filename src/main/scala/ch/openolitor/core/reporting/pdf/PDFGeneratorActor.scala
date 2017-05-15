@@ -26,12 +26,13 @@ import akka.actor._
 import scala.concurrent.blocking
 import scala.util._
 import ch.openolitor.core.SystemConfig
+import java.io.File
 
 object PDFGeneratorActor {
   def props(sysConfig: SystemConfig, name: String): Props = Props(classOf[PDFGeneratorActor], sysConfig, name)
 
-  case class GeneratePDF(document: Array[Byte])
-  case class PDFResult(pdf: Array[Byte])
+  case class GeneratePDF(document: File)
+  case class PDFResult(pdf: File)
   case class PDFError(error: String)
 }
 
