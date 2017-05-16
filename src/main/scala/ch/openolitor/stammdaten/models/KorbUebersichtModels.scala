@@ -20,41 +20,26 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.stammdaten.models
 
-import com.typesafe.scalalogging.LazyLogging
-import java.io.InputStream
+import ch.openolitor.core.models._
+import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
-trait FileTypeFilenameMapping extends LazyLogging {
-  def defaultFileTypeId(fileType: FileType) = {
-    fileType match {
-      case VorlageRechnung => "Rechnung.odt"
-      case VorlageDepotLieferschein => "DepotLieferschein.odt"
-      case VorlageTourLieferschein => "TourLieferschein.odt"
-      case VorlagePostLieferschein => "PostLieferschein.odt"
-      case VorlageDepotLieferetiketten => "DepotLieferetiketten.odt"
-      case VorlageTourLieferetiketten => "TourLieferetiketten.odt"
-      case VorlagePostLieferetiketten => "PostLieferetiketten.odt"
-      case VorlageMahnung => "Mahnung.odt"
-      case VorlageBestellung => "Bestellung.odt"
-      case VorlageKundenbrief => "Kundenbrief.odt"
-      case VorlageDepotbrief => "Depotbrief.odt"
-      case VorlageProduzentenbrief => "Produzentenbrief.odt"
-      case VorlageProduzentenabrechnung => "Produzentenabrechnung.odt"
-      case VorlageLieferplanung => "Lieferplanung.odt"
-      case VorlageKorbUebersicht => "Korbuebersicht.odt"
-      case _ => "undefined.odt"
-    }
-  }
+case class KorbUebersichtReportProDepotTour(
+  name: String,
+  anzahlKoerbe: Int
+) extends JSONSerializable
 
-  def fileTypeResourceAsStream(fileType: FileType, id: Option[String]): Either[String, InputStream] = {
-    val resourcePath = "/vorlagen/" + defaultFileTypeId(fileType)
-    val idString = id.map(i => s"/$i").getOrElse("")
-    val resource = s"$resourcePath$idString"
-    logger.debug(s"Resolve template from resources:$resource")
-    getClass.getResourceAsStream(resource) match {
-      case is: InputStream => Right(is)
-      case _ => Left(resource)
-    }
-  }
-}
+case class KorbUebersichtReportProAbotyp(
+  name: String,
+  anzahlKoerbe: Int,
+  koerbe: Seq[KorbUebersichtReportProDepotTour]
+) extends JSONSerializable
+
+case class AuslieferungKorbUebersichtReport(
+  projekt: ProjektReport,
+  datum: DateTime,
+  anzahlKoerbe: Int,
+  koerbe: Seq[KorbUebersichtReportProAbotyp]
+) extends JSONSerializable
