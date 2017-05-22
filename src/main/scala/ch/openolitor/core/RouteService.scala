@@ -160,9 +160,10 @@ trait RouteServiceActor
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(
+  val receive: Receive = runRoute(cors(dbEvolutionRoutes))
+
+  val initializedDB: Receive = runRoute(cors(
     // unsecured routes
     helloWorldRoute ~
       systemRouteService.statusRoute ~
@@ -455,10 +456,16 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     streamIt(streamResponse)
   }
 
+  private def getFromFileWithCleanup(file: File, deleteAfterStreaming: Boolean = false) = {
+    // TODO clean up after the chunked response has been sent. used withAck without success
+	  // return using chunked response 
+    getFromFile(file)
+  }
+
   protected def streamFile(fileName: String, mediaType: MediaType, file: File, deleteAfterStreaming: Boolean = false) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(mediaType) {
-        stream(file)
+        getFromFileWithCleanup(file, deleteAfterStreaming)
       }
     }
   }
@@ -466,7 +473,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamZip(fileName: String, result: File, deleteAfterStreaming: Boolean = false) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/zip`) {
-        stream(result, deleteAfterStreaming)
+        getFromFileWithCleanup(result, deleteAfterStreaming)
       }
     }
   }
@@ -474,7 +481,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamPdf(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/pdf`) {
-        stream(result)
+        complete(HttpData(result))
       }
     }
   }
@@ -482,7 +489,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamOdt(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.text`) {
-        stream(result)
+        complete(HttpData(result))
       }
     }
   }
@@ -490,7 +497,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamOds(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.spreadsheet`) {
-        stream(result)
+        complete(HttpData(result))
       }
     }
   }
