@@ -236,6 +236,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 
   implicit val timeout = Timeout(5.seconds)
 
+  lazy val DefaultChunkSize = ConfigLoader.loadConfig.getIntBytes("spray.can.parsing.max-chunk-size")
+
   implicit val exportFormatPath = enumPathMatcher(path =>
     path.head match {
       case '.' => ExportFormat.apply(path) match {
@@ -429,19 +431,16 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   protected def stream(input: File, deleteAfterStreaming: Boolean = false) = {
-    val stream = new FileInputStream(input)
-    val streamResponse: Stream[ByteString] = Stream.continually(stream.read).takeWhile(_ != -1).map(ByteString(_))
+    val streamResponse = input.toByteArrayStream(DefaultChunkSize).map(ByteString(_))
     streamThen(streamResponse, { () =>
       if (deleteAfterStreaming) {
         input.delete()
-      } else {
-        stream.close()
       }
     })
   }
 
   protected def stream(input: InputStream) = {
-    val streamResponse: Stream[ByteString] = Stream.continually(input.read).takeWhile(_ != -1).map(ByteString(_))
+    val streamResponse = input.toByteArrayStream(DefaultChunkSize).map(ByteString(_))
     streamThen(streamResponse, () => input.close())
   }
 
@@ -456,16 +455,10 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     streamIt(streamResponse)
   }
 
-  private def getFromFileWithCleanup(file: File, deleteAfterStreaming: Boolean = false) = {
-    // TODO clean up after the chunked response has been sent. used withAck without success
-	  // return using chunked response 
-    getFromFile(file)
-  }
-
   protected def streamFile(fileName: String, mediaType: MediaType, file: File, deleteAfterStreaming: Boolean = false) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(mediaType) {
-        getFromFileWithCleanup(file, deleteAfterStreaming)
+        stream(file, deleteAfterStreaming)
       }
     }
   }
@@ -473,7 +466,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamZip(fileName: String, result: File, deleteAfterStreaming: Boolean = false) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/zip`) {
-        getFromFileWithCleanup(result, deleteAfterStreaming)
+        stream(result, deleteAfterStreaming)
       }
     }
   }
