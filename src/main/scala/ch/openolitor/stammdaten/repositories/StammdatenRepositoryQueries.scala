@@ -1003,7 +1003,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferungMapping(lieferung)).list
   }
 
-  protected def sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
+  protected def sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId: VertriebId, datum: DateTime, startGeschaeftsjahr: DateTime) = {
     sql"""
       select
         sum(${lieferung.preisTotal})
@@ -1013,6 +1013,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         ${lieferung.vertriebId} = ${vertriebId.id}
         and ${lieferung.lieferplanungId} IS NOT NULL
         and ${lieferung.datum} < ${datum}
+        and ${lieferung.datum} >= ${startGeschaeftsjahr}
       """
       .map(x => BigDecimal(x.bigDecimal(1))).single
   }

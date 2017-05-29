@@ -45,7 +45,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
   def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo]
 
-  def getProjekt(implicit session: DBSession): Option[Projekt]
+  def getProjekt()(implicit session: DBSession): Option[Projekt]
   def getKunden(implicit session: DBSession): List[Kunde]
   def getKundentypen(implicit session: DBSession): List[Kundentyp]
   def getPersonen(kundeId: KundeId)(implicit session: DBSession): List[Person]
@@ -78,7 +78,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getLieferungen(id: VertriebId)(implicit session: DBSession): List[Lieferung]
   def getLieferungenDetails(id: LieferplanungId)(implicit session: DBSession): List[LieferungDetail]
-  def sumPreisTotalGeplanteLieferungenVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[BigDecimal]
+  def sumPreisTotalGeplanteLieferungenVorher(vertriebId: VertriebId, datum: DateTime, startGeschaeftsjahr: DateTime)(implicit session: DBSession): Option[BigDecimal]
   def getGeplanteLieferungVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[Lieferung]
   def getGeplanteLieferungNachher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[Lieferung]
   def countEarlierLieferungOffen(id: LieferplanungId)(implicit session: DBSession): Option[Int]
@@ -192,7 +192,7 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getPostlieferungAbosByVertriebQuery(vertriebId).apply()
   }
 
-  def getProjekt(implicit session: DBSession): Option[Projekt] = {
+  def getProjekt()(implicit session: DBSession): Option[Projekt] = {
     getProjektQuery.apply()
   }
 
@@ -370,8 +370,8 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getLieferungenDetailsQuery(id)()
   }
 
-  def sumPreisTotalGeplanteLieferungenVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[BigDecimal] = {
-    sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId, datum).apply()
+  def sumPreisTotalGeplanteLieferungenVorher(vertriebId: VertriebId, datum: DateTime, startGeschaeftsjahr: DateTime)(implicit session: DBSession): Option[BigDecimal] = {
+    sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId, datum, startGeschaeftsjahr).apply()
   }
 
   def getGeplanteLieferungVorher(vertriebId: VertriebId, datum: DateTime)(implicit session: DBSession): Option[Lieferung] = {

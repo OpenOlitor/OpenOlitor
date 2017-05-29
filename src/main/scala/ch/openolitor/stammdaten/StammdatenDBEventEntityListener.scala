@@ -1038,9 +1038,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def recalculateLieferungOffen(entity: Lieferung, lieferungVorher: Option[Lieferung])(implicit personId: PersonId, session: DBSession) = {
+    val project = stammdatenWriteRepository.getProjekt()
     val (newDurchschnittspreis, newAnzahlLieferungen) = lieferungVorher match {
-      case Some(lieferung) =>
-        val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(entity.vertriebId, entity.datum).getOrElse(BigDecimal(0))
+      case Some(lieferung) if project.get.geschaftsjahr.isInSame(lieferung.datum.toLocalDate(), entity.datum.toLocalDate()) =>
+        val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(entity.vertriebId, entity.datum, project.get.geschaftsjahr.start(entity.datum.toLocalDate()).toDateTime(null)).getOrElse(BigDecimal(0))
 
         val durchschnittspreisBisher: BigDecimal = lieferung.anzahlLieferungen match {
           case 0 => BigDecimal(0)
@@ -1049,7 +1050,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
         val anzahlLieferungenNeu = lieferung.anzahlLieferungen + 1
         (durchschnittspreisBisher, anzahlLieferungenNeu)
-      case None =>
+      case _ =>
         (BigDecimal(0), 1)
     }
 
