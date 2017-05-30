@@ -558,7 +558,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         "modifidat" -> meta.timestamp,
         "modifikator" -> meta.originator
       )
-      val project = stammdatenWriteRepository.getProjekt()
+      val project = stammdatenWriteRepository.getProjekt
 
       //create lieferplanung
       stammdatenWriteRepository.insertEntity[Lieferplanung, LieferplanungId](insert) map { lieferplanung =>
@@ -567,7 +567,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
           val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
             case Some(lieferungVorher) if project.get.geschaftsjahr.isInSame(lieferungVorher.datum.toLocalDate(), lieferung.datum.toLocalDate()) =>
-              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTime(null)).getOrElse(BigDecimal(0))
+              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
 
               val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
                 case 0 => BigDecimal(0)
@@ -634,12 +634,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, data: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
     DB autoCommit { implicit session =>
-      val project = stammdatenWriteRepository.getProjekt()
+      val project = stammdatenWriteRepository.getProjekt
       stammdatenWriteRepository.getById(lieferplanungMapping, data.lieferplanungId) map { lieferplanung =>
         stammdatenWriteRepository.getById(lieferungMapping, data.id) map { lieferung =>
           val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
             case Some(lieferungVorher) if project.get.geschaftsjahr.isInSame(lieferungVorher.datum.toLocalDate(), lieferung.datum.toLocalDate()) =>
-              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTime(null)).getOrElse(BigDecimal(0))
+              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
 
               val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
                 case 0 => BigDecimal(0)

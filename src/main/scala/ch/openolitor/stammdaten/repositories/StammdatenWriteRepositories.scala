@@ -45,7 +45,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
   def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo]
 
-  def getProjekt()(implicit session: DBSession): Option[Projekt]
+  def getProjekt(implicit session: DBSession): Option[Projekt]
   def getKunden(implicit session: DBSession): List[Kunde]
   def getKundentypen(implicit session: DBSession): List[Kundentyp]
   def getPersonen(kundeId: KundeId)(implicit session: DBSession): List[Person]
@@ -192,7 +192,7 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getPostlieferungAbosByVertriebQuery(vertriebId).apply()
   }
 
-  def getProjekt()(implicit session: DBSession): Option[Projekt] = {
+  def getProjekt(implicit session: DBSession): Option[Projekt] = {
     getProjektQuery.apply()
   }
 
