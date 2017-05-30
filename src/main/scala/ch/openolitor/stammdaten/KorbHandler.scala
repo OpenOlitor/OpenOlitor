@@ -39,7 +39,7 @@ trait KorbHandler extends KorbStatusHandler
    */
   def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: Abotyp)(implicit personId: PersonId, session: DBSession): (Option[Korb], Option[Korb]) = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
-      case None =>
+      case None if (lieferung.lieferplanungId.isDefined) =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
         val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
         val korbId = KorbId(IdUtil.positiveRandomId)
@@ -58,6 +58,9 @@ trait KorbHandler extends KorbStatusHandler
         )
         (stammdatenWriteRepository.insertEntity[Korb, KorbId](korb), None)
 
+      case None =>
+        // do nothing (lieferung hast not been planned yet)
+        (None, None)
       case Some(korb) =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
         val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)

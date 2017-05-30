@@ -473,4 +473,5 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
   def getLieferungenOffenByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung] = {
     getLieferungenOffenByAbotypQuery(abotypId)()
   }
+
 }
