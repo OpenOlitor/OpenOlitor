@@ -80,6 +80,28 @@ class BuchhaltungInsertServiceSpec extends Specification {
       service.generateReferenzNummer(rechnung, RechnungId(777)) === "123456000000000001230007772"
     }
 
+    "calculate correct referenzNummer with kundeId length same as allowed size" in {
+      val rechnung = RechnungCreate(
+        KundeId(12345),
+        AboId(111),
+        "titel",
+        3,
+        CHF,
+        20.5,
+        None,
+        new DateTime,
+        new DateTime,
+        None,
+        "street",
+        None,
+        None,
+        "3000",
+        "Bern"
+      )
+
+      service.generateReferenzNummer(rechnung, RechnungId(777)) === "123456000000000123450007773"
+    }
+
     "calculate correct esrNummer" in {
       val rechnung = RechnungCreate(
         KundeId(321),
