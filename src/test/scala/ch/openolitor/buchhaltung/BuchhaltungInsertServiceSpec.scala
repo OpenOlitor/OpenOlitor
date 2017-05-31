@@ -77,7 +77,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
         "Bern"
       )
 
-      service.generateReferenzNummer(rechnung, RechnungId(777)) === "123456000000000001230007772"
+      service.generateReferenzNummer(rechnung, RechnungId(777)) === "123456000000000000001237773"
     }
 
     "calculate correct esrNummer" in {
@@ -100,7 +100,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
       )
 
       val referenzNummer = service.generateReferenzNummer(rechnung, RechnungId(555))
-      service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>123456000000000003210005556+ 777777777>"
+      service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>123456000000000000003215558+ 777777777>"
     }
   }
 
@@ -131,7 +131,7 @@ class BuchhaltungInsertServiceSpec extends Specification {
       )
 
       val referenzNummer = service.generateReferenzNummer(rechnung, RechnungId(555))
-      service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>000000000000000003210005550+ 000000132>"
+      service.generateEsrNummer(rechnung, referenzNummer) === "0100000020573>000000000000000000003215552+ 000000132>"
     }
   }
 }
