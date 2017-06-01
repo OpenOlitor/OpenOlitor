@@ -10,6 +10,9 @@ import org.odftoolkit.odfdom.dom.element.office._
 import org.odftoolkit.odfdom.`type`.Color
 import org.odftoolkit.simple.table._
 import org.odftoolkit.simple.text.Paragraph
+import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle
+import org.odftoolkit.odfdom.incubator.doc.style.OdfDefaultStyle
+import org.odftoolkit.odfdom.dom.attribute.draw.DrawTextStyleNameAttribute
 
 /**
  * Extends document to make method accessor public available
@@ -35,6 +38,39 @@ object OdfToolkitUtils {
       } else {
         self.setTextContent(content)
       }
+    }
+
+    def setBackgroundColorWithNewStyle(color: Color) = {
+      val parent = self.getOdfElement.getParentNode.asInstanceOf[DrawFrameElement]
+      val styleName = parent.getStyleName
+      val styleFamily = parent.getStyleFamily
+
+      val dom = self.getOdfElement.getOwnerDocument
+      val doc = self.getOwnerDocument()
+      val styles = if (dom.isInstanceOf[OdfContentDom]) {
+        dom.asInstanceOf[OdfContentDom].getAutomaticStyles
+      } else {
+        dom.asInstanceOf[OdfStylesDom].getAutomaticStyles
+      }
+      val baseStyle = styles.getStyle(styleName, styleFamily)
+
+      val graphicStyle = styles.newStyle(OdfStyleFamily.Graphic)
+      val props = graphicStyle.newStyleGraphicPropertiesElement()
+
+      val attrs = baseStyle.getAttributes
+      val l = attrs.getLength - 1
+      for (i <- 0 to l) {
+        val item = attrs.item(i)
+        props.setAttribute(item.getNodeName, item.getNodeValue)
+      }
+
+      props.setDrawStrokeAttribute("none")
+      props.setDrawFillAttribute("solid")
+      props.setDrawFillColorAttribute(color.toString)
+      props.setStyleRunThroughAttribute("foreground")
+
+      // set comment content
+      parent.setStyleName(graphicStyle.getStyleNameAttribute)
     }
 
     def setFontColor(color: Color) = {

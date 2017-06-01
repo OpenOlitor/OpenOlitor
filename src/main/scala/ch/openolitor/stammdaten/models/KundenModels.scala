@@ -115,7 +115,13 @@ trait IKundeReport extends IKunde {
   }
 
   lazy val telefonNummern: String = (personen map { p =>
-    (p.telefonMobil :: p.telefonFestnetz :: Nil).flatten.mkString(" / ")
+    (p.telefonMobil :: p.telefonFestnetz :: Nil).map {
+      _ match {
+        case Some("") => None
+        case Some(text) if text.trim.isEmpty => None
+        case entry => entry
+      }
+    }.flatten.mkString(" / ")
   }).mkString(" / ")
 }
 
