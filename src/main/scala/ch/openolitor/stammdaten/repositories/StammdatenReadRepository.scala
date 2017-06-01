@@ -643,7 +643,7 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
           }
         }
       }).flatten
-      val entries = entriesD.sortBy(_.korb.abotyp.name) ++ entriesH.sortBy(_.korb.abotyp.name) ++ entriesP.sortBy(_.korb.abotyp.name)
+      val entries = entriesD ++ entriesH ++ entriesP
 
       MultiReport(MultiReportId(IdUtil.positiveRandomId), entries, projekt)
     }
