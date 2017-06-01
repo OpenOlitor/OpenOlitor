@@ -1003,7 +1003,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferungMapping(lieferung)).list
   }
 
-  protected def sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
+  protected def sumPreisTotalGeplanteLieferungenVorherQuery(vertriebId: VertriebId, datum: DateTime, startGeschaeftsjahr: DateTime) = {
     sql"""
       select
         sum(${lieferung.preisTotal})
@@ -1013,8 +1013,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         ${lieferung.vertriebId} = ${vertriebId.id}
         and ${lieferung.lieferplanungId} IS NOT NULL
         and ${lieferung.datum} < ${datum}
+        and ${lieferung.datum} >= ${startGeschaeftsjahr}
       """
-      .map(x => BigDecimal(x.bigDecimal(1))).single
+      .map(x => BigDecimal(x.bigDecimalOpt(1).getOrElse(java.math.BigDecimal.ZERO))).single
   }
 
   protected def getGeplanteLieferungVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
@@ -1713,15 +1714,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select(depotlieferungAbo.id)
         .from(depotlieferungAboMapping as depotlieferungAbo)
         .where.le(depotlieferungAbo.start, parameter(today))
-        .and.ge(depotlieferungAbo.ende, parameter(today))
+        .and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.ge(depotlieferungAbo.ende, parameter(today)) }
         .and.eq(depotlieferungAbo.aktiv, parameter(false))
         .union(select(heimlieferungAbo.id).from(heimlieferungAboMapping as heimlieferungAbo)
           .where.le(heimlieferungAbo.start, parameter(today))
-          .and.ge(heimlieferungAbo.ende, parameter(today))
+          .and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.ge(heimlieferungAbo.ende, parameter(today)) }
           .and.eq(heimlieferungAbo.aktiv, parameter(false))).union(
           select(postlieferungAbo.id).from(postlieferungAboMapping as postlieferungAbo)
             .where.le(postlieferungAbo.start, parameter(today))
-            .and.ge(postlieferungAbo.ende, parameter(today))
+            .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, parameter(today)) }
             .and.eq(postlieferungAbo.aktiv, parameter(false))
         )
     }.map(res => AboId(res.long(1))).list
@@ -1734,15 +1735,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select(depotlieferungAbo.id)
         .from(depotlieferungAboMapping as depotlieferungAbo)
         .where.le(depotlieferungAbo.start, parameter(yesterday))
-        .and.le(depotlieferungAbo.ende, parameter(yesterday))
+        .and.withRoundBracket { _.isNotNull(depotlieferungAbo.ende).and.le(depotlieferungAbo.ende, parameter(yesterday)) }
         .and.eq(depotlieferungAbo.aktiv, parameter(true))
         .union(select(heimlieferungAbo.id).from(heimlieferungAboMapping as heimlieferungAbo)
           .where.le(heimlieferungAbo.start, parameter(yesterday))
-          .and.le(heimlieferungAbo.ende, parameter(yesterday))
+          .and.withRoundBracket { _.isNotNull(heimlieferungAbo.ende).and.le(heimlieferungAbo.ende, parameter(yesterday)) }
           .and.eq(heimlieferungAbo.aktiv, parameter(true))).union(
           select(postlieferungAbo.id).from(postlieferungAboMapping as postlieferungAbo)
             .where.le(postlieferungAbo.start, parameter(yesterday))
-            .and.le(postlieferungAbo.ende, parameter(yesterday))
+            .and.withRoundBracket { _.isNotNull(postlieferungAbo.ende).and.le(postlieferungAbo.ende, parameter(yesterday)) }
             .and.eq(postlieferungAbo.aktiv, parameter(true))
         )
     }.map(res => AboId(res.long(1))).list

@@ -178,7 +178,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.deleteLieferpositionen(lieferung.id)
 
             //detach lieferung
-            logger.debug("detach Lieferung:$lieferung")
+            logger.debug(s"detach Lieferung:${lieferung.id}:${lieferung}")
             val copy = lieferung.copy(lieferplanungId = None)
             stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
           }

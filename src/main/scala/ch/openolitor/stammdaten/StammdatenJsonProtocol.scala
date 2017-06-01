@@ -478,6 +478,19 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val enhancedKundeDetailReportFormat: RootJsonFormat[KundeDetailReport] = enhancedKundeReportFormatDef(autoProductFormat[KundeDetailReport])
   implicit val korbReportFormat = autoProductFormat[KorbReport]
 
+  def enhancedBestellpositionFormatDef[T <: BestellpositionCalculatedFields](defaultFormat: JsonFormat[T]): RootJsonFormat[T] = new RootJsonFormat[T] {
+    def write(obj: T): JsValue = {
+      JsObject(defaultFormat.write(obj)
+        .asJsObject.fields +
+        (
+          "mengeTotal" -> JsNumber(obj.mengeTotal)
+        ))
+    }
+
+    def read(json: JsValue): T = defaultFormat.read(json)
+  }
+  implicit val enhancedBestellpositionFormat: RootJsonFormat[Bestellposition] = enhancedBestellpositionFormatDef(autoProductFormat[Bestellposition])
+
   def enhancedDepotReportFormatDef[D <: IDepotReport](defaultFormat: JsonFormat[D]): RootJsonFormat[D] = new RootJsonFormat[D] {
     def write(obj: D): JsValue = {
       JsObject(defaultFormat.write(obj)
