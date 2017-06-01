@@ -35,35 +35,58 @@ import ch.openolitor.core.models.PersonId
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.filestore._
+import org.joda.time.DateTime
 import ch.openolitor.core.jobs.JobQueueService.JobId
+import ch.openolitor.util.IdUtil
 
-trait ProduzentenabrechnungReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
+trait AuslieferungKorbUebersichtReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
-  def generateProduzentenabrechnungReports(fileType: FileType)(config: ReportConfig[SammelbestellungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[SammelbestellungId]]] = {
-    generateReports[SammelbestellungId, MultiReport[ProduzentenabrechnungReport]](
+  def generateAuslieferungKorbUebersichtReports(fileType: FileType)(config: ReportConfig[AuslieferungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[AuslieferungId]]] = {
+    generateReports[AuslieferungId, MultiReport[AuslieferungKorbUebersichtReport]](
       config,
-      bestellungById,
+      auslieferungenByIds,
       fileType,
       None,
       _.id,
-      GeneriertProduzentenabrechnung,
+      GeneriertAuslieferung,
       x => Some(x.id.id.toString),
       name(fileType),
       _.projekt.sprache,
-      JobId("Produzentenabrechnung(en)")
+      JobId("Auslieferungs-KorbUebersicht")
     )
   }
 
-  private def name(fileType: FileType)(la: MultiReport[ProduzentenabrechnungReport]) = s"la_${la.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
+  private def name(fileType: FileType)(auslieferung: MultiReport[AuslieferungKorbUebersichtReport]) = {
+    val now = new DateTime()
+    s"auslieferung_korbuebersicht_${now}"
+  }
 
-  private def bestellungById(ids: Seq[SammelbestellungId]): Future[(Seq[ValidationError[SammelbestellungId]], Seq[MultiReport[ProduzentenabrechnungReport]])] = {
+  private def auslieferungenByIds(auslieferungIds: Seq[AuslieferungId]): Future[(Seq[ValidationError[AuslieferungId]], Seq[MultiReport[AuslieferungKorbUebersichtReport]])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
-        stammdatenReadRepository.getMultiReport(projektReport, stammdatenReadRepository.getProduzentenabrechnungReport(ids, projektReport)) map { results =>
-          (Seq(), Seq(results))
+        stammdatenReadRepository.getMultiAuslieferungReport(auslieferungIds, projektReport) map { auslieferungReport =>
+
+          val proAbotyp = (auslieferungReport.entries groupBy (_.korb.abotyp.name) map {
+            case (abotypName, auslieferungen) =>
+              (abotypName, auslieferungen groupBy (auslieferung => auslieferung.depot.map(_.name) orElse (auslieferung.tour map (_.name)) getOrElse "Post") mapValues (_.size))
+          }) map {
+            case (abotypName, proDepotTour) =>
+              KorbUebersichtReportProAbotyp(abotypName, proDepotTour.values.sum, (proDepotTour map (p => KorbUebersichtReportProDepotTour(p._1, p._2))).toSeq)
+          }
+
+          val datum = if (!auslieferungReport.entries.isEmpty) auslieferungReport.entries(0).datum else new DateTime()
+
+          (Seq(), List(MultiReport(MultiReportId(IdUtil.positiveRandomId), Seq(
+            AuslieferungKorbUebersichtReport(
+              projektReport,
+              datum,
+              auslieferungReport.entries.size,
+              proAbotyp.toSeq
+            )
+          ), projektReport)))
         }
-      } getOrElse Future { (Seq(ValidationError[SammelbestellungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
+      } getOrElse Future { (Seq(ValidationError[AuslieferungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
     }
   }
 }

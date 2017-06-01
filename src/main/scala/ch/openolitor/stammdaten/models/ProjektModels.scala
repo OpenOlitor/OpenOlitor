@@ -63,6 +63,14 @@ case class Geschaeftsjahr(monat: Int, tag: Int) {
       s"${startDate.getMonthOfYear}/${startDate.getYear}"
     }
   }
+
+  /**
+   * Retourniert 'true' wenn die übergebenen Daten im selben Geschäftsjahr liegen. 'false' wenn dies nicht so ist.
+   * Wird nur ein Datum übergeben wird zum aktuelle Moment verglichen.
+   */
+  def isInSame(date: LocalDate, comparteTo: LocalDate = LocalDate.now): Boolean = {
+    key(date) == key(comparteTo)
+  }
 }
 
 case class Projekt(

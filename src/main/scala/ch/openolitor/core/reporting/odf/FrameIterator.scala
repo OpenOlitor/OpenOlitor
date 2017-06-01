@@ -32,14 +32,15 @@ import org.odftoolkit.simple.draw.Textbox
 import org.odftoolkit.odfdom.dom.element.draw.DrawFrameElement
 import org.odftoolkit.odfdom.dom.element.draw.DrawTextBoxElement
 import org.odftoolkit.simple.draw.TextboxContainer
+import org.odftoolkit.simple.draw.FrameContainer
+import org.odftoolkit.simple.draw.Frame
 
 /**
- * This class is an enhanced implementation for finding all textboxes in a textbox container. The SimpleTextboxIterator only looks up
- * children directly attached to provided parent. In fact when you apply some styling to a paragaph the textbox
- * might get encapsulated into a <p><span><draw-frame></span></p>. In this case, the SimpleTextboxIterator won't find the textboxes accordingly
+ * This class is an enhanced implementation for finding all frames in a framecontainer
  */
-class NestedTextboxIterator(containerElement: OdfElement) extends Iterator[Textbox] {
+class FrameIterator(container: FrameContainer) extends Iterator[Frame] {
 
+  val containerElement: OdfElement = container.getFrameContainerElement
   var nextElement: Option[(Node, Textbox)] = None;
   var tempElement: Option[(Node, Textbox)] = None;
 
@@ -65,16 +66,15 @@ class NestedTextboxIterator(containerElement: OdfElement) extends Iterator[Textb
 
   private def findNext(lastResult: Option[(Node, Textbox)]): Option[(Node, Textbox)] = {
     val node = lastResult map (_._1)
-    findDeepFirstChildNode[DrawFrameElement](DrawFrameElement.ELEMENT_NAME, containerElement, node) flatMap {
-      case (drawFrameNode, nextFrame) =>
-        findDeepFirstChildNode[DrawTextBoxElement](DrawTextBoxElement.ELEMENT_NAME, nextFrame, None) collect {
-          case (_, nextbox: DrawTextBoxElement) =>
-            (drawFrameNode, Textbox.getInstanceof(nextbox))
+    findDeepFirstChildNode(classOf[DrawFrameElement], containerElement, node) flatMap {
+      case (node, nextFrame) =>
+        findDeepFirstChildNode(classOf[DrawTextBoxElement], nextFrame, None) map {
+          case (_, nextbox) => (node, Textbox.getInstanceof(nextbox.asInstanceOf[DrawTextBoxElement]))
         }
     }
   }
 
-  private def findDeepFirstChildNode[T <: OdfElement](name: OdfName, parent: Node, refNode: Option[Node]): Option[(Node, Node)] = {
+  private def findDeepFirstChildNode[T <: OdfElement](clazz: Class[T], parent: Node, refNode: Option[Node]): Option[(Node, Node)] = {
     val startingNode = Option(refNode.map { node =>
       node.getNextSibling
     }.getOrElse {
@@ -82,22 +82,22 @@ class NestedTextboxIterator(containerElement: OdfElement) extends Iterator[Textb
     })
 
     startingNode.map { node =>
-      findDeepChildNode(name, node) match {
+      findDeepChildNode(clazz, node) match {
         case r @ Some(result) => r
-        case None => findDeepFirstChildNode(name, parent, Some(node))
+        case None => findDeepFirstChildNode(clazz, parent, Some(node))
       }
     }.getOrElse(None)
   }
 
   private def findDeepChildNode[T <: OdfElement](
-    name: OdfName,
+    clazz: Class[T],
     refNode: Node
   ): Option[(Node, Node)] = {
     refNode match {
-      case node: Node if node.getNodeName == name.getQName => Some((node, node))
-      case parent: ParentNode =>
-        findDeepFirstChildNode(name, parent, None) match {
-          case Some((_, c)) => Some((parent, c))
+      case n: Node if clazz.isAssignableFrom(n.getClass) => Some((n, n))
+      case n: ParentNode =>
+        findDeepFirstChildNode(clazz, n, None) match {
+          case Some((p, c)) => Some((n, c))
           case None => None
         }
       case _ => None

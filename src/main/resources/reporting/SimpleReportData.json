@@ -30,7 +30,36 @@
  			"street" : "Work address",
  			"date": "2002-01-01T12:21:01.123Z",
  			"number": -456.789,
- 			"persons": []
+ 			"persons": [
+ 				{
+ 					"firstname": "2.AA",
+ 					"name": "Miller"
+ 				},
+ 				{
+ 					"firstname": "2.BB",
+ 					"name": "Stark"
+ 				},
+ 				{
+ 					"firstname": "2.CC",
+ 					"name": "Stark"
+ 				}
+ 			]
+ 		},
+ 		{
+ 			"id": 3,
+ 			"street" : "Lab address",
+ 			"date": "2002-01-01T12:21:01.123Z",
+ 			"number": -456.789,
+ 			"persons": [
+ 				{
+ 					"firstname": "3.AA",
+ 					"name": "Miller"
+ 				},
+ 				{
+ 					"firstname": "3.BB",
+ 					"name": "Stark"
+ 				}
+ 			]
  		}
  	]
  }

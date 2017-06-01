@@ -35,35 +35,42 @@ import ch.openolitor.core.models.PersonId
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.filestore._
+import org.joda.time.DateTime
 import ch.openolitor.core.jobs.JobQueueService.JobId
 
-trait ProduzentenabrechnungReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
+trait LieferplanungReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
   self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
-  def generateProduzentenabrechnungReports(fileType: FileType)(config: ReportConfig[SammelbestellungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[SammelbestellungId]]] = {
-    generateReports[SammelbestellungId, MultiReport[ProduzentenabrechnungReport]](
+  def generateLieferplanungReports(fileType: FileType)(config: ReportConfig[LieferplanungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[LieferplanungId]]] = {
+    generateReports[LieferplanungId, LieferplanungReport](
       config,
-      bestellungById,
+      lieferplanungenByIds,
       fileType,
       None,
       _.id,
-      GeneriertProduzentenabrechnung,
+      GeneriertLieferplanung,
       x => Some(x.id.id.toString),
       name(fileType),
       _.projekt.sprache,
-      JobId("Produzentenabrechnung(en)")
+      JobId("Lieferplanung-Report")
     )
   }
 
-  private def name(fileType: FileType)(la: MultiReport[ProduzentenabrechnungReport]) = s"la_${la.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
+  private def name(fileType: FileType)(r: LieferplanungReport) = s"lp_${r.id}_${filenameDateFormat.print(System.currentTimeMillis())}"
 
-  private def bestellungById(ids: Seq[SammelbestellungId]): Future[(Seq[ValidationError[SammelbestellungId]], Seq[MultiReport[ProduzentenabrechnungReport]])] = {
+  private def lieferplanungenByIds(ids: Seq[LieferplanungId]): Future[(Seq[ValidationError[LieferplanungId]], Seq[LieferplanungReport])] = {
     stammdatenReadRepository.getProjekt flatMap {
       _ map { projekt =>
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
-        stammdatenReadRepository.getMultiReport(projektReport, stammdatenReadRepository.getProduzentenabrechnungReport(ids, projektReport)) map { results =>
-          (Seq(), Seq(results))
-        }
-      } getOrElse Future { (Seq(ValidationError[SammelbestellungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
+
+        val results = Future.sequence(ids.map { id =>
+          stammdatenReadRepository.getLieferplanungReport(id, projektReport).map(_.map { r =>
+            Right(r)
+          }.getOrElse(Left(ValidationError[LieferplanungId](id, s"Die Lieferplanung konnte nicht gefunden werden"))))
+        })
+        results.map(_.partition(_.isLeft) match {
+          case (a, b) => (a.map(_.left.get), b.map(_.right.get))
+        })
+      } getOrElse Future { (Seq(ValidationError[LieferplanungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
     }
   }
 }

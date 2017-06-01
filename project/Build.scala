@@ -13,7 +13,7 @@ object BuildSettings {
  
   val buildSettings = SbtScalariform.scalariformSettings ++ Seq(
     organization := "ch.openolitor.scalamacros",
-    version := "1.0.8",
+    version := "1.0.11",
     scalaVersion := "2.11.8",
     crossScalaVersions := Seq("2.10.2", "2.10.3", "2.10.4", "2.10.5", "2.11.0", "2.11.1", "2.11.2", "2.11.3", "2.11.4", "2.11.5", "2.11.6", "2.11.7", "2.11.8"),
     resolvers += Resolver.sonatypeRepo("snapshots"),
@@ -59,7 +59,7 @@ object BuildSettings {
 	    "ch.qos.logback"  	           %   "logback-classic"    		  		        % "1.1.3",
 	    "org.mariadb.jdbc"	           %   "mariadb-java-client"                  % "1.3.2",
 	    // Libreoffice document API
-	    "org.apache.odftoolkit"        %   "simple-odf"					                  % "0.8.1-incubating",
+	    "org.apache.odftoolkit"        %   "simple-odf"					          % "0.8.2-incubating" withSources(),
 	    "com.jsuereth"                 %%  "scala-arm"                            % "1.4",
 	    //simple websocket client
 	    "org.jfarcand"                 %   "wcs"                                  % "1.5",
