@@ -133,7 +133,8 @@ trait DocumentProcessor extends LazyLogging {
       _ <- Try(processFrames(doc, props, locale))
       _ <- Try(processSections(doc, props, locale))
       _ <- Try(processTextboxes(doc, props, locale, Nil))
-      _ <- Try(registerVariables(doc, props))
+      //TODO Reactivate a smarter way (i.e. only boolean and number fields?) 
+      //_ <- Try(registerVariables(doc, props))
     } yield true
   }
 
@@ -408,7 +409,7 @@ trait DocumentProcessor extends LazyLogging {
       case backgroundColorFormatPattern(pattern) =>
         // set background to textbox
         resolveColor(pattern, props, pathPrefixes) map { color =>
-          textbox.setBackgroundColor(color)
+          textbox.setBackgroundColorWithNewStyle(color)
         }
         value
       case foregroundColorFormatPattern(pattern) =>
@@ -418,7 +419,7 @@ trait DocumentProcessor extends LazyLogging {
         }
         value
       case numberFormatPattern(_, positiveColor, positivePattern, _, _, _, negativeColor, negativeFormat) =>
-        // lookup color value        
+        // lookup color value
         val number = value.toDouble
         if (number < 0 && negativeFormat != null) {
           val formattedValue = decimaleFormatForLocale(negativeFormat, locale).format(value.toDouble)
