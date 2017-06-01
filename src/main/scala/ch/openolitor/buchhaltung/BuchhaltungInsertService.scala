@@ -107,11 +107,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
    * Generieren einer Referenznummer, die die Kundennummer und Rechnungsnummer enthält.
    */
   def generateReferenzNummer(rechnung: RechnungCreate, id: RechnungId): String = {
-    val kundeId = s"%0${KundeIdLength - rechnung.kundeId.id.toString.size}d".format(0) + s"${rechnung.kundeId.id}"
-    val rechnungId = s"%0${RechnungIdLength - id.id.toString.size}d".format(0) + s"${id.id}"
-    val leadingZeroesLength = ReferenznummerLength - ReferenznummerPrefix.size - kundeId.size - rechnungId.size
-    val zeroes = s"%0${leadingZeroesLength}d".format(0)
-    val filled = (s"${ReferenznummerPrefix}${zeroes}${kundeId}${rechnungId}") takeRight (ReferenznummerLength)
+    val filled = s"${ReferenznummerPrefix}%0${ReferenznummerLength - ReferenznummerPrefix.size - RechnungIdLength}d%0${RechnungIdLength}d".format(rechnung.kundeId.id, id.id)
     val checksum = calculateChecksum(filled.toList map (_.asDigit))
 
     s"$filled$checksum"

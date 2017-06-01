@@ -1015,7 +1015,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         and ${lieferung.datum} < ${datum}
         and ${lieferung.datum} >= ${startGeschaeftsjahr}
       """
-      .map(x => BigDecimal(x.bigDecimal(1))).single
+      .map(x => BigDecimal(x.bigDecimalOpt(1).getOrElse(java.math.BigDecimal.ZERO))).single
   }
 
   protected def getGeplanteLieferungVorherQuery(vertriebId: VertriebId, datum: DateTime) = {
