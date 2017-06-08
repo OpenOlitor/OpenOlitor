@@ -309,7 +309,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   private def adjustGuthabenVorLieferung(id: AboId, guthaben: Int)(implicit personId: PersonId, session: DBSession) = {
     stammdatenWriteRepository.getKoerbeNichtAusgeliefertByAbo(id) map { korb =>
-      stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.copy(guthabenVorLieferung = guthaben))
+      stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.copy(guthabenVorLieferung = guthaben), korbMapping.column.guthabenVorLieferung)
     }
   }
 
