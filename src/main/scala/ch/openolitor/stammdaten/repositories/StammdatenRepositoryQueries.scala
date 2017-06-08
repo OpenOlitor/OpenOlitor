@@ -861,8 +861,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         rs => bestellpositionMapping.opt(bestellposition)(rs)
       )
       .map((sammelbestellung, produzenten, bestellungen, positionen) => {
-        val bestellungenDetails = bestellungen map { b =>
-          val p = positionen.filter(_.bestellungId == b.id)
+        val bestellungenDetails = bestellungen.sortBy(_.steuerSatz) map { b =>
+          val p = positionen.filter(_.bestellungId == b.id).sortBy(_.produktBeschrieb)
           copyTo[Bestellung, BestellungDetail](b, "positionen" -> p)
         }
         copyTo[Sammelbestellung, SammelbestellungDetail](sammelbestellung, "produzent" -> produzenten.head, "bestellungen" -> bestellungenDetails)
