@@ -381,7 +381,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
         )
 
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy, lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
       }
     }
   }
@@ -514,7 +514,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
         log.debug(s"Korb Status changed:${korb.aboId}/${korb.lieferungId}")
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](recalculateLieferungCounts(lieferung, korb.status, statusAlt))
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](recalculateLieferungCounts(lieferung, korb.status, statusAlt), lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
       }
     }
   }
@@ -762,7 +762,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         //calculate total of lieferung
         val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
         val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy, lieferungMapping.column.preisTotal, lieferungMapping.column.status)
 
         //update durchschnittspreis
         stammdatenWriteRepository.getProjekt map { projekt =>
@@ -1050,7 +1050,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         modifidat = DateTime.now,
         modifikator = personId
       )
-      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](
+        updatedLieferung,
+        lieferungMapping.column.durchschnittspreis,
+        lieferungMapping.column.anzahlLieferungen,
+        lieferungMapping.column.modifidat,
+        lieferungMapping.column.modifikator
+      )
     }
   }
 
