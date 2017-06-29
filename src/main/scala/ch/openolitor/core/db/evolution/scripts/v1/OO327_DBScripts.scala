@@ -20,14 +20,27 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
+object OO327_DBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      alterTableAddColumnIfNotExists(bestellungMapping, "steuer_satz", "DECIMAL(4,2)", "preis_total")
+      alterTableAddColumnIfNotExists(bestellungMapping, "steuer", "DECIMAL(7,2) not null default 0", "steuer_satz")
+      alterTableAddColumnIfNotExists(bestellungMapping, "total_steuer", "DECIMAL(7,2) not null default 0", "steuer")
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts)
 }

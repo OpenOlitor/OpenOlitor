@@ -92,7 +92,7 @@ trait MailService extends AggregateRoot
   override var state: MailServiceState = MailServiceState(DateTime.now, 0L, TreeSet.empty[MailEnqueued])
 
   override protected def afterEventPersisted(evt: PersistentEvent): Unit = {
-    updateState(evt)
+    updateState(false)(evt)
     publish(evt)
   }
 
@@ -173,16 +173,16 @@ trait MailService extends AggregateRoot
     }
   }
 
-  override def updateState(evt: PersistentEvent): Unit = {
+  override def updateState(recovery: Boolean)(evt: PersistentEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
       case MailServiceInitialized(_) =>
-      case SendMailEvent(meta, uid, mail, expires, commandMeta) =>
+      case SendMailEvent(meta, uid, mail, expires, commandMeta) if !recovery =>
         enqueueMail(meta, uid, mail, expires, commandMeta)
         self ! CheckMailQueue
-      case MailSentEvent(_, uid, _) =>
+      case MailSentEvent(_, uid, _) if !recovery  =>
         dequeueMail(uid)
-      case SendMailFailedEvent(_, uid, _, _) =>
+      case SendMailFailedEvent(_, uid, _, _) if !recovery  =>
         dequeueMail(uid)
       case _ =>
     }

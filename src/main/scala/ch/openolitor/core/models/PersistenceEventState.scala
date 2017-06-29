@@ -20,14 +20,19 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.models
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import org.joda.time.DateTime
+import ch.openolitor.util.IdUtil
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
-}
+case class PersistenceEventStateId(id: Long = IdUtil.positiveRandomId) extends BaseId
+case class PersistenceEventState(
+  id: PersistenceEventStateId,
+  persistenceId: String,
+  lastSequenceNr: Long,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[PersistenceEventStateId]

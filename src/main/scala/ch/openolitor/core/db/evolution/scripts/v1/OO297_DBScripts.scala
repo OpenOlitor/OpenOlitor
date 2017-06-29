@@ -20,14 +20,33 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
+object OO297_DBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Add column vertrieb_beschrieb to abo tables")
+      alterTableAddColumnIfNotExists(depotlieferungAboMapping, "vertrieb_beschrieb", "varchar(2000)", "vertrieb_id")
+      alterTableAddColumnIfNotExists(heimlieferungAboMapping, "vertrieb_beschrieb", "varchar(2000)", "vertrieb_id")
+      alterTableAddColumnIfNotExists(postlieferungAboMapping, "vertrieb_beschrieb", "varchar(2000)", "vertrieb_id")
+
+      //update vertrieb beschrieb
+      sql"""UPDATE ${depotlieferungAboMapping.table} as a JOIN ${vertriebMapping.table} as v ON a.vertrieb_id=v.id SET a.vertrieb_beschrieb=v.beschrieb""".execute.apply()
+      sql"""UPDATE ${heimlieferungAboMapping.table} as a JOIN ${vertriebMapping.table} as v ON a.vertrieb_id=v.id SET a.vertrieb_beschrieb=v.beschrieb""".execute.apply()
+      sql"""UPDATE ${postlieferungAboMapping.table} as a JOIN ${vertriebMapping.table} as v ON a.vertrieb_id=v.id SET a.vertrieb_beschrieb=v.beschrieb""".execute.apply()
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts)
 }

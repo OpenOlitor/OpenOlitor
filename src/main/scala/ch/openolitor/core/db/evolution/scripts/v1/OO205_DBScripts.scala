@@ -20,14 +20,29 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import scalikejdbc._
+import ch.openolitor.core.SystemConfig
+import scala.util.{ Try, Success }
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
+object OO205_DBScripts {
+
+  val StammdatenDBScript = new Script with LazyLogging with StammdatenDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      sql"alter table ${lieferplanungMapping.table} modify Column id BIGINT".execute.apply()
+      sql"alter table ${lieferungMapping.table} modify Column id BIGINT".execute.apply()
+      sql"alter table ${lieferpositionMapping.table} modify Column id BIGINT".execute.apply()
+      sql"alter table ${bestellungMapping.table} modify Column id BIGINT".execute.apply()
+      sql"alter table ${bestellpositionMapping.table}  modify Column id BIGINT".execute.apply()
+      sql"alter table ${korbMapping.table} modify Column id BIGINT".execute.apply()
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenDBScript)
 }

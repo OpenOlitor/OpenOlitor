@@ -55,10 +55,10 @@ trait SystemEventStore extends AggregateRoot {
    *
    * @param evt Event to apply
    */
-  override def updateState(evt: PersistentEvent): Unit = {
+  override def updateState(recovery: Boolean = false)(evt: PersistentEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
-      case PersistentSystemEvent(meta, event) =>
+      case PersistentSystemEvent(meta, event) if !recovery =>
         //publish event to eventstream
         log.debug(s"Publish system event:$event")
         publish(event)
@@ -107,6 +107,6 @@ trait SystemEventStore extends AggregateRoot {
   override val receiveCommand = created
 }
 
-class DefaultSystemEventStore(sysConfig: SystemConfig) extends SystemEventStore {
+class DefaultSystemEventStore(val sysConfig: SystemConfig) extends SystemEventStore {
   log.debug(s"create DefaultSystemEventStore")
 }

@@ -20,14 +20,13 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import scalikejdbc._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateKorbStatus
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateLieferungCounter
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
+object OO311_DBScripts {
+  val scripts = Seq(RecalulateKorbStatus.scripts, RecalulateLieferungCounter.scripts)
 }

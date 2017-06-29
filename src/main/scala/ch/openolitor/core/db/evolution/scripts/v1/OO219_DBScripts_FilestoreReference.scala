@@ -20,14 +20,29 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
+/**
+ *
+ */
+object OO219_DBScripts_FilestoreReference extends DefaultDBScripts {
+  val BuchhaltungScripts = new Script with LazyLogging with BuchhaltungDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"add column fileStoreId to rechnung...")
+      // add column sprache to projekt
+      alterTableAddColumnIfNotExists(rechnungMapping, "file_store_id", "varchar(20)", "esr_nummer")
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(BuchhaltungScripts)
 }

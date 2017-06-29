@@ -20,14 +20,25 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import scalikejdbc._
+import ch.openolitor.core.SystemConfig
+import scala.util.{ Try, Success }
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
+object OO215_DBScripts {
+
+  val StammdatenDBScript = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      alterTableAddColumnIfNotExists(tourMapping, "anzahl_abonnenten", "int not null", "beschreibung")
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenDBScript)
 }

@@ -20,14 +20,12 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
+import scalikejdbc._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalculateAnzahlGeliefertLieferung
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts
+object OO499_DBScripts {
+  val scripts = Seq(RecalculateAnzahlGeliefertLieferung.scripts)
 }
