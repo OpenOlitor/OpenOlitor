@@ -78,6 +78,8 @@ trait EntityStoreView extends PersistentView with EntityStoreReference with Lazy
   override val persistenceId = EntityStore.persistenceId
   override val viewId = s"$module-entity-store"
 
+  override val persistenceStateStoreId = viewId
+
   override def autoUpdateInterval = 100 millis
 
   /**

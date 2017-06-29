@@ -61,6 +61,8 @@ trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEv
 
   def now = System.currentTimeMillis
 
+  override val persistenceStateStoreId = persistenceId
+
   protected def afterEventPersisted(evt: PersistentEvent): Unit = {
     updateState(false)(evt)
     publish(evt)

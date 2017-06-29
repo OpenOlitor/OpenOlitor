@@ -22,7 +22,6 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
-import akka.persistence.PersistentView
 import akka.actor._
 import scalikejdbc._
 import ch.openolitor.core._

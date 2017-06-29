@@ -22,7 +22,6 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung
 
-import akka.persistence.PersistentView
 import akka.actor._
 import ch.openolitor.core._
 import ch.openolitor.core.db._

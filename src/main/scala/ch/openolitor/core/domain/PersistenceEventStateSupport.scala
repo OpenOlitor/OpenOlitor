@@ -15,7 +15,7 @@ import ch.openolitor.core.models.PersistenceEventStateId
  */
 trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMappings with ConnectionPoolContextAware {
 
-  def persistenceId(): String
+  val persistenceStateStoreId: String
 
   lazy val peState = persistenceEventStateMapping.syntax("pe_state")
   private var lastSequenceNr = 0L
@@ -31,7 +31,7 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
 
   protected def loadLastSequenceNr(): Long = {
     DB readOnly { implicit session =>
-      getByPersistenceId(persistenceId()) map (_.lastSequenceNr) getOrElse (0L)
+      getByPersistenceId(persistenceStateStoreId) map (_.lastSequenceNr) getOrElse (0L)
     }
   }
 
@@ -46,14 +46,14 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
   protected def setLastProcessedSequenceNr(sequenceNr: Long): Boolean = {
     if (sequenceNr > lastSequenceNr) {
       DB autoCommit { implicit session =>
-        getByPersistenceId(persistenceId()) match {
+        getByPersistenceId(persistenceStateStoreId) match {
           case Some(entity: PersistenceEventState) =>
             val modEntity = entity.copy(lastSequenceNr = sequenceNr, modifidat = DateTime.now)
             val params = persistenceEventStateMapping.updateParameters(modEntity)
             val id = peState.id
             withSQL(update(persistenceEventStateMapping as peState).set(params: _*).where.eq(id, parameter(modEntity.id))).update.apply() == 1
           case None =>
-            val entity = PersistenceEventState(PersistenceEventStateId(), persistenceId, sequenceNr, DateTime.now, personId, DateTime.now, personId)
+            val entity = PersistenceEventState(PersistenceEventStateId(), persistenceStateStoreId, sequenceNr, DateTime.now, personId, DateTime.now, personId)
             val params = persistenceEventStateMapping.parameterMappings(entity)
             withSQL(insertInto(persistenceEventStateMapping).values(params: _*)).update.apply() == 1
         }

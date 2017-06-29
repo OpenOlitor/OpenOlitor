@@ -180,9 +180,9 @@ trait MailService extends AggregateRoot
       case SendMailEvent(meta, uid, mail, expires, commandMeta) if !recovery =>
         enqueueMail(meta, uid, mail, expires, commandMeta)
         self ! CheckMailQueue
-      case MailSentEvent(_, uid, _) if !recovery  =>
+      case MailSentEvent(_, uid, _) if !recovery =>
         dequeueMail(uid)
-      case SendMailFailedEvent(_, uid, _, _) if !recovery  =>
+      case SendMailFailedEvent(_, uid, _, _) if !recovery =>
         dequeueMail(uid)
       case _ =>
     }
