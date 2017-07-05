@@ -91,21 +91,21 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   import StammdatenCommandHandler._
   import EntityStore._
 
-  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
+  override val handle: PartialFunction[UserCommand, EventFactory => EventTransactionMetadata => Try[Seq[PersistentEvent]]] = {
 
-    case DeleteAbwesenheitCommand(personId, id) => idFactory => meta =>
+    case DeleteAbwesenheitCommand(personId, id) => factory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getLieferung(id) map { lieferung =>
           lieferung.status match {
             case (Offen | Ungeplant) =>
-              Success(Seq(EntityDeletedEvent(meta, id)))
+              Success(Seq(EntityDeletedEvent(factory.newMetadata(meta), id)))
             case _ =>
               Failure(new InvalidStateException("Die der Abwesenheit zugeordnete Lieferung muss Offen oder Ungeplant sein."))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferung zu Abwesenheit Nr. $id gefunden")))
       }
 
-    case LieferplanungAbschliessenCommand(personId, id) => idFactory => meta =>
+    case LieferplanungAbschliessenCommand(personId, id) => factory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
@@ -115,15 +115,15 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                   val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
 
                   val bestellEvents = distinctSammelbestellungen.map { sammelbestellungCreate =>
-                    val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
-                    val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, sammelbestellungCreate)
+                    val sammelbestellungId = SammelbestellungId(factory.newId(classOf[SammelbestellungId]))
+                    val insertEvent = EntityInsertedEvent(factory.newMetadata(meta), sammelbestellungId, sammelbestellungCreate)
 
-                    val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
+                    val bestellungVersendenEvent = SammelbestellungVersendenEvent(factory.newMetadata(meta), sammelbestellungId)
 
                     Seq(insertEvent, bestellungVersendenEvent)
                   }.toSeq.flatten
 
-                  val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
+                  val lpAbschliessenEvent = LieferplanungAbschliessenEvent(factory.newMetadata(meta), id)
 
                   Success(lpAbschliessenEvent +: bestellEvents)
                 case _ =>
@@ -135,7 +135,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
       }
 
-    case LieferplanungModifyCommand(personId, lieferplanungPositionenModify) => idFactory => meta =>
+    case LieferplanungModifyCommand(personId, lieferplanungPositionenModify) => factory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungPositionenModify.id) map { lieferplanung =>
           lieferplanung.status match {
@@ -154,14 +154,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                     // evaluate which sammelbestellungen are missing and have to be inserted
                     // they will be used in handleLieferungChanged afterwards
                     (distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
-                      val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
+                      val sammelbestellungId = SammelbestellungId(factory.newId(classOf[SammelbestellungId]))
                       SammelbestellungCreate(sammelbestellungId, s.produzentId, s.lieferplanungId, s.datum)
                     }.toSeq
                   } else {
                     Nil
                   }
 
-                  Success(LieferplanungDataModifiedEvent(meta, LieferplanungDataModify(lieferplanungPositionenModify.id, missingSammelbestellungen.toSet, lieferplanungPositionenModify.lieferungen)) :: Nil)
+                  Success(LieferplanungDataModifiedEvent(factory.newMetadata(meta), LieferplanungDataModify(lieferplanungPositionenModify.id, missingSammelbestellungen.toSet, lieferplanungPositionenModify.lieferungen)) :: Nil)
                 case _ =>
                   Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
               }
@@ -171,41 +171,41 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. ${lieferplanungPositionenModify.id} gefunden")))
       }
 
-    case LieferplanungAbrechnenCommand(personId, id: LieferplanungId) => idFactory => meta =>
+    case LieferplanungAbrechnenCommand(personId, id: LieferplanungId) => factory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
           lieferplanung.status match {
             case Abgeschlossen =>
-              Success(Seq(LieferplanungAbrechnenEvent(meta, id)))
+              Success(Seq(LieferplanungAbrechnenEvent(factory.newMetadata(meta), id)))
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Abgeschlossen' verrechnet werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
       }
 
-    case AbwesenheitCreateCommand(personId, abw: AbwesenheitCreate) => idFactory => meta =>
+    case AbwesenheitCreateCommand(personId, abw: AbwesenheitCreate) => factory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.countAbwesend(abw.lieferungId, abw.aboId) match {
           case Some(0) =>
-            handleEntityInsert[AbwesenheitCreate, AbwesenheitId](idFactory, meta, abw, AbwesenheitId.apply)
+            handleEntityInsert[AbwesenheitCreate, AbwesenheitId](factory, meta, abw, AbwesenheitId.apply)
           case _ =>
             Failure(new InvalidStateException("Eine Abwesenheit kann nur einmal erfasst werden"))
         }
       }
 
-    case SammelbestellungAnProduzentenVersendenCommand(personId, id: SammelbestellungId) => idFactory => meta =>
+    case SammelbestellungAnProduzentenVersendenCommand(personId, id: SammelbestellungId) => factory => meta =>
       DB readOnly { implicit session =>
         stammdatenWriteRepository.getById(sammelbestellungMapping, id) map { sammelbestellung =>
           sammelbestellung.status match {
             case Offen | Abgeschlossen =>
-              Success(Seq(SammelbestellungVersendenEvent(meta, id)))
+              Success(Seq(SammelbestellungVersendenEvent(factory.newMetadata(meta), id)))
             case _ =>
               Failure(new InvalidStateException("Eine Bestellung kann nur in den Status 'Offen' oder 'Abgeschlossen' versendet werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
       }
 
-    case AuslieferungenAlsAusgeliefertMarkierenCommand(personId, ids: Seq[AuslieferungId]) => idFactory => meta =>
+    case AuslieferungenAlsAusgeliefertMarkierenCommand(personId, ids: Seq[AuslieferungId]) => factory => meta =>
       DB readOnly { implicit session =>
         val (events, failures) = ids map { id =>
           stammdatenWriteRepository.getById(depotAuslieferungMapping, id) orElse
@@ -221,7 +221,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                     case p: PostAuslieferung =>
                       p.copy(status = Ausgeliefert)
                   }
-                  Success(EntityUpdatedEvent(meta, id, copy))
+                  Success(EntityUpdatedEvent(factory.newMetadata(meta), id, copy))
                 case _ =>
                   Failure(new InvalidStateException(s"Eine Auslieferung kann nur im Status 'Erfasst' als ausgeliefert markiert werden. Nr. $id"))
               }
@@ -235,13 +235,13 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    case SammelbestellungenAlsAbgerechnetMarkierenCommand(personId, datum, ids: Seq[SammelbestellungId]) => idFactory => meta =>
+    case SammelbestellungenAlsAbgerechnetMarkierenCommand(personId, datum, ids: Seq[SammelbestellungId]) => factory => meta =>
       DB readOnly { implicit session =>
         val (events, failures) = ids map { id =>
           stammdatenWriteRepository.getById(sammelbestellungMapping, id) map { sammelbestellung =>
             sammelbestellung.status match {
               case Abgeschlossen =>
-                Success(SammelbestellungAlsAbgerechnetMarkierenEvent(meta, datum, id))
+                Success(SammelbestellungAlsAbgerechnetMarkierenEvent(factory.newMetadata(meta), datum, id))
               case _ =>
                 Failure(new InvalidStateException(s"Eine Sammelbestellung kann nur im Status 'Abgeschlossen' als abgerechnet markiert werden. Nr. $id"))
             }
@@ -255,109 +255,109 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    case CreateAnzahlLieferungenRechnungenCommand(originator, aboRechnungCreate) => idFactory => meta =>
-      createAboRechnungen(idFactory, meta, aboRechnungCreate)
+    case CreateAnzahlLieferungenRechnungenCommand(originator, aboRechnungCreate) => factory => meta =>
+      createAboRechnungen(factory, meta, aboRechnungCreate)
 
-    case CreateBisGuthabenRechnungenCommand(originator, aboRechnungCreate) => idFactory => meta =>
-      createAboRechnungen(idFactory, meta, aboRechnungCreate)
+    case CreateBisGuthabenRechnungenCommand(originator, aboRechnungCreate) => factory => meta =>
+      createAboRechnungen(factory, meta, aboRechnungCreate)
 
-    case PasswortWechselCommand(originator, personId, pwd, einladungId) => idFactory => meta =>
-      Success(Seq(PasswortGewechseltEvent(meta, personId, pwd, einladungId)))
+    case PasswortWechselCommand(originator, personId, pwd, einladungId) => factory => meta =>
+      Success(Seq(PasswortGewechseltEvent(factory.newMetadata(meta), personId, pwd, einladungId)))
 
-    case LoginDeaktivierenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
-      Success(Seq(LoginDeaktiviertEvent(meta, kundeId, personId)))
+    case LoginDeaktivierenCommand(originator, kundeId, personId) if originator.id != personId => factory => meta =>
+      Success(Seq(LoginDeaktiviertEvent(factory.newMetadata(meta), kundeId, personId)))
 
-    case LoginAktivierenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
-      Success(Seq(LoginAktiviertEvent(meta, kundeId, personId)))
+    case LoginAktivierenCommand(originator, kundeId, personId) if originator.id != personId => factory => meta =>
+      Success(Seq(LoginAktiviertEvent(factory.newMetadata(meta), kundeId, personId)))
 
-    case EinladungSendenCommand(originator, kundeId, personId) if originator.id != personId => idFactory => meta =>
-      sendEinladung(idFactory, meta, kundeId, personId)
+    case EinladungSendenCommand(originator, kundeId, personId) if originator.id != personId => factory => meta =>
+      sendEinladung(factory, meta, kundeId, personId)
 
-    case PasswortResetCommand(originator, personId) => idFactory => meta =>
-      sendPasswortReset(idFactory, meta, personId)
+    case PasswortResetCommand(originator, personId) => factory => meta =>
+      sendPasswortReset(factory, meta, personId)
 
-    case RolleWechselnCommand(originator, kundeId, personId, rolle) if originator.id != personId => idFactory => meta =>
-      changeRolle(idFactory, meta, kundeId, personId, rolle)
+    case RolleWechselnCommand(originator, kundeId, personId, rolle) if originator.id != personId => factory => meta =>
+      changeRolle(factory, meta, kundeId, personId, rolle)
 
-    case AboAktivierenCommand(aboId, originator) => idFactory => meta =>
-      Success(Seq(AboAktiviertEvent(meta, aboId)))
+    case AboAktivierenCommand(aboId, originator) => factory => meta =>
+      Success(Seq(AboAktiviertEvent(factory.newMetadata(meta), aboId)))
 
-    case AboDeaktivierenCommand(aboId, originator) => idFactory => meta =>
-      Success(Seq(AboDeaktiviertEvent(meta, aboId)))
+    case AboDeaktivierenCommand(aboId, originator) => factory => meta =>
+      Success(Seq(AboDeaktiviertEvent(factory.newMetadata(meta), aboId)))
 
     /*
        * Insert command handling
        */
-    case e @ InsertEntityCommand(personId, entity: CustomKundentypCreate) => idFactory => meta =>
-      handleEntityInsert[CustomKundentypCreate, CustomKundentypId](idFactory, meta, entity, CustomKundentypId.apply)
-    case e @ InsertEntityCommand(personId, entity: LieferungenAbotypCreate) => idFactory => meta =>
+    case e @ InsertEntityCommand(personId, entity: CustomKundentypCreate) => factory => meta =>
+      handleEntityInsert[CustomKundentypCreate, CustomKundentypId](factory, meta, entity, CustomKundentypId.apply)
+    case e @ InsertEntityCommand(personId, entity: LieferungenAbotypCreate) => factory => meta =>
       val events = entity.daten.map { datum =>
         val lieferungCreate = copyTo[LieferungenAbotypCreate, LieferungAbotypCreate](entity, "datum" -> datum)
-        insertEntityEvent[LieferungAbotypCreate, LieferungId](idFactory, meta, lieferungCreate, LieferungId.apply)
+        insertEntityEvent[LieferungAbotypCreate, LieferungId](factory, meta, lieferungCreate, LieferungId.apply)
       }
       Success(events)
-    case e @ InsertEntityCommand(personId, entity: LieferungAbotypCreate) => idFactory => meta =>
-      handleEntityInsert[LieferungAbotypCreate, LieferungId](idFactory, meta, entity, LieferungId.apply)
-    case e @ InsertEntityCommand(personId, entity: LieferplanungCreate) => idFactory => meta =>
-      handleEntityInsert[LieferplanungCreate, LieferplanungId](idFactory, meta, entity, LieferplanungId.apply)
-    case e @ InsertEntityCommand(personId, entity: LieferungPlanungAdd) => idFactory => meta =>
-      handleEntityInsert[LieferungPlanungAdd, LieferungId](idFactory, meta, entity, LieferungId.apply)
-    case e @ InsertEntityCommand(personId, entity: LieferpositionenModify) => idFactory => meta =>
-      handleEntityInsert[LieferpositionenModify, LieferpositionId](idFactory, meta, entity, LieferpositionId.apply)
-    case e @ InsertEntityCommand(personId, entity: PendenzModify) => idFactory => meta =>
-      handleEntityInsert[PendenzModify, PendenzId](idFactory, meta, entity, PendenzId.apply)
-    case e @ InsertEntityCommand(personId, entity: PersonCreate) => idFactory => meta =>
-      handleEntityInsert[PersonCreate, PersonId](idFactory, meta, entity, PersonId.apply)
-    case e @ InsertEntityCommand(personId, entity: ProduzentModify) => idFactory => meta =>
-      handleEntityInsert[ProduzentModify, ProduzentId](idFactory, meta, entity, ProduzentId.apply)
-    case e @ InsertEntityCommand(personId, entity: ProduktModify) => idFactory => meta =>
-      handleEntityInsert[ProduktModify, ProduktId](idFactory, meta, entity, ProduktId.apply)
-    case e @ InsertEntityCommand(personId, entity: ProduktProduktekategorie) => idFactory => meta =>
-      handleEntityInsert[ProduktProduktekategorie, ProduktProduktekategorieId](idFactory, meta, entity, ProduktProduktekategorieId.apply)
-    case e @ InsertEntityCommand(personId, entity: ProduktProduzent) => idFactory => meta =>
-      handleEntityInsert[ProduktProduzent, ProduktProduzentId](idFactory, meta, entity, ProduktProduzentId.apply)
-    case e @ InsertEntityCommand(personId, entity: ProduktekategorieModify) => idFactory => meta =>
-      handleEntityInsert[ProduktekategorieModify, ProduktekategorieId](idFactory, meta, entity, ProduktekategorieId.apply)
-    case e @ InsertEntityCommand(personId, entity: ProjektModify) => idFactory => meta =>
-      handleEntityInsert[ProjektModify, ProjektId](idFactory, meta, entity, ProjektId.apply)
-    case e @ InsertEntityCommand(personId, entity: TourCreate) => idFactory => meta =>
-      handleEntityInsert[TourCreate, TourId](idFactory, meta, entity, TourId.apply)
-    case e @ InsertEntityCommand(personId, entity: AbwesenheitCreate) => idFactory => meta =>
-      handleEntityInsert[AbwesenheitCreate, AbwesenheitId](idFactory, meta, entity, AbwesenheitId.apply)
-    case e @ InsertEntityCommand(personId, entity: AbotypModify) => idFactory => meta =>
-      handleEntityInsert[AbotypModify, AbotypId](idFactory, meta, entity, AbotypId.apply)
-    case e @ InsertEntityCommand(personId, entity: DepotModify) => idFactory => meta =>
-      handleEntityInsert[DepotModify, DepotId](idFactory, meta, entity, DepotId.apply)
-    case e @ InsertEntityCommand(personId, entity: DepotlieferungModify) => idFactory => meta =>
-      handleEntityInsert[DepotlieferungModify, VertriebsartId](idFactory, meta, entity, VertriebsartId.apply)
-    case e @ InsertEntityCommand(personId, entity: HeimlieferungModify) => idFactory => meta =>
-      handleEntityInsert[HeimlieferungModify, VertriebsartId](idFactory, meta, entity, VertriebsartId.apply)
-    case e @ InsertEntityCommand(personId, entity: PostlieferungModify) => idFactory => meta =>
-      handleEntityInsert[PostlieferungModify, VertriebsartId](idFactory, meta, entity, VertriebsartId.apply)
-    case e @ InsertEntityCommand(personId, entity: DepotlieferungAbotypModify) => idFactory => meta =>
-      handleEntityInsert[DepotlieferungAbotypModify, VertriebsartId](idFactory, meta, entity, VertriebsartId.apply)
-    case e @ InsertEntityCommand(personId, entity: HeimlieferungAbotypModify) => idFactory => meta =>
-      handleEntityInsert[HeimlieferungAbotypModify, VertriebsartId](idFactory, meta, entity, VertriebsartId.apply)
-    case e @ InsertEntityCommand(personId, entity: PostlieferungAbotypModify) => idFactory => meta =>
-      handleEntityInsert[PostlieferungAbotypModify, VertriebsartId](idFactory, meta, entity, VertriebsartId.apply)
-    case e @ InsertEntityCommand(personId, entity: DepotlieferungAboModify) => idFactory => meta =>
-      handleEntityInsert[DepotlieferungAboModify, AboId](idFactory, meta, entity, AboId.apply)
-    case e @ InsertEntityCommand(personId, entity: HeimlieferungAboModify) => idFactory => meta =>
-      handleEntityInsert[HeimlieferungAboModify, AboId](idFactory, meta, entity, AboId.apply)
-    case e @ InsertEntityCommand(personId, entity: PostlieferungAboModify) => idFactory => meta =>
-      handleEntityInsert[PostlieferungAboModify, AboId](idFactory, meta, entity, AboId.apply)
-    case e @ InsertEntityCommand(personId, entity: PendenzCreate) => idFactory => meta =>
-      handleEntityInsert[PendenzCreate, PendenzId](idFactory, meta, entity, PendenzId.apply)
-    case e @ InsertEntityCommand(personId, entity: VertriebModify) => idFactory => meta =>
-      handleEntityInsert[VertriebModify, VertriebId](idFactory, meta, entity, VertriebId.apply)
-    case e @ InsertEntityCommand(personId, entity: ProjektVorlageCreate) => idFactory => meta =>
-      handleEntityInsert[ProjektVorlageCreate, ProjektVorlageId](idFactory, meta, entity, ProjektVorlageId.apply)
-    case e @ InsertEntityCommand(personId, entity: KundeModify) => idFactory => meta =>
+    case e @ InsertEntityCommand(personId, entity: LieferungAbotypCreate) => factory => meta =>
+      handleEntityInsert[LieferungAbotypCreate, LieferungId](factory, meta, entity, LieferungId.apply)
+    case e @ InsertEntityCommand(personId, entity: LieferplanungCreate) => factory => meta =>
+      handleEntityInsert[LieferplanungCreate, LieferplanungId](factory, meta, entity, LieferplanungId.apply)
+    case e @ InsertEntityCommand(personId, entity: LieferungPlanungAdd) => factory => meta =>
+      handleEntityInsert[LieferungPlanungAdd, LieferungId](factory, meta, entity, LieferungId.apply)
+    case e @ InsertEntityCommand(personId, entity: LieferpositionenModify) => factory => meta =>
+      handleEntityInsert[LieferpositionenModify, LieferpositionId](factory, meta, entity, LieferpositionId.apply)
+    case e @ InsertEntityCommand(personId, entity: PendenzModify) => factory => meta =>
+      handleEntityInsert[PendenzModify, PendenzId](factory, meta, entity, PendenzId.apply)
+    case e @ InsertEntityCommand(personId, entity: PersonCreate) => factory => meta =>
+      handleEntityInsert[PersonCreate, PersonId](factory, meta, entity, PersonId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProduzentModify) => factory => meta =>
+      handleEntityInsert[ProduzentModify, ProduzentId](factory, meta, entity, ProduzentId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProduktModify) => factory => meta =>
+      handleEntityInsert[ProduktModify, ProduktId](factory, meta, entity, ProduktId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProduktProduktekategorie) => factory => meta =>
+      handleEntityInsert[ProduktProduktekategorie, ProduktProduktekategorieId](factory, meta, entity, ProduktProduktekategorieId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProduktProduzent) => factory => meta =>
+      handleEntityInsert[ProduktProduzent, ProduktProduzentId](factory, meta, entity, ProduktProduzentId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProduktekategorieModify) => factory => meta =>
+      handleEntityInsert[ProduktekategorieModify, ProduktekategorieId](factory, meta, entity, ProduktekategorieId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProjektModify) => factory => meta =>
+      handleEntityInsert[ProjektModify, ProjektId](factory, meta, entity, ProjektId.apply)
+    case e @ InsertEntityCommand(personId, entity: TourCreate) => factory => meta =>
+      handleEntityInsert[TourCreate, TourId](factory, meta, entity, TourId.apply)
+    case e @ InsertEntityCommand(personId, entity: AbwesenheitCreate) => factory => meta =>
+      handleEntityInsert[AbwesenheitCreate, AbwesenheitId](factory, meta, entity, AbwesenheitId.apply)
+    case e @ InsertEntityCommand(personId, entity: AbotypModify) => factory => meta =>
+      handleEntityInsert[AbotypModify, AbotypId](factory, meta, entity, AbotypId.apply)
+    case e @ InsertEntityCommand(personId, entity: DepotModify) => factory => meta =>
+      handleEntityInsert[DepotModify, DepotId](factory, meta, entity, DepotId.apply)
+    case e @ InsertEntityCommand(personId, entity: DepotlieferungModify) => factory => meta =>
+      handleEntityInsert[DepotlieferungModify, VertriebsartId](factory, meta, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(personId, entity: HeimlieferungModify) => factory => meta =>
+      handleEntityInsert[HeimlieferungModify, VertriebsartId](factory, meta, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(personId, entity: PostlieferungModify) => factory => meta =>
+      handleEntityInsert[PostlieferungModify, VertriebsartId](factory, meta, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(personId, entity: DepotlieferungAbotypModify) => factory => meta =>
+      handleEntityInsert[DepotlieferungAbotypModify, VertriebsartId](factory, meta, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(personId, entity: HeimlieferungAbotypModify) => factory => meta =>
+      handleEntityInsert[HeimlieferungAbotypModify, VertriebsartId](factory, meta, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(personId, entity: PostlieferungAbotypModify) => factory => meta =>
+      handleEntityInsert[PostlieferungAbotypModify, VertriebsartId](factory, meta, entity, VertriebsartId.apply)
+    case e @ InsertEntityCommand(personId, entity: DepotlieferungAboModify) => factory => meta =>
+      handleEntityInsert[DepotlieferungAboModify, AboId](factory, meta, entity, AboId.apply)
+    case e @ InsertEntityCommand(personId, entity: HeimlieferungAboModify) => factory => meta =>
+      handleEntityInsert[HeimlieferungAboModify, AboId](factory, meta, entity, AboId.apply)
+    case e @ InsertEntityCommand(personId, entity: PostlieferungAboModify) => factory => meta =>
+      handleEntityInsert[PostlieferungAboModify, AboId](factory, meta, entity, AboId.apply)
+    case e @ InsertEntityCommand(personId, entity: PendenzCreate) => factory => meta =>
+      handleEntityInsert[PendenzCreate, PendenzId](factory, meta, entity, PendenzId.apply)
+    case e @ InsertEntityCommand(personId, entity: VertriebModify) => factory => meta =>
+      handleEntityInsert[VertriebModify, VertriebId](factory, meta, entity, VertriebId.apply)
+    case e @ InsertEntityCommand(personId, entity: ProjektVorlageCreate) => factory => meta =>
+      handleEntityInsert[ProjektVorlageCreate, ProjektVorlageId](factory, meta, entity, ProjektVorlageId.apply)
+    case e @ InsertEntityCommand(personId, entity: KundeModify) => factory => meta =>
       if (entity.ansprechpersonen.isEmpty) {
         Failure(new InvalidStateException(s"Zum Erstellen eines Kunden muss mindestens ein Ansprechpartner angegeben werden"))
       } else {
         logger.debug(s"created => Insert entity:$entity")
-        val kundeEvent = EntityInsertedEvent(meta, KundeId(idFactory(classOf[KundeId])), entity)
+        val kundeEvent = EntityInsertedEvent(factory.newMetadata(meta), KundeId(factory.newId(classOf[KundeId])), entity)
 
         val kundeId = kundeEvent.id
         val apartnerEvents = entity.ansprechpersonen.zipWithIndex.map {
@@ -365,7 +365,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             val sort = index + 1
             val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> kundeId, "sort" -> sort)
             logger.debug(s"created => Insert entity:$personCreate")
-            EntityInsertedEvent(meta, PersonId(idFactory(classOf[PersonId])), personCreate)
+            EntityInsertedEvent(factory.newMetadata(meta), PersonId(factory.newId(classOf[PersonId])), personCreate)
         }
 
         Success(kundeEvent +: apartnerEvents)
@@ -374,14 +374,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     /*
     * Custom update command handling
     */
-    case UpdateEntityCommand(personId, id: KundeId, entity: KundeModify) => idFactory => meta =>
+    case UpdateEntityCommand(personId, id: KundeId, entity: KundeModify) => factory => meta =>
       val partitions = entity.ansprechpersonen.partition(_.id.isDefined)
       val newPersons = partitions._2.zipWithIndex.map {
         case (newPerson, index) =>
           //generate persistent id for new person
           val sort = partitions._1.length + index
           val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
-          val event = EntityInsertedEvent(meta, PersonId(idFactory(classOf[PersonId])), personCreate)
+          val event = EntityInsertedEvent(factory.newMetadata(meta), PersonId(factory.newId(classOf[PersonId])), personCreate)
           (event, newPerson.copy(id = Some(event.id)))
       }
       val newPersonsEvents = newPersons.map(_._1)
@@ -391,37 +391,37 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       val newPendenzen = pendenzenPartitions._2.map {
         case newPendenz =>
           val pendenzCreate = copyTo[PendenzModify, PendenzCreate](newPendenz, "kundeId" -> id, "generiert" -> FALSE)
-          val event = EntityInsertedEvent(meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
+          val event = EntityInsertedEvent(factory.newMetadata(meta), PendenzId(factory.newId(classOf[PendenzId])), pendenzCreate)
           (event, newPendenz.copy(id = Some(event.id)))
       }
       val newPendenzenEvents = newPendenzen.map(_._1)
       val updatePendenzen = (pendenzenPartitions._1 ++ newPendenzen.map(_._2))
 
       val updateEntity = entity.copy(ansprechpersonen = updatePersons, pendenzen = updatePendenzen)
-      val updateEvent = EntityUpdatedEvent(meta, id, updateEntity)
+      val updateEvent = EntityUpdatedEvent(factory.newMetadata(meta), id, updateEntity)
       Success(updateEvent +: (newPersonsEvents ++ newPendenzenEvents))
 
-    case UpdateEntityCommand(personId, id: AboId, entity: AboGuthabenModify) => idFactory => meta =>
+    case UpdateEntityCommand(personId, id: AboId, entity: AboGuthabenModify) => factory => meta =>
       DB readOnly { implicit session =>
         //TODO: assemble text using gettext
         stammdatenWriteRepository.getAboDetail(id) match {
           case Some(abo) => {
             val text = s"Guthaben manuell angepasst. Abo Nr.: ${id.id}; Bisher: ${abo.guthaben}; Neu: ${entity.guthabenNeu}; Grund: ${entity.bemerkung}"
-            val pendenzEvent = addKundenPendenz(idFactory, meta, id, text)
-            Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+            val pendenzEvent = addKundenPendenz(factory, meta, id, text)
+            Success(Seq(Some(EntityUpdatedEvent(factory.newMetadata(meta), id, entity)), pendenzEvent).flatten)
           }
           case None =>
             Failure(new InvalidStateException(s"UpdateEntityCommand: Abo konnte nicht gefunden werden"))
         }
       }
-    case UpdateEntityCommand(personId, id: AboId, entity: AboVertriebsartModify) => idFactory => meta =>
+    case UpdateEntityCommand(personId, id: AboId, entity: AboVertriebsartModify) => factory => meta =>
       //TODO: assemble text using gettext
       val text = s"Vertriebsart angepasst. Abo Nr.: ${id.id}, Neu: ${entity.vertriebsartIdNeu}; Grund: ${entity.bemerkung}"
-      val pendenzEvent = addKundenPendenz(idFactory, meta, id, text)
-      Success(Seq(Some(EntityUpdatedEvent(meta, id, entity)), pendenzEvent).flatten)
+      val pendenzEvent = addKundenPendenz(factory, meta, id, text)
+      Success(Seq(Some(EntityUpdatedEvent(factory.newMetadata(meta), id, entity)), pendenzEvent).flatten)
   }
 
-  def addKundenPendenz(idFactory: IdFactory, meta: EventMetadata, id: AboId, bemerkung: String): Option[PersistentEvent] = {
+  def addKundenPendenz(factory: EventFactory, meta: EventTransactionMetadata, id: AboId, bemerkung: String): Option[PersistentEvent] = {
     DB readOnly { implicit session =>
       // zusätzlich eine pendenz erstellen
       ((stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
@@ -435,12 +435,12 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         //TODO: assemble text using gettext
         val title = "Guthaben angepasst: "
         val pendenzCreate = PendenzCreate(kundeId, meta.timestamp, Some(bemerkung), Erledigt, true)
-        EntityInsertedEvent[PendenzId, PendenzCreate](meta, PendenzId(idFactory(classOf[PendenzId])), pendenzCreate)
+        EntityInsertedEvent[PendenzId, PendenzCreate](factory.newMetadata(meta), PendenzId(factory.newId(classOf[PendenzId])), pendenzCreate)
       }
     }
   }
 
-  def createAboRechnungen(idFactory: IdFactory, meta: EventMetadata, aboRechnungCreate: AboRechnungCreate) = {
+  def createAboRechnungen(factory: EventFactory, meta: EventTransactionMetadata, aboRechnungCreate: AboRechnungCreate) = {
     DB readOnly { implicit session =>
       val (events, failures) = aboRechnungCreate.ids map { id =>
         stammdatenWriteRepository.getAboDetail(id) flatMap { aboDetail =>
@@ -477,7 +477,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                     kunde.ortLieferung getOrElse kunde.ort
                   )
 
-                  Success(insertEntityEvent(idFactory, meta, rechnung, RechnungId.apply))
+                  Success(insertEntityEvent(factory, meta, rechnung, RechnungId.apply))
                 } else {
                   Failure(new InvalidStateException(s"Für das Abo mit der Id $id wurde keine Rechnung erstellt. Anzahl Lieferungen 0"))
                 }
@@ -495,11 +495,11 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }
   }
 
-  def sendEinladung(idFactory: IdFactory, meta: EventMetadata, kundeId: KundeId, personId: PersonId) = {
+  def sendEinladung(factory: EventFactory, meta: EventTransactionMetadata, kundeId: KundeId, personId: PersonId) = {
     DB readOnly { implicit session =>
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         person.email map { email =>
-          val id = EinladungId(idFactory(classOf[EinladungId]))
+          val id = EinladungId(factory.newId(classOf[EinladungId]))
 
           val einladung = EinladungCreate(
             id,
@@ -509,7 +509,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             None
           )
 
-          Success(Seq(EinladungGesendetEvent(meta, einladung)))
+          Success(Seq(EinladungGesendetEvent(factory.newMetadata(meta), einladung)))
         } getOrElse {
           Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
         }
@@ -519,11 +519,11 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }
   }
 
-  def sendPasswortReset(idFactory: IdFactory, meta: EventMetadata, personId: PersonId) = {
+  def sendPasswortReset(factory: EventFactory, meta: EventTransactionMetadata, personId: PersonId) = {
     DB readOnly { implicit session =>
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         person.email map { email =>
-          val id = EinladungId(idFactory(classOf[EinladungId]))
+          val id = EinladungId(factory.newId(classOf[EinladungId]))
 
           val einladung = EinladungCreate(
             id,
@@ -533,7 +533,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             None
           )
 
-          Success(Seq(PasswortResetGesendetEvent(meta, einladung)))
+          Success(Seq(PasswortResetGesendetEvent(factory.newMetadata(meta), einladung)))
         } getOrElse {
           Failure(new InvalidStateException(s"Dieser Person kann keine Einladung gesendet werden da sie keine Emailadresse besitzt."))
         }
@@ -543,17 +543,17 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }
   }
 
-  def changeRolle(idFactory: IdFactory, meta: EventMetadata, kundeId: KundeId, personId: PersonId, rolle: Rolle) = {
+  def changeRolle(factory: EventFactory, meta: EventTransactionMetadata, kundeId: KundeId, personId: PersonId, rolle: Rolle) = {
     DB readOnly { implicit session =>
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         person.rolle map { existingRolle =>
           if (existingRolle != rolle) {
-            Success(Seq(RolleGewechseltEvent(meta, kundeId, personId, rolle)))
+            Success(Seq(RolleGewechseltEvent(factory.newMetadata(meta), kundeId, personId, rolle)))
           } else {
             Failure(new InvalidStateException(s"Die Person mit der Id: $personId hat bereits die Rolle: $rolle."))
           }
         } getOrElse {
-          Success(Seq(RolleGewechseltEvent(meta, kundeId, personId, rolle)))
+          Success(Seq(RolleGewechseltEvent(factory.newMetadata(meta), kundeId, personId, rolle)))
         }
       } getOrElse {
         Failure(new InvalidStateException(s"Person wurde nicht gefunden."))

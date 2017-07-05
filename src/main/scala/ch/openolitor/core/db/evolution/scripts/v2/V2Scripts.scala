@@ -30,6 +30,7 @@ object V2Scripts {
       sql"""create table if not exists ${persistenceEventStateMapping.table}  (
         id BIGINT not null,
         persistence_id varchar(100) not null,
+        last_transaction_nr BIGINT default 0,
         last_sequence_nr BIGINT default 0,
         erstelldat datetime not null,
         ersteller BIGINT not null,
@@ -40,14 +41,14 @@ object V2Scripts {
       val persistentActorStates = queryLatestPersistenceMessageByPersistenceIdQuery.apply().map { messagePerPersistenceId =>
         //find latest sequence nr
         messagePerPersistenceId.message.map { message =>
-          PersistenceEventState(PersistenceEventStateId(), messagePerPersistenceId.persistenceId, message.meta.seqNr, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
+          PersistenceEventState(PersistenceEventStateId(), messagePerPersistenceId.persistenceId, message.meta.seqNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
         }
       }.flatten
 
       // append persistent views
       val persistentViewStates = persistentActorStates.filter(_.persistenceId == "entity-store").flatMap(newState =>
         Seq("buchhaltung", "stammdaten").map { module =>
-          PersistenceEventState(PersistenceEventStateId(), s"$module-entity-store", newState.lastSequenceNr, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
+          PersistenceEventState(PersistenceEventStateId(), s"$module-entity-store", newState.lastSequenceNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
         })
 
       implicit val personId = Boot.systemPersonId

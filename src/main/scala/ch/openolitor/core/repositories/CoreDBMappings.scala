@@ -69,6 +69,7 @@ trait CoreDBMappings extends DBMappings {
 
     override def updateParameters(state: PersistenceEventState) = {
       Seq(
+        column.lastTransactionNr -> parameter(state.lastTransactionNr),
         column.lastSequenceNr -> parameter(state.lastSequenceNr)
       )
     }

@@ -24,6 +24,7 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
   def persistenceStateStoreId: String
 
   lazy val peState = persistenceEventStateMapping.syntax("pe_state")
+  private var lastTransactionNr = 0L
   private var lastSequenceNr = 0L
   var dbState: DBEvolutionActor.DBEvolutionState = _
 
@@ -38,7 +39,9 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
     log.debug(s"preStart PersistenceEventStateSupport")
     dbEvolutionActor ? DBEvolutionActor.CheckDBEvolution map {
       case Success(state: DBEvolutionActor.DBEvolutionState) =>
-        lastSequenceNr = loadLastSequenceNr()
+        val (tnr, snr) = loadLastSequenceNr()
+        lastTransactionNr = tnr
+        lastSequenceNr = snr
         dbState = state
         log.debug(s"Initialize PersistenceEventStateSupport ${persistenceStateStoreId} to lastSequenceNr: $lastSequenceNr")
         super.preStart()
@@ -52,9 +55,11 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
 
   def lastProcessedSequenceNr = lastSequenceNr
 
-  protected def loadLastSequenceNr(): Long = {
+  def lastProcessedTransactionNr = lastTransactionNr
+
+  protected def loadLastSequenceNr(): (Long, Long) = {
     DB readOnly { implicit session =>
-      getByPersistenceId(persistenceStateStoreId) map (_.lastSequenceNr) getOrElse (0L)
+      getByPersistenceId(persistenceStateStoreId) map (x => (x.lastTransactionNr, x.lastSequenceNr)) getOrElse ((0L, 0L))
     }
   }
 
@@ -66,24 +71,32 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
     }.map(persistenceEventStateMapping.apply(peState)).single.apply()
   }
 
-  protected def setLastProcessedSequenceNr(sequenceNr: Long): Boolean = {
-    if (sequenceNr > lastSequenceNr) {
-      lastSequenceNr = sequenceNr
-      DB autoCommit { implicit session =>
-        getByPersistenceId(persistenceStateStoreId) match {
-          case Some(entity: PersistenceEventState) =>
-            val modEntity = entity.copy(lastSequenceNr = sequenceNr, modifidat = DateTime.now)
-            val params = persistenceEventStateMapping.updateParameters(modEntity)
-            val id = peState.id
-            withSQL(update(persistenceEventStateMapping as peState).set(params: _*).where.eq(id, parameter(modEntity.id))).update.apply() == 1
-          case None =>
-            val entity = PersistenceEventState(PersistenceEventStateId(), persistenceStateStoreId, sequenceNr, DateTime.now, personId, DateTime.now, personId)
-            val params = persistenceEventStateMapping.parameterMappings(entity)
-            withSQL(insertInto(persistenceEventStateMapping).values(params: _*)).update.apply() == 1
-        }
-      }
+  protected def setLastProcessedSequenceNr(meta: EventMetadata): Boolean = {
+    if (meta.transactionNr > lastTransactionNr) {
+      lastSequenceNr = meta.seqNr
+      lastTransactionNr = meta.transactionNr
+      upatePersistenceEventState()
+    } else if (meta.transactionNr == lastTransactionNr && meta.seqNr > lastSequenceNr) {
+      lastSequenceNr = meta.seqNr
+      upatePersistenceEventState()
     } else {
       true
+    }
+  }
+
+  private def upatePersistenceEventState() = {
+    DB autoCommit { implicit session =>
+      getByPersistenceId(persistenceStateStoreId) match {
+        case Some(entity: PersistenceEventState) =>
+          val modEntity = entity.copy(lastTransactionNr = lastTransactionNr, lastSequenceNr = lastSequenceNr, modifidat = DateTime.now)
+          val params = persistenceEventStateMapping.updateParameters(modEntity)
+          val id = peState.id
+          withSQL(update(persistenceEventStateMapping as peState).set(params: _*).where.eq(id, parameter(modEntity.id))).update.apply() == 1
+        case None =>
+          val entity = PersistenceEventState(PersistenceEventStateId(), persistenceStateStoreId, lastTransactionNr, lastSequenceNr, DateTime.now, personId, DateTime.now, personId)
+          val params = persistenceEventStateMapping.parameterMappings(entity)
+          withSQL(insertInto(persistenceEventStateMapping).values(params: _*)).update.apply() == 1
+      }
     }
   }
 }

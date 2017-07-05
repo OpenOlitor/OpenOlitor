@@ -29,6 +29,7 @@ case class PersistenceEventStateId(id: Long = IdUtil.positiveRandomId) extends B
 case class PersistenceEventState(
   id: PersistenceEventStateId,
   persistenceId: String,
+  lastTransactionNr: Long,
   lastSequenceNr: Long,
   //modification flags
   erstelldat: DateTime,

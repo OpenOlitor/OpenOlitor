@@ -59,18 +59,18 @@ object EventStoreSerializer extends EntityStoreJsonProtocol
   // entity store serialization
   val entityPersisters = Persisters(corePersisters ++ stammdatenPersisters ++ buchhaltungPersisters)
   val entityStoreInitializedPersister = persister[EntityStoreInitialized]("entity-store-initialized")
-  val entityInsertEventPersister = new EntityInsertEventPersister[V1](entityPersisters)
-  val entityUpdatedEventPersister = new EntityUpdatedEventPersister[V1](entityPersisters)
-  val entityDeletedEventPersister = new EntityDeletedEventPersister[V1](entityPersisters)
+  val entityInsertEventPersister = new EntityInsertEventPersister(entityPersisters)
+  val entityUpdatedEventPersister = new EntityUpdatedEventPersister(entityPersisters)
+  val entityDeletedEventPersister = new EntityDeletedEventPersister(entityPersisters)
 
   // system event serialization
   val eventPersisters = Persisters(systemEventPersisters)
-  val systemEventPersister = new SystemEventPersister[V1](eventPersisters)
+  val systemEventPersister = new SystemEventPersister(eventPersisters)
 
   // mail event serialization
-  val sendMailEventPersister = new SendMailEventPersister[V1](entityPersisters ++ eventPersisters)
-  val mailSentEventPersister = new MailSentEventPersister[V1](entityPersisters ++ eventPersisters)
-  val sendMailFailedEventPersister = new SendMailFailedEventPersister[V1](entityPersisters ++ eventPersisters)
+  val sendMailEventPersister = new SendMailEventPersister(entityPersisters ++ eventPersisters)
+  val mailSentEventPersister = new MailSentEventPersister(entityPersisters ++ eventPersisters)
+  val sendMailFailedEventPersister = new SendMailFailedEventPersister(entityPersisters ++ eventPersisters)
 
   val eventStorePersisters = List(
     entityStoreInitializedPersister,

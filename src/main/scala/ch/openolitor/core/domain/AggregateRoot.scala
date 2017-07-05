@@ -69,7 +69,7 @@ trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEv
     log.debug(s"afterEventPersisted:send back state:$state")
     sender ! state
 
-    setLastProcessedSequenceNr(evt.meta.seqNr)
+    setLastProcessedSequenceNr(evt.meta)
   }
 
   protected def publish(event: Object) =

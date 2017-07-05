@@ -81,70 +81,70 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
   import BuchhaltungCommandHandler._
   import EntityStore._
 
-  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
-    case RechnungVerschickenCommand(personId, id: RechnungId) => idFactory => meta =>
+  override val handle: PartialFunction[UserCommand, EventFactory => EventTransactionMetadata => Try[Seq[PersistentEvent]]] = {
+    case RechnungVerschickenCommand(personId, id: RechnungId) => factory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Erstellt =>
-              Success(Seq(RechnungVerschicktEvent(meta, id)))
+              Success(Seq(RechnungVerschicktEvent(factory.newMetadata(meta), id)))
             case _ =>
               Failure(new InvalidStateException("Eine Rechnung kann nur im Status 'Erstellt' verschickt werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungenVerschickenCommand(personId, ids: Seq[RechnungId]) => idFactory => meta =>
+    case RechnungenVerschickenCommand(personId, ids: Seq[RechnungId]) => factory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getByIds(rechnungMapping, ids) filter (_.status == Erstellt) match {
           case Seq() => Failure(new InvalidStateException("Keine Rechnung im Status 'Erstellt' selektiert"))
           case validatedRechnungen =>
-            Success(validatedRechnungen.map(r => RechnungVerschicktEvent(meta, r.id)))
+            Success(validatedRechnungen.map(r => RechnungVerschicktEvent(factory.newMetadata(meta), r.id)))
         }
       }
 
-    case RechnungMahnungVerschickenCommand(personId, id: RechnungId) => idFactory => meta =>
+    case RechnungMahnungVerschickenCommand(personId, id: RechnungId) => factory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt =>
-              Success(Seq(RechnungMahnungVerschicktEvent(meta, id)))
+              Success(Seq(RechnungMahnungVerschicktEvent(factory.newMetadata(meta), id)))
             case _ =>
               Failure(new InvalidStateException("Eine Mahnung kann nur im Status 'Verschickt' verschickt werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungBezahlenCommand(personId, id: RechnungId, entity: RechnungModifyBezahlt) => idFactory => meta =>
+    case RechnungBezahlenCommand(personId, id: RechnungId, entity: RechnungModifyBezahlt) => factory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Verschickt | MahnungVerschickt =>
-              Success(Seq(RechnungBezahltEvent(meta, id, entity)))
+              Success(Seq(RechnungBezahltEvent(factory.newMetadata(meta), id, entity)))
             case _ =>
               Failure(new InvalidStateException("Eine Rechnung kann nur im Status 'Verschickt' oder 'MahnungVerschickt' bezahlt werden"))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case RechnungStornierenCommand(personId, id: RechnungId) => idFactory => meta =>
+    case RechnungStornierenCommand(personId, id: RechnungId) => factory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
           rechnung.status match {
             case Bezahlt =>
               Failure(new InvalidStateException("Eine Rechnung im Status 'Bezahlt' kann nicht mehr storniert werden"))
             case _ =>
-              Success(Seq(RechnungStorniertEvent(meta, id)))
+              Success(Seq(RechnungStorniertEvent(factory.newMetadata(meta), id)))
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
 
-    case ZahlungsImportCreateCommand(personId, file, zahlungsEingaengeRecords) => idFactory => meta =>
-      val id = ZahlungsImportId(idFactory(classOf[ZahlungsImportId]))
+    case ZahlungsImportCreateCommand(personId, file, zahlungsEingaengeRecords) => factory => meta =>
+      val id = ZahlungsImportId(factory.newId(classOf[ZahlungsImportId]))
       val zahlungsEingaenge = zahlungsEingaengeRecords collect {
         // ignoring total records for now
         case result: ZahlungsImportRecord =>
-          val zahlungsEingangId = ZahlungsEingangId(idFactory(classOf[ZahlungsEingangId]))
+          val zahlungsEingangId = ZahlungsEingangId(factory.newId(classOf[ZahlungsEingangId]))
 
           ZahlungsEingangCreate(
             zahlungsEingangId,
@@ -162,22 +162,22 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
           )
       }
 
-      Success(Seq(ZahlungsImportCreatedEvent(meta, ZahlungsImportCreate(id, file, zahlungsEingaenge))))
+      Success(Seq(ZahlungsImportCreatedEvent(factory.newMetadata(meta), ZahlungsImportCreate(id, file, zahlungsEingaenge))))
 
-    case ZahlungsEingangErledigenCommand(personId, entity) => idFactory => meta =>
+    case ZahlungsEingangErledigenCommand(personId, entity) => factory => meta =>
       DB readOnly { implicit session =>
         buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
           if (!eingang.erledigt) {
-            Success(Seq(ZahlungsEingangErledigtEvent(meta, entity)))
+            Success(Seq(ZahlungsEingangErledigtEvent(factory.newMetadata(meta), entity)))
           } else {
             Success(Seq())
           }
         } getOrElse (Failure(new InvalidStateException(s"Kein Zahlungseingang mit der Nr. ${entity.id} gefunden")))
       }
 
-    case ZahlungsEingaengeErledigenCommand(userId, entities) => idFactory => meta =>
+    case ZahlungsEingaengeErledigenCommand(userId, entities) => factory => meta =>
       val (successfuls, failures) = entities map { entity =>
-        handle(ZahlungsEingangErledigenCommand(userId, entity))(idFactory)(meta)
+        handle(ZahlungsEingangErledigenCommand(userId, entity))(factory)(meta)
       } partition (_.isSuccess)
 
       if (successfuls.isEmpty) {
@@ -186,17 +186,17 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         Success(successfuls flatMap (_.get))
       }
 
-    case RechnungPDFStoredCommand(personId, id, fileStoreId) => idFactory => meta =>
-      Success(Seq(RechnungPDFStoredEvent(meta, id, fileStoreId)))
+    case RechnungPDFStoredCommand(personId, id, fileStoreId) => factory => meta =>
+      Success(Seq(RechnungPDFStoredEvent(factory.newMetadata(meta), id, fileStoreId)))
 
-    case MahnungPDFStoredCommand(personId, id, fileStoreId) => idFactory => meta =>
-      Success(Seq(MahnungPDFStoredEvent(meta, id, fileStoreId)))
+    case MahnungPDFStoredCommand(personId, id, fileStoreId) => factory => meta =>
+      Success(Seq(MahnungPDFStoredEvent(factory.newMetadata(meta), id, fileStoreId)))
 
     /*
        * Insert command handling
        */
-    case e @ InsertEntityCommand(personId, entity: RechnungCreate) => idFactory => meta =>
-      handleEntityInsert[RechnungCreate, RechnungId](idFactory, meta, entity, RechnungId.apply)
+    case e @ InsertEntityCommand(personId, entity: RechnungCreate) => factory => meta =>
+      handleEntityInsert[RechnungCreate, RechnungId](factory, meta, entity, RechnungId.apply)
   }
 }
 

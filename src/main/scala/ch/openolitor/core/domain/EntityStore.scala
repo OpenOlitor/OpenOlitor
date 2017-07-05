@@ -51,7 +51,7 @@ import ch.openolitor.core.DBEvolutionReference
 object EntityStore {
   import AggregateRoot._
 
-  val VERSION = 1
+  val VERSION = 2
 
   val persistenceId = "entity-store"
 
@@ -89,7 +89,7 @@ object EntityStore {
 trait EntityStoreJsonProtocol extends BaseJsonProtocol {
   import EntityStore._
 
-  implicit val metadataFormat = jsonFormat5(EventMetadata)
+  implicit val metadataFormat = jsonFormat6(EventMetadata)
   implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)
 }
 
@@ -182,12 +182,10 @@ trait EntityStore extends AggregateRoot
       context become created
     case Startup =>
       context become created
-      //reprocess event
-      created(Startup)
       sender ! Started
     case e =>
       log.debug(s"uninitialized => Initialize eventstore with event:$e, $self")
-      persist(EntityStoreInitialized(metadata(Boot.systemPersonId)))(afterEventPersisted)
+      persist(EntityStoreInitialized(metadata(Boot.systemPersonId).toMetadata(1L)))(afterEventPersisted)
       context become created
       //reprocess event
       created(e)
@@ -206,7 +204,7 @@ trait EntityStore extends AggregateRoot
     case command: UserCommand =>
       val meta = metadata(command.originator)
       val result = moduleCommandHandlers collectFirst { case ch: CommandHandler if ch.handle.isDefinedAt((command)) => ch.handle(command) } map { handle =>
-        handle(newId)(meta) match {
+        handle(new EventFactory(newId))(meta) match {
           case Success(resultingEvents) =>
             log.debug(s"handled command: $command in module specific command handler.")
             resultingEvents map { resultingEvent =>
@@ -241,7 +239,7 @@ trait EntityStore extends AggregateRoot
   }
 
   def metadata(personId: PersonId) = {
-    EventMetadata(personId, VERSION, DateTime.now, lastProcessedSequenceNr + 1, persistenceId)
+    EventTransactionMetadata(personId, VERSION, DateTime.now, lastProcessedTransactionNr + 1, persistenceId)
   }
 
   /**

@@ -36,6 +36,8 @@ import ch.openolitor.stammdaten.models.{ AboId, AbwesenheitCreate, AbwesenheitId
 
 import akka.actor.ActorSystem
 import scalikejdbc.DB
+import ch.openolitor.core.domain.EventFactory
+import ch.openolitor.core.domain.EventTransactionMetadata
 
 object KundenportalCommandHandler {
   case class AbwesenheitErstellenCommand(originator: PersonId, subject: Subject, entity: AbwesenheitCreate) extends UserCommand
@@ -47,23 +49,23 @@ trait KundenportalCommandHandler extends CommandHandler with BuchhaltungDBMappin
   import KundenportalCommandHandler._
   import EntityStore._
 
-  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
-    case AbwesenheitErstellenCommand(personId, subject, entity: AbwesenheitCreate) => idFactory => meta =>
+  override val handle: PartialFunction[UserCommand, EventFactory => EventTransactionMetadata => Try[Seq[PersistentEvent]]] = {
+    case AbwesenheitErstellenCommand(personId, subject, entity: AbwesenheitCreate) => factory => meta =>
       DB readOnly { implicit session =>
         kundenportalWriteRepository.getAbo(entity.aboId) map { abo =>
           if (subject.kundeId == abo.kundeId && abo.id == entity.aboId) {
-            handleEntityInsert[AbwesenheitCreate, AbwesenheitId](idFactory, meta, entity, AbwesenheitId.apply)
+            handleEntityInsert[AbwesenheitCreate, AbwesenheitId](factory, meta, entity, AbwesenheitId.apply)
           } else {
             Failure(new InvalidStateException("Es können nur Abwesenheiten auf eigenen Abos erstellt werden."))
           }
         } getOrElse (Failure(new InvalidStateException(s"Das Abo dieser Abwesenheit wurden nicht gefunden.")))
       }
 
-    case AbwesenheitLoeschenCommand(personId, subject, aboId, abwesenheitId) => idFactory => meta =>
+    case AbwesenheitLoeschenCommand(personId, subject, aboId, abwesenheitId) => factory => meta =>
       DB readOnly { implicit session =>
         kundenportalWriteRepository.getAbo(aboId) map { abo =>
           if (subject.kundeId == abo.kundeId) {
-            Success(Seq(EntityDeletedEvent(meta, abwesenheitId)))
+            Success(Seq(EntityDeletedEvent(factory.newMetadata(meta), abwesenheitId)))
           } else {
             Failure(new InvalidStateException("Es können nur Abwesenheiten eigener Abos entfernt werden."))
           }

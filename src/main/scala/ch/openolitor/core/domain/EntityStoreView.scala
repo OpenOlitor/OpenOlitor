@@ -91,9 +91,10 @@ trait EntityStoreView extends PersistentView with DBEvolutionReference with Lazy
       log.debug("Received Startup command")
       startup()
       sender ! Started
-    case e: PersistentEvent if e.meta.seqNr <= lastProcessedSequenceNr =>
-      //ignore already processed event
-      logger.debug(s"Ignore event in:$viewId, message already processed: ${e.meta.seqNr} <= ${lastProcessedSequenceNr}")
+    case e: PersistentEvent if e.meta.transactionNr < lastProcessedTransactionNr =>
+    //ignore already processed event
+    case e: PersistentEvent if e.meta.transactionNr == lastProcessedTransactionNr && e.meta.seqNr <= lastProcessedSequenceNr =>
+    //ignore already processed event
     case e: PersistentEvent =>
       logger.debug(s"Process new event ${e} in:$viewId: ${e.meta.seqNr}")
       processNewEvents(e)
@@ -120,7 +121,7 @@ trait EntityStoreView extends PersistentView with DBEvolutionReference with Lazy
     Try(handle(event)) match {
       case Success(_) =>
         // update last processed sequence number of event if event could get processed successfully
-        setLastProcessedSequenceNr(event.meta.seqNr)
+        setLastProcessedSequenceNr(event.meta)
       case Failure(e) =>
         log.error(s"Couldn't execute event:$e, error: {}", e)
         // forward exception which should get handled outside of this code
