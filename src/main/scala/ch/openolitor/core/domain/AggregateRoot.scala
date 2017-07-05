@@ -64,9 +64,9 @@ trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEv
 
   override val persistenceStateStoreId = persistenceId
 
-  override def preStart(): Unit = {
-    super.preStart()
+  override def dbInitialized(): Unit = {
     lastAquiredTransactionNr = lastProcessedTransactionNr
+    log.debug(s"$persistenceId: initialize aquire transaction nr to ${lastAquiredTransactionNr}")
   }
 
   protected def afterEventPersisted(evt: PersistentEvent): Unit = {
