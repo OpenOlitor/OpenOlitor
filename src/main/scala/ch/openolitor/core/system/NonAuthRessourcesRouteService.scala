@@ -56,6 +56,7 @@ trait NonAuthRessourcesRouteService extends HttpService with ActorReferences
   val eventStore: akka.actor.ActorRef = null
   val mailService: akka.actor.ActorRef = null
   val reportSystem: akka.actor.ActorRef = null
+  val dbEvolutionActor: akka.actor.ActorRef = null
 
   def ressourcesRoutes = pathPrefix("ressource") {
     staticFileRoute

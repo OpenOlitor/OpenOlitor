@@ -47,7 +47,6 @@ import akka.pattern.ask
 import scala.concurrent.Future
 import akka.util.Timeout
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 import spray.json._
 import ch.openolitor.core.BaseJsonProtocol._
 import com.typesafe.config.Config
@@ -91,14 +90,16 @@ import scala.collection.Iterable
 import collection.JavaConverters._
 import java.io.File
 import java.io.FileInputStream
+import ch.openolitor.core.db.evolution.DBEvolutionActor.CheckDBEvolution
+import scala.concurrent.ExecutionContext
 
 sealed trait ResponseType
 case object Download extends ResponseType
 case object Fetch extends ResponseType
 
 object RouteServiceActor {
-  def props(entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, airbrakeNotifier: ActorRef, jobQueueService: ActorRef, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
-    Props(classOf[DefaultRouteServiceActor], entityStore, eventStore, mailService, reportSystem, fileStore, airbrakeNotifier, jobQueueService, sysConfig, system, loginTokenCache)
+  def props(dbEvolutionActor: ActorRef, entityStore: ActorRef, eventStore: ActorRef, mailService: ActorRef, reportSystem: ActorRef, fileStore: FileStore, airbrakeNotifier: ActorRef, jobQueueService: ActorRef, loginTokenCache: Cache[Subject])(implicit sysConfig: SystemConfig, system: ActorSystem): Props =
+    Props(classOf[DefaultRouteServiceActor], dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, fileStore, airbrakeNotifier, jobQueueService, sysConfig, system, loginTokenCache)
 }
 
 trait RouteServiceComponent extends ActorReferences {
@@ -120,12 +121,12 @@ trait RouteServiceComponent extends ActorReferences {
 }
 
 trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache {
-  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
-  override lazy val stammdatenRouteOpenService = new DefaultStammdatenOpenRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
-  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
-  override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
-  override lazy val systemRouteService = new DefaultSystemRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
-  override lazy val loginRouteService = new DefaultLoginRouteService(entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService, loginTokenCache)
+  override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val stammdatenRouteOpenService = new DefaultStammdatenOpenRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val systemRouteService = new DefaultSystemRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val loginRouteService = new DefaultLoginRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService, loginTokenCache)
   override lazy val nonAuthRessourcesRouteService = new DefaultNonAuthRessourcesRouteService(sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
 }
 
@@ -212,7 +213,7 @@ trait RouteServiceActor
   def runDBEvolution() = {
     logger.debug(s"runDBEvolution:$entityStore")
     implicit val timeout = Timeout(50.seconds)
-    entityStore ? CheckDBEvolution map {
+    dbEvolutionActor ? CheckDBEvolution map {
       case Success(rev) =>
         logger.debug(s"Successfully check db with revision:$rev")
         context become initializedDB
@@ -234,6 +235,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     with DateFormats {
 
   implicit val timeout = Timeout(5.seconds)
+
+  implicit val executionContext: ExecutionContext = system.dispatcher
 
   implicit val exportFormatPath = enumPathMatcher(path =>
     path.head match {
@@ -607,6 +610,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
 }
 
 class DefaultRouteServiceActor(
+  override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,

@@ -9,22 +9,45 @@ import ch.openolitor.core.models.PersistenceEventState
 import ch.openolitor.core.Boot
 import org.joda.time.DateTime
 import ch.openolitor.core.models.PersistenceEventStateId
+import ch.openolitor.core.DBEvolutionReference
+import ch.openolitor.core.db.evolution.DBEvolutionActor
+import akka.util.Timeout
+import scala.concurrent.duration._
+import scala.util.{ Success, Failure }
+import akka.pattern.ask
 
 /**
  * This trait provides helper methods to keep track of latest processed sequenceNr of messages to limit reprocessing after a specified sequence nr per persistenceId
  */
-trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMappings with ConnectionPoolContextAware {
+trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMappings with ConnectionPoolContextAware with DBEvolutionReference {
 
-  val persistenceStateStoreId: String
+  def persistenceStateStoreId: String
 
   lazy val peState = persistenceEventStateMapping.syntax("pe_state")
   private var lastSequenceNr = 0L
+  var dbState: DBEvolutionActor.DBEvolutionState = _
 
   val personId = Boot.systemPersonId
+  implicit val excecutionContext = context.dispatcher
 
+  /**
+   * start with event recovery after evolution complete
+   */
   override def preStart(): Unit = {
-    lastSequenceNr = loadLastSequenceNr()
-    super.preStart()
+    implicit val timeout = Timeout(50.seconds)
+    log.debug(s"preStart PersistenceEventStateSupport")
+    dbEvolutionActor ? DBEvolutionActor.CheckDBEvolution map {
+      case Success(state: DBEvolutionActor.DBEvolutionState) =>
+        lastSequenceNr = loadLastSequenceNr()
+        dbState = state
+        log.debug(s"Initialize PersistenceEventStateSupport ${persistenceStateStoreId} to lastSequenceNr: $lastSequenceNr")
+        super.preStart()
+      case Failure(e) =>
+        log.warning(s"Failed initializing DB, stopping PersistenceEventStateSupport ${persistenceStateStoreId}")
+      //self ! PoisonPill
+      case x =>
+        log.warning(s"Received unexpected result:$x")
+    }
   }
 
   def lastProcessedSequenceNr = lastSequenceNr
@@ -45,6 +68,7 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
 
   protected def setLastProcessedSequenceNr(sequenceNr: Long): Boolean = {
     if (sequenceNr > lastSequenceNr) {
+      lastSequenceNr = sequenceNr
       DB autoCommit { implicit session =>
         getByPersistenceId(persistenceStateStoreId) match {
           case Some(entity: PersistenceEventState) =>

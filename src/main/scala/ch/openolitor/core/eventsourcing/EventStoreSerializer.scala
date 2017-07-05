@@ -86,4 +86,6 @@ object EventStoreSerializer extends EntityStoreJsonProtocol
     stammdatenPersisters ++
     buchhaltungPersisters ++
     systemEventPersisters
+
+  val allPersisters = Persisters(eventStorePersisters)
 }

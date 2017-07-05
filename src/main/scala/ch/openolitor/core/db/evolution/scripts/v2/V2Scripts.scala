@@ -11,37 +11,54 @@ import scala.util.{ Try, Success }
 import ch.openolitor.util.IdUtil
 import org.joda.time.DateTime
 import ch.openolitor.core.Boot
+import ch.openolitor.core.repositories.CoreRepositoryQueries
+import ch.openolitor.core.models.PersistenceEventState
+import ch.openolitor.core.models.PersistenceEventStateId
+import ch.openolitor.core.eventsourcing.EventStoreSerializer
+import ch.openolitor.core.domain.PersistentEvent
+import ch.openolitor.core.repositories.BaseWriteRepository
+import akka.actor.ActorSystem
 
-object V2Scripts {  
+object V2Scripts {
 
-  val oo656 = new Script with LazyLogging with CoreDBMappings with DefaultDBScripts {
+  def oo656(sytem: ActorSystem) = new Script with LazyLogging with CoreDBMappings with DefaultDBScripts with CoreRepositoryQueries {
+    lazy val system: ActorSystem = sytem
+
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       logger.debug(s"creating PersistenceEventState")
 
-      sql"""create table ${persistenceEventStateMapping.table}  (
+      sql"""create table if not exists ${persistenceEventStateMapping.table}  (
         id BIGINT not null,
         persistence_id varchar(100) not null,
-        last_sequence_nr BIGINT default (0),
+        last_sequence_nr BIGINT default 0,
         erstelldat datetime not null,
         ersteller BIGINT not null,
         modifidat datetime not null,
         modifikator BIGINT not null)""".execute.apply()
 
-      logger.debug(s"store last sequence number for persistent actors")
-      for { module <- Seq("buchhaltung", "stammdaten") } {
-        sql"""insert into ${persistenceEventStateMapping.table} 
-          (id, $module-entity-store, last_sequence_nr, erstelltdat, ersteller, modifidat, modifikator)
-          SELECT 
-          ${IdUtil.positiveRandomId}, persistence_key, max(sequence_nr), ${parameter(DateTime.now)}, ${parameter(Boot.systemPersonId)}, ${parameter(DateTime.now)}, ${parameter(Boot.systemPersonId)}
-          FROM 
-          persistence_journal group by persistence_key where persistence_key='$module'""".execute.apply()
-      }
+      logger.debug(s"store last sequence number for actors and persistence views")
+      val persistentActorStates = queryLatestPersistenceMessageByPersistenceIdQuery.apply().map { messagePerPersistenceId =>
+        //find latest sequence nr
+        messagePerPersistenceId.message.map { message =>
+          PersistenceEventState(PersistenceEventStateId(), messagePerPersistenceId.persistenceId, message.meta.seqNr, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
+        }
+      }.flatten
 
-      logger.debug(s"store last sequence number for persistent views")
+      // append persistent views
+      val persistentViewStates = persistentActorStates.filter(_.persistenceId == "entity-store").flatMap(newState =>
+        Seq("buchhaltung", "stammdaten").map { module =>
+          PersistenceEventState(PersistenceEventStateId(), s"$module-entity-store", newState.lastSequenceNr, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
+        })
+
+      implicit val personId = Boot.systemPersonId
+      (persistentActorStates ++ persistentViewStates) map { entity =>
+        val params = persistenceEventStateMapping.parameterMappings(entity)
+        withSQL(insertInto(persistenceEventStateMapping).values(params: _*)).update.apply()
+      }
 
       Success(true)
     }
   }
-  
-  val scripts = Seq(oo656)
+
+  def scripts(system: ActorSystem) = Seq(oo656(system))
 }

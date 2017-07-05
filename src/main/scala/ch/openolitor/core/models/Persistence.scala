@@ -2,6 +2,7 @@ package ch.openolitor.core.models
 
 import spray.json.JsValue
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.core.domain.PersistentEvent
 
 case class PersistedMessage(persistenceId: String, sequenceNr: Long, payload: JsValue) extends JSONSerializable
 
@@ -17,4 +18,9 @@ case class PersistenceMetadata(
   persistenceId: String,
   persistenceKey: Long,
   sequenceNr: Long
+) extends JSONSerializable
+
+case class PersistenceMessage(
+  persistenceId: String,
+  message: Option[PersistentEvent]
 ) extends JSONSerializable

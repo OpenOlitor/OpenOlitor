@@ -24,10 +24,11 @@ package ch.openolitor.core.db.evolution.scripts
 
 import ch.openolitor.core.db.evolution.scripts.v1._
 import ch.openolitor.core.db.evolution.scripts.v2._
+import akka.actor.ActorSystem
 
 object Scripts {
-  val current =
+  def current(system: ActorSystem) =
     V1Scripts.scripts ++
       V1SRScripts.scripts ++
-      V2Scripts.scripts
+      V2Scripts.scripts(system)
 }

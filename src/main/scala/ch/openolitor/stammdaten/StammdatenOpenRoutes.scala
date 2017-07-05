@@ -108,6 +108,7 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
 }
 
 class DefaultStammdatenOpenRoutes(
+  override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,
