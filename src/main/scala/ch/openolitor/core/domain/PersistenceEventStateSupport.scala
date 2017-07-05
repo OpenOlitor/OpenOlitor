@@ -43,7 +43,7 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
         lastTransactionNr = tnr
         lastSequenceNr = snr
         dbState = state
-        log.debug(s"Initialize PersistenceEventStateSupport ${persistenceStateStoreId} to lastSequenceNr: $lastSequenceNr")
+        log.debug(s"Initialize PersistenceEventStateSupport ${persistenceStateStoreId} to lastSequenceNr: $lastTransactionNr.$lastSequenceNr")
         super.preStart()
       case Failure(e) =>
         log.warning(s"Failed initializing DB, stopping PersistenceEventStateSupport ${persistenceStateStoreId}")
@@ -72,6 +72,7 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
   }
 
   protected def setLastProcessedSequenceNr(meta: EventMetadata): Boolean = {
+    log.debug(s"setLastProcessedSequenceNr in $persistenceStateStoreId ${meta.transactionNr}.${meta.seqNr} > ${lastTransactionNr}.${lastSequenceNr}")
     if (meta.transactionNr > lastTransactionNr) {
       lastSequenceNr = meta.seqNr
       lastTransactionNr = meta.transactionNr

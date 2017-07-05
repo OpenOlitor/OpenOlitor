@@ -239,7 +239,7 @@ trait EntityStore extends AggregateRoot
   }
 
   def metadata(personId: PersonId) = {
-    EventTransactionMetadata(personId, VERSION, DateTime.now, lastProcessedTransactionNr + 1, persistenceId)
+    EventTransactionMetadata(personId, VERSION, DateTime.now, aquireTransactionNr(), persistenceId)
   }
 
   /**

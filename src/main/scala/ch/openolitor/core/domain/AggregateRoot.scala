@@ -51,6 +51,7 @@ trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEv
 
   type S <: State
   var state: S
+  private var lastAquiredTransactionNr = 0L
 
   case class Initialize(state: S) extends Command
 
@@ -63,13 +64,24 @@ trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEv
 
   override val persistenceStateStoreId = persistenceId
 
+  override def preStart(): Unit = {
+    super.preStart()
+    lastAquiredTransactionNr = lastProcessedTransactionNr
+  }
+
   protected def afterEventPersisted(evt: PersistentEvent): Unit = {
     updateState(false)(evt)
     publish(evt)
-    log.debug(s"afterEventPersisted:send back state:$state")
-    sender ! state
 
     setLastProcessedSequenceNr(evt.meta)
+
+    log.debug(s"afterEventPersisted:send back state:$state")
+    sender ! state
+  }
+
+  protected def aquireTransactionNr() = {
+    lastAquiredTransactionNr += 1
+    lastAquiredTransactionNr
   }
 
   protected def publish(event: Object) =
