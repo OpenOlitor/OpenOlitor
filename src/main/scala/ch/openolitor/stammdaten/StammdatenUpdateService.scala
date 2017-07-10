@@ -43,6 +43,8 @@ import ch.openolitor.core.models.PersonId
 import scala.concurrent.Future
 import scalikejdbc.DBSession
 import ch.openolitor.util.IdUtil
+import ch.openolitor.util.ConfigUtil._
+import org.joda.time.DateTime
 
 object StammdatenUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenUpdateService = new DefaultStammdatenUpdateService(sysConfig, system)
@@ -63,6 +65,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   self: StammdatenWriteRepositoryComponent =>
 
   val FALSE = false
+
+  // Hotfix
+  lazy val startTime = DateTime.now.minusSeconds(sysConfig.mandantConfiguration.config.getIntOption("startTimeDelationSeconds") getOrElse 10)
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: VertriebId, entity: VertriebModify) => updateVertrieb(meta, id, entity)
@@ -282,26 +287,29 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateAboGuthaben(meta: EventMetadata, id: AboId, update: AboGuthabenModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
-        if (abo.guthaben == update.guthabenAlt) {
-          val copy = abo.copy(guthaben = update.guthabenNeu)
-          stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
-          adjustGuthabenVorLieferung(id, update.guthabenNeu)
+    // Hotfix: only execute in live using the meta info to determine
+    if (meta.timestamp.isAfter(this.startTime)) {
+      DB autoCommit { implicit session =>
+        stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
+          if (abo.guthaben == update.guthabenAlt) {
+            val copy = abo.copy(guthaben = update.guthabenNeu)
+            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+            adjustGuthabenVorLieferung(id, update.guthabenNeu)
+          }
         }
-      }
-      stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
-        if (abo.guthaben == update.guthabenAlt) {
-          val copy = abo.copy(guthaben = update.guthabenNeu)
-          stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
-          adjustGuthabenVorLieferung(id, update.guthabenNeu)
+        stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
+          if (abo.guthaben == update.guthabenAlt) {
+            val copy = abo.copy(guthaben = update.guthabenNeu)
+            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+            adjustGuthabenVorLieferung(id, update.guthabenNeu)
+          }
         }
-      }
-      stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
-        if (abo.guthaben == update.guthabenAlt) {
-          val copy = abo.copy(guthaben = update.guthabenNeu)
-          stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
-          adjustGuthabenVorLieferung(id, update.guthabenNeu)
+        stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
+          if (abo.guthaben == update.guthabenAlt) {
+            val copy = abo.copy(guthaben = update.guthabenNeu)
+            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+            adjustGuthabenVorLieferung(id, update.guthabenNeu)
+          }
         }
       }
     }
