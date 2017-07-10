@@ -166,7 +166,7 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
       val id = alias.id
       val updateParams = updateFields.toList match {
         case Nil => syntaxSupport.updateParameters(entity)
-        case specifiedFields => (syntaxSupport.updateParameters(entity) filter (f => specifiedFields.contains(f))) ++ syntaxSupport.defaultColumns(entity)
+        case specifiedFields => (syntaxSupport.updateParameters(entity) filter (f => specifiedFields.contains(f._1))) ++ syntaxSupport.defaultColumns(entity)
       }
 
       logger.debug(s"update entity:${entity.id} with values:$updateParams")
