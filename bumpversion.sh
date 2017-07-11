@@ -44,17 +44,22 @@ esac
 shift
 done
 
-VERSION_REGEX="version.*?\K(\d+)\.(\d+)\.(\d+)"
-MANIFEST_REGEX="openolitor-server-\K(\d+).(\d+).(\d+)"
+VERSION_REGEX="version.*?\K(\d+)\.(\d+)\.(\d+)(-SNAPSHOT)?"
+MANIFEST_REGEX="openolitor-server-\K(\d+).(\d+).(\d+)(-SNAPSHOT)?"
 
 BUILD_FILE='project/Build.scala'
 
 CURRENT_VERSION="$(grep -Po $VERSION_REGEX $BUILD_FILE)"
 echo "Current version is: "$CURRENT_VERSION
 
-IFS=. read V1 V2 V3 <<< $CURRENT_VERSION
+IFS='.-' read V1 V2 V3 SNAPSHOT <<< $CURRENT_VERSION
 
-NEXT_VERSION="$V1.$V2."$(($V3 + 1))
+if [ -n "$SNAPSHOT" ]
+then
+  SNAPSHOT="-$SNAPSHOT"
+fi
+
+NEXT_VERSION="$V1.$V2."$(($V3 + 1))$SNAPSHOT
 
 VERSION=${VERSION:-$NEXT_VERSION}
 COMMIT=${COMMIT:-false}
