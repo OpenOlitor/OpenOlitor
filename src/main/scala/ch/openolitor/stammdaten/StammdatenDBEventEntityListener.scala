@@ -351,14 +351,22 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         if (orig.isDefined && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
           deleteKorb(lieferung, abo)
         } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
-          upsertKorb(lieferung, abo, abotyp)
+          upsertKorb(lieferung, abo, abotyp) match {
+            case (Some(created), None) =>
+              // nur im created Fall muss eins dazu gezählt werden
+              // bei Statuswechsel des Korbs wird handleKorbStatusChanged die Counts justieren
+              updateLieferungWithCount(created, 1)
+            case _ =>
+            // counts werden andersweitig angepasst
+          }
+
         }
       }
     }
   }
 
   def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession) = {
-    // koerbe der offenen lieferungen loeschen
+    // Koerbe der offenen Lieferungen loeschen
     stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
       deleteKorb(lieferung, abo)
     }
@@ -369,7 +377,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleKorbCreated(korb: Korb)(implicit personId: PersonId) = {
-    updateLieferungWithCount(korb, +1)
+    // Lieferung Counts bereits gesetzt im InsertService
   }
 
   private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId) = {
