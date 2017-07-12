@@ -46,6 +46,8 @@ import ch.openolitor.util.IdUtil
 import ch.openolitor.stammdaten.models.LieferpositionenModify
 import scalikejdbc.DBSession
 import org.joda.time.format.DateTimeFormat
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
@@ -133,7 +135,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifikator" -> meta.originator
     )
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       //create abotyp
       stammdatenWriteRepository.insertEntity[Abotyp, AbotypId](typ)
     }
@@ -155,7 +157,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifikator" -> meta.originator
     )
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       //create abotyp
       stammdatenWriteRepository.insertEntity[Vertrieb, VertriebId](vertriebCreate)
     }
@@ -170,7 +172,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator)
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Depotlieferung, VertriebsartId](insert)
     }
   }
@@ -184,7 +186,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator)
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Heimlieferung, VertriebsartId](insert)
     }
   }
@@ -198,13 +200,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator)
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Postlieferung, VertriebsartId](insert)
     }
   }
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getAbotypDetail(lieferung.abotypId) match {
         case Some(abotyp) =>
           stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) map {
@@ -253,7 +255,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       //create abotyp
       stammdatenWriteRepository.insertEntity[Kunde, KundeId](kunde)
     }
@@ -278,13 +280,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifikator" -> meta.originator
     )
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Person, PersonId](person)
     }
   }
 
   def createPendenz(meta: EventMetadata, id: PendenzId, create: PendenzCreate)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(kundeMapping, create.kundeId) map { kunde =>
         val pendenz = copyTo[PendenzCreate, Pendenz](create, "id" -> id,
           "kundeId" -> create.kundeId,
@@ -310,7 +312,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Depot, DepotId](depot)
     }
   }
@@ -356,7 +358,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createAbo(meta: EventMetadata, id: AboId, create: AboModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       val emptyMap: TreeMap[String, Int] = TreeMap()
       abotypByVertriebartId(create.vertriebsartId) map {
         case (vertriebsart, vertrieb, abotyp) =>
@@ -448,7 +450,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[CustomKundentyp, CustomKundentypId](kundentyp)
     }
   }
@@ -462,7 +464,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Produkt, ProduktId](produkt)
     }
   }
@@ -476,7 +478,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Produktekategorie, ProduktekategorieId](produktekategrie)
     }
   }
@@ -490,7 +492,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Produzent, ProduzentId](produzent)
     }
   }
@@ -506,7 +508,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Tour, TourId](tour)
     }
   }
@@ -520,13 +522,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       "modifidat" -> meta.timestamp,
       "modifikator" -> meta.originator
     )
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.insertEntity[Projekt, ProjektId](projekt)
     }
   }
 
   def createAbwesenheit(meta: EventMetadata, id: AbwesenheitId, create: AbwesenheitCreate)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.countAbwesend(create.lieferungId, create.aboId) match {
         case Some(0) =>
           val abw = copyTo[AbwesenheitCreate, Abwesenheit](
@@ -545,7 +547,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createLieferplanung(meta: EventMetadata, lieferplanungId: LieferplanungId, lieferplanung: LieferplanungCreate)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       val defaultAbotypDepotTour = ""
       val insert = copyTo[LieferplanungCreate, Lieferplanung](
         lieferplanung,
@@ -613,7 +615,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     stammdatenWriteRepository.publish(DataEvent(personId, LieferplanungCreated(lieferplanungId)))
   }
 
-  def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession) = {
+  def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     logger.debug(s"Create Koerbe:${lieferung.id}")
     stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
       val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
@@ -633,7 +635,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, data: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       val project = stammdatenWriteRepository.getProjekt
       stammdatenWriteRepository.getById(lieferplanungMapping, data.lieferplanungId) map { lieferplanung =>
         stammdatenWriteRepository.getById(lieferungMapping, data.id) map { lieferung =>
@@ -672,13 +674,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createSammelbestellungen(meta: EventMetadata, id: SammelbestellungId, create: SammelbestellungModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       createOrUpdateSammelbestellungen(id, create)
     }
   }
 
   def createProjektVorlage(meta: EventMetadata, id: ProjektVorlageId, create: ProjektVorlageCreate)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       val vorlage = copyTo[ProjektVorlageCreate, ProjektVorlage](create, "id" -> id,
         "fileStoreId" -> None,
         "erstelldat" -> meta.timestamp,

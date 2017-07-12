@@ -41,6 +41,8 @@ import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.util.ConfigUtil._
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object BuchhaltungInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungInsertService = new DefaultBuchhaltungInsertService(sysConfig, system)
@@ -98,7 +100,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       "modifikator" -> meta.originator
     )
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.insertEntity[Rechnung, RechnungId](typ)
     }
   }

@@ -37,6 +37,8 @@ import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.repositories.SqlBinder
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object StammdatenGeneratedEventsListener {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenGeneratedEventsListener], sysConfig, system)
@@ -82,22 +84,22 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
   }
 
   private def handleChange(id: AboId, aktiv: Boolean)(implicit personId: PersonId) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getAbo(id) map { abo =>
         if (abo.aktiv != aktiv) {
           abo match {
             case d: DepotlieferungAbo =>
-              modifyEntity[DepotlieferungAbo, AboId](d.id, { a =>
+              modifyEntity[DepotlieferungAbo, AboId](d.id) { a =>
                 a.copy(aktiv = aktiv)
-              })
+              }
             case h: HeimlieferungAbo =>
-              modifyEntity[HeimlieferungAbo, AboId](h.id, { a =>
+              modifyEntity[HeimlieferungAbo, AboId](h.id) { a =>
                 a.copy(aktiv = aktiv)
-              })
+              }
             case p: PostlieferungAbo =>
-              modifyEntity[PostlieferungAbo, AboId](p.id, { a =>
+              modifyEntity[PostlieferungAbo, AboId](p.id) { a =>
                 a.copy(aktiv = aktiv)
-              })
+              }
 
           }
         }
@@ -106,9 +108,7 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
   }
 
   // TODO refactor this further
-  def modifyEntity[E <: BaseEntity[I], I <: BaseId](
-    id: I, mod: E => E
-  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(mod: E => E)(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
     modifyEntityWithRepository(stammdatenWriteRepository)(id, mod)
   }
 }

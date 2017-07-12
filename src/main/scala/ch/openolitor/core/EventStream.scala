@@ -24,6 +24,7 @@ package ch.openolitor.core
 
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
+import ch.openolitor.core.repositories.InstantEventPublisher
 
 /**
  * Trait providing a simple access to publish events to the eventstream per mandant
@@ -34,6 +35,8 @@ trait EventStream {
 
 trait NoPublishEventStream extends EventStream {
   def publish(msg: Object) = {}
+
+  implicit val eventPublisher = new InstantEventPublisher(this)
 }
 
 trait AkkaEventStream extends EventStream {

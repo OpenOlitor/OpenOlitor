@@ -45,7 +45,7 @@ object OO330_DBScripts {
   class ScriptStammdatenInsertService(sysConfig: SystemConfig)
     extends StammdatenInsertService(sysConfig) with ScriptStammdatenWriteRepositoryComponent
 
-  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with NoPublishEventStream {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       //create missing koerbe due to older releases
       implicit val personId = Boot.systemPersonId

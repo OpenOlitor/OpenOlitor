@@ -41,13 +41,14 @@ import ch.openolitor.util.IdUtil
 import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
 import scala.concurrent.Future
+import ch.openolitor.core.repositories.EventPublisher
 
 trait StammdatenEnityModify {
   this: StammdatenWriteRepositoryComponent =>
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](
     id: I, mod: E => E
-  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
+  )(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId) = {
 
     stammdatenWriteRepository.getById(syntax, id) map { result =>
       val copy = mod(result)

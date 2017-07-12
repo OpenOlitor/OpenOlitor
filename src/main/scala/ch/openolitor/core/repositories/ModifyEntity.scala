@@ -20,22 +20,13 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.repositories
+package ch.openolitor.core.repositories
 
-import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
-import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
+import ch.openolitor.core.models.BaseEntity
+import ch.openolitor.core.models.BaseId
+import scalikejdbc.DBSession
+import ch.openolitor.core.models.PersonId
 
-import akka.actor.ActorSystem
-import ch.openolitor.core.EventStream
-
-trait StammdatenWriteRepositoryComponent extends BaseWriteRepositoryComponent {
-  val stammdatenWriteRepository: StammdatenWriteRepository
-
-  // implicitly expose the eventStream
-  implicit def stammdatenWriteRepositoryImplicit = stammdatenWriteRepository
-}
-
-trait DefaultStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {
-  val system: ActorSystem
-  override val stammdatenWriteRepository: StammdatenWriteRepository = new DefaultActorSystemReference(system) with StammdatenWriteRepositoryImpl with AkkaEventStream
+trait ModifyEntity {
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(mod: E => E)(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E]
 }

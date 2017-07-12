@@ -26,9 +26,13 @@ import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
 import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
 
 import akka.actor.ActorSystem
+import ch.openolitor.core.EventStream
 
 trait BuchhaltungWriteRepositoryComponent extends BaseWriteRepositoryComponent {
   val buchhaltungWriteRepository: BuchhaltungWriteRepository
+
+  // implicitly expose the eventStream
+  implicit def buchhaltungWriteRepositoryImplicit = buchhaltungWriteRepository
 }
 
 trait DefaultBuchhaltungWriteRepositoryComponent extends BuchhaltungWriteRepositoryComponent {
