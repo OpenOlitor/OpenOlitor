@@ -29,7 +29,6 @@ import ch.openolitor.core.SystemConfig
 import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
-import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.db.evolution.scripts.recalculations.RecalulateAnzahlAktiveAbosCounter
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
@@ -114,7 +113,7 @@ object OO554_DBScripts {
         ) p ON v.id = p.vertrieb_id
         SET v.anzahl_abos_aktiv = (IFNULL(d.c, 0) + IFNULL(h.c, 0) + IFNULL(p.c, 0))""".execute.apply()
 
-      // Depotlieferung.anzahl_abos_aktiv
+      //update  Depotlieferung.anzahl_abos_aktiv
       sql"""UPDATE Depotlieferung SET anzahl_abos_aktiv=0""".execute.apply()
       sql"""UPDATE Depotlieferung d
         INNER JOIN
@@ -126,7 +125,7 @@ object OO554_DBScripts {
         ) j ON d.vertrieb_id = j.vertrieb_id AND d.depot_id = j.depot_id
         SET d.anzahl_abos_aktiv = j.c""".execute.apply()
 
-      // Heimlieferung.anzahl_abos_aktiv
+      //update  Heimlieferung.anzahl_abos_aktiv
       sql"""UPDATE Heimlieferung SET anzahl_abos_aktiv=0""".execute.apply()
       sql"""UPDATE Heimlieferung h
         INNER JOIN
@@ -138,7 +137,7 @@ object OO554_DBScripts {
         ) j ON h.vertrieb_id = j.vertrieb_id
         SET h.anzahl_abos_aktiv = j.c""".execute.apply()
 
-      // Postlieferung.anzahl_abos_aktiv
+      //update  Postlieferung.anzahl_abos_aktiv
       sql"""UPDATE Postlieferung SET anzahl_abos_aktiv=0""".execute.apply()
       sql"""UPDATE Postlieferung p
         INNER JOIN
@@ -150,18 +149,18 @@ object OO554_DBScripts {
         ) j ON p.vertrieb_id = j.vertrieb_id
         SET p.anzahl_abos_aktiv = j.c""".execute.apply()
 
-      // Depot.anzahl_abonnenten_aktiv
+      //update  Depot.anzahl_abonnenten_aktiv
       sql"""UPDATE Depot SET anzahl_abonnenten_aktiv=0""".execute.apply()
       sql"""UPDATE Depot d
         INNER JOIN
         (
         	SELECT depot_id, COUNT(*) c
-        	FROM DepotlieferungAbo 
+        	FROM DepotlieferungAbo
         	GROUP BY depot_id
         ) j ON d.id = j.depot_id
         SET d.anzahl_abonnenten_aktiv = j.c""".execute.apply()
 
-      // Tour.anzahl_abonnenten_aktiv
+      //update  Tour.anzahl_abonnenten_aktiv
       sql"""UPDATE Tour SET anzahl_abonnenten_aktiv=0""".execute.apply()
       sql"""UPDATE Tour t
         INNER JOIN
