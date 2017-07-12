@@ -59,5 +59,11 @@ object Scripts {
       OO544_DBScripts.scripts ++
       OO597_DBScripts.scripts ++
       OO597_Index_DBScripts.scripts ++
+<<<<<<< HEAD
       OO544_DBScripts.scripts
+=======
+      OO544_DBScripts.scripts ++
+      OO618_DBScripts.scripts
+
+>>>>>>> ce57b04... wip
 }
