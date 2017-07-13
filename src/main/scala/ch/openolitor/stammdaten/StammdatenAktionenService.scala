@@ -51,6 +51,8 @@ import org.joda.time.format.DateTimeFormat
 import ch.openolitor.util.ConfigUtil._
 import scalikejdbc.DBSession
 import BigDecimal.RoundingMode._
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object StammdatenAktionenService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem, mailService: ActorRef): StammdatenAktionenService = new DefaultStammdatenAktionenService(sysConfig, system, mailService)
@@ -109,7 +111,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Offen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
@@ -119,7 +121,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         if (Abgeschlossen == lieferplanung.status) {
           stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Verrechnet))
@@ -139,7 +141,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   }
 
   def lieferplanungDataModified(meta: EventMetadata, result: LieferplanungDataModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(lieferplanungMapping, result.id) map { lieferplanung =>
         if (Offen == lieferplanung.status || Abgeschlossen == lieferplanung.status) {
           // lieferungen mit positionen anpassen
@@ -164,7 +166,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
   def sammelbestellungVersenden(meta: EventMetadata, id: SammelbestellungId)(implicit personId: PersonId = meta.originator) = {
     val format = DateTimeFormat.forPattern("dd.MM.yyyy")
 
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       //send mails to Produzenten
       stammdatenWriteRepository.getProjekt map { projekt =>
         stammdatenWriteRepository.getById(sammelbestellungMapping, id) map {
@@ -218,7 +220,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def updatePasswort(meta: EventMetadata, id: PersonId, pwd: Array[Char], einladungId: Option[EinladungId])(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(personMapping, id) map { person =>
         val updated = person.copy(passwort = Some(pwd))
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
@@ -234,7 +236,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def disableLogin(meta: EventMetadata, personId: PersonId)(implicit originator: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         val updated = person.copy(loginAktiv = false)
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
@@ -243,12 +245,12 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def enableLogin(meta: EventMetadata, personId: PersonId)(implicit originator: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       setLoginAktiv(meta, personId)
     }
   }
 
-  def setLoginAktiv(meta: EventMetadata, personId: PersonId)(implicit originator: PersonId = meta.originator, session: DBSession) = {
+  def setLoginAktiv(meta: EventMetadata, personId: PersonId)(implicit originator: PersonId = meta.originator, session: DBSession, publisher: EventPublisher) = {
     stammdatenWriteRepository.getById(personMapping, personId) map { person =>
       val updated = person.copy(loginAktiv = true)
       stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
@@ -264,7 +266,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def sendEinladung(meta: EventMetadata, einladungCreate: EinladungCreate, baseText: String, baseLink: String)(implicit originator: PersonId): Unit = {
-    DB localTx { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(personMapping, einladungCreate.personId) map { person =>
 
         // existierende einladung überprüfen
@@ -308,7 +310,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def changeRolle(meta: EventMetadata, personId: PersonId, rolle: Rolle)(implicit originator: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(personMapping, personId) map { person =>
         val updated = person.copy(rolle = Some(rolle))
         stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
@@ -320,7 +322,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
    * @deprecated handling already persisted events. auslieferungAusgeliefert is now done in update service.
    */
   def auslieferungAusgeliefert(meta: EventMetadata, id: AuslieferungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(depotAuslieferungMapping, id) map { auslieferung =>
         if (Erfasst == auslieferung.status) {
           stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
@@ -342,7 +344,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def sammelbestellungAbgerechnet(meta: EventMetadata, datum: DateTime, id: SammelbestellungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(sammelbestellungMapping, id) map { sammelbestellung =>
         if (Abgeschlossen == sammelbestellung.status) {
           stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Verrechnet, datumAbrechnung = Some(datum)))

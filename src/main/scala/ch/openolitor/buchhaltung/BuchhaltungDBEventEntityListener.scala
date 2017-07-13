@@ -38,6 +38,8 @@ import ch.openolitor.stammdaten.models.AboId
 import ch.openolitor.stammdaten.models.{ DepotlieferungAbo, HeimlieferungAbo, PostlieferungAbo }
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object BuchhaltungDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungDBEventEntityListener], sysConfig, system)
@@ -81,22 +83,20 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
   }
 
   def handleZahlungsEingangModified(entity: ZahlungsEingang, orig: ZahlungsEingang)(implicit userId: PersonId) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       if (!orig.erledigt && entity.erledigt) {
-        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId, { zahlungsImport =>
+        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId) { zahlungsImport =>
           zahlungsImport.copy(anzahlZahlungsEingaengeErledigt = zahlungsImport.anzahlZahlungsEingaengeErledigt + 1)
-        })
+        }
       } else if (orig.erledigt && !entity.erledigt) {
-        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId, { zahlungsImport =>
+        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId) { zahlungsImport =>
           zahlungsImport.copy(anzahlZahlungsEingaengeErledigt = zahlungsImport.anzahlZahlungsEingaengeErledigt - 1)
-        })
+        }
       }
     }
   }
 
-  def modifyEntity[E <: BaseEntity[I], I <: BaseId](
-    id: I, mod: E => E
-  )(implicit session: DBSession, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(mod: E => E)(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
     modifyEntityWithRepository(buchhaltungWriteRepository)(id, mod)
   }
 }
