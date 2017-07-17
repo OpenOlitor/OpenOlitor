@@ -595,9 +595,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
-      val kundetypen = stammdatenWriteRepository.getKundentypen
+      val kundetypen = stammdatenWriteRepository.getCustomKundentypen
       removed.map { kundetypId =>
-        kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
+        kundetypen.filter(kt => kt.kundentyp == kundetypId).headOption.map {
           case customKundentyp: CustomKundentyp =>
             val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen - 1)
             log.debug(s"Reduce anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
@@ -606,7 +606,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       }
 
       added.map { kundetypId =>
-        kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
+        kundetypen.filter(kt => kt.kundentyp == kundetypId).headOption.map {
           case customKundentyp: CustomKundentyp =>
             val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen + 1)
             log.debug(s"Increment anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")

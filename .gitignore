@@ -20,11 +20,12 @@ project/plugins/project/
 .project
 .settings
 /bin/
+.idea
 
 # ensime
 .ensime
 .ensime_cache
+.ensime.sbt
 
 # ctags
 tags
-

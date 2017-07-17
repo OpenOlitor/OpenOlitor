@@ -47,7 +47,8 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
 
   def getProjekt(implicit session: DBSession): Option[Projekt]
   def getKunden(implicit session: DBSession): List[Kunde]
-  def getKundentypen(implicit session: DBSession): List[Kundentyp]
+  // def getKundentypen(implicit session: DBSession): List[Kundentyp]
+  def getCustomKundentypen(implicit session: DBSession): List[CustomKundentyp]
   def getPersonen(kundeId: KundeId)(implicit session: DBSession): List[Person]
   def getPendenzen(id: KundeId)(implicit session: DBSession): List[Pendenz]
 
@@ -232,9 +233,9 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getKundenQuery.apply()
   }
 
-  def getKundentypen(implicit session: DBSession): List[Kundentyp] = {
-    (getCustomKundentypen ++ SystemKundentyp.ALL.toList).sortBy(_.kundentyp.id)
-  }
+  // def getKundentypen(implicit session: DBSession): List[Kundentyp] = {
+  //   (getCustomKundentypen ++ SystemKundentyp.ALL.toList).sortBy(_.kundentyp.id)
+  // }
 
   def getCustomKundentypen(implicit session: DBSession): List[CustomKundentyp] = {
     getCustomKundentypenQuery.apply()

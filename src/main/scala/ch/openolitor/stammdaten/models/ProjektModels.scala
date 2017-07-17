@@ -165,51 +165,49 @@ case class ProjektModify(
 
 case class KundentypId(id: String) extends BaseStringId
 
-case class CustomKundentypId(id: Long) extends BaseId
+case class CustomKundentypId(id: Long) extends BaseId // TODO löschen
 
-trait Kundentyp {
-  val kundentyp: KundentypId
-  val beschreibung: Option[String] = None
-  def system: Boolean
-}
+// trait Kundentyp {
+//   val kundentyp: KundentypId
+//   val beschreibung: Option[String] = None
+//   def system: Boolean // Löschen
+// } // Löschen
 
 case class CustomKundentyp(
-    id: CustomKundentypId,
-    override val kundentyp: KundentypId,
-    override val beschreibung: Option[String],
-    anzahlVerknuepfungen: Int,
-    //modification flags
-    erstelldat: DateTime,
-    ersteller: PersonId,
-    modifidat: DateTime,
-    modifikator: PersonId
-) extends BaseEntity[CustomKundentypId] with Kundentyp {
-  override def system = false
-}
+  id: CustomKundentypId,
+  val kundentyp: KundentypId,
+  val beschreibung: Option[String],
+  anzahlVerknuepfungen: Int,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[CustomKundentypId]
 
 case class CustomKundentypModify(beschreibung: Option[String]) extends JSONSerializable
 case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String]) extends JSONSerializable
 
-sealed trait SystemKundentyp extends Kundentyp with Product {
-  override def system = true
-}
-
-object SystemKundentyp {
-  val ALL = Vector(Vereinsmitglied, Goenner, Genossenschafterin)
-
-  def parse(value: String): Option[SystemKundentyp] = {
-    ALL find (_.toString == value)
-  }
-}
-
-case object Vereinsmitglied extends SystemKundentyp {
-  override val kundentyp = KundentypId("Vereinsmitglied")
-}
-
-case object Goenner extends SystemKundentyp {
-  override val kundentyp = KundentypId("Goenner")
-}
-
-case object Genossenschafterin extends SystemKundentyp {
-  override val kundentyp = KundentypId("Genossenschafterin")
-}
+// sealed trait SystemKundentyp extends Kundentyp with Product {
+//   override def system = true
+// }
+//
+// object SystemKundentyp {
+//   val ALL = Vector(Vereinsmitglied, Goenner, Genossenschafterin)
+//
+//   def parse(value: String): Option[SystemKundentyp] = {
+//     ALL find (_.toString == value)
+//   }
+// }
+//
+// case object Vereinsmitglied extends SystemKundentyp {
+//   override val kundentyp = KundentypId("Vereinsmitglied")
+// }
+//
+// case object Goenner extends SystemKundentyp {
+//   override val kundentyp = KundentypId("Goenner")
+// }
+//
+// case object Genossenschafterin extends SystemKundentyp {
+//   override val kundentyp = KundentypId("Genossenschafterin")
+// }
