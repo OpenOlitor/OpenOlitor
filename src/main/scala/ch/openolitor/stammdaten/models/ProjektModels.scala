@@ -185,7 +185,7 @@ case class CustomKundentyp(
   modifikator: PersonId
 ) extends BaseEntity[CustomKundentypId]
 
-case class CustomKundentypModify(beschreibung: Option[String]) extends JSONSerializable
+case class CustomKundentypModify(kundentyp: KundentypId, id: CustomKundentypId, beschreibung: Option[String]) extends JSONSerializable
 case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String]) extends JSONSerializable
 
 // sealed trait SystemKundentyp extends Kundentyp with Product {

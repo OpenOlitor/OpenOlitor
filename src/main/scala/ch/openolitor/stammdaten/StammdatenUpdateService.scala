@@ -446,13 +446,37 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateKundentyp(meta: EventMetadata, id: CustomKundentypId, update: CustomKundentypModify)(implicit personId: PersonId = meta.originator) = {
+    logger.debug(s"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(customKundentypMapping, id) map { kundentyp =>
+        stammdatenWriteRepository.getKundenByKundentyp(kundentyp.kundentyp) map { kunde =>
+          logger.debug(s"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+
+          logger.debug(s"kunde: $kunde")
+
+          //val newKunde = kunde.copy(typen = kunde.typen - kundentyp.kundentyp + update.kundentyp)
+          val newKundentypen = kunde.typen - kundentyp.kundentyp + update.kundentyp
+          val newKunde = copyTo[Kunde, Kunde](
+            kunde,
+            "typen" -> newKundentypen,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> personId
+          )
+
+          logger.debug(s"newKunde: $newKunde")
+
+          stammdatenWriteRepository.updateEntity[Kunde, KundeId](newKunde)
+        }
+
+        logger.debug(s"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
         //map all updatable fields
+        logger.debug(s"kundentyp: $kundentyp")
         val copy = copyFrom(kundentyp, update, "farbCode" -> "", "modifidat" -> meta.timestamp, "modifikator" -> personId)
+        logger.debug(s"copy: $copy")
         stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
       }
     }
+    logger.debug(s"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
   }
 
   def updateProduzent(meta: EventMetadata, id: ProduzentId, update: ProduzentModify)(implicit personId: PersonId = meta.originator) = {

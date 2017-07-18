@@ -97,6 +97,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(kundeMapping(kunde)).list
   }
 
+  protected def getKundenByKundentypQuery(kundentyp: KundentypId) = {
+    withSQL {
+      select
+        .from(kundeMapping as kunde)
+        .where.like(kunde.typen, '%' + kundentyp.id + '%')
+    }.map(kundeMapping(kunde)).list
+  }
+
   protected def getKundenUebersichtQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
