@@ -165,13 +165,7 @@ case class ProjektModify(
 
 case class KundentypId(id: String) extends BaseStringId
 
-case class CustomKundentypId(id: Long) extends BaseId // TODO löschen
-
-// trait Kundentyp {
-//   val kundentyp: KundentypId
-//   val beschreibung: Option[String] = None
-//   def system: Boolean // Löschen
-// } // Löschen
+case class CustomKundentypId(id: Long) extends BaseId
 
 case class CustomKundentyp(
   id: CustomKundentypId,
@@ -187,27 +181,3 @@ case class CustomKundentyp(
 
 case class CustomKundentypModify(kundentyp: KundentypId, id: CustomKundentypId, beschreibung: Option[String]) extends JSONSerializable
 case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String]) extends JSONSerializable
-
-// sealed trait SystemKundentyp extends Kundentyp with Product {
-//   override def system = true
-// }
-//
-// object SystemKundentyp {
-//   val ALL = Vector(Vereinsmitglied, Goenner, Genossenschafterin)
-//
-//   def parse(value: String): Option[SystemKundentyp] = {
-//     ALL find (_.toString == value)
-//   }
-// }
-//
-// case object Vereinsmitglied extends SystemKundentyp {
-//   override val kundentyp = KundentypId("Vereinsmitglied")
-// }
-//
-// case object Goenner extends SystemKundentyp {
-//   override val kundentyp = KundentypId("Goenner")
-// }
-//
-// case object Genossenschafterin extends SystemKundentyp {
-//   override val kundentyp = KundentypId("Genossenschafterin")
-// }
