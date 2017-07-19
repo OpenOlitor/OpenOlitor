@@ -287,32 +287,6 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
 
   implicit val abotypFormat = enhanceWithBooleanFlag[Abotyp]("aktiv")
 
-  // implicit val systemKundentypFormat = new JsonFormat[SystemKundentyp] {
-  //   def write(obj: SystemKundentyp): JsValue =
-  //     JsString(obj.productPrefix)
-  //
-  //   def read(json: JsValue): SystemKundentyp =
-  //     json match {
-  //       case JsString(kundentyp) => SystemKundentyp.parse(kundentyp).getOrElse(sys.error(s"Unknown System-Kundentyp:$kundentyp"))
-  //       case pt => sys.error(s"Unknown personentyp:$pt")
-  //     }
-  // }
-
-  // implicit val kundentypFormat = new JsonFormat[Kundentyp] {
-  //   def write(obj: Kundentyp): JsValue =
-  //     obj match {
-  //       case s: SystemKundentyp => s.toJson
-  //       case c: CustomKundentyp => c.toJson
-  //     }
-  //
-  //   def read(json: JsValue): Kundentyp =
-  //     json match {
-  //       case system: JsString => json.convertTo[SystemKundentyp]
-  //       case custom: JsObject => json.convertTo[CustomKundentyp]
-  //       case pt => sys.error(s"Unknown personentyp:$pt")
-  //     }
-  // }
-
   implicit val treeMapIntFormat = new JsonFormat[TreeMap[String, Int]] {
     def write(obj: TreeMap[String, Int]): JsValue = {
       val elems = obj.toTraversable.map {
