@@ -42,15 +42,13 @@ import ch.openolitor.stammdaten.models.KontoDaten
 import ch.openolitor.util.ConfigUtil._
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
-import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryComponent
-import ch.openolitor.stammdaten.repositories.DefaultStammdatenWriteRepositoryComponent
 
 object BuchhaltungInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungInsertService = new DefaultBuchhaltungInsertService(sysConfig, system)
 }
 
 class DefaultBuchhaltungInsertService(sysConfig: SystemConfig, override val system: ActorSystem)
-    extends BuchhaltungInsertService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent with DefaultStammdatenWriteRepositoryComponent {
+    extends BuchhaltungInsertService(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent {
 }
 
 /**
@@ -58,7 +56,7 @@ class DefaultBuchhaltungInsertService(sysConfig: SystemConfig, override val syst
  */
 class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends EventService[EntityInsertedEvent[_, _]] with LazyLogging with AsyncConnectionPoolContextAware
     with BuchhaltungDBMappings {
-  self: BuchhaltungWriteRepositoryComponent with StammdatenWriteRepositoryComponent =>
+  self: BuchhaltungWriteRepositoryComponent =>
 
   val Divisor = 10
   val ReferenznummerLength = 26
@@ -83,7 +81,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungCreate)(implicit personId: PersonId = meta.originator): Option[Rechnung] = {
 
     DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getKontoDaten flatMap { kontoDaten =>
+      buchhaltungWriteRepository.getKontoDaten flatMap { kontoDaten =>
         val referenzNummer = generateReferenzNummer(kontoDaten, entity, id)
         val esrNummer = generateEsrNummer(kontoDaten, entity, referenzNummer)
 
