@@ -40,26 +40,25 @@ import scala.util.Success
 trait CommandHandler extends LazyLogging with Defaults {
   import EntityStore._
 
-  val handle: PartialFunction[UserCommand, EventFactory => EventTransactionMetadata => Try[Seq[PersistentEvent]]]
+  val handle: PartialFunction[UserCommand, IdFactory => EventTransactionMetadata => Try[Seq[ResultingEvent]]]
 
-  def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](eventFactory: EventFactory, transactionMeta: EventTransactionMetadata, entity: E, f: Long => I): Try[Seq[PersistentEvent]] = {
-    Success(Seq(insertEntityEvent(eventFactory, transactionMeta, entity, f)))
+  def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, transactionMeta: EventTransactionMetadata, entity: E, constructor: Long => I): Try[Seq[ResultingEvent]] = {
+    Success(Seq(insertEntityEvent(idFactory, transactionMeta, entity, constructor)))
   }
 
-  def insertEntityEvent[E <: AnyRef, I <: BaseId: ClassTag](eventFactory: EventFactory, transactionMeta: EventTransactionMetadata, entity: E, f: Long => I): PersistentEvent = {
+  def insertEntityEvent[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, transactionMeta: EventTransactionMetadata, entity: E, constructor: Long => I): ResultingEvent = {
     val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
     logger.debug(s"created => Insert entity:$entity")
-    val id = f(eventFactory.newId(clOf))
-    val meta = eventFactory.newMetadata(transactionMeta)
-    EntityInsertedEvent(meta, id, entity)
+    val id = idFactory.newId[I](constructor)
+    EntityInsertEvent[I, E](id, entity)
   }
 }
 
-object CommandHandler {
-  type IdFactory = Class[_ <: BaseId] => Long
+trait IdFactory {
+  def newId[I <: BaseId: ClassTag](cons: Long => I): I
 }
 
-class EventFactory(idFactory: CommandHandler.IdFactory) {
+class EventMetadataFactory(meta: EventTransactionMetadata) {
 
   var seqNr = 0L
 
@@ -68,6 +67,9 @@ class EventFactory(idFactory: CommandHandler.IdFactory) {
     seqNr
   }
 
-  def newId(clazz: Class[_ <: BaseId]): Long = idFactory(clazz)
-  def newMetadata(trans: EventTransactionMetadata): EventMetadata = trans.toMetadata(nextSeqNr())
+  //  def newId[I <: BaseId: ClassTag](cons: Long => I): I = {
+  //    val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
+  //    cons(idFactory(clOf))
+  //  }
+  def newMetadata(): EventMetadata = meta.toMetadata(nextSeqNr())
 }

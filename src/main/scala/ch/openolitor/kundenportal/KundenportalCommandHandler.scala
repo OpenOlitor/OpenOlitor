@@ -27,7 +27,7 @@ import scala.util.{ Failure, Success, Try }
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.db.{ AsyncConnectionPoolContextAware, ConnectionPoolContextAware }
-import ch.openolitor.core.domain.{ CommandHandler, EntityStore, EventMetadata, PersistentEvent, UserCommand }
+import ch.openolitor.core.domain.{ CommandHandler, EntityStore, EventTransactionMetadata, PersistentEvent, UserCommand, IdFactory }
 import ch.openolitor.core.exceptions.InvalidStateException
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.security.Subject
@@ -36,8 +36,6 @@ import ch.openolitor.stammdaten.models.{ AboId, AbwesenheitCreate, AbwesenheitId
 
 import akka.actor.ActorSystem
 import scalikejdbc.DB
-import ch.openolitor.core.domain.EventFactory
-import ch.openolitor.core.domain.EventTransactionMetadata
 
 object KundenportalCommandHandler {
   case class AbwesenheitErstellenCommand(originator: PersonId, subject: Subject, entity: AbwesenheitCreate) extends UserCommand
@@ -49,23 +47,23 @@ trait KundenportalCommandHandler extends CommandHandler with BuchhaltungDBMappin
   import KundenportalCommandHandler._
   import EntityStore._
 
-  override val handle: PartialFunction[UserCommand, EventFactory => EventTransactionMetadata => Try[Seq[PersistentEvent]]] = {
-    case AbwesenheitErstellenCommand(personId, subject, entity: AbwesenheitCreate) => factory => meta =>
+  override val handle: PartialFunction[UserCommand, IdFactory => EventTransactionMetadata => Try[Seq[ResultingEvent]]] = {
+    case AbwesenheitErstellenCommand(personId, subject, entity: AbwesenheitCreate) => idFactory => meta =>
       DB readOnly { implicit session =>
         kundenportalWriteRepository.getAbo(entity.aboId) map { abo =>
           if (subject.kundeId == abo.kundeId && abo.id == entity.aboId) {
-            handleEntityInsert[AbwesenheitCreate, AbwesenheitId](factory, meta, entity, AbwesenheitId.apply)
+            handleEntityInsert[AbwesenheitCreate, AbwesenheitId](idFactory, meta, entity, AbwesenheitId.apply)
           } else {
             Failure(new InvalidStateException("Es können nur Abwesenheiten auf eigenen Abos erstellt werden."))
           }
         } getOrElse (Failure(new InvalidStateException(s"Das Abo dieser Abwesenheit wurden nicht gefunden.")))
       }
 
-    case AbwesenheitLoeschenCommand(personId, subject, aboId, abwesenheitId) => factory => meta =>
+    case AbwesenheitLoeschenCommand(personId, subject, aboId, abwesenheitId) => idFactory => meta =>
       DB readOnly { implicit session =>
         kundenportalWriteRepository.getAbo(aboId) map { abo =>
           if (subject.kundeId == abo.kundeId) {
-            Success(Seq(EntityDeletedEvent(factory.newMetadata(meta), abwesenheitId)))
+            Success(Seq(EntityDeleteEvent(abwesenheitId)))
           } else {
             Failure(new InvalidStateException("Es können nur Abwesenheiten eigener Abos entfernt werden."))
           }

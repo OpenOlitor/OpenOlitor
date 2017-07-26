@@ -77,6 +77,22 @@ object EntityStore {
   }
   case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistentEvent
 
+  trait ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent
+  }
+  case class EntityInsertEvent[I <: BaseId: ClassTag, E <: AnyRef](id: I, entity: E) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = EntityInsertedEvent(factory.newMetadata(), id, entity)
+  }
+  case class EntityUpdateEvent[I <: BaseId, E <: AnyRef](id: I, entity: E) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = EntityUpdatedEvent(factory.newMetadata(), id, entity)
+  }
+  case class EntityDeleteEvent[I <: BaseId](id: I) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = EntityDeletedEvent(factory.newMetadata(), id)
+  }
+  case class DefaultResultingEvent(eventF: EventMetadataFactory => PersistentEvent) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = eventF(factory)
+  }
+
   case object StartSnapshotCommand
 
   // other actor messages  
@@ -96,7 +112,8 @@ trait EntityStoreJsonProtocol extends BaseJsonProtocol {
 trait EntityStore extends AggregateRoot
     with ConnectionPoolContextAware
     with CommandHandlerComponent
-    with DBEvolutionReference {
+    with DBEvolutionReference
+    with IdFactory {
 
   import EntityStore._
   import AggregateRoot._
@@ -117,12 +134,13 @@ trait EntityStore extends AggregateRoot
     baseCommandHandler
   )
 
-  def newId(clOf: Class[_ <: BaseId]): Long = {
+  def newId[I <: BaseId: ClassTag](cons: Long => I): I = {
+    val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
     val id: Long = state.dbSeeds.get(clOf).map { id =>
       id + 1
     }.getOrElse(sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
     updateId(clOf, id)
-    id
+    cons(id)
   }
 
   def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: Long) = {
@@ -204,14 +222,17 @@ trait EntityStore extends AggregateRoot
     case command: UserCommand =>
       val meta = metadata(command.originator)
       val result = moduleCommandHandlers collectFirst { case ch: CommandHandler if ch.handle.isDefinedAt((command)) => ch.handle(command) } map { handle =>
-        handle(new EventFactory(newId))(meta) match {
+        handle(this)(meta) match {
           case Success(resultingEvents) =>
             log.debug(s"handled command: $command in module specific command handler.")
-            resultingEvents map { resultingEvent =>
-              persist(resultingEvent)(afterEventPersisted)
+            implicit val eventFactory = new EventMetadataFactory(meta)
+            val result = resultingEvents map { resultingEvent =>
+              val persistentEvent = resultingEvent.toPersistentEvent
+              persist(persistentEvent)(afterEventPersisted)
+              persistentEvent
             }
             //return only first event to sender
-            resultingEvents.headOption map { result =>
+            result.headOption map { result =>
               sender ! result
             }
           case Failure(e) =>
