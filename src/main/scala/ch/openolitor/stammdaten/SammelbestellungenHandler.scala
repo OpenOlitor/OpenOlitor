@@ -28,11 +28,12 @@ import ch.openolitor.stammdaten.repositories._
 import org.joda.time.DateTime
 import scalikejdbc._
 import ch.openolitor.util.IdUtil
+import ch.openolitor.core.repositories.EventPublisher
 
 trait SammelbestellungenHandler extends StammdatenDBMappings {
   this: StammdatenWriteRepositoryComponent =>
 
-  def createOrUpdateSammelbestellungen(id: SammelbestellungId, create: SammelbestellungModify)(implicit personId: PersonId, session: DBSession) = {
+  def createOrUpdateSammelbestellungen(id: SammelbestellungId, create: SammelbestellungModify)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     stammdatenWriteRepository.getById(produzentMapping, create.produzentId) map { produzent =>
 
       val sammelbestellung = stammdatenWriteRepository.getById(sammelbestellungMapping, id) getOrElse {

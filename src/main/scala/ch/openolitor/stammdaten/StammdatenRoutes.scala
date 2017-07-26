@@ -72,10 +72,12 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     with Defaults
     with AuslieferungLieferscheinReportService
     with AuslieferungEtikettenReportService
+    with AuslieferungKorbUebersichtReportService
     with KundenBriefReportService
     with DepotBriefReportService
     with ProduzentenBriefReportService
     with ProduzentenabrechnungReportService
+    with LieferplanungReportService
     with FileTypeFilenameMapping
     with StammdatenPaths {
   self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
@@ -443,6 +445,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("lieferplanungen" / lieferplanungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, korbStatus) =>
         get(list(stammdatenReadRepository.getAboIds(lieferplanungId, korbStatus)))
       } ~
+      path("lieferplanungen" / lieferplanungIdPath / "auslieferungen") { (lieferplanungId) =>
+        get(list(stammdatenReadRepository.getAuslieferungen(lieferplanungId)))
+      } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, lieferungId, korbStatus) =>
         get(list(stammdatenReadRepository.getAboIds(lieferungId, korbStatus)))
       } ~
@@ -469,6 +474,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "sammelbestellungen" / sammelbestellungIdPath / "aktionen" / "erneutBestellen") { (lieferplanungId, sammelbestellungId) =>
         (post)(sammelbestellungErneutVersenden(sammelbestellungId))
+      } ~
+      path("lieferplanungen" / "berichte" / "lieferplanung") {
+        implicit val personId = subject.personId
+        generateReport[LieferplanungId](None, generateLieferplanungReports(VorlageLieferplanung) _)(LieferplanungId.apply)
       }
 
   def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {
@@ -563,7 +572,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
-  def auslieferungenRoute(implicit subject: Subject) =
+  def auslieferungenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
     path("depotauslieferungen" ~ exportFormatPath.?) { exportFormat =>
       get(list(stammdatenReadRepository.getDepotAuslieferungen, exportFormat))
     } ~
@@ -590,6 +599,14 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         post {
           auslieferungenAlsAusgeliefertMarkieren(Seq(auslieferungId))
         }
+      } ~
+      path("(depot|tour|post)auslieferungen".r / "berichte" / "korbuebersicht") { _ =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](None, generateAuslieferungKorbUebersichtReports(VorlageKorbUebersicht) _)(AuslieferungId.apply)
+      } ~
+      path("(depot|tour|post)auslieferungen".r / auslieferungIdPath / "berichte" / "korbuebersicht") { (_, auslieferungId) =>
+        implicit val personId = subject.personId
+        generateReport[AuslieferungId](Some(auslieferungId), generateAuslieferungKorbUebersichtReports(VorlageKorbUebersicht) _)(AuslieferungId.apply)
       } ~
       path("depotauslieferungen" / "berichte" / "lieferschein") {
         implicit val personId = subject.personId

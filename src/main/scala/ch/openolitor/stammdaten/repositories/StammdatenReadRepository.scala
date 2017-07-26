@@ -23,6 +23,8 @@
 package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
+import ch.openolitor.core.repositories.ReportReadRepository
+import ch.openolitor.core.reporting.models._
 import scalikejdbc._
 import scalikejdbc.async._
 import scala.concurrent.ExecutionContext
@@ -39,8 +41,11 @@ import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
 import ch.openolitor.util.IdUtil
 import ch.openolitor.util.parsing.FilterExpr
+import scalaz._
+import Scalaz._
+import scalaz.OptionT.optionT
 
-trait StammdatenReadRepository {
+trait StammdatenReadRepository extends ReportReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
 
@@ -119,6 +124,8 @@ trait StammdatenReadRepository {
   def getAboIds(lieferungId: LieferungId, korbStatus: KorbStatus)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[AboId]]
   def getAboIds(lieferplanungId: LieferplanungId, korbStatus: KorbStatus)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[AboId]]
 
+  def getLieferplanungReport(lieferplanungId: LieferplanungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[LieferplanungReport]]
+
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Korb]]
   def getKoerbeLieferung(aboId: AboId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[KorbLieferung]]
 
@@ -129,15 +136,17 @@ trait StammdatenReadRepository {
   def getSammelbestellungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[SammelbestellungDetail]]
   def getSammelbestellungByProduzentLieferplanungDatum(produzentId: ProduzentId, lieferplanungId: LieferplanungId, datum: DateTime)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Sammelbestellung]]
 
-  def getDepotAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotAuslieferung]]
-  def getTourAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[TourAuslieferung]]
-  def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]]
+  def getDepotAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[DepotAuslieferung]]
+  def getTourAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[TourAuslieferung]]
+  def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PostAuslieferung]]
   def getAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]]
-  def getMultiAuslieferungReport(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiAuslieferungReport]
+  def getMultiAuslieferungReport(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiReport[AuslieferungReportEntry]]
 
   def getDepotAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotAuslieferungDetail]]
   def getTourAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourAuslieferungDetail]]
   def getPostAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[PostAuslieferungDetail]]
+
+  def getAuslieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Auslieferung]]
 
   def getProjektVorlagen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProjektVorlage]]
   def getProjektVorlage(id: ProjektVorlageId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektVorlage]]
@@ -476,6 +485,10 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     getVerfuegbareLieferungenQuery(id).future
   }
 
+  def getLieferplanungReport(lieferplanungId: LieferplanungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[LieferplanungReport]] = {
+    getLieferplanungReportQuery(lieferplanungId, projekt).future
+  }
+
   def getSammelbestellungDetail(id: SammelbestellungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[SammelbestellungDetail]] = {
     getSammelbestellungDetailQuery(id).future
   }
@@ -528,15 +541,15 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     getKoerbeLieferungQuery(aboId).future
   }
 
-  def getDepotAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotAuslieferung]] = {
-    getDepotAuslieferungenQuery.future
+  def getDepotAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[DepotAuslieferung]] = {
+    getDepotAuslieferungenQuery(filter).future
   }
-  def getTourAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[TourAuslieferung]] = {
-    getTourAuslieferungenQuery.future
+  def getTourAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[TourAuslieferung]] = {
+    getTourAuslieferungenQuery(filter).future
 
   }
-  def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]] = {
-    getPostAuslieferungenQuery.future
+  def getPostAuslieferungen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[PostAuslieferung]] = {
+    getPostAuslieferungenQuery(filter).future
   }
 
   def getDepotAuslieferungDetail(auslieferungId: AuslieferungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[DepotAuslieferungDetail]] = {
@@ -551,6 +564,26 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     getPostAuslieferungDetailQuery(auslieferungId).future
   }
 
+  def getDepotAuslieferungen(lieferplanungId: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[DepotAuslieferung]] = {
+    getDepotAuslieferungenQuery(lieferplanungId).future
+  }
+
+  def getTourAuslieferungen(lieferplanungId: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[TourAuslieferung]] = {
+    getTourAuslieferungenQuery(lieferplanungId).future
+  }
+
+  def getPostAuslieferungen(lieferplanungId: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[PostAuslieferung]] = {
+    getPostAuslieferungenQuery(lieferplanungId).future
+  }
+
+  def getAuslieferungen(id: LieferplanungId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Auslieferung]] = {
+    for {
+      d <- getDepotAuslieferungen(id)
+      h <- getTourAuslieferungen(id)
+      p <- getPostAuslieferungen(id)
+    } yield (d.distinct ::: h.distinct ::: p.distinct)
+  }
+
   def getAuslieferungReport(id: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
     for {
       d <- getDepotAuslieferungReport(id, projekt)
@@ -559,7 +592,7 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
     } yield (d orElse h orElse p)
   }
 
-  def getMultiAuslieferungReport(ids: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiAuslieferungReport] = {
+  def getMultiAuslieferungReport(ids: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[MultiReport[AuslieferungReportEntry]] = {
     for {
       d <- getDepotAuslieferungReports(ids, projekt)
       h <- getTourAuslieferungReports(ids, projekt)
@@ -612,37 +645,67 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
       }).flatten
       val entries = entriesD ++ entriesH ++ entriesP
 
-      MultiAuslieferungReport(MultiAuslieferungId(IdUtil.positiveRandomId), entries, projekt)
+      MultiReport(MultiReportId(IdUtil.positiveRandomId), entries, projekt)
     }
   }
 
   def getDepotAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    getDepotAuslieferungReportQuery(auslieferungId, projekt).future
+    val result = for {
+      auslieferungReport <- optionT(getDepotAuslieferungReportQuery(auslieferungId, projekt).future)
+      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
+    } yield {
+      auslieferungReport.copy(koerbe =
+        auslieferungReport.koerbe map { korbReport =>
+          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
+        })
+    }
+
+    result.run
   }
 
   def getTourAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    getTourAuslieferungReportQuery(auslieferungId, projekt).future
+    val result = for {
+      auslieferungReport <- optionT(getTourAuslieferungReportQuery(auslieferungId, projekt).future)
+      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
+    } yield {
+      auslieferungReport.copy(koerbe =
+        auslieferungReport.koerbe map { korbReport =>
+          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
+        })
+    }
+
+    result.run
   }
 
   def getPostAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    getPostAuslieferungReportQuery(auslieferungId, projekt).future
+    val result = for {
+      auslieferungReport <- optionT(getPostAuslieferungReportQuery(auslieferungId, projekt).future)
+      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
+    } yield {
+      auslieferungReport.copy(koerbe =
+        auslieferungReport.koerbe map { korbReport =>
+          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
+        })
+    }
+
+    result.run
   }
 
   def getDepotAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[DepotAuslieferungReport]]] = {
-    Future.sequence((auslieferungIds map { auslieferungId =>
-      getDepotAuslieferungReportQuery(auslieferungId, projekt).future
-    }).toList)
+    Future.sequence(auslieferungIds map { auslieferungId =>
+      getDepotAuslieferungReport(auslieferungId, projekt) map (_.asInstanceOf[Option[DepotAuslieferungReport]])
+    })
   }
 
   def getTourAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[TourAuslieferungReport]]] = {
     Future.sequence(auslieferungIds map { auslieferungId =>
-      getTourAuslieferungReportQuery(auslieferungId, projekt).future
+      getTourAuslieferungReport(auslieferungId, projekt) map (_.asInstanceOf[Option[TourAuslieferungReport]])
     })
   }
 
   def getPostAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[PostAuslieferungReport]]] = {
     Future.sequence(auslieferungIds map { auslieferungId =>
-      getPostAuslieferungReportQuery(auslieferungId, projekt).future
+      getPostAuslieferungReport(auslieferungId, projekt) map (_.asInstanceOf[Option[PostAuslieferungReport]])
     })
   }
 

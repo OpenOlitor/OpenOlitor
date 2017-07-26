@@ -41,6 +41,8 @@ import ch.openolitor.stammdaten.models.{ Waehrung, CHF, EUR }
 import ch.openolitor.util.ConfigUtil._
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object BuchhaltungInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungInsertService = new DefaultBuchhaltungInsertService(sysConfig, system)
@@ -98,7 +100,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
       "modifikator" -> meta.originator
     )
 
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.insertEntity[Rechnung, RechnungId](typ)
     }
   }
@@ -107,11 +109,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
    * Generieren einer Referenznummer, die die Kundennummer und Rechnungsnummer enthält.
    */
   def generateReferenzNummer(rechnung: RechnungCreate, id: RechnungId): String = {
-    val kundeId = s"${rechnung.kundeId.id}"
-    val rechnungId = s"${id.id}"
-    val zeroesLength = ReferenznummerLength - ReferenznummerPrefix.size - kundeId.size - rechnungId.size
-    val zeroes = s"%0${zeroesLength}d".format(0)
-    val filled = (s"${ReferenznummerPrefix}${zeroes}${rechnung.kundeId.id}${id.id}") takeRight (ReferenznummerLength)
+    val filled = s"${ReferenznummerPrefix}%0${ReferenznummerLength - ReferenznummerPrefix.size - RechnungIdLength}d%0${RechnungIdLength}d".format(rechnung.kundeId.id, id.id)
     val checksum = calculateChecksum(filled.toList map (_.asDigit))
 
     s"$filled$checksum"

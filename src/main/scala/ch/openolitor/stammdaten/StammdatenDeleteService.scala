@@ -37,6 +37,8 @@ import ch.openolitor.stammdaten.repositories._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import scala.concurrent.ExecutionContext.Implicits.global
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object StammdatenDeleteService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenDeleteService = new DefaultStammdatenDeleteService(sysConfig, system)
@@ -80,29 +82,29 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteAbotyp(meta: EventMetadata, id: AbotypId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Abotyp, AbotypId](id, { abotyp: Abotyp => abotyp.anzahlAbonnenten == 0 && abotyp.anzahlAbonnentenAktiv == 0 })
     }
   }
 
   def deleteAbwesenheit(meta: EventMetadata, id: AbwesenheitId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Abwesenheit, AbwesenheitId](id)
     }
   }
 
   def deletePerson(meta: EventMetadata, id: PersonId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       noSessionDeletePerson(id)
     }
   }
 
-  private def noSessionDeletePerson(id: PersonId)(implicit personId: PersonId, session: DBSession) = {
+  private def noSessionDeletePerson(id: PersonId)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     stammdatenWriteRepository.deleteEntity[Person, PersonId](id)
   }
 
   def deleteKunde(meta: EventMetadata, kundeId: KundeId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Kunde, KundeId](kundeId, { kunde: Kunde => kunde.anzahlAbos == 0 && kunde.anzahlAbosAktiv == 0 }) match {
         case Some(kunde) =>
           //delete all personen as well
@@ -116,7 +118,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteDepot(meta: EventMetadata, id: DepotId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Depot, DepotId](id, { depot: Depot => depot.anzahlAbonnenten == 0 && depot.anzahlAbonnentenAktiv == 0 }) map { depot =>
         stammdatenWriteRepository.getDepotlieferung(depot.id) map { dl =>
           stammdatenWriteRepository.deleteEntity[Depotlieferung, VertriebsartId](dl.id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 && vertriebsart.anzahlAbosAktiv == 0 })
@@ -126,17 +128,17 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deletePendenz(meta: EventMetadata, id: PendenzId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       noSessionDeletePendenz(id)
     }
   }
 
-  private def noSessionDeletePendenz(id: PendenzId)(implicit personId: PersonId, session: DBSession) = {
+  private def noSessionDeletePendenz(id: PendenzId)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     stammdatenWriteRepository.deleteEntity[Pendenz, PendenzId](id)
   }
 
   def deleteAbo(meta: EventMetadata, id: AboId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](id)
       stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](id)
       stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](id)
@@ -144,7 +146,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteKundentyp(meta: EventMetadata, id: CustomKundentypId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[CustomKundentyp, CustomKundentypId](id) match {
         case Some(kundentyp) =>
           if (kundentyp.anzahlVerknuepfungen > 0) {
@@ -160,7 +162,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteVertriebsart(meta: EventMetadata, id: VertriebsartId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Depotlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 && vertriebsart.anzahlAbosAktiv == 0 })
       stammdatenWriteRepository.deleteEntity[Heimlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 && vertriebsart.anzahlAbosAktiv == 0 })
       stammdatenWriteRepository.deleteEntity[Postlieferung, VertriebsartId](id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 && vertriebsart.anzahlAbosAktiv == 0 })
@@ -168,7 +170,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteLieferplanung(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       val lieferungenOld = stammdatenWriteRepository.getLieferungen(id)
       stammdatenWriteRepository.deleteEntity[Lieferplanung, LieferplanungId](id, { lieferplanung: Lieferplanung => lieferplanung.status == Offen }) map {
         lieferplanung =>
@@ -177,7 +179,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.deleteLieferpositionen(lieferung.id)
 
             //detach lieferung
-            logger.debug("detach Lieferung:$lieferung")
+            logger.debug(s"detach Lieferung:${lieferung.id}:${lieferung}")
             val copy = lieferung.copy(lieferplanungId = None)
             stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
           }
@@ -186,7 +188,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungOnLieferplanungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteLieferpositionen(id.getLieferungId())
       stammdatenWriteRepository.getById(lieferungMapping, id.getLieferungId()) map { lieferung =>
         //map all updatable fields
@@ -210,37 +212,37 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteLieferung(meta: EventMetadata, id: LieferungId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Lieferung, LieferungId](id, { lieferung: Lieferung => lieferung.lieferplanungId == None })
     }
   }
 
   def deleteProdukt(meta: EventMetadata, id: ProduktId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Produkt, ProduktId](id)
     }
   }
 
   def deleteProduzent(meta: EventMetadata, id: ProduzentId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Produzent, ProduzentId](id)
     }
   }
 
   def deleteProduktekategorie(meta: EventMetadata, id: ProduktekategorieId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Produktekategorie, ProduktekategorieId](id)
     }
   }
 
   def deleteProduktProduktekategorie(meta: EventMetadata, id: ProduktProduktekategorieId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[ProduktProduktekategorie, ProduktProduktekategorieId](id)
     }
   }
 
   def deleteTour(meta: EventMetadata, id: TourId)(implicit personId: PersonId = meta.originator) = {
-    DB localTx { implicit session =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Tour, TourId](id, { tour: Tour => tour.anzahlAbonnenten == 0 }) map { tour =>
         stammdatenWriteRepository.getHeimlieferung(tour.id) map { hl =>
           stammdatenWriteRepository.deleteEntity[Heimlieferung, VertriebsartId](hl.id, { vertriebsart: Vertriebsart => vertriebsart.anzahlAbos == 0 && vertriebsart.anzahlAbosAktiv == 0 })
@@ -250,13 +252,13 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   }
 
   def deleteVertrieb(meta: EventMetadata, id: VertriebId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[Vertrieb, VertriebId](id, { vertrieb: Vertrieb => vertrieb.anzahlAbos == 0 && vertrieb.anzahlAbosAktiv == 0 })
     }
   }
 
   def deleteProjektVorlage(meta: EventMetadata, id: ProjektVorlageId)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[ProjektVorlage, ProjektVorlageId](id)
     }
   }

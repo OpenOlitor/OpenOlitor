@@ -56,15 +56,17 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
    */
   def parameterMappings(entity: E): Seq[Any]
 
-  /**
-   * Declare update parameters for this entity used on update. Is by default an empty set
-   */
-  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
+  def defaultColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
     column.erstelldat -> parameter(entity.erstelldat),
     column.ersteller -> parameter(entity.ersteller),
     column.modifidat -> parameter(entity.modifidat),
     column.modifikator -> parameter(entity.modifikator)
   )
+
+  /**
+   * Declare update parameters for this entity used on update. Is by default an empty set
+   */
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = defaultColumns(entity)
 }
 
 trait ParameterBinderMapping[A] {
@@ -114,7 +116,6 @@ trait BaseReadRepository extends BaseRepositoryQueries {
 }
 
 trait BaseWriteRepository extends BaseRepositoryQueries {
-  self: EventStream =>
 
   type Validator[E] = E => Boolean
   val TrueValidator: Validator[Any] = x => true
@@ -135,7 +136,8 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: PersonId): Option[E] = {
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
     val params = syntaxSupport.parameterMappings(entity)
     logger.debug(s"create entity with values:$entity")
     getById(syntaxSupport, entity.id) match {
@@ -146,27 +148,34 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
         withSQL(insertInto(syntaxSupport).values(params: _*)).update.apply()
 
         //publish event to stream
-        publish(EntityCreated(user, entity))
+        eventPublisher.registerPublish(EntityCreated(user, entity))
         Some(entity)
     }
   }
 
-  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
+  /*
+   * @param updateFields restrict the updated fields to this list
+   */
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E, updateFields: SQLSyntax*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: PersonId): Option[E] = {
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
     getById(syntaxSupport, entity.id).map { orig =>
       val alias = syntaxSupport.syntax("x")
       val id = alias.id
-      val updateParams = syntaxSupport.updateParameters(entity)
+      val updateParams = updateFields.toList match {
+        case Nil => syntaxSupport.updateParameters(entity)
+        case specifiedFields => (syntaxSupport.updateParameters(entity) filter (f => specifiedFields.contains(f._1))) ++ syntaxSupport.defaultColumns(entity)
+      }
 
       logger.debug(s"update entity:${entity.id} with values:$updateParams")
 
       withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(id, parameter(entity.id))).update.apply()
 
       //publish event to stream
-      publish(EntityModified(user, entity, orig))
+      eventPublisher.registerPublish(EntityModified(user, entity, orig))
 
       entity
     } orElse {
@@ -179,7 +188,8 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: PersonId): Option[E] = {
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
     deleteEntity[E, I](id, Some(validator))
   }
 
@@ -187,7 +197,8 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
-    user: PersonId): Option[E] = {
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
     logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
     getById(syntaxSupport, id).map { entity =>
       val validation = validator.getOrElse(TrueValidator)
@@ -196,7 +207,7 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
           withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, parameter(id))).update.apply()
 
           //publish event to stream
-          publish(EntityDeleted(user, entity))
+          eventPublisher.registerPublish(EntityDeleted(user, entity))
           Some(entity)
         case false =>
           logger.debug(s"Couldn't delete from ${syntaxSupport.tableName}: $id, validation didn't succeed")

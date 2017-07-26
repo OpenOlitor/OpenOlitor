@@ -161,9 +161,10 @@ trait RouteServiceActor
   // this actor only runs our route, but you could add
   // other things here, like request stream processing
   // or timeout handling
-  val receive = runRoute(cors(dbEvolutionRoutes))
 
-  val initializedDB = runRoute(cors(
+  val receive: Receive = runRoute(cors(dbEvolutionRoutes))
+
+  val initializedDB: Receive = runRoute(cors(
     // unsecured routes
     helloWorldRoute ~
       systemRouteService.statusRoute ~
@@ -235,8 +236,8 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     with DateFormats {
 
   implicit val timeout = Timeout(5.seconds)
-
-  implicit val executionContext: ExecutionContext = system.dispatcher
+  implicit lazy val executionContext: ExecutionContext = system.dispatcher
+  lazy val DefaultChunkSize = ConfigLoader.loadConfig.getIntBytes("spray.can.parsing.max-chunk-size")
 
   implicit val exportFormatPath = enumPathMatcher(path =>
     path.head match {
@@ -431,19 +432,16 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   protected def stream(input: File, deleteAfterStreaming: Boolean = false) = {
-    val stream = new FileInputStream(input)
-    val streamResponse: Stream[ByteString] = Stream.continually(stream.read).takeWhile(_ != -1).map(ByteString(_))
+    val streamResponse = input.toByteArrayStream(DefaultChunkSize).map(ByteString(_))
     streamThen(streamResponse, { () =>
       if (deleteAfterStreaming) {
         input.delete()
-      } else {
-        stream.close()
       }
     })
   }
 
   protected def stream(input: InputStream) = {
-    val streamResponse: Stream[ByteString] = Stream.continually(input.read).takeWhile(_ != -1).map(ByteString(_))
+    val streamResponse = input.toByteArrayStream(DefaultChunkSize).map(ByteString(_))
     streamThen(streamResponse, () => input.close())
   }
 
@@ -461,7 +459,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamFile(fileName: String, mediaType: MediaType, file: File, deleteAfterStreaming: Boolean = false) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(mediaType) {
-        stream(file)
+        stream(file, deleteAfterStreaming)
       }
     }
   }
@@ -477,7 +475,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamPdf(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/pdf`) {
-        stream(result)
+        complete(HttpData(result))
       }
     }
   }
@@ -485,7 +483,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamOdt(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.text`) {
-        stream(result)
+        complete(HttpData(result))
       }
     }
   }
@@ -493,7 +491,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   protected def streamOds(fileName: String, result: Array[Byte]) = {
     respondWithHeader(HttpHeaders.`Content-Disposition`("attachment", Map(("filename", fileName)))) {
       respondWithMediaType(MediaTypes.`application/vnd.oasis.opendocument.spreadsheet`) {
-        stream(result)
+        complete(HttpData(result))
       }
     }
   }

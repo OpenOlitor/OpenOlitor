@@ -28,6 +28,7 @@ import ch.openolitor.stammdaten.repositories._
 import org.joda.time.DateTime
 import scalikejdbc._
 import ch.openolitor.util.IdUtil
+import ch.openolitor.core.repositories.EventPublisher
 
 trait KorbHandler extends KorbStatusHandler
     with StammdatenDBMappings {
@@ -37,9 +38,9 @@ trait KorbHandler extends KorbStatusHandler
    * insert or update Korb
    * @return (created/updated, existing)
    */
-  def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: Abotyp)(implicit personId: PersonId, session: DBSession): (Option[Korb], Option[Korb]) = {
+  def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: Abotyp)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (Option[Korb], Option[Korb]) = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
-      case None =>
+      case None if (lieferung.lieferplanungId.isDefined) =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
         val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
         val korbId = KorbId(IdUtil.positiveRandomId)
@@ -58,6 +59,9 @@ trait KorbHandler extends KorbStatusHandler
         )
         (stammdatenWriteRepository.insertEntity[Korb, KorbId](korb), None)
 
+      case None =>
+        // do nothing (lieferung hast not been planned yet)
+        (None, None)
       case Some(korb) =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
         val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
@@ -76,7 +80,7 @@ trait KorbHandler extends KorbStatusHandler
     }
   }
 
-  def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession) = {
+  def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) flatMap { korb =>
       stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
     }

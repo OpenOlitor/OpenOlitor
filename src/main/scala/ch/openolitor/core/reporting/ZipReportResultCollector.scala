@@ -60,6 +60,7 @@ class ZipReportResultCollector(reportSystem: ActorRef, override val jobQueueServ
       log.debug(s"Add Zip Entry:${result.name}")
       zipBuilder.addZipEntry(result.name, result.document) match {
         case Success(r) =>
+          result.document.delete()
         case Failure(error) =>
           log.warning(s"Coulnd't att document to  zip file:$error")
           errors = errors :+ ReportError(Some(id), s"Dokument konnte nicht zum Zip hinzugefügt werde:$error")

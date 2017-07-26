@@ -26,9 +26,13 @@ import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
 import ch.openolitor.core.repositories.BaseWriteRepositoryComponent
 
 import akka.actor.ActorSystem
+import ch.openolitor.core.EventStream
 
 trait StammdatenWriteRepositoryComponent extends BaseWriteRepositoryComponent {
   val stammdatenWriteRepository: StammdatenWriteRepository
+
+  // implicitly expose the eventStream
+  implicit def stammdatenWriteRepositoryImplicit = stammdatenWriteRepository
 }
 
 trait DefaultStammdatenWriteRepositoryComponent extends StammdatenWriteRepositoryComponent {

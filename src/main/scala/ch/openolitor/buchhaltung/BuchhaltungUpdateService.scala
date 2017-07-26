@@ -39,6 +39,8 @@ import java.util.UUID
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
 object BuchhaltungUpdateService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungUpdateService = new DefaultBuchhaltungUpdateService(sysConfig, system)
@@ -60,7 +62,7 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
   }
 
   def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommit { implicit session =>
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { entity =>
         //map all updatable fields
         val copy = copyFrom(entity, update)

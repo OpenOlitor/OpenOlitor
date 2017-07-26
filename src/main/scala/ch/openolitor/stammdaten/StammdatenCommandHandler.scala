@@ -118,9 +118,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                     val sammelbestellungId = SammelbestellungId(factory.newId(classOf[SammelbestellungId]))
                     val insertEvent = EntityInsertedEvent(factory.newMetadata(meta), sammelbestellungId, sammelbestellungCreate)
 
-                    val bestellungVersendenEvent = SammelbestellungVersendenEvent(factory.newMetadata(meta), sammelbestellungId)
-
-                    Seq(insertEvent, bestellungVersendenEvent)
+                    // TODO OO-589
+                    //val bestellungVersendenEvent = SammelbestellungVersendenEvent(factory.newMetadata(meta), sammelbestellungId)
+                    Seq(insertEvent) //, bestellungVersendenEvent)
                   }.toSeq.flatten
 
                   val lpAbschliessenEvent = LieferplanungAbschliessenEvent(factory.newMetadata(meta), id)

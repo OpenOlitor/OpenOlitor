@@ -34,6 +34,7 @@ class UserJobQueue(personId: PersonId, mandantConfiguration: MandantConfiguratio
 
   val maxJobResults = mandantConfiguration.config.getIntOption("jobqueue.max_results").getOrElse(50)
   val expiresAfterHours = mandantConfiguration.config.getIntOption("jobqueue.expires_after_hours").getOrElse(24)
+  val expiresAfterAccessHours = mandantConfiguration.config.getIntOption("jobqueue.expires_after_access_hours").getOrElse(4)
 
   var progressMap = Map[JobId, JobProgress]()
 
@@ -52,6 +53,7 @@ class UserJobQueue(personId: PersonId, mandantConfiguration: MandantConfiguratio
       .recordStats()
       .expireAfterWrite(expiresAfterHours.hours)
       .maximumSize(maxJobResults)
+      .expireAfterAccess(expiresAfterAccessHours.hours)
       .removalListener { (key: JobId, value: JobResult, cause) =>
         cause match {
           case RemovalCause.EXPIRED =>
@@ -85,11 +87,12 @@ class UserJobQueue(personId: PersonId, mandantConfiguration: MandantConfiguratio
     case r: FetchJobResult =>
       jobResults.asMap.find(_._1.id == r.jobId) map {
         case (id, result) =>
-          jobResults.invalidate(id)
           sender ! result
 
           // notify other users session that job result was already fetched
           send(personId, JobFetched(personId, id))
+
+          jobResults.invalidate(id)
       } getOrElse {
         sender ! JobResultUnavailable(personId, r.jobId)
       }
