@@ -42,6 +42,7 @@ trait SystemEventSerializer extends BaseJsonProtocol with EntityStoreJsonProtoco
   import SystemEvents._
 
   implicit val personLoggedInPersister = persister[PersonLoggedIn]("person-logged-in")
+  implicit val systemStartedPersister = persister[SystemStarted]("system-started")
 
-  val systemEventPersisters = List(personLoggedInPersister)
+  val systemEventPersisters = List(personLoggedInPersister, systemStartedPersister)
 }

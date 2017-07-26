@@ -70,6 +70,8 @@ import ch.openolitor.util.AirbrakeNotifier
 import ch.openolitor.core.jobs.JobQueueService
 import ch.openolitor.core.db.evolution.DBEvolutionActor
 import ch.openolitor.core.db.evolution.scripts.Scripts
+import ch.openolitor.core.domain.SystemEvents.SystemStarted
+import org.joda.time.DateTime
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -231,6 +233,9 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system: configured ws listener on port ${cfg.wsPort}")
 
       calculations ! InitializeCalculation
+
+      // persist timestamp of system startup
+      eventStore ! SystemStarted(DateTime.now)
 
       MandantSystem(cfg, app)
     }

@@ -56,4 +56,5 @@ object SystemEvents {
   val SystemPersonId = PersonId(0)
 
   case class PersonLoggedIn(personId: PersonId, timestamp: DateTime) extends SystemEvent
+  case class SystemStarted(timestamp: DateTime) extends SystemEvent
 }
