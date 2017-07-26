@@ -171,7 +171,9 @@ trait MailService extends AggregateRoot
   }
 
   override def updateState(recovery: Boolean)(evt: PersistentEvent): Unit = {
-    log.debug(s"updateState:$evt")
+    if (!recovery) {
+      log.debug(s"updateState:$evt")
+    }
     evt match {
       case MailServiceInitialized(_) =>
       case SendMailEvent(meta, uid, mail, expires, commandMeta) if !recovery =>

@@ -22,5 +22,6 @@ case class PersistenceMetadata(
 
 case class PersistenceMessage(
   persistenceId: String,
+  sequenceNr: Long,
   message: Option[PersistentEvent]
 ) extends JSONSerializable

@@ -26,12 +26,18 @@ trait CoreRepositoryQueries extends LazyLogging with CoreDBMappings with Persist
   }
 
   protected def queryLatestPersistenceMessageByPersistenceIdQuery = {
-    sql"""SELECT m.persistence_id, max(j.sequence_nr), j.message
-          FROM persistence_journal j JOIN persistence_metadata m ON j.persistence_key=m.persistence_key group by j.persistence_key
+    sql"""SELECT l.persistence_id, l.persistence_key, l.sequence_nr, j.message FROM
+      persistence_journal j INNER JOIN (
+        SELECT j.persistence_key, m.persistence_id, max(j.sequence_nr) sequence_nr
+          FROM persistence_journal j JOIN persistence_metadata m ON j.persistence_key=m.persistence_key group by j.persistence_key, m.persistence_id) l
+        ON j.persistence_key=l.persistence_key AND j.sequence_nr=l.sequence_nr
           """.map { rs =>
-      val peristenceId = rs.string("persistence_id")
+      val persistenceId = rs.string("persistence_id")
+      val persistenceKey = rs.long("persistence_key")
+      val seqNr = rs.long("sequence_nr")
       val message = persistentEventBinder.apply(rs.underlying, "message")
-      PersistenceMessage(peristenceId, message)
+      logger.debug(s"Get latest message per persistenceId:$persistenceId, sequenceNr: $seqNr, message:$message")
+      PersistenceMessage(persistenceId, seqNr, message)
     }.list
   }
 }

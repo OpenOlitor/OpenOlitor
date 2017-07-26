@@ -27,7 +27,9 @@ object V2Scripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       logger.debug(s"creating PersistenceEventState")
 
-      sql"""create table if not exists ${persistenceEventStateMapping.table}  (
+      sql"""drop table if exists ${persistenceEventStateMapping.table}""".execute.apply()
+
+      sql"""create table ${persistenceEventStateMapping.table}  (
         id BIGINT not null,
         persistence_id varchar(100) not null,
         last_transaction_nr BIGINT default 0,
@@ -40,15 +42,15 @@ object V2Scripts {
       logger.debug(s"store last sequence number for actors and persistence views")
       val persistentActorStates = queryLatestPersistenceMessageByPersistenceIdQuery.apply().map { messagePerPersistenceId =>
         //find latest sequence nr
-        messagePerPersistenceId.message.map { message =>
-          PersistenceEventState(PersistenceEventStateId(), messagePerPersistenceId.persistenceId, message.meta.seqNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
-        }
-      }.flatten
+        logger.debug(s"OO-656: latest persistence id of persistentactor:${messagePerPersistenceId.persistenceId}, sequenceNr:${messagePerPersistenceId.sequenceNr}")
+        PersistenceEventState(PersistenceEventStateId(), messagePerPersistenceId.persistenceId, messagePerPersistenceId.sequenceNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
+      }
 
       // append persistent views
       val persistentViewStates = persistentActorStates.filter(_.persistenceId == "entity-store").flatMap(newState =>
         Seq("buchhaltung", "stammdaten").map { module =>
-          PersistenceEventState(PersistenceEventStateId(), s"$module-entity-store", newState.lastSequenceNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
+          logger.debug(s"OO-656: latest persistence id of persistentview:$module-entity-store, sequenceNr:${newState.lastTransactionNr}")
+          PersistenceEventState(PersistenceEventStateId(), s"$module-entity-store", newState.lastTransactionNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
         })
 
       implicit val personId = Boot.systemPersonId
@@ -56,6 +58,9 @@ object V2Scripts {
         val params = persistenceEventStateMapping.parameterMappings(entity)
         withSQL(insertInto(persistenceEventStateMapping).values(params: _*)).update.apply()
       }
+
+      // stop all entity-store snapshots due to class incompatiblity
+      sql"""truncate persistence_snapshot""".execute.apply()
 
       Success(true)
     }

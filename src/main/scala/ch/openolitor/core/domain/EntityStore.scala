@@ -157,10 +157,12 @@ trait EntityStore extends AggregateRoot
    * @param evt Event to apply
    */
   override def updateState(recovery: Boolean)(evt: PersistentEvent): Unit = {
-    log.debug(s"updateState($recovery):$evt")
     evt match {
       case EntityStoreInitialized(_) =>
-      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id.id)
+        log.debug(s"EntityStoreInitialized")
+      case e @ EntityInsertedEvent(meta, id, entity) =>
+        updateId(e.idType, id.id)
+        log.debug(s"EntityInsertedEvent, update id to:${e.idType} -> ${id.id}")
       case _ =>
     }
   }

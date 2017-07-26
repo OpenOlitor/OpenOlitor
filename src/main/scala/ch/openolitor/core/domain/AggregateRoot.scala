@@ -89,7 +89,6 @@ trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEv
 
   override val receiveRecover: Receive = {
     case evt: PersistentEvent =>
-      log.debug(s"receiveRecover $evt")
       updateState(evt.meta.seqNr >= lastProcessedSequenceNr)(evt)
     case SnapshotOffer(metadata, state: State) =>
       restoreFromSnapshot(metadata, state)

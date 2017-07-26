@@ -58,7 +58,7 @@ object EventStoreSerializer extends EntityStoreJsonProtocol
 
   // entity store serialization
   val entityPersisters = Persisters(corePersisters ++ stammdatenPersisters ++ buchhaltungPersisters)
-  val entityStoreInitializedPersister = persister[EntityStoreInitialized]("entity-store-initialized")
+  val entityStoreInitializedPersister = persister[EntityStoreInitialized, V2]("entity-store-initialized", V1toV2metaDataMigration)
   val entityInsertEventPersister = new EntityInsertEventPersister(entityPersisters)
   val entityUpdatedEventPersister = new EntityUpdatedEventPersister(entityPersisters)
   val entityDeletedEventPersister = new EntityDeletedEventPersister(entityPersisters)
