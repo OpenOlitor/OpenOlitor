@@ -346,20 +346,23 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession) = {
     // koerbe erstellen, modifizieren, loeschen falls noetig
-    stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
-      stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
-        if (orig.isDefined && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
-          deleteKorb(lieferung, abo)
-        } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
-          upsertKorb(lieferung, abo, abotyp) match {
-            case (Some(created), None) =>
-              // nur im created Fall muss eins dazu gezählt werden
-              // bei Statuswechsel des Korbs wird handleKorbStatusChanged die Counts justieren
-              updateLieferungWithCount(created, 1)
-            case _ =>
-            // counts werden andersweitig angepasst
+    val isExistingAbo = orig.isDefined
+    // only modify koerbe if the start or end of this abo has changed or we're creating them for a new abo
+    if (!isExistingAbo || abo.start != orig.get.start || abo.ende != orig.get.ende) {
+      stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+        stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+          if (isExistingAbo && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
+            deleteKorb(lieferung, abo)
+          } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
+            upsertKorb(lieferung, abo, abotyp) match {
+              case (Some(created), None) =>
+                // nur im created Fall muss eins dazu gezählt werden
+                // bei Statuswechsel des Korbs wird handleKorbStatusChanged die Counts justieren
+                updateLieferungWithCount(created, 1)
+              case _ =>
+              // counts werden andersweitig angepasst
+            }
           }
-
         }
       }
     }
@@ -530,6 +533,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   private def recalculateLieferungCounts(lieferung: Lieferung, korbStatusNeu: KorbStatus, korbStatusAlt: KorbStatus)(implicit personId: PersonId, session: DBSession) = {
     val zuLiefernDiff = korbStatusNeu match {
       case WirdGeliefert => 1
+      case Geliefert if korbStatusAlt == WirdGeliefert => 0 // TODO introduce additional counter for delivered baskets
       case _ if korbStatusAlt == WirdGeliefert => -1
       case _ => 0
     }
