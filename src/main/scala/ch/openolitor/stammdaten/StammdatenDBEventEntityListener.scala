@@ -220,7 +220,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleHeimlieferungAboModified(entity: HeimlieferungAbo, orig: HeimlieferungAbo)(implicit personId: PersonId) = {
-    insertOrUpdateTourlieferung(entity)
+    updateTourlieferung(entity)
   }
 
   def handleHeimlieferungAboCreated(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
@@ -230,7 +230,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten + 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv + calculateAboAktivCreate(entity))
       }
     }
-    insertOrUpdateTourlieferung(entity)
+    updateTourlieferung(entity)
   }
 
   def handleHeimlieferungAboDeleted(abo: HeimlieferungAbo)(implicit personId: PersonId) = {
@@ -239,8 +239,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Remove abonnent from tour:${tour.id}")
         tour.copy(anzahlAbonnenten = tour.anzahlAbonnenten - 1, anzahlAbonnentenAktiv = tour.anzahlAbonnentenAktiv - calculateAboAktivCreate(abo))
       }
-
-      stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](abo.id)
     }
   }
 
@@ -928,34 +926,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def insertOrUpdateTourlieferung(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
+  def updateTourlieferung(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(kundeMapping, entity.kundeId) map { kunde =>
-        val updated = Tourlieferung(
-          entity.id,
-          entity.tourId,
-          entity.abotypId,
-          entity.kundeId,
-          entity.vertriebsartId,
-          entity.vertriebId,
-          kunde.bezeichnungLieferung getOrElse kunde.bezeichnung,
-          kunde.strasseLieferung getOrElse kunde.strasse,
-          kunde.hausNummerLieferung orElse kunde.hausNummer,
-          kunde.adressZusatzLieferung orElse kunde.adressZusatz,
-          kunde.plzLieferung getOrElse kunde.plz,
-          kunde.ortLieferung getOrElse kunde.ort,
-          entity.abotypName,
-          None,
-          DateTime.now,
-          personId,
-          DateTime.now,
-          personId
-        )
-
         stammdatenWriteRepository.getById(tourlieferungMapping, entity.id) map { tourlieferung =>
-          stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](updated.copy(sort = tourlieferung.sort))
-        } getOrElse {
-          stammdatenWriteRepository.insertEntity[Tourlieferung, AboId](updated)
+          stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](Tourlieferung(entity, kunde, personId).copy(sort = tourlieferung.sort))
         }
       }
     }

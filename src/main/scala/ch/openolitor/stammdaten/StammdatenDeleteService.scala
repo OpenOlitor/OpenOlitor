@@ -141,6 +141,8 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](id)
       stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](id)
+      // also delete corresponding Tourlieferung
+      stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](id)
       stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](id)
     }
   }

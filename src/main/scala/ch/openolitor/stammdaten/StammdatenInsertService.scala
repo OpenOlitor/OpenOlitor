@@ -412,7 +412,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "ersteller" -> meta.originator,
                     "modifidat" -> meta.timestamp,
                     "modifikator" -> meta.originator
-                  ))
+                  )) map { heimlieferungAbo =>
+                    // create the corresponding tourlieferung as well
+                    stammdatenWriteRepository.getById(kundeMapping, heimlieferungAbo.kundeId) map { kunde =>
+                      stammdatenWriteRepository.insertEntity[Tourlieferung, AboId](Tourlieferung(heimlieferungAbo, kunde, personId))
+                    }
+                  }
                 case create: PostlieferungAboModify =>
                   stammdatenWriteRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](
                     create,
