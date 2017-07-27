@@ -78,7 +78,7 @@ trait PersistenceDBMappings extends DBMappings with ActorSystemReference {
 
   val serialization: Serialization = SerializationExtension(system)
 
-  implicit val persistedMessageBinder: TypeBinder[Option[PersistedMessage]] = bytes.map { message =>
+  implicit val persistedMessageBinder: TypeBinder[Option[PersistedMessage]] = bytes map { message =>
     Try {
       serialization.deserialize(message, classOf[PersistentRepr]) match {
         case Success(m: PersistentRepr) =>
@@ -109,7 +109,7 @@ trait PersistenceDBMappings extends DBMappings with ActorSystemReference {
     }
   }
 
-  implicit val persistentEventBinder: TypeBinder[Option[PersistentEvent]] = bytes.map { message =>
+  implicit val persistentEventBinder: TypeBinder[Option[PersistentEvent]] = bytes map { message =>
     Try {
       serialization.deserialize(message, classOf[PersistentRepr]) match {
         case Success(m: PersistentRepr) =>

@@ -62,15 +62,15 @@ object V2Scripts {
         modifikator BIGINT not null)""".execute.apply()
 
       logger.debug(s"store last sequence number for actors and persistence views")
-      val persistentActorStates = queryLatestPersistenceMessageByPersistenceIdQuery.apply().map { messagePerPersistenceId =>
+      val persistentActorStates = queryLatestPersistenceMessageByPersistenceIdQuery.apply() map { messagePerPersistenceId =>
         //find latest sequence nr
         logger.debug(s"OO-656: latest persistence id of persistentactor:${messagePerPersistenceId.persistenceId}, sequenceNr:${messagePerPersistenceId.sequenceNr}")
         PersistenceEventState(PersistenceEventStateId(), messagePerPersistenceId.persistenceId, messagePerPersistenceId.sequenceNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
       }
 
       // append persistent views
-      val persistentViewStates = persistentActorStates.filter(_.persistenceId == "entity-store").flatMap(newState =>
-        Seq("buchhaltung", "stammdaten").map { module =>
+      val persistentViewStates = persistentActorStates filter (_.persistenceId == "entity-store") flatMap (newState =>
+        Seq("buchhaltung", "stammdaten") map { module =>
           logger.debug(s"OO-656: latest persistence id of persistentview:$module-entity-store, sequenceNr:${newState.lastTransactionNr}")
           PersistenceEventState(PersistenceEventStateId(), s"$module-entity-store", newState.lastTransactionNr, 0L, DateTime.now, Boot.systemPersonId, DateTime.now, Boot.systemPersonId)
         })

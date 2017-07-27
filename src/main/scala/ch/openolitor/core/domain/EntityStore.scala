@@ -136,15 +136,15 @@ trait EntityStore extends AggregateRoot
 
   def newId[I <: BaseId: ClassTag](cons: Long => I): I = {
     val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
-    val id: Long = state.dbSeeds.get(clOf).map { id =>
+    val id: Long = state.dbSeeds.get(clOf) map { id =>
       id + 1
-    }.getOrElse(sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
+    } getOrElse (sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
     updateId(clOf, id)
     cons(id)
   }
 
   def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: Long) = {
-    if (state.dbSeeds.get(clOf).map(_ < id).getOrElse(true)) {
+    if (state.dbSeeds.get(clOf) map (_ < id) getOrElse (true)) {
       log.debug(s"updateId:$clOf -> $id")
       //only update if current id is smaller than new one or no id did exist 
       state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
