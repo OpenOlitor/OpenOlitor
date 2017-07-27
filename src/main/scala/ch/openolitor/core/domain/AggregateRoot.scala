@@ -46,26 +46,42 @@ object AggregateRoot {
   case object Uninitialized extends State
 }
 
-trait AggregateRoot extends PersistentActor with ActorLogging {
+trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEventStateSupport {
   import AggregateRoot._
 
   type S <: State
   var state: S
+  private var lastAquiredTransactionNr = 0L
 
   case class Initialize(state: S) extends Command
 
-  def updateState(evt: PersistentEvent): Unit
+  def updateState(recovery: Boolean = false)(evt: PersistentEvent): Unit
   def restoreFromSnapshot(metadata: SnapshotMetadata, state: State)
 
   def afterRecoveryCompleted(): Unit = {}
 
   def now = System.currentTimeMillis
 
+  override val persistenceStateStoreId = persistenceId
+
+  override def dbInitialized(): Unit = {
+    lastAquiredTransactionNr = lastProcessedTransactionNr
+    log.debug(s"$persistenceId: initialize aquire transaction nr to ${lastAquiredTransactionNr}")
+  }
+
   protected def afterEventPersisted(evt: PersistentEvent): Unit = {
-    updateState(evt)
+    updateState(false)(evt)
     publish(evt)
+
+    setLastProcessedSequenceNr(evt.meta)
+
     log.debug(s"afterEventPersisted:send back state:$state")
     sender ! state
+  }
+
+  protected def aquireTransactionNr() = {
+    lastAquiredTransactionNr += 1
+    lastAquiredTransactionNr
   }
 
   protected def publish(event: Object) =
@@ -73,8 +89,7 @@ trait AggregateRoot extends PersistentActor with ActorLogging {
 
   override val receiveRecover: Receive = {
     case evt: PersistentEvent =>
-      log.debug(s"receiveRecover $evt")
-      updateState(evt)
+      updateState(evt.meta.seqNr >= lastProcessedSequenceNr)(evt)
     case SnapshotOffer(metadata, state: State) =>
       restoreFromSnapshot(metadata, state)
       log.debug("recovering aggregate from snapshot")

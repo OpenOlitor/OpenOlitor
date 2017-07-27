@@ -39,6 +39,7 @@ import akka.pattern.ask
 import scala.util._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.DBEvolutionReference
 
 trait EventService[E <: PersistentEvent] {
   type Handle = (E => Unit)
@@ -67,7 +68,7 @@ object EntityStoreView {
 /**
  * Diese generische EntityStoreView delelegiert die Events an die jeweilige modulspezifische ActorRef
  */
-trait EntityStoreView extends PersistentView with EntityStoreReference with LazyLogging {
+trait EntityStoreView extends PersistentView with DBEvolutionReference with LazyLogging with PersistenceEventStateSupport {
   self: EntityStoreViewComponent =>
 
   import EntityStore._
@@ -76,7 +77,9 @@ trait EntityStoreView extends PersistentView with EntityStoreReference with Lazy
   val module: String
 
   override val persistenceId = EntityStore.persistenceId
-  override val viewId = s"$module-entity-store"
+  override def viewId = s"$module-entity-store"
+
+  override def persistenceStateStoreId = viewId
 
   override def autoUpdateInterval = 100 millis
 
@@ -84,35 +87,49 @@ trait EntityStoreView extends PersistentView with EntityStoreReference with Lazy
    * Delegate to
    */
   val receive: Receive = {
+    case Startup =>
+      log.debug("Received Startup command")
+      startup()
+      sender ! Started
+    case e: PersistentEvent if e.meta.transactionNr < lastProcessedTransactionNr =>
+      // ignore already processed event
+      logger.debug(s"Ignore eventin:$viewId, already processed transaction: ${e.meta.transactionNr}.${e.meta.seqNr} <= ${lastProcessedTransactionNr}.${lastProcessedSequenceNr}")
+    case e: PersistentEvent if e.meta.transactionNr == lastProcessedTransactionNr && e.meta.seqNr <= lastProcessedSequenceNr =>
+      // ignore already processed event
+      logger.debug(s"Ignore eventin:$viewId, already processed event: ${e.meta.transactionNr}.${e.meta.seqNr} <= ${lastProcessedTransactionNr}.${lastProcessedSequenceNr}")
+    case e: PersistentEvent =>
+      logger.debug(s"Process new event ${e} in:$viewId: ${e.meta.transactionNr}.${e.meta.seqNr}")
+      processNewEvents(e)
+  }
+
+  def startup(): Unit = {}
+
+  val processNewEvents: Receive = {
     case e: EntityStoreInitialized =>
       log.debug(s"Received EntityStoreInitialized")
       initializeEntityStoreView()
     case e: EntityInsertedEvent[_, _] =>
-      insertService.handle(e)
+      runSafe(insertService.handle, e)
     case e: EntityUpdatedEvent[_, _] =>
-      updateService.handle(e)
+      runSafe(updateService.handle, e)
     case e: EntityDeletedEvent[_] =>
-      deleteService.handle(e)
-    case Startup =>
-      log.debug("Received startup command")
-      sender ! Started
+      runSafe(deleteService.handle, e)
     case e: PersistentEvent =>
       // handle custom events
-      aktionenService.handle(e)
+      runSafe(aktionenService.handle, e)
   }
 
-  def initializeEntityStoreView(): Unit
-
-  /**
-   * start with event recovery after evolution complete
-   */
-  override def preStart(): Unit = {
-    implicit val timeout = Timeout(50.seconds)
-    entityStore ? EntityStore.CheckDBEvolution map {
-      case Success(rev) =>
-        super.preStart()
+  private def runSafe[E <: PersistentEvent](handle: (E => Unit), event: E) = {
+    Try(handle(event)) match {
+      case Success(_) =>
+        // update last processed sequence number of event if event could get processed successfully
+        setLastProcessedSequenceNr(event.meta)
       case Failure(e) =>
+        log.error(s"Couldn't execute event:$e, error: {}", e)
+        // forward exception which should get handled outside of this code
         throw e
     }
   }
+
+  def initializeEntityStoreView(): Unit
 }

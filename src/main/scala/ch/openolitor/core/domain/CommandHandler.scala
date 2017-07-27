@@ -39,17 +39,37 @@ import scala.util.Success
  */
 trait CommandHandler extends LazyLogging with Defaults {
   import EntityStore._
-  type IdFactory = Class[_ <: BaseId] => Long
-  val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]]
 
-  def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, meta: EventMetadata, entity: E, f: Long => I): Try[Seq[PersistentEvent]] = {
-    Success(Seq(insertEntityEvent(idFactory, meta, entity, f)))
+  val handle: PartialFunction[UserCommand, IdFactory => EventTransactionMetadata => Try[Seq[ResultingEvent]]]
+
+  def handleEntityInsert[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, transactionMeta: EventTransactionMetadata, entity: E, constructor: Long => I): Try[Seq[ResultingEvent]] = {
+    Success(Seq(insertEntityEvent(idFactory, transactionMeta, entity, constructor)))
   }
 
-  def insertEntityEvent[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, meta: EventMetadata, entity: E, f: Long => I): PersistentEvent = {
+  def insertEntityEvent[E <: AnyRef, I <: BaseId: ClassTag](idFactory: IdFactory, transactionMeta: EventTransactionMetadata, entity: E, constructor: Long => I): ResultingEvent = {
     val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
     logger.debug(s"created => Insert entity:$entity")
-    val id = f(idFactory(clOf))
-    EntityInsertedEvent(meta, id, entity)
+    val id = idFactory.newId[I](constructor)
+    EntityInsertEvent[I, E](id, entity)
   }
+}
+
+trait IdFactory {
+  def newId[I <: BaseId: ClassTag](cons: Long => I): I
+}
+
+class EventMetadataFactory(meta: EventTransactionMetadata) {
+
+  var seqNr = 0L
+
+  private def nextSeqNr() = {
+    seqNr += 1
+    seqNr
+  }
+
+  //  def newId[I <: BaseId: ClassTag](cons: Long => I): I = {
+  //    val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
+  //    cons(idFactory(clOf))
+  //  }
+  def newMetadata(): EventMetadata = meta.toMetadata(nextSeqNr())
 }

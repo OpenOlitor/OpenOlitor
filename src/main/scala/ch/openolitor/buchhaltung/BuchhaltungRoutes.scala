@@ -297,6 +297,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 }
 
 class DefaultBuchhaltungRoutes(
+  override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,

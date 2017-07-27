@@ -34,6 +34,9 @@ trait CoreDBMappings extends DBMappings {
   implicit val dbSchemaIdSqlBinder = baseIdSqlBinder[DBSchemaId]
   implicit val evolutionStatusBinder = toStringSqlBinder[EvolutionStatus]
 
+  implicit val persistenceEventStateIdSqlBinderBinder: TypeBinder[PersistenceEventStateId] = baseIdTypeBinder(PersistenceEventStateId.apply _)
+  implicit val persistenceEventStateIdSqlBinder = baseIdSqlBinder[PersistenceEventStateId]
+
   implicit val dbSchemaMapping = new BaseEntitySQLSyntaxSupport[DBSchema] {
     override val tableName = "DBSchema"
 
@@ -49,6 +52,25 @@ trait CoreDBMappings extends DBMappings {
       Seq(
         column.revision -> parameter(schema.revision),
         column.status -> parameter(schema.status)
+      )
+    }
+  }
+
+  implicit val persistenceEventStateMapping = new BaseEntitySQLSyntaxSupport[PersistenceEventState] {
+    override val tableName = "PersistenceEventState"
+
+    override lazy val columns = autoColumns[PersistenceEventState]()
+
+    def apply(rn: ResultName[PersistenceEventState])(rs: WrappedResultSet): PersistenceEventState =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: PersistenceEventState): Seq[Any] =
+      parameters(PersistenceEventState.unapply(entity).get)
+
+    override def updateParameters(state: PersistenceEventState) = {
+      Seq(
+        column.lastTransactionNr -> parameter(state.lastTransactionNr),
+        column.lastSequenceNr -> parameter(state.lastSequenceNr)
       )
     }
   }

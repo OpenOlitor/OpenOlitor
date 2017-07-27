@@ -25,7 +25,7 @@ package ch.openolitor.core.eventsourcing
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 import stamina._
-import migrations._
+import stamina.json._
 import ch.openolitor.core.domain._
 import spray.json._
 import ch.openolitor.core.BaseJsonProtocol
@@ -36,7 +36,26 @@ import ch.openolitor.core.mailservice._
 import ch.openolitor.core.mailservice.MailService._
 import zangelo.spray.json.AutoProductFormats
 
+package object events extends DefaultJsonProtocol {
+  import spray.json.lenses.JsonLenses._
+
+  val V1toV2metaDataMigration = from[V1].to[V2] { meta1 =>
+    // write seqNr to transactionNr, set seqNr to 1
+    val oldSeq = meta1.extract[Long]('meta / 'seqNr)
+    meta1.update('meta / 'transactionNr ! set[Long](oldSeq)).update('meta / 'seqNr ! set[Long](1L))
+  }
+}
+
 package events {
+
+  sealed abstract class PersistedEventPersisterVn[T <: PersistentEvent: ClassTag, V <: Version: VersionInfo: MigratableVersion](key: String, entityPersisters: Persisters, migrator: JsonMigrator[V]) extends PersistedEventPersister[T, V](key, entityPersisters) {
+    override def canUnpersist(p: Persisted): Boolean = p.key == key && migrator.canMigrate(p.version)
+
+    override def unpersist(p: Persisted): T = {
+      if (canUnpersist(p)) unpersist(migrator.migrate(toJson(p.bytes), p.version))
+      else throw new IllegalArgumentException(s"Cannot unpersist:$p")
+    }
+  }
 
   sealed abstract class PersistedEventPersister[T <: PersistentEvent: ClassTag, V <: Version: VersionInfo](key: String, entityPersisters: Persisters) extends Persister[T, V](key) with LazyLogging {
 
@@ -47,12 +66,16 @@ package events {
     def unpersist(p: Persisted): T = {
       if (canUnpersist(p)) {
         fromBytes(p.bytes)
-      } else throw new IllegalArgumentException(s"Cannot unpersist")
+      } else throw new IllegalArgumentException(s"Cannot unpersist:$p")
     }
 
     def toBytes(t: T): ByteString
 
-    def fromBytes(bytes: ByteString): T
+    def fromBytes(bytes: ByteString): T = {
+      unpersist(toJson(bytes))
+    }
+
+    def unpersist(json: JsValue): T
 
     def persistEntity[E <: AnyRef](entity: E): JsValue = {
       logger.debug(s"persistEntity:$entity")
@@ -87,8 +110,8 @@ package events {
     def fromJson(json: JsValue): ByteString = ByteString(json.toString)
   }
 
-  class EntityInsertEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters)
-      extends PersistedEventPersister[EntityInsertedEvent[BaseId, AnyRef], V]("entity-inserted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
+  class EntityInsertEventPersister(entityPersisters: Persisters)
+      extends PersistedEventPersisterVn[EntityInsertedEvent[BaseId, AnyRef], V2]("entity-inserted", entityPersisters, V1toV2metaDataMigration) with EntityStoreJsonProtocol with BaseJsonProtocol
       with LazyLogging {
 
     def toBytes(t: EntityInsertedEvent[BaseId, AnyRef]): ByteString = {
@@ -106,8 +129,8 @@ package events {
       ))
     }
 
-    def fromBytes(bytes: ByteString): EntityInsertedEvent[BaseId, AnyRef] = {
-      toJson(bytes).asJsObject.getFields("meta", "id", "entity") match {
+    def unpersist(json: JsValue): EntityInsertedEvent[BaseId, AnyRef] = {
+      json.asJsObject.getFields("meta", "id", "entity") match {
         case Seq(metaJson, idJson, entityJson) =>
           val meta = metadataFormat.read(metaJson)
           val id: BaseId = unpersistEntity(idJson)
@@ -120,8 +143,8 @@ package events {
     }
   }
 
-  class EntityUpdatedEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters)
-      extends PersistedEventPersister[EntityUpdatedEvent[BaseId, AnyRef], V]("entity-updated", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol
+  class EntityUpdatedEventPersister(entityPersisters: Persisters)
+      extends PersistedEventPersisterVn[EntityUpdatedEvent[BaseId, AnyRef], V2]("entity-updated", entityPersisters, V1toV2metaDataMigration) with EntityStoreJsonProtocol with BaseJsonProtocol
       with LazyLogging {
 
     def toBytes(t: EntityUpdatedEvent[BaseId, AnyRef]): ByteString = {
@@ -141,8 +164,8 @@ package events {
       fromJson(json)
     }
 
-    def fromBytes(bytes: ByteString): EntityUpdatedEvent[BaseId, AnyRef] = {
-      toJson(bytes).asJsObject.getFields("meta", "id", "entity") match {
+    def unpersist(json: JsValue): EntityUpdatedEvent[BaseId, AnyRef] = {
+      json.asJsObject.getFields("meta", "id", "entity") match {
         case Seq(metaJson, idJson, entityJson) =>
           val meta = metadataFormat.read(metaJson)
           val id: BaseId = unpersistEntity(idJson)
@@ -154,8 +177,8 @@ package events {
     }
   }
 
-  class EntityDeletedEventPersister[V <: Version: VersionInfo](entityPersisters: Persisters)
-      extends PersistedEventPersister[EntityDeletedEvent[BaseId], V]("entity-deleted", entityPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+  class EntityDeletedEventPersister(entityPersisters: Persisters)
+      extends PersistedEventPersisterVn[EntityDeletedEvent[BaseId], V2]("entity-deleted", entityPersisters, V1toV2metaDataMigration) with EntityStoreJsonProtocol with BaseJsonProtocol {
 
     def toBytes(t: EntityDeletedEvent[BaseId]): ByteString = {
       //build custom json
@@ -168,8 +191,8 @@ package events {
       ))
     }
 
-    def fromBytes(bytes: ByteString): EntityDeletedEvent[BaseId] = {
-      toJson(bytes).asJsObject.getFields("meta", "id") match {
+    def unpersist(json: JsValue): EntityDeletedEvent[BaseId] = {
+      json.asJsObject.getFields("meta", "id") match {
         case Seq(metaJson, idJson) =>
           val meta = metadataFormat.read(metaJson)
           val id: BaseId = unpersistEntity(idJson)
@@ -180,8 +203,8 @@ package events {
     }
   }
 
-  class SystemEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
-      extends PersistedEventPersister[PersistentSystemEvent, V]("system-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+  class SystemEventPersister(eventPersisters: Persisters)
+      extends PersistedEventPersisterVn[PersistentSystemEvent, V2]("system-event", eventPersisters, V1toV2metaDataMigration) with EntityStoreJsonProtocol with BaseJsonProtocol {
 
     def toBytes(t: PersistentSystemEvent): ByteString = {
       //build custom json
@@ -194,8 +217,8 @@ package events {
       ))
     }
 
-    def fromBytes(bytes: ByteString): PersistentSystemEvent = {
-      toJson(bytes).asJsObject.getFields("meta", "event") match {
+    def unpersist(json: JsValue): PersistentSystemEvent = {
+      json.asJsObject.getFields("meta", "event") match {
         case Seq(metaJson, eventJson) =>
           val meta = metadataFormat.read(metaJson)
           val event: SystemEvent = unpersistEntity(eventJson)
@@ -206,8 +229,8 @@ package events {
     }
   }
 
-  class SendMailEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
-      extends PersistedEventPersister[SendMailEvent, V]("send-mail-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol with MailJsonProtocol {
+  class SendMailEventPersister(eventPersisters: Persisters)
+      extends PersistedEventPersisterVn[SendMailEvent, V2]("send-mail-event", eventPersisters, V1toV2metaDataMigration) with EntityStoreJsonProtocol with BaseJsonProtocol with MailJsonProtocol {
 
     def toBytes(t: SendMailEvent): ByteString = {
       //build custom json
@@ -225,7 +248,7 @@ package events {
       ))
     }
 
-    def fromBytes(bytes: ByteString): SendMailEvent = {
+    def unpersist(json: JsValue): SendMailEvent = {
       def toSendMailEvent(metaJson: JsValue, uid: String, mailJson: JsValue, expiresJson: JsValue, commandMeta: Option[AnyRef]) = {
         val meta = metadataFormat.read(metaJson)
         val mail: Mail = mailFormat.read(mailJson)
@@ -233,7 +256,7 @@ package events {
         SendMailEvent(meta, uid, mail, expires, commandMeta)
       }
 
-      toJson(bytes).asJsObject.getFields("meta", "uid", "mail", "expires", "commandMeta") match {
+      json.asJsObject.getFields("meta", "uid", "mail", "expires", "commandMeta") match {
         case Seq(metaJson, JsString(uid), mailJson, expiresJson, JsNull) =>
           toSendMailEvent(metaJson, uid, mailJson, expiresJson, None)
         case Seq(metaJson, JsString(uid), mailJson, expiresJson, commandMetaJson) =>
@@ -244,8 +267,8 @@ package events {
     }
   }
 
-  class MailSentEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
-      extends PersistedEventPersister[MailSentEvent, V]("mail-sent-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+  class MailSentEventPersister(eventPersisters: Persisters)
+      extends PersistedEventPersisterVn[MailSentEvent, V2]("mail-sent-event", eventPersisters, V1toV2metaDataMigration) with EntityStoreJsonProtocol with BaseJsonProtocol {
 
     def toBytes(t: MailSentEvent): ByteString = {
       //build custom json
@@ -259,13 +282,13 @@ package events {
       ))
     }
 
-    def fromBytes(bytes: ByteString): MailSentEvent = {
+    def unpersist(json: JsValue): MailSentEvent = {
       def toMailSentEvent(metaJson: JsValue, uid: String, commandMeta: Option[AnyRef]) = {
         val meta = metadataFormat.read(metaJson)
         MailSentEvent(meta, uid, commandMeta)
       }
 
-      toJson(bytes).asJsObject.getFields("meta", "uid", "commandMeta") match {
+      json.asJsObject.getFields("meta", "uid", "commandMeta") match {
         case Seq(metaJson, JsString(uid), JsNull) =>
           toMailSentEvent(metaJson, uid, None)
         case Seq(metaJson, JsString(uid), commandMetaJson) =>
@@ -276,8 +299,8 @@ package events {
     }
   }
 
-  class SendMailFailedEventPersister[V <: Version: VersionInfo](eventPersisters: Persisters)
-      extends PersistedEventPersister[SendMailFailedEvent, V]("send-mail-failed-event", eventPersisters) with EntityStoreJsonProtocol with BaseJsonProtocol {
+  class SendMailFailedEventPersister(eventPersisters: Persisters)
+      extends PersistedEventPersisterVn[SendMailFailedEvent, V2]("send-mail-failed-event", eventPersisters, V1toV2metaDataMigration) with EntityStoreJsonProtocol with BaseJsonProtocol {
 
     def toBytes(t: SendMailFailedEvent): ByteString = {
       //build custom json
@@ -292,13 +315,13 @@ package events {
       ))
     }
 
-    def fromBytes(bytes: ByteString): SendMailFailedEvent = {
+    def unpersist(json: JsValue): SendMailFailedEvent = {
       def toSendMailFailedEvent(metaJson: JsValue, uid: String, afterNumberOfRetries: Int, commandMeta: Option[AnyRef]) = {
         val meta = metadataFormat.read(metaJson)
         SendMailFailedEvent(meta, uid, afterNumberOfRetries, commandMeta)
       }
 
-      toJson(bytes).asJsObject.getFields("meta", "uid", "numberOfRetries", "commandMeta") match {
+      json.asJsObject.getFields("meta", "uid", "numberOfRetries", "commandMeta") match {
         case Seq(metaJson, JsString(uid), JsNumber(afterNumberOfRetries), JsNull) =>
           toSendMailFailedEvent(metaJson, uid, afterNumberOfRetries.toInt, None)
         case Seq(metaJson, JsString(uid), JsNumber(afterNumberOfRetries), commandMetaJson) =>

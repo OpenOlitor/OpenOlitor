@@ -29,10 +29,10 @@ import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.stammdaten.repositories._
 
 object StammdatenEntityStoreView {
-  def props(mailService: ActorRef, entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenEntityStoreView], mailService, entityStore, sysConfig, system)
+  def props(mailService: ActorRef, dbEvolutionActor: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenEntityStoreView], mailService, dbEvolutionActor, sysConfig, system)
 }
 
-class DefaultStammdatenEntityStoreView(override val mailService: ActorRef, override val entityStore: ActorRef, implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends StammdatenEntityStoreView
+class DefaultStammdatenEntityStoreView(override val mailService: ActorRef, override val dbEvolutionActor: ActorRef, implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends StammdatenEntityStoreView
   with DefaultStammdatenWriteRepositoryComponent
 
 /**
@@ -44,7 +44,14 @@ trait StammdatenEntityStoreView extends EntityStoreView
 
   override val module = "stammdaten"
 
+  logger.debug(s"Created EntityStoreView:${viewId}")
+
   def initializeEntityStoreView = {
+    logger.debug(s"Initialize StammdatenEntityStoreView for mandant:${sysConfig.mandantConfiguration.name}")
+  }
+
+  override def startup() = {
+    logger.debug(s"Startup StammdatenEntityStoreView for mandant:${sysConfig.mandantConfiguration.name}")
   }
 }
 

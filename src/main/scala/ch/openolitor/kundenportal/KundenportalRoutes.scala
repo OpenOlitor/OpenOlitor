@@ -176,6 +176,7 @@ trait KundenportalRoutes extends HttpService with ActorReferences
 }
 
 class DefaultKundenportalRoutes(
+  override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,

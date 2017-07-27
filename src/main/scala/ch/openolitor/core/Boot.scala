@@ -54,7 +54,6 @@ import java.net.ServerSocket
 import spray.http.Uri
 import ch.openolitor.core.proxy.ProxyServiceActor
 import ch.openolitor.core.db.evolution.Evolution
-import ch.openolitor.core.domain.EntityStore.CheckDBEvolution
 import scala.util._
 import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
 import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
@@ -69,6 +68,10 @@ import ch.openolitor.core.calculations.OpenOlitorCalculations
 import ch.openolitor.core.calculations.Calculations.InitializeCalculation
 import ch.openolitor.util.AirbrakeNotifier
 import ch.openolitor.core.jobs.JobQueueService
+import ch.openolitor.core.db.evolution.DBEvolutionActor
+import ch.openolitor.core.db.evolution.scripts.Scripts
+import ch.openolitor.core.domain.SystemEvents.SystemStarted
+import org.joda.time.DateTime
 
 case class SystemConfig(mandantConfiguration: MandantConfiguration, cpContext: ConnectionPoolContext, asyncCpContext: MultipleAsyncConnectionPoolContext)
 
@@ -177,16 +180,19 @@ object Boot extends App with LazyLogging {
       val duration = Duration.create(1, SECONDS);
       val airbrakeNotifier = startAirbrakeService
 
+      val evolution = new Evolution(sysCfg, Scripts.current(app))
       val system = app.actorOf(SystemActor.props(airbrakeNotifier), "oo-system")
       logger.debug(s"oo-system:$system")
-      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(new Evolution(sysCfg)), "entity-store"), duration).asInstanceOf[ActorRef]
+      val dbEvolutionActor = Await.result(system ? SystemActor.Child(DBEvolutionActor.props(evolution), "db-evolution"), duration).asInstanceOf[ActorRef]
+      logger.debug(s"oo-system:$system -> dbEvolutionActor:$dbEvolutionActor")
+      val entityStore = Await.result(system ? SystemActor.Child(EntityStore.props(dbEvolutionActor, evolution), "entity-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> entityStore:$entityStore")
-      val eventStore = Await.result(system ? SystemActor.Child(SystemEventStore.props, "event-store"), duration).asInstanceOf[ActorRef]
+      val eventStore = Await.result(system ? SystemActor.Child(SystemEventStore.props(dbEvolutionActor), "event-store"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> eventStore:$eventStore")
-      val mailService = Await.result(system ? SystemActor.Child(MailService.props, "mail-service"), duration).asInstanceOf[ActorRef]
+      val mailService = Await.result(system ? SystemActor.Child(MailService.props(dbEvolutionActor), "mail-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system:$system -> eventStore:$mailService")
 
-      val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props(mailService, entityStore), "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
+      val stammdatenEntityStoreView = Await.result(system ? SystemActor.Child(StammdatenEntityStoreView.props(mailService, dbEvolutionActor), "stammdaten-entity-store-view"), duration).asInstanceOf[ActorRef]
       val fileStoreComponent = new DefaultFileStoreComponent(cfg.name, sysCfg, app)
       val reportSystem = Await.result(system ? SystemActor.Child(ReportSystem.props(fileStoreComponent.fileStore, sysCfg), "report-system"), duration).asInstanceOf[ActorRef]
       val jobQueueService = Await.result(system ? SystemActor.Child(JobQueueService.props(cfg), "job-queue"), duration).asInstanceOf[ActorRef]
@@ -196,7 +202,7 @@ object Boot extends App with LazyLogging {
       val stammdatenMailSentListener = Await.result(system ? SystemActor.Child(StammdatenMailListener.props, "stammdaten-mail-listener"), duration).asInstanceOf[ActorRef]
       val stammdatenGeneratedEventsListener = Await.result(system ? SystemActor.Child(StammdatenGeneratedEventsListener.props, "stammdaten-generated-events-listener"), duration).asInstanceOf[ActorRef]
 
-      val buchhaltungEntityStoreView = Await.result(system ? SystemActor.Child(BuchhaltungEntityStoreView.props(entityStore), "buchhaltung-entity-store-view"), duration).asInstanceOf[ActorRef]
+      val buchhaltungEntityStoreView = Await.result(system ? SystemActor.Child(BuchhaltungEntityStoreView.props(dbEvolutionActor), "buchhaltung-entity-store-view"), duration).asInstanceOf[ActorRef]
       val buchhaltungDBEventListener = Await.result(system ? SystemActor.Child(BuchhaltungDBEventEntityListener.props, "buchhaltung-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
       val buchhaltungReportEventListener = Await.result(system ? SystemActor.Child(BuchhaltungReportEventListener.props(entityStore), "buchhaltung-report-event-listener"), duration).asInstanceOf[ActorRef]
 
@@ -215,7 +221,7 @@ object Boot extends App with LazyLogging {
       buchhaltungEntityStoreView ? DefaultMessages.Startup
 
       // create and start our service actor
-      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, airbrakeNotifier, jobQueueService, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
+      val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, airbrakeNotifier, jobQueueService, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]
       logger.debug(s"oo-system: route-service:$service")
 
       // start a new HTTP server on port 9005 with our service actor as the handler
@@ -227,6 +233,9 @@ object Boot extends App with LazyLogging {
       logger.debug(s"oo-system: configured ws listener on port ${cfg.wsPort}")
 
       calculations ! InitializeCalculation
+
+      // persist timestamp of system startup
+      eventStore ! SystemStarted(DateTime.now)
 
       MandantSystem(cfg, app)
     }

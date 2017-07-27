@@ -27,7 +27,7 @@ import scala.util.{ Failure, Success, Try }
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.db.{ AsyncConnectionPoolContextAware, ConnectionPoolContextAware }
-import ch.openolitor.core.domain.{ CommandHandler, EntityStore, EventMetadata, PersistentEvent, UserCommand }
+import ch.openolitor.core.domain.{ CommandHandler, EntityStore, EventTransactionMetadata, PersistentEvent, UserCommand, IdFactory }
 import ch.openolitor.core.exceptions.InvalidStateException
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.security.Subject
@@ -47,7 +47,7 @@ trait KundenportalCommandHandler extends CommandHandler with BuchhaltungDBMappin
   import KundenportalCommandHandler._
   import EntityStore._
 
-  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
+  override val handle: PartialFunction[UserCommand, IdFactory => EventTransactionMetadata => Try[Seq[ResultingEvent]]] = {
     case AbwesenheitErstellenCommand(personId, subject, entity: AbwesenheitCreate) => idFactory => meta =>
       DB readOnly { implicit session =>
         kundenportalWriteRepository.getAbo(entity.aboId) map { abo =>
@@ -63,7 +63,7 @@ trait KundenportalCommandHandler extends CommandHandler with BuchhaltungDBMappin
       DB readOnly { implicit session =>
         kundenportalWriteRepository.getAbo(aboId) map { abo =>
           if (subject.kundeId == abo.kundeId) {
-            Success(Seq(EntityDeletedEvent(meta, abwesenheitId)))
+            Success(Seq(EntityDeleteEvent(abwesenheitId)))
           } else {
             Failure(new InvalidStateException("Es können nur Abwesenheiten eigener Abos entfernt werden."))
           }

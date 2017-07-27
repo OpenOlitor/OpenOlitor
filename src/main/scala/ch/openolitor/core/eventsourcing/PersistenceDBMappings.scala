@@ -49,6 +49,7 @@ import ch.openolitor.core.ActorSystemReference
 import akka.persistence.PersistentImpl
 import spray.json._
 import scala.reflect.ClassTag
+import ch.openolitor.core.domain.PersistentEvent
 
 trait PersistenceDBMappings extends DBMappings with ActorSystemReference {
 
@@ -77,7 +78,7 @@ trait PersistenceDBMappings extends DBMappings with ActorSystemReference {
 
   val serialization: Serialization = SerializationExtension(system)
 
-  implicit val persistedMessageBinder: TypeBinder[Option[PersistedMessage]] = bytes.map { message =>
+  implicit val persistedMessageBinder: TypeBinder[Option[PersistedMessage]] = bytes map { message =>
     Try {
       serialization.deserialize(message, classOf[PersistentRepr]) match {
         case Success(m: PersistentRepr) =>
@@ -104,6 +105,22 @@ trait PersistenceDBMappings extends DBMappings with ActorSystemReference {
       case Failure(e) =>
         println(s">>>>>>Errro:$e")
         e.printStackTrace()
+        None
+    }
+  }
+
+  implicit val persistentEventBinder: TypeBinder[Option[PersistentEvent]] = bytes map { message =>
+    Try {
+      serialization.deserialize(message, classOf[PersistentRepr]) match {
+        case Success(m: PersistentRepr) =>
+          m.payload match {
+            case x: PersistentEvent => Some(x)
+          }
+        case _ => None
+      }
+    } match {
+      case Success(msg) => msg
+      case Failure(e) =>
         None
     }
   }
