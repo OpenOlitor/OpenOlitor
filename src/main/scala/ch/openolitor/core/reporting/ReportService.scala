@@ -45,7 +45,7 @@ import java.util.Locale
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.stammdaten.models.ProjektVorlageId
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsync
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import spray.json._
 import ch.openolitor.core.DateFormats
@@ -81,7 +81,7 @@ case class AsyncReportServiceResult(jobId: JobId, validationErrors: Seq[JsValue]
 }
 
 trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware with FileTypeFilenameMapping with DateFormats {
-  self: ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
+  self: ActorReferences with FileStoreComponent with StammdatenReadRepositoryAsyncComponent =>
 
   implicit val actorSystem = system
 

@@ -22,10 +22,10 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung.repositories
 
-trait BuchhaltungReadRepositoryComponent {
+trait BuchhaltungReadRepositoryAsyncComponent {
   val buchhaltungReadRepository: BuchhaltungReadRepositoryAsync
 }
 
-trait DefaultBuchhaltungReadRepositoryComponent extends BuchhaltungReadRepositoryComponent {
+trait DefaultBuchhaltungReadRepositoryAsyncComponent extends BuchhaltungReadRepositoryAsyncComponent {
   override val buchhaltungReadRepository: BuchhaltungReadRepositoryAsync = new BuchhaltungReadRepositoryAsyncImpl
 }

@@ -41,7 +41,7 @@ import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-trait BuchhaltungReadRepositorySync extends BaseReadRepositorySync with EventStream {
+trait BuchhaltungReadRepositorySync extends BaseReadRepositorySync {
   def getRechnungen(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung]
   def getKundenRechnungen(kundeId: KundeId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung]
   def getRechnungDetail(id: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[RechnungDetail]

@@ -20,12 +20,17 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.buchhaltung.repositories
 
-import org.specs2.mock.Mockito
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsync
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
+import akka.actor.ActorSystem
+import ch.openolitor.core.DefaultActorSystemReference
 
-trait MockStammdatenReadRepositoryComponent extends StammdatenReadRepositoryAsyncComponent with Mockito {
-  override val stammdatenReadRepository: StammdatenReadRepositoryAsync = mock[StammdatenReadRepositoryAsync]
+trait BuchhaltungReadRepositorySyncComponent {
+  val buchhaltungReadRepository: BuchhaltungReadRepositorySync
+}
+
+trait DefaultBuchhaltungReadRepositorySyncComponent extends BuchhaltungReadRepositorySyncComponent {
+  val system: ActorSystem
+
+  override val buchhaltungReadRepository: BuchhaltungReadRepositorySync = new DefaultActorSystemReference(system) with BuchhaltungReadRepositorySyncImpl
 }

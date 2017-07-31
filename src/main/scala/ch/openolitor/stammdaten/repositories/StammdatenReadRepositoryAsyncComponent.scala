@@ -22,10 +22,10 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.repositories
 
-trait StammdatenReadRepositoryComponent {
+trait StammdatenReadRepositoryAsyncComponent {
   val stammdatenReadRepository: StammdatenReadRepositoryAsync
 }
 
-trait DefaultStammdatenReadRepositoryComponent extends StammdatenReadRepositoryComponent {
+trait DefaultStammdatenReadRepositoryAsyncComponent extends StammdatenReadRepositoryAsyncComponent {
   override val stammdatenReadRepository: StammdatenReadRepositoryAsync = new StammdatenReadRepositoryAsyncImpl
 }

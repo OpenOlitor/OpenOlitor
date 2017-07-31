@@ -26,7 +26,7 @@ import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.models._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
 import ch.openolitor.core.ActorReferences
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import ch.openolitor.core.filestore._
@@ -39,7 +39,7 @@ import org.joda.time.DateTime
 import ch.openolitor.core.jobs.JobQueueService.JobId
 
 trait LieferplanungReportService extends AsyncConnectionPoolContextAware with ReportService with StammdatenJsonProtocol {
-  self: StammdatenReadRepositoryComponent with ActorReferences with FileStoreComponent =>
+  self: StammdatenReadRepositoryAsyncComponent with ActorReferences with FileStoreComponent =>
   def generateLieferplanungReports(fileType: FileType)(config: ReportConfig[LieferplanungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[LieferplanungId]]] = {
     generateReports[LieferplanungId, LieferplanungReport](
       config,
