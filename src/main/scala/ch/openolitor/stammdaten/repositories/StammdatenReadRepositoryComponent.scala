@@ -23,9 +23,9 @@
 package ch.openolitor.stammdaten.repositories
 
 trait StammdatenReadRepositoryComponent {
-  val stammdatenReadRepository: StammdatenReadRepository
+  val stammdatenReadRepository: StammdatenReadRepositoryAsync
 }
 
 trait DefaultStammdatenReadRepositoryComponent extends StammdatenReadRepositoryComponent {
-  override val stammdatenReadRepository: StammdatenReadRepository = new StammdatenReadRepositoryImpl
+  override val stammdatenReadRepository: StammdatenReadRepositoryAsync = new StammdatenReadRepositoryAsyncImpl
 }

@@ -23,9 +23,9 @@
 package ch.openolitor.stammdaten
 
 import org.specs2.mock.Mockito
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsync
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 
 trait MockStammdatenReadRepositoryComponent extends StammdatenReadRepositoryComponent with Mockito {
-  override val stammdatenReadRepository: StammdatenReadRepository = mock[StammdatenReadRepository]
+  override val stammdatenReadRepository: StammdatenReadRepositoryAsync = mock[StammdatenReadRepositoryAsync]
 }

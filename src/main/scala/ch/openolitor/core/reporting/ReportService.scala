@@ -44,7 +44,7 @@ import ch.openolitor.util.InputStreamUtil._
 import java.util.Locale
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.stammdaten.models.ProjektVorlageId
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsync
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import spray.json._
