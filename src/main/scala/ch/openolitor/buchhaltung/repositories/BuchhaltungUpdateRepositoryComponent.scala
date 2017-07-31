@@ -22,10 +22,21 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung.repositories
 
-trait BuchhaltungReadRepositoryComponent {
-  val buchhaltungReadRepository: BuchhaltungReadRepositoryAsync
+import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
+import ch.openolitor.core.repositories.BaseUpdateRepositoryComponent
+
+import akka.actor.ActorSystem
+import ch.openolitor.core.EventStream
+
+trait BuchhaltungUpdateRepositoryComponent extends BaseUpdateRepositoryComponent {
+  val buchhaltungUpdateRepository: BuchhaltungUpdateRepository
+
+  // implicitly expose the eventStream
+  implicit def buchhaltungUpdateRepositoryImplicit = buchhaltungUpdateRepository
 }
 
-trait DefaultBuchhaltungReadRepositoryComponent extends BuchhaltungReadRepositoryComponent {
-  override val buchhaltungReadRepository: BuchhaltungReadRepositoryAsync = new BuchhaltungReadRepositoryAsyncImpl
+trait DefaultBuchhaltungUpdateRepositoryComponent extends BuchhaltungUpdateRepositoryComponent {
+  val system: ActorSystem
+
+  override val buchhaltungUpdateRepository: BuchhaltungUpdateRepository = new DefaultActorSystemReference(system) with BuchhaltungUpdateRepositoryImpl with AkkaEventStream
 }
