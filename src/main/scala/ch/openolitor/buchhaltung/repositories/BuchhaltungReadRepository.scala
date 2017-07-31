@@ -45,7 +45,7 @@ import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 /**
  * Asynchronous Repository
  */
-trait BuchhaltungReadRepository extends BaseReadRepository {
+trait BuchhaltungReadRepository extends BaseReadRepositoryAsync {
   def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]]
   def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
   def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]

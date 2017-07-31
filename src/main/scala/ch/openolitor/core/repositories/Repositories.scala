@@ -101,7 +101,7 @@ trait BaseRepositoryQueries extends DBMappings with LazyLogging {
   }
 }
 
-trait BaseReadRepository extends BaseRepositoryQueries {
+trait BaseReadRepositoryAsync extends BaseRepositoryQueries {
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
     asyncCpContext: MultipleAsyncConnectionPoolContext,
     binder: SqlBinder[I]): Future[Option[E]] = {
@@ -115,11 +115,7 @@ trait BaseReadRepository extends BaseRepositoryQueries {
   }
 }
 
-trait BaseWriteRepository extends BaseRepositoryQueries {
-
-  type Validator[E] = E => Boolean
-  val TrueValidator: Validator[Any] = x => true
-
+trait BaseReadRepositorySync extends BaseRepositoryQueries {
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
     session: DBSession,
     binder: SqlBinder[I]): Option[E] = {
@@ -131,7 +127,9 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
     binder: SqlBinder[I]): List[E] = {
     getByIdsQuery(syntax, ids).apply()
   }
+}
 
+trait BaseInsertRepository extends BaseReadRepositorySync with InsertRepository {
   def insertEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
@@ -152,7 +150,9 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
         Some(entity)
     }
   }
+}
 
+trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository {
   /*
    * @param updateFields restrict the updated fields to this list
    */
@@ -183,7 +183,9 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
       None
     }
   }
+}
 
+trait BaseDeleteRepository extends BaseReadRepositorySync with DeleteRepository {
   def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Validator[E])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
@@ -215,4 +217,11 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
       }
     }.getOrElse(None)
   }
+}
+
+trait BaseWriteRepository extends CrudRepository
+    with BaseReadRepositorySync
+    with BaseInsertRepository
+    with BaseUpdateRepository
+    with BaseDeleteRepository {
 }

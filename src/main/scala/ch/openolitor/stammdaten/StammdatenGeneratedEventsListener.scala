@@ -44,7 +44,7 @@ object StammdatenGeneratedEventsListener {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenGeneratedEventsListener], sysConfig, system)
 }
 
-class DefaultStammdatenGeneratedEventsListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenGeneratedEventsListener(sysConfig) with DefaultStammdatenWriteRepositoryComponent
+class DefaultStammdatenGeneratedEventsListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenGeneratedEventsListener(sysConfig) with DefaultStammdatenUpdateRepositoryComponent
 
 /**
  * Listens to succesful sent mails
@@ -53,7 +53,7 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
     with StammdatenDBMappings
     with ConnectionPoolContextAware
     with AboAktivChangeHandler {
-  this: StammdatenWriteRepositoryComponent =>
+  this: StammdatenUpdateRepositoryComponent =>
   import StammdatenGeneratedEventsListener._
 
   override def preStart() {
@@ -85,7 +85,7 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
 
   private def handleChange(id: AboId, aktiv: Boolean)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getAbo(id) map { abo =>
+      stammdatenUpdateRepository.getAbo(id) map { abo =>
         if (abo.aktiv != aktiv) {
           abo match {
             case d: DepotlieferungAbo =>
@@ -109,6 +109,6 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
 
   // TODO refactor this further
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(mod: E => E)(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
-    modifyEntityWithRepository(stammdatenWriteRepository)(id, mod)
+    modifyEntityWithRepository(stammdatenUpdateRepository)(id, mod)
   }
 }

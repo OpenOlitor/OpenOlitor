@@ -156,7 +156,7 @@ trait StammdatenReadRepository extends ReportReadRepository {
   def getLastClosedLieferplanungenDetail(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[LieferplanungOpenDetail]]
 }
 
-class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
+class StammdatenReadRepositoryImpl extends BaseReadRepositoryAsync with StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]] = {
     getAbotypenQuery(filter).future
   }
