@@ -86,7 +86,7 @@ object StammdatenCommandHandler {
   case class AboDeaktiviertEvent(meta: EventMetadata, aboId: AboId) extends PersistentGeneratedEvent with JSONSerializable
 }
 
-trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware {
+trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware with LieferungHandler {
   self: StammdatenWriteRepositoryComponent =>
   import StammdatenCommandHandler._
   import EntityStore._
@@ -598,6 +598,137 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           } else { Nil }
         }
       }).toSeq
+    }
+  }
+
+  private def getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung: Lieferplanung, meta: EventMetadata)(implicit personId: PersonId): Seq[PersistentEvent] = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanung.id)
+
+      //handle Depot- and Postlieferungen: Group all entries with the same VertriebId on the same Date
+      val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
+
+      (vertriebeDaten flatmap {
+        case (vertriebId, lieferungDatum) => {
+          logger.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
+          //create auslieferungen
+          val auslieferungL = stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
+            val auslieferungO = getAuslieferungDepotPost(lieferungDatum, vertriebsart)
+            val auslieferungC = auslieferungO match {
+              case None => {
+                logger.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
+                val newAuslieferung = createAuslieferungDepotPost(lieferungDatum, vertriebsart, 0)
+                EntityInsertedEvent(meta, newAuslieferung.id, newAuslieferung)
+              }
+            }
+
+            auslieferungC map { _ =>
+              val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+              if (!koerbe.isEmpty) {
+                koerbe map { korb =>
+                  val copy = korb.copy(auslieferungId = auslieferungC.head.id)
+                  EntityUpdatedEvent(meta, copy.id, copy)
+                }
+              }
+            }
+          }
+
+          auslieferungL.distinct.collect {
+            case Some(auslieferung) => {
+              val koerbeC = stammdatenWriteRepository.countKoerbe(auslieferung.id) getOrElse 0
+              auslieferung match {
+                case d: DepotAuslieferung => {
+                  val copy = d.copy(anzahlKoerbe = koerbeC)
+                  EntityUpdatedEvent(meta, copy.id, copy)
+                }
+                case p: PostAuslieferung => {
+                  val copy = p.copy(anzahlKoerbe = koerbeC)
+                  EntityUpdatedEvent(meta, copy.id, copy)
+                }
+                case _ =>
+              }
+            }
+          }
+        }
+      }).toSeq
+      //calculate new values
+      lieferungen map { lieferung =>
+        //calculate total of lieferung
+        val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
+        val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy, lieferungMapping.column.preisTotal, lieferungMapping.column.status)
+
+        //update durchschnittspreis
+        stammdatenWriteRepository.getProjekt map { projekt =>
+          stammdatenWriteRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
+            val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
+
+            val lieferungen = vertrieb.anzahlLieferungen.get(gjKey).getOrElse(0)
+            val durchschnittspreis: BigDecimal = vertrieb.durchschnittspreis.get(gjKey).getOrElse(0)
+
+            val neuerDurchschnittspreis = calcDurchschnittspreis(durchschnittspreis, lieferungen, total)
+            val copy = vertrieb.copy(
+              anzahlLieferungen = vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
+              durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
+            )
+
+            stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
+          }
+        }
+      }
+
+      stammdatenWriteRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
+        if (Offen == sammelbestellung.status) {
+          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Abgeschlossen))
+        }
+      }
+    }
+  }
+
+  private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId): Auslieferung = {
+    val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+
+    vertriebsart match {
+      case d: DepotlieferungDetail =>
+        val result = DepotAuslieferung(
+          auslieferungId,
+          Erfasst,
+          d.depotId,
+          d.depot.name,
+          lieferungDatum,
+          anzahlKoerbe,
+          DateTime.now,
+          personId,
+          DateTime.now,
+          personId
+        )
+        //stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
+        result
+
+      case p: PostlieferungDetail =>
+        val result = PostAuslieferung(
+          auslieferungId,
+          Erfasst,
+          lieferungDatum,
+          anzahlKoerbe,
+          DateTime.now,
+          personId,
+          DateTime.now,
+          personId
+        )
+        //stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
+        result
+    }
+  }
+
+  private def getAuslieferungDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Option[Auslieferung] = {
+    vertriebsart match {
+      case d: DepotlieferungDetail =>
+        stammdatenWriteRepository.getDepotAuslieferung(d.depotId, datum)
+      case p: PostlieferungDetail =>
+        stammdatenWriteRepository.getPostAuslieferung(datum)
+      case _ =>
+        None
     }
   }
 
