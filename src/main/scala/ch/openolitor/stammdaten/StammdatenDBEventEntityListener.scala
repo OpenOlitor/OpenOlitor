@@ -334,8 +334,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv - modAboCount)
       }
-
-      deleteKoerbeForDeletedAbo(abo)
     }
   }
 
@@ -353,13 +351,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           upsertKorb(lieferung, abo, abotyp)
         }
       }
-    }
-  }
-
-  def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    // koerbe der offenen lieferungen loeschen
-    stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
-      deleteKorb(lieferung, abo)
     }
   }
 
