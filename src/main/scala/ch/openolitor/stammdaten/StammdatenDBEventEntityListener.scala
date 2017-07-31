@@ -60,7 +60,7 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with StammdatenDBMappings
     with ConnectionPoolContextAware
-    with KorbHandler
+    with KorbStatusHandler
     with AboAktivChangeHandler
     with LieferungHandler {
   this: StammdatenWriteRepositoryComponent =>
@@ -301,8 +301,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + modAboCount)
         }
       }
-
-      modifyKoerbeForAbo(to, Some(from))
     }
   }
 

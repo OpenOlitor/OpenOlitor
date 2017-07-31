@@ -63,7 +63,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     with LazyLogging
     with AsyncConnectionPoolContextAware
     with StammdatenDBMappings
-    with LieferungHandler {
+    with LieferungHandler
+    with KorbHandler {
   self: StammdatenWriteRepositoryComponent =>
 
   val FALSE = false
@@ -413,34 +414,40 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateDepotlieferungAbo(meta: EventMetadata, id: AboId, update: DepotlieferungAboModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
         //map all updatable fields
         val aktiv = IAbo.calculateAktiv(update.start, update.ende)
         val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
         stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+
+        modifyKoerbeForAbo(copy, Some(abo))
       }
     }
   }
 
   def updatePostlieferungAbo(meta: EventMetadata, id: AboId, update: PostlieferungAboModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
         //map all updatable fields
         val aktiv = IAbo.calculateAktiv(update.start, update.ende)
         val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
         stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+
+        modifyKoerbeForAbo(copy, Some(abo))
       }
     }
   }
 
   def updateHeimlieferungAbo(meta: EventMetadata, id: AboId, update: HeimlieferungAboModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
         //map all updatable fields
         val aktiv = IAbo.calculateAktiv(update.start, update.ende)
         val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
         stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+
+        modifyKoerbeForAbo(copy, Some(abo))
       }
     }
   }
