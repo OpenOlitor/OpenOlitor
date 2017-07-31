@@ -20,39 +20,32 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.kundenportal.repositories
+package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
+import java.util.UUID
 import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
-import scala.concurrent.ExecutionContext
-import ch.openolitor.core.db._
-import ch.openolitor.core.db.OOAsyncDB._
-import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseWriteRepository
-import scala.concurrent._
-import akka.event.Logging
-import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
-import ch.openolitor.core.Boot
-import akka.actor.ActorSystem
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.core.AkkaEventStream
-import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import scala.util._
+import ch.openolitor.core.scalax._
+import scala.concurrent.Future
+import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
+import ch.openolitor.core.db.OOAsyncDB._
 
-/**
- * Synchronous Repository
- */
-trait KundenportalWriteRepository extends BaseWriteRepository with EventStream {
-  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
-}
+trait BaseReadRepositoryAsync extends BaseRepositoryQueries {
+  def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
+    asyncCpContext: MultipleAsyncConnectionPoolContext,
+    binder: SqlBinder[I]): Future[Option[E]] = {
+    getByIdQuery(syntax, id).future
+  }
 
-trait KundenportalWriteRepositoryImpl extends KundenportalWriteRepository with LazyLogging with KundenportalRepositoryQueries {
-  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
-    getById(depotlieferungAboMapping, id) orElse getById(heimlieferungAboMapping, id) orElse getById(postlieferungAboMapping, id)
+  def getByIds[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], ids: Seq[I])(implicit
+    asyncCpContext: MultipleAsyncConnectionPoolContext,
+    binder: SqlBinder[I]): Future[List[E]] = {
+    getByIdsQuery(syntax, ids).future
   }
 }

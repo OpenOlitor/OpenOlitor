@@ -27,7 +27,6 @@ import scalikejdbc._
 import sqls.{ distinct, count }
 import ch.openolitor.core.db._
 import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.buchhaltung.models._

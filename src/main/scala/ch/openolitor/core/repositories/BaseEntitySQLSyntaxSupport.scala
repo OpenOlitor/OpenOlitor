@@ -20,39 +20,59 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.kundenportal.repositories
+package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
+import java.util.UUID
 import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
-import scala.concurrent.ExecutionContext
-import ch.openolitor.core.db._
-import ch.openolitor.core.db.OOAsyncDB._
-import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseWriteRepository
-import scala.concurrent._
-import akka.event.Logging
-import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
-import ch.openolitor.core.Boot
-import akka.actor.ActorSystem
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.core.AkkaEventStream
-import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import scala.util._
+import ch.openolitor.core.scalax._
+import scala.concurrent.Future
+import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
+import ch.openolitor.core.db.OOAsyncDB._
 
-/**
- * Synchronous Repository
- */
-trait KundenportalWriteRepository extends BaseWriteRepository with EventStream {
-  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
+case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
+
+trait ParameterBinderMapping[A] {
+  def bind(value: A): ParameterBinder[A]
 }
 
-trait KundenportalWriteRepositoryImpl extends KundenportalWriteRepository with LazyLogging with KundenportalRepositoryQueries {
-  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
-    getById(depotlieferungAboMapping, id) orElse getById(heimlieferungAboMapping, id) orElse getById(postlieferungAboMapping, id)
+trait SqlBinder[-T] extends (T => Any) {
+}
+
+trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging with DBMappings {
+
+  //override def columnNames 
+  def apply(p: SyntaxProvider[E])(rs: WrappedResultSet): E = apply(p.resultName)(rs)
+
+  def opt(e: SyntaxProvider[E])(rs: WrappedResultSet): Option[E] = try {
+    rs.stringOpt(e.resultName.id).map(_ => apply(e)(rs))
+  } catch {
+    case e: IllegalArgumentException => None
   }
+
+  def apply(rn: ResultName[E])(rs: WrappedResultSet): E
+
+  /**
+   * Declare parameter mappings for all parameters used on insert
+   */
+  def parameterMappings(entity: E): Seq[Any]
+
+  def defaultColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
+    column.erstelldat -> parameter(entity.erstelldat),
+    column.ersteller -> parameter(entity.ersteller),
+    column.modifidat -> parameter(entity.modifidat),
+    column.modifikator -> parameter(entity.modifikator)
+  )
+
+  /**
+   * Declare update parameters for this entity used on update. Is by default an empty set
+   */
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = defaultColumns(entity)
 }
+

@@ -20,39 +20,51 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.kundenportal.repositories
+package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
+import java.util.UUID
 import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
-import scala.concurrent.ExecutionContext
-import ch.openolitor.core.db._
-import ch.openolitor.core.db.OOAsyncDB._
-import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseWriteRepository
-import scala.concurrent._
-import akka.event.Logging
-import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
-import ch.openolitor.core.Boot
-import akka.actor.ActorSystem
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.core.AkkaEventStream
-import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import scala.util._
+import ch.openolitor.core.scalax._
+import scala.concurrent.Future
+import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
+import ch.openolitor.core.db.OOAsyncDB._
 
-/**
- * Synchronous Repository
- */
-trait KundenportalWriteRepository extends BaseWriteRepository with EventStream {
-  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
-}
+trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository {
+  /*
+   * @param updateFields restrict the updated fields to this list
+   */
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E, updateFields: SQLSyntax*)(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+    getById(syntaxSupport, entity.id).map { orig =>
+      val alias = syntaxSupport.syntax("x")
+      val id = alias.id
+      val updateParams = updateFields.toList match {
+        case Nil => syntaxSupport.updateParameters(entity)
+        case specifiedFields => (syntaxSupport.updateParameters(entity) filter (f => specifiedFields.contains(f._1))) ++ syntaxSupport.defaultColumns(entity)
+      }
 
-trait KundenportalWriteRepositoryImpl extends KundenportalWriteRepository with LazyLogging with KundenportalRepositoryQueries {
-  def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
-    getById(depotlieferungAboMapping, id) orElse getById(heimlieferungAboMapping, id) orElse getById(postlieferungAboMapping, id)
+      logger.debug(s"update entity:${entity.id} with values:$updateParams")
+
+      withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(id, parameter(entity.id))).update.apply()
+
+      //publish event to stream
+      eventPublisher.registerPublish(EntityModified(user, entity, orig))
+
+      entity
+    } orElse {
+      logger.debug(s"Entity with id:${entity.id} not found, ignore update")
+      None
+    }
   }
 }

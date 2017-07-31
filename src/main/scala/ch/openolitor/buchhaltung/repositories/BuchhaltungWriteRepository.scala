@@ -29,7 +29,6 @@ import scalikejdbc.async.FutureImplicits._
 import ch.openolitor.core.db._
 import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
 import ch.openolitor.stammdaten.models._
