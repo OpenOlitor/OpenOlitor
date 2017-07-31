@@ -33,13 +33,13 @@ import akka.actor.ActorSystem
 import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.Macros._
-import com.fasterxml.jackson.databind.JsonSerializable
 import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
 import org.joda.time.DateTime
 import java.util.UUID
 import scalikejdbc.DBSession
 import ch.openolitor.util.IdUtil
+import ch.openolitor.core.repositories.EventPublishingImplicits._
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
@@ -114,19 +114,12 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                 case Some(0) =>
                   val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
 
-                  val bestellEvents = distinctSammelbestellungen.map { sammelbestellungCreate =>
-                    val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
-                    val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, sammelbestellungCreate)
-
-                    // TODO OO-589
-                    //val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
-
-                    Seq(insertEvent) //, bestellungVersendenEvent)
-                  }.toSeq.flatten
+                  val bestellEvents = getBestellEvents(distinctSammelbestellungen, idFactory, meta)
 
                   val lpAbschliessenEvent = LieferplanungAbschliessenEvent(meta, id)
 
-                  Success(lpAbschliessenEvent +: bestellEvents)
+                  val createAuslieferungHeimEvent = getCreateAuslieferungHeimEvent(lieferplanung, meta)(personId)
+                  Success(lpAbschliessenEvent +: bestellEvents ++: createAuslieferungHeimEvent)
                 case _ =>
                   Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
               }
@@ -560,6 +553,73 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         Failure(new InvalidStateException(s"Person wurde nicht gefunden."))
       }
     }
+  }
+
+  private def getBestellEvents(distinctSammelbestellungen: Set[SammelbestellungModify], idFactory: IdFactory, meta: EventMetadata): Seq[EntityInsertedEvent[SammelbestellungId, SammelbestellungModify]] = {
+    distinctSammelbestellungen.map { sammelbestellungCreate =>
+      val sammelbestellungId = SammelbestellungId(idFactory(classOf[SammelbestellungId]))
+      val insertEvent = EntityInsertedEvent(meta, sammelbestellungId, sammelbestellungCreate)
+
+      // TODO OO-589
+      //val bestellungVersendenEvent = SammelbestellungVersendenEvent(meta, sammelbestellungId)
+
+      Seq(insertEvent) //, bestellungVersendenEvent)
+    }.toSeq.flatten
+  }
+
+  private def getCreateAuslieferungHeimEvent(lieferplanung: Lieferplanung, meta: EventMetadata)(implicit personId: PersonId): Seq[PersistentEvent] = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanung.id)
+
+      //handle Tourenlieferungen: Group all entries with the same TourId on the same Date
+      val vertriebsartenDaten = (lieferungen flatMap { lieferung =>
+        stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) collect {
+          case h: HeimlieferungDetail =>
+            stammdatenWriteRepository.getById(tourMapping, h.tourId) map { tour =>
+              (h.tourId, tour.name, lieferung.datum) -> h.id
+            }
+        }
+      }).flatten.groupBy(_._1).mapValues(_ map { _._2 })
+
+      (vertriebsartenDaten flatMap {
+        case ((tourId, tourName, lieferdatum), vertriebsartIds) => {
+          //create auslieferungen
+          if (!isAuslieferungExistingHeim(lieferdatum, tourId)) {
+            val koerbe = stammdatenWriteRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
+            if (!koerbe.isEmpty) {
+              val tourAuslieferung = createTourAuslieferungHeim(lieferdatum, tourId, tourName, koerbe.size)
+              val updates = koerbe map { korb =>
+                val tourlieferung = stammdatenWriteRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
+                val copy = korb.copy(auslieferungId = Some(tourAuslieferung.id), sort = tourlieferung flatMap (_.sort))
+                EntityUpdatedEvent(meta, copy.id, copy)
+              }
+              EntityInsertedEvent(meta, tourAuslieferung.id, tourAuslieferung) :: updates
+            } else { Nil }
+          } else { Nil }
+        }
+      }).toSeq
+    }
+  }
+
+  private def isAuslieferungExistingHeim(datum: DateTime, tourId: TourId)(implicit session: DBSession): Boolean = {
+    stammdatenWriteRepository.getTourAuslieferung(tourId, datum).isDefined
+  }
+
+  private def createTourAuslieferungHeim(lieferungDatum: DateTime, tourId: TourId, tourName: String, anzahlKoerbe: Int)(implicit personId: PersonId): TourAuslieferung = {
+    val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+    val result = TourAuslieferung(
+      auslieferungId,
+      Erfasst,
+      tourId,
+      tourName,
+      lieferungDatum,
+      anzahlKoerbe,
+      DateTime.now,
+      personId,
+      DateTime.now,
+      personId
+    )
+    result
   }
 
   private def getDistinctSammelbestellungModifyByLieferplan(lieferplanungId: LieferplanungId)(implicit session: DBSession): Set[SammelbestellungModify] = {
