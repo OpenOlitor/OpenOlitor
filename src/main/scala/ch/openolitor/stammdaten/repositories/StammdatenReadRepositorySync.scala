@@ -106,24 +106,6 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync with EventStre
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
 }
 
-trait StammdatenUpdateRepository extends BaseUpdateRepository
-    with StammdatenReadRepositorySync
-    with EventStream {
-}
-
-trait StammdatenDeleteRepository extends BaseDeleteRepository with EventStream {
-  def deleteLieferpositionen(id: LieferungId)(implicit session: DBSession): Int
-  def deleteKoerbe(id: LieferungId)(implicit session: DBSession): Int
-}
-
-trait StammdatenWriteRepository extends StammdatenReadRepositorySync
-    with StammdatenUpdateRepository
-    with StammdatenDeleteRepository
-    with BaseWriteRepository
-    with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-}
-
 trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with LazyLogging with StammdatenRepositoryQueries {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
@@ -441,60 +423,5 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getLieferungenOffenByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung] = {
     getLieferungenOffenByAbotypQuery(abotypId)()
-  }
-}
-
-trait StammdatenUpdateRepositoryImpl extends StammdatenUpdateRepository with LazyLogging {
-}
-
-trait StammdatenDeleteRepositoryImpl extends StammdatenDeleteRepository with LazyLogging with StammdatenRepositoryQueries {
-  def deleteLieferpositionen(id: LieferungId)(implicit session: DBSession): Int = {
-    deleteLieferpositionenQuery(id).update.apply
-  }
-
-  def deleteKoerbe(id: LieferungId)(implicit session: DBSession): Int = {
-    deleteKoerbeQuery(id).update.apply
-  }
-}
-
-trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository
-    with StammdatenReadRepositorySyncImpl
-    with StammdatenUpdateRepositoryImpl
-    with StammdatenDeleteRepositoryImpl
-    with LazyLogging
-    with StammdatenRepositoryQueries {
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB autoCommit { implicit session =>
-      sql"truncate table ${postlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotlieferungMapping.table}".execute.apply()
-      sql"truncate table ${heimlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotMapping.table}".execute.apply()
-      sql"truncate table ${tourMapping.table}".execute.apply()
-      sql"truncate table ${abotypMapping.table}".execute.apply()
-      sql"truncate table ${kundeMapping.table}".execute.apply()
-      sql"truncate table ${pendenzMapping.table}".execute.apply()
-      sql"truncate table ${customKundentypMapping.table}".execute.apply()
-      sql"truncate table ${personMapping.table}".execute.apply()
-      sql"truncate table ${depotlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${heimlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${postlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${lieferplanungMapping.table}".execute.apply()
-      sql"truncate table ${lieferungMapping.table}".execute.apply()
-      sql"truncate table ${lieferpositionMapping.table}".execute.apply()
-      sql"truncate table ${bestellungMapping.table}".execute.apply()
-      sql"truncate table ${bestellpositionMapping.table}".execute.apply()
-      sql"truncate table ${produktMapping.table}".execute.apply()
-      sql"truncate table ${produktekategorieMapping.table}".execute.apply()
-      sql"truncate table ${produzentMapping.table}".execute.apply()
-      sql"truncate table ${projektMapping.table}".execute.apply()
-      sql"truncate table ${produktProduzentMapping.table}".execute.apply()
-      sql"truncate table ${produktProduktekategorieMapping.table}".execute.apply()
-      sql"truncate table ${abwesenheitMapping.table}".execute.apply()
-      sql"truncate table ${korbMapping.table}".execute.apply()
-      sql"truncate table ${tourlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotAuslieferungMapping.table}".execute.apply()
-      sql"truncate table ${tourAuslieferungMapping.table}".execute.apply()
-      sql"truncate table ${postAuslieferungMapping.table}".execute.apply()
-    }
   }
 }
