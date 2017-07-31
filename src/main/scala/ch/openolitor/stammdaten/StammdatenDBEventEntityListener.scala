@@ -404,7 +404,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
       }
 
-      insertOrUpdateTourlieferungenByKunde(kunde)
+      updateTourlieferungenByKunde(kunde)
     }
 
   }
@@ -935,8 +935,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def insertOrUpdateTourlieferungenByKunde(kunde: Kunde)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-
+  def updateTourlieferungenByKunde(kunde: Kunde)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     stammdatenWriteRepository.getTourlieferungenByKunde(kunde.id) map { tourlieferung =>
       stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](tourlieferung.copy(
         kundeBezeichnung = kunde.bezeichnungLieferung getOrElse kunde.bezeichnung,
