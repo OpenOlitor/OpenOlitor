@@ -140,16 +140,16 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   def deleteAbo(meta: EventMetadata, id: AboId)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       val maybeAbo: Option[Abo] = stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](id) orElse
-      stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](id) orElse 
-      stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](id)
+        stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](id) orElse
+        stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](id)
       // also delete corresponding Tourlieferung
       stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](id)
-      
+
       // also delete related Korbe
       maybeAbo map (deleteKoerbeForDeletedAbo)
     }
   }
-  
+
   private def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     // koerbe der offenen lieferungen loeschen
     stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>

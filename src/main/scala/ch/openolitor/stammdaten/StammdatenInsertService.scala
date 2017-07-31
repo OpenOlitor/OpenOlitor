@@ -358,13 +358,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def createAbo(meta: EventMetadata, id: AboId, create: AboModify)(implicit personId: PersonId = meta.originator) = {
-    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+    DB localTxPostPublish { implicit session => implicit publisher =>
       val emptyMap: TreeMap[String, Int] = TreeMap()
       abotypByVertriebartId(create.vertriebsartId) map {
         case (vertriebsart, vertrieb, abotyp) =>
           aboParameters(create)(abotyp) match {
             case (guthaben, ende, aktiv) =>
-              val abo = create match {
+              val maybeAbo: Option[Abo] = create match {
                 case create: DepotlieferungAboModify =>
                   val depotName = depotById(create.depotId).map(_.name).getOrElse("")
 
@@ -417,6 +417,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     stammdatenWriteRepository.getById(kundeMapping, heimlieferungAbo.kundeId) map { kunde =>
                       stammdatenWriteRepository.insertEntity[Tourlieferung, AboId](Tourlieferung(heimlieferungAbo, kunde, personId))
                     }
+                    heimlieferungAbo
                   }
                 case create: PostlieferungAboModify =>
                   stammdatenWriteRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](
@@ -440,6 +441,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                     "modifikator" -> meta.originator
                   ))
               }
+
+              // create required Koerbe for abo
+              maybeAbo map (abo => modifyKoerbeForAbo(abo, None))
           }
       }
     }
