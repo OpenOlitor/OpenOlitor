@@ -47,11 +47,11 @@ import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 /**
  * Synchronous Repository
  */
-trait KundenportalWriteRepository extends BaseWriteRepository with EventStream {
+trait KundenportalReadRepositorySync extends BaseReadRepositorySync {
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
 }
 
-trait KundenportalWriteRepositoryImpl extends KundenportalWriteRepository with LazyLogging with KundenportalRepositoryQueries {
+trait KundenportalReadRepositorySyncImpl extends KundenportalReadRepositorySync with LazyLogging with KundenportalRepositoryQueries {
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
     getById(depotlieferungAboMapping, id) orElse getById(heimlieferungAboMapping, id) orElse getById(postlieferungAboMapping, id)
   }

@@ -22,15 +22,10 @@
 \*                                                                           */
 package ch.openolitor.kundenportal.repositories
 
-import akka.actor.ActorSystem
-import ch.openolitor.core._
-
-trait KundenportalWriteRepositoryComponent {
-  val kundenportalWriteRepository: KundenportalWriteRepository
+trait KundenportalReadRepositoryAsyncComponent {
+  val kundenportalReadRepository: KundenportalReadRepositoryAsync
 }
 
-trait DefaultKundenportalWriteRepositoryComponent extends KundenportalWriteRepositoryComponent {
-  val system: ActorSystem
-
-  override val kundenportalWriteRepository: KundenportalWriteRepository = new DefaultActorSystemReference(system) with KundenportalWriteRepositoryImpl with AkkaEventStream
+trait DefaultKundenportalReadRepositoryAsyncComponent extends KundenportalReadRepositoryAsyncComponent {
+  override val kundenportalReadRepository: KundenportalReadRepositoryAsync = new KundenportalReadRepositoryAsyncImpl
 }
