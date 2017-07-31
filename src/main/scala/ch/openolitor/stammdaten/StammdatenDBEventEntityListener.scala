@@ -62,8 +62,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     with ConnectionPoolContextAware
     with KorbHandler
     with AboAktivChangeHandler
-    with LieferungHandler
-    with SammelbestellungenHandler {
+    with LieferungHandler {
   this: StammdatenWriteRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
