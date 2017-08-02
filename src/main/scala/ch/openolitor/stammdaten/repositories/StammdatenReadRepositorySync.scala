@@ -33,7 +33,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.AkkaEventStream
 import ch.openolitor.core.EventStream
 
-trait StammdatenReadRepositorySync extends BaseReadRepositorySync with EventStream {
+trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]

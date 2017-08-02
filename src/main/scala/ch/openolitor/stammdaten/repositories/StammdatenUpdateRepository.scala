@@ -38,5 +38,5 @@ trait StammdatenUpdateRepository extends BaseUpdateRepository
     with EventStream {
 }
 
-trait StammdatenUpdateRepositoryImpl extends StammdatenUpdateRepository with LazyLogging {
+trait StammdatenUpdateRepositoryImpl extends StammdatenReadRepositorySyncImpl with StammdatenUpdateRepository with LazyLogging {
 }

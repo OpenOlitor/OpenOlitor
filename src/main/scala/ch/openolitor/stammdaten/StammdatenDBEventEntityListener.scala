@@ -792,7 +792,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       DateTime.now,
       personId
     )
-    stammdatenUpdateRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
+    // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
 
     result
   }
@@ -814,7 +814,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           DateTime.now,
           personId
         )
-        stammdatenUpdateRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
+        // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
         Some(result)
 
       case p: PostlieferungDetail =>
@@ -828,7 +828,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           DateTime.now,
           personId
         )
-        stammdatenUpdateRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
+        // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
         Some(result)
       case _ =>
         //nothing to create for Tour, see createAuslieferungHeim

@@ -46,5 +46,5 @@ trait BuchhaltungUpdateRepository extends BaseUpdateRepository
     with EventStream {
 }
 
-trait BuchhaltungUpdateRepositoryImpl extends BuchhaltungUpdateRepository with LazyLogging {
+trait BuchhaltungUpdateRepositoryImpl extends BuchhaltungReadRepositorySyncImpl with BuchhaltungUpdateRepository with LazyLogging {
 }
