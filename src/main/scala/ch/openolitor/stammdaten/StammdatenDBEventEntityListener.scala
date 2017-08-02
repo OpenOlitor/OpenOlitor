@@ -60,7 +60,7 @@ class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override v
 class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging
     with StammdatenDBMappings
     with ConnectionPoolContextAware
-    with KorbHandler
+    with KorbStatusHandler
     with AboAktivChangeHandler
     with LieferungHandler {
   this: StammdatenWriteRepositoryComponent =>
@@ -281,7 +281,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Add abonnent to vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos + 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv + modAboCount)
       }
-      createKoerbeForAbo(abo)
     }
   }
 
@@ -302,8 +301,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           vertrieb.copy(anzahlAbos = vertrieb.anzahlAbos + 1, anzahlAbosAktiv = vertrieb.anzahlAbosAktiv + modAboCount)
         }
       }
-
-      modifyKoerbeForAbo(to, Some(from))
     }
   }
 
@@ -334,32 +331,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         log.debug(s"Remove abonnent from vertriebsart:${vertriebsart.id}")
         vertriebsart.copy(anzahlAbos = vertriebsart.anzahlAbos - 1, anzahlAbosAktiv = vertriebsart.anzahlAbosAktiv - modAboCount)
       }
-
-      deleteKoerbeForDeletedAbo(abo)
-    }
-  }
-
-  def createKoerbeForAbo(abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    modifyKoerbeForAbo(abo, None)
-  }
-
-  def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    // koerbe erstellen, modifizieren, loeschen falls noetig
-    stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
-      stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
-        if (orig.isDefined && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
-          deleteKorb(lieferung, abo)
-        } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
-          upsertKorb(lieferung, abo, abotyp)
-        }
-      }
-    }
-  }
-
-  def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    // koerbe der offenen lieferungen loeschen
-    stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
-      deleteKorb(lieferung, abo)
     }
   }
 
