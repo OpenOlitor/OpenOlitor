@@ -54,8 +54,8 @@ import ch.openolitor.stammdaten.reporting._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
 import akka.actor._
-import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
-import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryAsyncComponent
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryAsyncComponent
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 import ch.openolitor.core.security.Subject
 import ch.openolitor.stammdaten.repositories._
@@ -78,7 +78,7 @@ trait StammdatenOpenRoutes extends HttpService with ActorReferences
     with ProduzentenabrechnungReportService
     with FileTypeFilenameMapping
     with StammdatenPaths {
-  self: StammdatenReadRepositoryComponent with BuchhaltungReadRepositoryComponent with FileStoreComponent =>
+  self: StammdatenReadRepositoryAsyncComponent with BuchhaltungReadRepositoryAsyncComponent with FileStoreComponent =>
 
   import EntityStore._
 
@@ -121,5 +121,5 @@ class DefaultStammdatenOpenRoutes(
   override val jobQueueService: ActorRef
 )
     extends StammdatenOpenRoutes
-    with DefaultStammdatenReadRepositoryComponent
-    with DefaultBuchhaltungReadRepositoryComponent
+    with DefaultStammdatenReadRepositoryAsyncComponent
+    with DefaultBuchhaltungReadRepositoryAsyncComponent

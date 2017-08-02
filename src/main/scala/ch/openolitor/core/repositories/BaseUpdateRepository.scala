@@ -20,51 +20,51 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.repositories
+package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
+import java.util.UUID
 import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
-import ch.openolitor.core.db._
-import ch.openolitor.core.db.OOAsyncDB._
-import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseWriteRepository
-import scala.concurrent._
-import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
-import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
-import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import scala.util._
+import ch.openolitor.core.scalax._
+import scala.concurrent.Future
+import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
+import ch.openolitor.core.db.OOAsyncDB._
 
-/**
- * Synchronous Repository
- */
-trait BuchhaltungWriteRepository extends BuchhaltungReadRepositorySync
-    with BuchhaltungInsertRepository
-    with BuchhaltungUpdateRepository
-    with BuchhaltungDeleteRepository
-    with BaseWriteRepository
-    with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-}
+trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository {
+  /*
+   * @param updateFields restrict the updated fields to this list
+   */
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E, updateFields: SQLSyntax*)(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+    getById(syntaxSupport, entity.id).map { orig =>
+      val alias = syntaxSupport.syntax("x")
+      val id = alias.id
+      val updateParams = updateFields.toList match {
+        case Nil => syntaxSupport.updateParameters(entity)
+        case specifiedFields => (syntaxSupport.updateParameters(entity) filter (f => specifiedFields.contains(f._1))) ++ syntaxSupport.defaultColumns(entity)
+      }
 
-trait BuchhaltungWriteRepositoryImpl extends BuchhaltungReadRepositorySyncImpl
-    with BuchhaltungInsertRepositoryImpl
-    with BuchhaltungUpdateRepositoryImpl
-    with BuchhaltungDeleteRepositoryImpl
-    with BuchhaltungWriteRepository
-    with LazyLogging
-    with BuchhaltungRepositoryQueries {
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB autoCommit { implicit session =>
-      sql"truncate table ${rechnungMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()
+      logger.debug(s"update entity:${entity.id} with values:$updateParams")
+
+      withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(id, parameter(entity.id))).update.apply()
+
+      //publish event to stream
+      eventPublisher.registerPublish(EntityModified(user, entity, orig))
+
+      entity
+    } orElse {
+      logger.debug(s"Entity with id:${entity.id} not found, ignore update")
+      None
     }
   }
 }

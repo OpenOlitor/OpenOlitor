@@ -35,17 +35,17 @@ import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.Projekt
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
 import ch.openolitor.stammdaten.models.ProjektReport
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
-import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryAsyncComponent
 import scala.Left
 import scala.Right
 import ch.openolitor.core.jobs.JobQueueService.JobId
 
 trait MahnungReportService extends AsyncConnectionPoolContextAware with ReportService with BuchhaltungJsonProtocol with RechnungReportData {
-  self: BuchhaltungReadRepositoryComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryComponent =>
+  self: BuchhaltungReadRepositoryAsyncComponent with ActorReferences with FileStoreComponent with StammdatenReadRepositoryAsyncComponent =>
 
   def generateMahnungReports(config: ReportConfig[RechnungId])(implicit personId: PersonId): Future[Either[ServiceFailed, ReportServiceResult[RechnungId]]] = {
     generateReports[RechnungId, RechnungDetailReport](

@@ -34,8 +34,8 @@ import spray.caching._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryAsyncComponent
 import akka.actor.ActorRef
 import ch.openolitor.core.filestore.FileStore
 import akka.actor.ActorRefFactory
@@ -71,7 +71,7 @@ trait LoginRouteService extends HttpService with ActorReferences
     with SprayDeserializers
     with DefaultRouteService with LazyLogging with LoginJsonProtocol
     with XSRFTokenSessionAuthenticatorProvider {
-  self: StammdatenReadRepositoryComponent =>
+  self: StammdatenReadRepositoryAsyncComponent =>
   import SystemEvents._
 
   type EitherFuture[A] = EitherT[Future, RequestFailed, A]
@@ -466,4 +466,4 @@ class DefaultLoginRouteService(
   override val loginTokenCache: Cache[Subject]
 )
     extends LoginRouteService
-    with DefaultStammdatenReadRepositoryComponent
+    with DefaultStammdatenReadRepositoryAsyncComponent

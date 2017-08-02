@@ -24,7 +24,7 @@ package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
 import scalikejdbc._
-import ch.openolitor.core.repositories.BaseWriteRepository
+import ch.openolitor.core.repositories._
 import ch.openolitor.stammdaten.models._
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -33,12 +33,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.AkkaEventStream
 import ch.openolitor.core.EventStream
 
-trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-
-  def deleteLieferpositionen(id: LieferungId)(implicit session: DBSession): Int
-  def deleteKoerbe(id: LieferungId)(implicit session: DBSession): Int
-
+trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
@@ -111,51 +106,7 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
 }
 
-trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyLogging with StammdatenRepositoryQueries {
-
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB autoCommit { implicit session =>
-      sql"truncate table ${postlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotlieferungMapping.table}".execute.apply()
-      sql"truncate table ${heimlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotMapping.table}".execute.apply()
-      sql"truncate table ${tourMapping.table}".execute.apply()
-      sql"truncate table ${abotypMapping.table}".execute.apply()
-      sql"truncate table ${kundeMapping.table}".execute.apply()
-      sql"truncate table ${pendenzMapping.table}".execute.apply()
-      sql"truncate table ${customKundentypMapping.table}".execute.apply()
-      sql"truncate table ${personMapping.table}".execute.apply()
-      sql"truncate table ${depotlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${heimlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${postlieferungAboMapping.table}".execute.apply()
-      sql"truncate table ${lieferplanungMapping.table}".execute.apply()
-      sql"truncate table ${lieferungMapping.table}".execute.apply()
-      sql"truncate table ${lieferpositionMapping.table}".execute.apply()
-      sql"truncate table ${bestellungMapping.table}".execute.apply()
-      sql"truncate table ${bestellpositionMapping.table}".execute.apply()
-      sql"truncate table ${produktMapping.table}".execute.apply()
-      sql"truncate table ${produktekategorieMapping.table}".execute.apply()
-      sql"truncate table ${produzentMapping.table}".execute.apply()
-      sql"truncate table ${projektMapping.table}".execute.apply()
-      sql"truncate table ${produktProduzentMapping.table}".execute.apply()
-      sql"truncate table ${produktProduktekategorieMapping.table}".execute.apply()
-      sql"truncate table ${abwesenheitMapping.table}".execute.apply()
-      sql"truncate table ${korbMapping.table}".execute.apply()
-      sql"truncate table ${tourlieferungMapping.table}".execute.apply()
-      sql"truncate table ${depotAuslieferungMapping.table}".execute.apply()
-      sql"truncate table ${tourAuslieferungMapping.table}".execute.apply()
-      sql"truncate table ${postAuslieferungMapping.table}".execute.apply()
-    }
-  }
-
-  def deleteLieferpositionen(id: LieferungId)(implicit session: DBSession): Int = {
-    deleteLieferpositionenQuery(id).update.apply
-  }
-
-  def deleteKoerbe(id: LieferungId)(implicit session: DBSession): Int = {
-    deleteKoerbeQuery(id).update.apply
-  }
-
+trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with LazyLogging with StammdatenRepositoryQueries {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
   }
@@ -473,5 +424,4 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
   def getLieferungenOffenByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung] = {
     getLieferungenOffenByAbotypQuery(abotypId)()
   }
-
 }

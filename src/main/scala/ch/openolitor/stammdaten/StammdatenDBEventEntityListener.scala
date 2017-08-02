@@ -52,7 +52,7 @@ object StammdatenDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenDBEventEntityListener], sysConfig, system)
 }
 
-class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenDBEventEntityListener(sysConfig) with DefaultStammdatenWriteRepositoryComponent
+class DefaultStammdatenDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends StammdatenDBEventEntityListener(sysConfig) with DefaultStammdatenUpdateRepositoryComponent
 
 /**
  * Listen on DBEvents and adjust calculated fields within this module
@@ -62,8 +62,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     with ConnectionPoolContextAware
     with KorbStatusHandler
     with AboAktivChangeHandler
-    with LieferungHandler {
-  this: StammdatenWriteRepositoryComponent =>
+    with LieferungDurchschnittspreisHandler {
+  this: StammdatenUpdateRepositoryComponent =>
   import StammdatenDBEventEntityListener._
   import SystemEvents._
 
@@ -164,7 +164,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleAbotypModify(orig: Abotyp, entity: Abotyp)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getAbosByAbotyp(entity.id) map { abo =>
+      stammdatenUpdateRepository.getAbosByAbotyp(entity.id) map { abo =>
         modifyEntity[DepotlieferungAbo, AboId](abo.id) { abo =>
           abo.copy(abotypName = entity.name)
         }
@@ -344,14 +344,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
+      stammdatenUpdateRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
         val copy = lieferung.copy(
           anzahlKoerbeZuLiefern = if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern,
           anzahlAbwesenheiten = if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten,
           anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
         )
 
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy, lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
+        stammdatenUpdateRepository.updateEntity[Lieferung, LieferungId](copy, lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
       }
     }
   }
@@ -369,10 +369,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     handleKundentypenChanged(removed, added)
 
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getPendenzen(kunde.id) map { pendenz =>
+      stammdatenUpdateRepository.getPendenzen(kunde.id) map { pendenz =>
         val copy = pendenz.copy(kundeBezeichnung = kunde.bezeichnung)
         log.debug(s"Modify Kundenbezeichnung on Pendenz to : ${copy.kundeBezeichnung}.")
-        stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
+        stammdatenUpdateRepository.updateEntity[Pendenz, PendenzId](copy)
       }
 
       updateTourlieferungenByKunde(kunde)
@@ -390,12 +390,12 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handlePersonDeleted(person: Person)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      val personen = stammdatenWriteRepository.getPersonen(person.kundeId)
+      val personen = stammdatenUpdateRepository.getPersonen(person.kundeId)
       if (personen.size == 1) {
-        stammdatenWriteRepository.getById(kundeMapping, person.kundeId) map { kunde =>
+        stammdatenUpdateRepository.getById(kundeMapping, person.kundeId) map { kunde =>
           val copy = kunde.copy(bezeichnung = personen.head.fullName)
           log.debug(s"Kunde-Bezeichnung set to empty as there is just one Person: ${kunde.id}")
-          stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
+          stammdatenUpdateRepository.updateEntity[Kunde, KundeId](copy)
         }
       }
     }
@@ -403,7 +403,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getProjekt map { projekt =>
+      stammdatenUpdateRepository.getProjekt map { projekt =>
         val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
         modifyEntity[DepotlieferungAbo, AboId](abw.aboId) { abo =>
@@ -423,18 +423,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         }
       }
 
-      stammdatenWriteRepository.getAboDetailAusstehend(abw.aboId) match {
+      stammdatenUpdateRepository.getAboDetailAusstehend(abw.aboId) match {
         case Some(abo) => {
-          stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
+          stammdatenUpdateRepository.getKorb(abw.lieferungId, abw.aboId) match {
             case Some(korb) => {
-              stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+              stammdatenUpdateRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
                 //re count because the might be another abwesenheit for the same date
-                val newAbwesenheitCount = stammdatenWriteRepository.countAbwesend(abw.aboId, abw.datum)
+                val newAbwesenheitCount = stammdatenUpdateRepository.countAbwesend(abw.aboId, abw.datum)
                 val status = calculateKorbStatus(newAbwesenheitCount, abo.guthaben, abotyp.guthabenMindestbestand)
                 val statusAlt = korb.status
                 val copy = korb.copy(status = status)
                 log.debug(s"Modify Korb-Status as Abwesenheit was deleted ${abw.id}, newCount:$newAbwesenheitCount, newStatus:${copy.status}.")
-                stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                stammdatenUpdateRepository.updateEntity[Korb, KorbId](copy)
               }
             }
             case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
@@ -447,7 +447,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleAbwesenheitCreated(abw: Abwesenheit)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getProjekt map { projekt =>
+      stammdatenUpdateRepository.getProjekt map { projekt =>
         val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
 
         modifyEntity[DepotlieferungAbo, AboId](abw.aboId) { abo =>
@@ -467,13 +467,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         }
       }
 
-      stammdatenWriteRepository.getKorb(abw.lieferungId, abw.aboId) match {
+      stammdatenUpdateRepository.getKorb(abw.lieferungId, abw.aboId) match {
         case Some(korb) => {
           val statusAlt = korb.status
           val status = FaelltAusAbwesend
           val copy = korb.copy(status = status)
           log.debug(s"Modify Korb-Status as Abwesenheit was created : ${copy}.")
-          stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+          stammdatenUpdateRepository.updateEntity[Korb, KorbId](copy)
 
         }
         case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
@@ -483,9 +483,9 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleKorbStatusChanged(korb: Korb, statusAlt: KorbStatus)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
+      stammdatenUpdateRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
         log.debug(s"Korb Status changed:${korb.aboId}/${korb.lieferungId}")
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](recalculateLieferungCounts(lieferung, korb.status, statusAlt), lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
+        stammdatenUpdateRepository.updateEntity[Lieferung, LieferungId](recalculateLieferungCounts(lieferung, korb.status, statusAlt), lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
       }
     }
   }
@@ -553,13 +553,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      val kundetypen = stammdatenWriteRepository.getKundentypen
+      val kundetypen = stammdatenUpdateRepository.getKundentypen
       removed.map { kundetypId =>
         kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
           case customKundentyp: CustomKundentyp =>
             val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen - 1)
             log.debug(s"Reduce anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
-            stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+            stammdatenUpdateRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
         }
       }
 
@@ -568,7 +568,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           case customKundentyp: CustomKundentyp =>
             val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen + 1)
             log.debug(s"Increment anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
-            stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+            stammdatenUpdateRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
         }
       }
     }
@@ -646,13 +646,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanung.id)
+      val lieferungen = stammdatenUpdateRepository.getLieferungen(lieferplanung.id)
 
       //handle Tourenlieferungen: Group all entries with the same TourId on the same Date
       val vertriebsartenDaten = (lieferungen flatMap { lieferung =>
-        stammdatenWriteRepository.getVertriebsarten(lieferung.vertriebId) collect {
+        stammdatenUpdateRepository.getVertriebsarten(lieferung.vertriebId) collect {
           case h: HeimlieferungDetail =>
-            stammdatenWriteRepository.getById(tourMapping, h.tourId) map { tour =>
+            stammdatenUpdateRepository.getById(tourMapping, h.tourId) map { tour =>
               (h.tourId, tour.name, lieferung.datum) -> h.id
             }
         }
@@ -662,14 +662,14 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         case ((tourId, tourName, lieferdatum), vertriebsartIds) => {
           //create auslieferungen
           if (!isAuslieferungExistingHeim(lieferdatum, tourId)) {
-            val koerbe = stammdatenWriteRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
+            val koerbe = stammdatenUpdateRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
             if (!koerbe.isEmpty) {
               val auslieferung = createAuslieferungHeim(lieferdatum, tourId, tourName, koerbe.size)
 
               koerbe map { korb =>
-                val tourlieferung = stammdatenWriteRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
+                val tourlieferung = stammdatenUpdateRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
                 val copy = korb.copy(auslieferungId = Some(auslieferung.id), sort = tourlieferung flatMap (_.sort))
-                stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                stammdatenUpdateRepository.updateEntity[Korb, KorbId](copy)
               }
             }
           }
@@ -684,7 +684,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
           log.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
           //create auslieferungen
-          val auslieferungL = stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
+          val auslieferungL = stammdatenUpdateRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
 
             val auslieferungO = getAuslieferungDepotPost(lieferungDatum, vertriebsart)
 
@@ -699,11 +699,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
             }
 
             auslieferungC map { _ =>
-              val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+              val koerbe = stammdatenUpdateRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
               if (!koerbe.isEmpty) {
                 koerbe map { korb =>
                   val copy = korb.copy(auslieferungId = Some(auslieferungC.head.id))
-                  stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+                  stammdatenUpdateRepository.updateEntity[Korb, KorbId](copy)
                 }
               }
             }
@@ -712,15 +712,15 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
           auslieferungL.distinct.collect {
             case Some(auslieferung) => {
-              val koerbeC = stammdatenWriteRepository.countKoerbe(auslieferung.id) getOrElse 0
+              val koerbeC = stammdatenUpdateRepository.countKoerbe(auslieferung.id) getOrElse 0
               auslieferung match {
                 case d: DepotAuslieferung => {
                   val copy = d.copy(anzahlKoerbe = koerbeC)
-                  stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](copy)
+                  stammdatenUpdateRepository.updateEntity[DepotAuslieferung, AuslieferungId](copy)
                 }
                 case p: PostAuslieferung => {
                   val copy = p.copy(anzahlKoerbe = koerbeC)
-                  stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](copy)
+                  stammdatenUpdateRepository.updateEntity[PostAuslieferung, AuslieferungId](copy)
                 }
                 case _ =>
               }
@@ -731,13 +731,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       //calculate new values
       lieferungen map { lieferung =>
         //calculate total of lieferung
-        val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
+        val total = stammdatenUpdateRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
         val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy, lieferungMapping.column.preisTotal, lieferungMapping.column.status)
+        stammdatenUpdateRepository.updateEntity[Lieferung, LieferungId](lieferungCopy, lieferungMapping.column.preisTotal, lieferungMapping.column.status)
 
         //update durchschnittspreis
-        stammdatenWriteRepository.getProjekt map { projekt =>
-          stammdatenWriteRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
+        stammdatenUpdateRepository.getProjekt map { projekt =>
+          stammdatenUpdateRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
             val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
 
             val lieferungen = vertrieb.anzahlLieferungen.get(gjKey).getOrElse(0)
@@ -749,29 +749,29 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
               durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
             )
 
-            stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
+            stammdatenUpdateRepository.updateEntity[Vertrieb, VertriebId](copy)
           }
         }
       }
 
-      stammdatenWriteRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
+      stammdatenUpdateRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
         if (Offen == sammelbestellung.status) {
-          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Abgeschlossen))
+          stammdatenUpdateRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Abgeschlossen))
         }
       }
     }
   }
 
   private def isAuslieferungExistingHeim(datum: DateTime, tourId: TourId)(implicit session: DBSession): Boolean = {
-    stammdatenWriteRepository.getTourAuslieferung(tourId, datum).isDefined
+    stammdatenUpdateRepository.getTourAuslieferung(tourId, datum).isDefined
   }
 
   private def getAuslieferungDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Option[Auslieferung] = {
     vertriebsart match {
       case d: DepotlieferungDetail =>
-        stammdatenWriteRepository.getDepotAuslieferung(d.depotId, datum)
+        stammdatenUpdateRepository.getDepotAuslieferung(d.depotId, datum)
       case p: PostlieferungDetail =>
-        stammdatenWriteRepository.getPostAuslieferung(datum)
+        stammdatenUpdateRepository.getPostAuslieferung(datum)
       case _ =>
         None
     }
@@ -792,7 +792,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       DateTime.now,
       personId
     )
-    stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
+    // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
 
     result
   }
@@ -814,7 +814,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           DateTime.now,
           personId
         )
-        stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
+        // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
         Some(result)
 
       case p: PostlieferungDetail =>
@@ -828,7 +828,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           DateTime.now,
           personId
         )
-        stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
+        // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
         Some(result)
       case _ =>
         //nothing to create for Tour, see createAuslieferungHeim
@@ -838,10 +838,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleAuslieferungAusgeliefert(entity: Auslieferung)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getKoerbe(entity.id) map { korb =>
+      stammdatenUpdateRepository.getKoerbe(entity.id) map { korb =>
         val copy = korb.copy(status = Geliefert)
-        stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
-        stammdatenWriteRepository.getProjekt map { projekt =>
+        stammdatenUpdateRepository.updateEntity[Korb, KorbId](copy)
+        stammdatenUpdateRepository.getProjekt map { projekt =>
           val geschaeftsjahrKey = projekt.geschaftsjahr.key(entity.datum.toLocalDate)
 
           modifyEntity[DepotlieferungAbo, AboId](korb.aboId) { abo =>
@@ -886,11 +886,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     if (depot.name != orig.name) {
       //Depot name was changed. Replace it in Abos
       DB localTxPostPublish { implicit session => implicit publisher =>
-        stammdatenWriteRepository.getDepotlieferungAbosByDepot(depot.id) map { abo =>
+        stammdatenUpdateRepository.getDepotlieferungAbosByDepot(depot.id) map { abo =>
           val copy = abo.copy(
             depotName = depot.name
           )
-          stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+          stammdatenUpdateRepository.updateEntity[DepotlieferungAbo, AboId](copy)
         }
       }
     }
@@ -898,17 +898,17 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def updateTourlieferung(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(kundeMapping, entity.kundeId) map { kunde =>
-        stammdatenWriteRepository.getById(tourlieferungMapping, entity.id) map { tourlieferung =>
-          stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](Tourlieferung(entity, kunde, personId).copy(sort = tourlieferung.sort))
+      stammdatenUpdateRepository.getById(kundeMapping, entity.kundeId) map { kunde =>
+        stammdatenUpdateRepository.getById(tourlieferungMapping, entity.id) map { tourlieferung =>
+          stammdatenUpdateRepository.updateEntity[Tourlieferung, AboId](Tourlieferung(entity, kunde, personId).copy(sort = tourlieferung.sort))
         }
       }
     }
   }
 
   def updateTourlieferungenByKunde(kunde: Kunde)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    stammdatenWriteRepository.getTourlieferungenByKunde(kunde.id) map { tourlieferung =>
-      stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](tourlieferung.copy(
+    stammdatenUpdateRepository.getTourlieferungenByKunde(kunde.id) map { tourlieferung =>
+      stammdatenUpdateRepository.updateEntity[Tourlieferung, AboId](tourlieferung.copy(
         kundeBezeichnung = kunde.bezeichnungLieferung getOrElse kunde.bezeichnung,
         strasse = kunde.strasseLieferung getOrElse kunde.strasse,
         hausNummer = kunde.hausNummerLieferung orElse kunde.hausNummer,
@@ -921,17 +921,17 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handlePersonLoggedIn(personId: PersonId, timestamp: DateTime) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
+      stammdatenUpdateRepository.getById(personMapping, personId) map { person =>
         implicit val pid = SystemEvents.SystemPersonId
         val updated = person.copy(letzteAnmeldung = Some(timestamp))
-        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
+        stammdatenUpdateRepository.updateEntity[Person, PersonId](updated)
       }
     }
   }
 
   def updateLieferplanungAbotypenListing(lieferplanungId: LieferplanungId)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId) = {
-    stammdatenWriteRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
-      val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanungId)
+    stammdatenUpdateRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
+      val lieferungen = stammdatenUpdateRepository.getLieferungen(lieferplanungId)
       val abotypDates = (lieferungen.map(l => (dateFormat.print(l.datum), l.abotypBeschrieb))
         .groupBy(_._1).mapValues(_ map { _._2 }) map {
           case (datum, abotypBeschriebe) =>
@@ -939,7 +939,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         }).mkString("; ")
       val copy = lp.copy(abotypDepotTour = abotypDates)
       if (lp.abotypDepotTour != abotypDates) {
-        stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
+        stammdatenUpdateRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
       }
     }
   }
@@ -962,8 +962,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       if (entity.anzahlLieferungen == 1) {
         recalculateLieferungOffen(entity, None)
       }
-      val lieferungVorher = stammdatenWriteRepository.getGeplanteLieferungVorher(orig.vertriebId, entity.datum)
-      stammdatenWriteRepository.getGeplanteLieferungNachher(orig.vertriebId, entity.datum) match {
+      val lieferungVorher = stammdatenUpdateRepository.getGeplanteLieferungVorher(orig.vertriebId, entity.datum)
+      stammdatenUpdateRepository.getGeplanteLieferungNachher(orig.vertriebId, entity.datum) match {
         case Some(lieferungNach) => recalculateLieferungOffen(lieferungNach, Some(entity))
         case _ =>
       }
@@ -971,10 +971,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def recalculateLieferungOffen(entity: Lieferung, lieferungVorher: Option[Lieferung])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    val project = stammdatenWriteRepository.getProjekt
+    val project = stammdatenUpdateRepository.getProjekt
     val (newDurchschnittspreis, newAnzahlLieferungen) = lieferungVorher match {
       case Some(lieferung) if project.get.geschaftsjahr.isInSame(lieferung.datum.toLocalDate(), entity.datum.toLocalDate()) =>
-        val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(entity.vertriebId, entity.datum, project.get.geschaftsjahr.start(entity.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
+        val sum = stammdatenUpdateRepository.sumPreisTotalGeplanteLieferungenVorher(entity.vertriebId, entity.datum, project.get.geschaftsjahr.start(entity.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
 
         val durchschnittspreisBisher: BigDecimal = lieferung.anzahlLieferungen match {
           case 0 => BigDecimal(0)
@@ -996,7 +996,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         modifidat = DateTime.now,
         modifikator = personId
       )
-      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](
+      stammdatenUpdateRepository.updateEntity[Lieferung, LieferungId](
         updatedLieferung,
         lieferungMapping.column.durchschnittspreis,
         lieferungMapping.column.anzahlLieferungen,
@@ -1007,6 +1007,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(mod: E => E)(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
-    modifyEntityWithRepository(stammdatenWriteRepository)(id, mod)
+    modifyEntityWithRepository(stammdatenUpdateRepository)(id, mod)
   }
 }

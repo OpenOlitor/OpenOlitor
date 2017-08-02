@@ -20,51 +20,30 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.repositories
+package ch.openolitor.stammdaten.repositories
 
 import ch.openolitor.core.models._
 import scalikejdbc._
-import scalikejdbc.async._
-import scalikejdbc.async.FutureImplicits._
-import ch.openolitor.core.db._
-import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseWriteRepository
-import scala.concurrent._
 import ch.openolitor.stammdaten.models._
+import org.joda.time.DateTime
+import org.joda.time.LocalDate
+import akka.actor.ActorSystem
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.AkkaEventStream
 import ch.openolitor.core.EventStream
-import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
-import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-/**
- * Synchronous Repository
- */
-trait BuchhaltungWriteRepository extends BuchhaltungReadRepositorySync
-    with BuchhaltungInsertRepository
-    with BuchhaltungUpdateRepository
-    with BuchhaltungDeleteRepository
-    with BaseWriteRepository
-    with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
+trait StammdatenDeleteRepository extends BaseDeleteRepository with EventStream {
+  def deleteLieferpositionen(id: LieferungId)(implicit session: DBSession): Int
+  def deleteKoerbe(id: LieferungId)(implicit session: DBSession): Int
 }
 
-trait BuchhaltungWriteRepositoryImpl extends BuchhaltungReadRepositorySyncImpl
-    with BuchhaltungInsertRepositoryImpl
-    with BuchhaltungUpdateRepositoryImpl
-    with BuchhaltungDeleteRepositoryImpl
-    with BuchhaltungWriteRepository
-    with LazyLogging
-    with BuchhaltungRepositoryQueries {
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB autoCommit { implicit session =>
-      sql"truncate table ${rechnungMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()
-    }
+trait StammdatenDeleteRepositoryImpl extends StammdatenDeleteRepository with LazyLogging with StammdatenRepositoryQueries {
+  def deleteLieferpositionen(id: LieferungId)(implicit session: DBSession): Int = {
+    deleteLieferpositionenQuery(id).update.apply
+  }
+
+  def deleteKoerbe(id: LieferungId)(implicit session: DBSession): Int = {
+    deleteKoerbeQuery(id).update.apply
   }
 }

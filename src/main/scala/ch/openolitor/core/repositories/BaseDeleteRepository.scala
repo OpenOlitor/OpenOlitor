@@ -20,51 +20,52 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.repositories
+package ch.openolitor.core.repositories
 
 import ch.openolitor.core.models._
+import java.util.UUID
 import scalikejdbc._
 import scalikejdbc.async._
 import scalikejdbc.async.FutureImplicits._
-import ch.openolitor.core.db._
-import ch.openolitor.core.db.OOAsyncDB._
-import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseWriteRepository
-import scala.concurrent._
-import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.DateTime
 import ch.openolitor.core.EventStream
-import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
-import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import scala.util._
+import ch.openolitor.core.scalax._
+import scala.concurrent.Future
+import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
+import ch.openolitor.core.db.OOAsyncDB._
 
-/**
- * Synchronous Repository
- */
-trait BuchhaltungWriteRepository extends BuchhaltungReadRepositorySync
-    with BuchhaltungInsertRepository
-    with BuchhaltungUpdateRepository
-    with BuchhaltungDeleteRepository
-    with BaseWriteRepository
-    with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
-}
+trait BaseDeleteRepository extends BaseReadRepositorySync with DeleteRepository {
+  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Validator[E])(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+    deleteEntity[E, I](id, Some(validator))
+  }
 
-trait BuchhaltungWriteRepositoryImpl extends BuchhaltungReadRepositorySyncImpl
-    with BuchhaltungInsertRepositoryImpl
-    with BuchhaltungUpdateRepositoryImpl
-    with BuchhaltungDeleteRepositoryImpl
-    with BuchhaltungWriteRepository
-    with LazyLogging
-    with BuchhaltungRepositoryQueries {
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB autoCommit { implicit session =>
-      sql"truncate table ${rechnungMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()
-    }
+  def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Option[Validator[E]] = None)(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+    logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
+    getById(syntaxSupport, id).map { entity =>
+      val validation = validator.getOrElse(TrueValidator)
+      validation(entity) match {
+        case true =>
+          withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, parameter(id))).update.apply()
+
+          //publish event to stream
+          eventPublisher.registerPublish(EntityDeleted(user, entity))
+          Some(entity)
+        case false =>
+          logger.debug(s"Couldn't delete from ${syntaxSupport.tableName}: $id, validation didn't succeed")
+          None
+      }
+    }.getOrElse(None)
   }
 }

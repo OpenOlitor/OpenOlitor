@@ -22,10 +22,21 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.repositories
 
-trait StammdatenReadRepositoryComponent {
-  val stammdatenReadRepository: StammdatenReadRepository
+import ch.openolitor.core.models._
+import scalikejdbc._
+import ch.openolitor.core.repositories._
+import ch.openolitor.stammdaten.models._
+import org.joda.time.DateTime
+import org.joda.time.LocalDate
+import akka.actor.ActorSystem
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.AkkaEventStream
+import ch.openolitor.core.EventStream
+
+trait StammdatenInsertRepository extends BaseInsertRepository
+    with StammdatenReadRepositorySync
+    with EventStream {
 }
 
-trait DefaultStammdatenReadRepositoryComponent extends StammdatenReadRepositoryComponent {
-  override val stammdatenReadRepository: StammdatenReadRepository = new StammdatenReadRepositoryImpl
+trait StammdatenInsertRepositoryImpl extends StammdatenInsertRepository with LazyLogging {
 }

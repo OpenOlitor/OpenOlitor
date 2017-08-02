@@ -20,17 +20,31 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.kundenportal.repositories
+package ch.openolitor.buchhaltung.repositories
 
-import akka.actor.ActorSystem
-import ch.openolitor.core._
+import ch.openolitor.core.models._
+import scalikejdbc._
+import scalikejdbc.async._
+import scalikejdbc.async.FutureImplicits._
+import ch.openolitor.core.db._
+import ch.openolitor.core.db.OOAsyncDB._
+import ch.openolitor.core.repositories._
+import ch.openolitor.core.repositories.BaseWriteRepository
+import scala.concurrent._
+import ch.openolitor.stammdaten.models._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.EventStream
+import ch.openolitor.buchhaltung.models._
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-trait KundenportalWriteRepositoryComponent {
-  val kundenportalWriteRepository: KundenportalWriteRepository
+trait BuchhaltungInsertRepository extends BaseInsertRepository
+    with BuchhaltungReadRepositorySync
+    with EventStream {
 }
 
-trait DefaultKundenportalWriteRepositoryComponent extends KundenportalWriteRepositoryComponent {
-  val system: ActorSystem
-
-  override val kundenportalWriteRepository: KundenportalWriteRepository = new DefaultActorSystemReference(system) with KundenportalWriteRepositoryImpl with AkkaEventStream
+trait BuchhaltungInsertRepositoryImpl extends BuchhaltungInsertRepository with LazyLogging {
 }

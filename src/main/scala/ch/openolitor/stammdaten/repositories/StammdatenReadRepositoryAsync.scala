@@ -31,7 +31,6 @@ import scala.concurrent.ExecutionContext
 import ch.openolitor.core.db._
 import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseRepository._
 import scala.concurrent._
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
@@ -45,7 +44,7 @@ import scalaz._
 import Scalaz._
 import scalaz.OptionT.optionT
 
-trait StammdatenReadRepository extends ReportReadRepository {
+trait StammdatenReadRepositoryAsync extends ReportReadRepository {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
 
@@ -156,7 +155,7 @@ trait StammdatenReadRepository extends ReportReadRepository {
   def getLastClosedLieferplanungenDetail(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[LieferplanungOpenDetail]]
 }
 
-class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenReadRepository with LazyLogging with StammdatenRepositoryQueries {
+class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with StammdatenReadRepositoryAsync with LazyLogging with StammdatenRepositoryQueries {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]] = {
     getAbotypenQuery(filter).future
   }

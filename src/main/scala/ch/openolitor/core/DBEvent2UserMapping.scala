@@ -29,7 +29,7 @@ import ch.openolitor.core.ws._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepository
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsync
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 

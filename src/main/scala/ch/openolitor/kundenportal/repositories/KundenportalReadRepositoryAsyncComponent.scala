@@ -20,45 +20,12 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten
+package ch.openolitor.kundenportal.repositories
 
-import ch.openolitor.core.Macros._
-import ch.openolitor.core.models._
-import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.repositories._
-import scalikejdbc._
-import ch.openolitor.util.IdUtil
-import ch.openolitor.core.domain.EventMetadata
-import ch.openolitor.core.repositories.EventPublisher
+trait KundenportalReadRepositoryAsyncComponent {
+  val kundenportalReadRepository: KundenportalReadRepositoryAsync
+}
 
-trait LieferungHandler extends LieferungDurchschnittspreisHandler with StammdatenDBMappings {
-  this: StammdatenWriteRepositoryComponent =>
-
-  def recreateLieferpositionen(meta: EventMetadata, lieferungId: LieferungId, positionen: LieferpositionenModify)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    stammdatenWriteRepository.deleteLieferpositionen(lieferungId)
-
-    stammdatenWriteRepository.getById(lieferungMapping, lieferungId) map { lieferung =>
-      positionen.preisTotal match {
-        case Some(preis) =>
-          val copy = lieferung.copy(preisTotal = preis, modifidat = meta.timestamp, modifikator = personId)
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-        case _ =>
-      }
-
-      //save Lieferpositionen
-      positionen.lieferpositionen map { create =>
-        val lpId = LieferpositionId(IdUtil.positiveRandomId)
-        val newObj = copyTo[LieferpositionModify, Lieferposition](
-          create,
-          "id" -> lpId,
-          "lieferungId" -> lieferungId,
-          "erstelldat" -> meta.timestamp,
-          "ersteller" -> meta.originator,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> meta.originator
-        )
-        stammdatenWriteRepository.insertEntity[Lieferposition, LieferpositionId](newObj)
-      }
-    }
-  }
+trait DefaultKundenportalReadRepositoryAsyncComponent extends KundenportalReadRepositoryAsyncComponent {
+  override val kundenportalReadRepository: KundenportalReadRepositoryAsync = new KundenportalReadRepositoryAsyncImpl
 }

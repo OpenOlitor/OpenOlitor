@@ -29,7 +29,6 @@ import scalikejdbc.async.FutureImplicits._
 import ch.openolitor.core.db._
 import ch.openolitor.core.db.OOAsyncDB._
 import ch.openolitor.core.repositories._
-import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.repositories.BaseWriteRepository
 import scala.concurrent._
 import ch.openolitor.stammdaten.models._
@@ -42,42 +41,43 @@ import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-/**
- * Asynchronous Repository
- */
-trait BuchhaltungReadRepository extends BaseReadRepository {
-  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]]
-  def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]]
-  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]]
-  def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]]
+trait BuchhaltungReadRepositorySync extends BaseReadRepositorySync {
+  def getRechnungen(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung]
+  def getKundenRechnungen(kundeId: KundeId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung]
+  def getRechnungDetail(id: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[RechnungDetail]
+  def getRechnungByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Rechnung]
 
-  def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]]
-  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZahlungsImportDetail]]
+  def getZahlungsImports(implicit session: DBSession, cpContext: ConnectionPoolContext): List[ZahlungsImport]
+  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsImportDetail]
+  def getZahlungsEingangByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsEingang]
 }
 
-class BuchhaltungReadRepositoryImpl extends BuchhaltungReadRepository with LazyLogging with BuchhaltungRepositoryQueries {
-  def getRechnungen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Rechnung]] = {
-    getRechnungenQuery(filter).future
+trait BuchhaltungReadRepositorySyncImpl extends BuchhaltungReadRepositorySync with LazyLogging with BuchhaltungRepositoryQueries {
+  def getRechnungen(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung] = {
+    getRechnungenQuery(None).apply()
   }
 
-  def getKundenRechnungen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Rechnung]] = {
-    getKundenRechnungenQuery(kundeId).future
+  def getKundenRechnungen(kundeId: KundeId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Rechnung] = {
+    getKundenRechnungenQuery(kundeId).apply()
   }
 
-  def getRechnungDetail(id: RechnungId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[RechnungDetail]] = {
-    getRechnungDetailQuery(id).future
+  def getRechnungDetail(id: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[RechnungDetail] = {
+    getRechnungDetailQuery(id).apply()
   }
 
-  def getRechnungByReferenznummer(referenzNummer: String)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Rechnung]] = {
-    getRechnungByReferenznummerQuery(referenzNummer).future
+  def getRechnungByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Rechnung] = {
+    getRechnungByReferenznummerQuery(referenzNummer).apply()
   }
 
-  def getZahlungsImports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ZahlungsImport]] = {
-    getZahlungsImportsQuery.future
+  def getZahlungsImports(implicit session: DBSession, cpContext: ConnectionPoolContext): List[ZahlungsImport] = {
+    getZahlungsImportsQuery.apply()
   }
 
-  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZahlungsImportDetail]] = {
-    getZahlungsImportDetailQuery(id).future
+  def getZahlungsImportDetail(id: ZahlungsImportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsImportDetail] = {
+    getZahlungsImportDetailQuery(id).apply()
+  }
+
+  def getZahlungsEingangByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsEingang] = {
+    getZahlungsEingangByReferenznummerQuery(referenzNummer)();
   }
 }
-

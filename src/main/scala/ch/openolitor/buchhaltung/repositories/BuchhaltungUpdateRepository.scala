@@ -41,30 +41,10 @@ import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-/**
- * Synchronous Repository
- */
-trait BuchhaltungWriteRepository extends BuchhaltungReadRepositorySync
-    with BuchhaltungInsertRepository
-    with BuchhaltungUpdateRepository
-    with BuchhaltungDeleteRepository
-    with BaseWriteRepository
+trait BuchhaltungUpdateRepository extends BaseUpdateRepository
+    with BuchhaltungReadRepositorySync
     with EventStream {
-  def cleanupDatabase(implicit cpContext: ConnectionPoolContext)
 }
 
-trait BuchhaltungWriteRepositoryImpl extends BuchhaltungReadRepositorySyncImpl
-    with BuchhaltungInsertRepositoryImpl
-    with BuchhaltungUpdateRepositoryImpl
-    with BuchhaltungDeleteRepositoryImpl
-    with BuchhaltungWriteRepository
-    with LazyLogging
-    with BuchhaltungRepositoryQueries {
-  override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
-    DB autoCommit { implicit session =>
-      sql"truncate table ${rechnungMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
-      sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()
-    }
-  }
+trait BuchhaltungUpdateRepositoryImpl extends BuchhaltungReadRepositorySyncImpl with BuchhaltungUpdateRepository with LazyLogging {
 }

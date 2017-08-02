@@ -20,12 +20,12 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.kundenportal.repositories
+package ch.openolitor.stammdaten.repositories
 
-trait KundenportalReadRepositoryComponent {
-  val kundenportalReadRepository: KundenportalReadRepository
+trait StammdatenReadRepositoryAsyncComponent {
+  val stammdatenReadRepository: StammdatenReadRepositoryAsync
 }
 
-trait DefaultKundenportalReadRepositoryComponent extends KundenportalReadRepositoryComponent {
-  override val kundenportalReadRepository: KundenportalReadRepository = new KundenportalReadRepositoryImpl
+trait DefaultStammdatenReadRepositoryAsyncComponent extends StammdatenReadRepositoryAsyncComponent {
+  override val stammdatenReadRepository: StammdatenReadRepositoryAsync = new StammdatenReadRepositoryAsyncImpl
 }
