@@ -39,7 +39,6 @@ import org.joda.time.DateTime
 import java.util.UUID
 import scalikejdbc.DBSession
 import ch.openolitor.util.IdUtil
-import ch.openolitor.core.repositories.EventPublishingImplicits._
 
 object StammdatenCommandHandler {
   case class LieferplanungAbschliessenCommand(originator: PersonId, id: LieferplanungId) extends UserCommand
@@ -568,7 +567,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   }
 
   private def getCreateAuslieferungHeimEvent(lieferplanung: Lieferplanung, meta: EventMetadata)(implicit personId: PersonId): Seq[PersistentEvent] = {
-    DB localTxPostPublish { implicit session => implicit publisher =>
+    DB readOnly { implicit session =>
       val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanung.id)
 
       //handle Tourenlieferungen: Group all entries with the same TourId on the same Date
@@ -602,64 +601,46 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   }
 
   private def getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung: Lieferplanung, meta: EventMetadata)(implicit personId: PersonId): Seq[PersistentEvent] = {
-    DB localTxPostPublish { implicit session => implicit publisher =>
+    DB readOnly { implicit session =>
       val lieferungen = stammdatenWriteRepository.getLieferungen(lieferplanung.id)
 
       //handle Depot- and Postlieferungen: Group all entries with the same VertriebId on the same Date
       val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
 
-      (vertriebeDaten flatmap {
+      val updates1 = (vertriebeDaten map {
         case (vertriebId, lieferungDatum) => {
           logger.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
           //create auslieferungen
           val auslieferungL = stammdatenWriteRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
-            val auslieferungO = getAuslieferungDepotPost(lieferungDatum, vertriebsart)
-            val auslieferungC = auslieferungO match {
+            getAuslieferungDepotPost(lieferungDatum, vertriebsart) match {
               case None => {
                 logger.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
-                val newAuslieferung = createAuslieferungDepotPost(lieferungDatum, vertriebsart, 0)
-                EntityInsertedEvent(meta, newAuslieferung.id, newAuslieferung)
-              }
-            }
-
-            auslieferungC map { _ =>
-              val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-              if (!koerbe.isEmpty) {
-                koerbe map { korb =>
-                  val copy = korb.copy(auslieferungId = auslieferungC.head.id)
-                  EntityUpdatedEvent(meta, copy.id, copy)
+                val koerbe = stammdatenWriteRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+                if (!koerbe.isEmpty) {
+                  val newAuslieferung = createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size)
+                  val updates = koerbe map { korb =>
+                    val copy = korb.copy(auslieferungId = Some(newAuslieferung.id))
+                    EntityUpdatedEvent(meta, copy.id, copy)
+                  }
+                  EntityInsertedEvent(meta, newAuslieferung.id, newAuslieferung) :: updates
+                } else {
+                  Nil
                 }
               }
             }
           }
-
-          auslieferungL.distinct.collect {
-            case Some(auslieferung) => {
-              val koerbeC = stammdatenWriteRepository.countKoerbe(auslieferung.id) getOrElse 0
-              auslieferung match {
-                case d: DepotAuslieferung => {
-                  val copy = d.copy(anzahlKoerbe = koerbeC)
-                  EntityUpdatedEvent(meta, copy.id, copy)
-                }
-                case p: PostAuslieferung => {
-                  val copy = p.copy(anzahlKoerbe = koerbeC)
-                  EntityUpdatedEvent(meta, copy.id, copy)
-                }
-                case _ =>
-              }
-            }
-          }
+          auslieferungL.flatten
         }
-      }).toSeq
+      }).flatten
+
       //calculate new values
-      lieferungen map { lieferung =>
+      val updates2 = (lieferungen map { lieferung =>
         //calculate total of lieferung
         val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
         val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy, lieferungMapping.column.preisTotal, lieferungMapping.column.status)
 
         //update durchschnittspreis
-        stammdatenWriteRepository.getProjekt map { projekt =>
+        val updates = (stammdatenWriteRepository.getProjekt map { projekt =>
           stammdatenWriteRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
             val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
 
@@ -671,17 +652,21 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               anzahlLieferungen = vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
               durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
             )
-
-            stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
+            EntityUpdatedEvent(meta, copy.id, copy)
           }
-        }
-      }
+        }).get.get
+        EntityUpdatedEvent(meta, lieferungCopy.id, lieferungCopy) :: updates :: Nil
+      }).flatten
 
-      stammdatenWriteRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
-        if (Offen == sammelbestellung.status) {
-          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Abgeschlossen))
-        }
-      }
+      val updates3 = (stammdatenWriteRepository.getSammelbestellungen(lieferplanung.id) map {
+        sammelbestellung =>
+          if (Offen == sammelbestellung.status) {
+            val sammelbestellungCopy = sammelbestellung.copy(status = Abgeschlossen)
+            Seq(EntityUpdatedEvent(meta, sammelbestellungCopy.id, sammelbestellungCopy))
+          } else { Nil }
+      }).filter(_.nonEmpty).flatten
+
+      updates1 ::: updates3 ::: updates2
     }
   }
 
