@@ -61,5 +61,6 @@ object Scripts {
       OO597_Index_DBScripts.scripts ++
       OO544_DBScripts.scripts ++
       OO554_DBScripts.scripts ++
+      OO291_OO396_DBScripts.scripts ++
       OO281_DBScripts.scripts
 }

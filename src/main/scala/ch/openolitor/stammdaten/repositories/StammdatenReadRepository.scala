@@ -63,7 +63,6 @@ trait StammdatenReadRepository extends ReportReadRepository {
   def getKundeDetail(id: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KundeDetail]]
   def getKundeDetailReport(kundeId: KundeId, projekt: ProjektReport)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KundeDetailReport]]
 
-  def getKundentypen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kundentyp]]
   def getCustomKundentypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[CustomKundentyp]]
 
   def getPersonen(kundeId: KundeId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Person]]
@@ -169,14 +168,6 @@ class StammdatenReadRepositoryImpl extends BaseReadRepository with StammdatenRea
 
   def getKundenUebersicht(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[KundeUebersicht]] = {
     getKundenUebersichtQuery(filter).future
-  }
-
-  def getKundentypen(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kundentyp]] = {
-    for {
-      ct <- getCustomKundentypen
-    } yield {
-      (ct ++ SystemKundentyp.ALL.toList).sortBy(_.kundentyp.id)
-    }
   }
 
   def getCustomKundentypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[CustomKundentyp]] = {

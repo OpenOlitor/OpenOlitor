@@ -98,6 +98,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(kundeMapping(kunde)).list
   }
 
+  protected def getKundenByKundentypQuery(kundentyp: KundentypId) = {
+    // search for kundentyp in typen spalte von Kunde (Komma separierte liste von Kundentypen)
+    val kundentypRegex: String = SQLSyntax.createUnsafely(s"""([ ,]|^)${kundentyp.id}([ ,]|$$)+""")
+    sql"""
+      SELECT ${kunde.result.*} FROM ${kundeMapping as kunde}
+      WHERE typen REGEXP ${kundentypRegex}
+    """.map(kundeMapping(kunde)).list
+  }
+
   protected def getKundenUebersichtQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select

@@ -216,7 +216,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   def kundentypenRoute(implicit subject: Subject) =
     path("kundentypen") {
-      get(list(stammdatenReadRepository.getKundentypen)) ~
+      get(list(stammdatenReadRepository.getCustomKundentypen)) ~
         post(create[CustomKundentypCreate, CustomKundentypId](CustomKundentypId.apply _))
     } ~
       path("kundentypen" / kundentypIdPath) { (kundentypId) =>
