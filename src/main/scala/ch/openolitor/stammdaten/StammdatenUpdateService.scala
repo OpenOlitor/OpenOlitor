@@ -85,6 +85,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify) => updateTour(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AuslieferungId, entity: TourAuslieferungModify) => updateAuslieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: KontoDatenId, entity: KontoDatenModify) => updateKontoDaten(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: Lieferung) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
@@ -588,6 +589,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(projekt, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
         stammdatenWriteRepository.updateEntity[Projekt, ProjektId](copy)
+      }
+    }
+  }
+
+  def updateKontoDaten(meta: EventMetadata, id: KontoDatenId, update: KontoDatenModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommit { implicit session =>
+      stammdatenWriteRepository.getById(kontoDatenMapping, id) map { kontoDaten =>
+        //map all updatable fields
+        val copy = copyFrom(kontoDaten, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+        stammdatenWriteRepository.updateEntity[KontoDaten, KontoDatenId](copy)
       }
     }
   }

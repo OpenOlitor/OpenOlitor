@@ -174,6 +174,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
       }
   }
   implicit val projektIdFormat = baseIdFormat(ProjektId.apply)
+  implicit val kontoDatenIdFormat = baseIdFormat(KontoDatenId.apply)
   implicit val korbIdFormat = baseIdFormat(KorbId.apply)
   implicit val einladungIdFormat = baseIdFormat(EinladungId.apply)
 
@@ -414,6 +415,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val korbCreateFormat = autoProductFormat[KorbCreate]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
+  implicit val kontoDatenModifyFormat = autoProductFormat[KontoDatenModify]
 
   // special report formats
   def enhancedProjektReportFormatDef(defaultFormat: JsonFormat[ProjektReport]): RootJsonFormat[ProjektReport] = new RootJsonFormat[ProjektReport] {
