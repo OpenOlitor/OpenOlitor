@@ -66,7 +66,7 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
       buchhaltungWriteRepository.getById(rechnungMapping, id) map { entity =>
         //map all updatable fields
         val copy = copyFrom(entity, update)
-        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](copy)
+        buchhaltungWriteRepository.updateEntityFully[Rechnung, RechnungId](copy)
       }
     }
   }

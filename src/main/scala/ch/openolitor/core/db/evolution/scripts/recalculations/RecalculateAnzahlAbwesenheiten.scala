@@ -62,13 +62,13 @@ object RecalculateAnzahlAbwesenheiten {
             getAboDetail(aboId) map {
               case a: DepotlieferungAboDetail =>
                 val copy = a.copy(anzahlAbwesenheiten = abwMap)
-                updateEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboDetail, DepotlieferungAbo](copy))
+                updateEntityFully[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboDetail, DepotlieferungAbo](copy))
               case a: HeimlieferungAboDetail =>
                 val copy = a.copy(anzahlAbwesenheiten = abwMap)
-                updateEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboDetail, HeimlieferungAbo](copy))
+                updateEntityFully[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboDetail, HeimlieferungAbo](copy))
               case a: PostlieferungAboDetail =>
                 val copy = a.copy(anzahlAbwesenheiten = abwMap)
-                updateEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboDetail, PostlieferungAbo](copy))
+                updateEntityFully[PostlieferungAbo, AboId](copyTo[PostlieferungAboDetail, PostlieferungAbo](copy))
             }
         }
       }

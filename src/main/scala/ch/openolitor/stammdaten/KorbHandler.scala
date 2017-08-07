@@ -74,7 +74,10 @@ trait KorbHandler extends KorbStatusHandler
 
         // only update if changed
         if (korb != copy) {
-          (stammdatenWriteRepository.updateEntity[Korb, KorbId](copy), Some(korb))
+          (stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(
+            korbMapping.column.status -> status,
+            korbMapping.column.guthabenVorLieferung -> abo.guthaben
+          ), Some(korb))
         } else {
           (Some(korb), Some(korb))
         }

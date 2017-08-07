@@ -604,19 +604,28 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           val adjustedLieferung = createKoerbe(updatedLieferung)
 
           //update Lieferung
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
+            lieferungMapping.column.lieferplanungId -> adjustedLieferung.lieferplanungId,
+            lieferungMapping.column.status -> adjustedLieferung.status,
+            lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
+            lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
+            lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
+            lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
+            lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief
+          )
 
           (dateFormat.print(adjustedLieferung.datum), adjustedLieferung.abotypBeschrieb)
         }
+
         val abotypDates = (abotypDepotTour.groupBy(_._1).mapValues(_ map { _._2 }) map {
           case (datum, abotypBeschrieb) =>
             datum + ": " + abotypBeschrieb.mkString(", ")
         }).mkString("; ")
 
-        val updatedObj = lieferplanung.copy(abotypDepotTour = abotypDates)
-
         //update lieferplanung
-        stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
+        stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.id)(
+          lieferplanungMapping.column.abotypDepotTour -> abotypDates
+        )
       }
     }
 
@@ -676,7 +685,15 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           val adjustedLieferung = createKoerbe(updatedLieferung)
 
           //update Lieferung
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
+            lieferungMapping.column.lieferplanungId -> adjustedLieferung.lieferplanungId,
+            lieferungMapping.column.status -> adjustedLieferung.status,
+            lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
+            lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
+            lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
+            lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
+            lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief
+          )
         }
       }
     }
