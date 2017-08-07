@@ -179,5 +179,8 @@ case class CustomKundentyp(
   modifikator: PersonId
 ) extends BaseEntity[CustomKundentypId]
 
+// Don't use! 
+case class CustomKundentypModifyV1(beschreibung: Option[String]) extends JSONSerializable
+
 case class CustomKundentypModify(kundentyp: KundentypId, id: CustomKundentypId, beschreibung: Option[String]) extends JSONSerializable
 case class CustomKundentypCreate(kundentyp: KundentypId, beschreibung: Option[String]) extends JSONSerializable
