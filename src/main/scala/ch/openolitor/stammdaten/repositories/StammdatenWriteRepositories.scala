@@ -243,10 +243,6 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getKundenByKundentypQuery(kundentyp).apply()
   }
 
-  // def getKundentypen(implicit session: DBSession): List[Kundentyp] = {
-  //   (getCustomKundentypen ++ SystemKundentyp.ALL.toList).sortBy(_.kundentyp.id)
-  // }
-
   def getCustomKundentypen(implicit session: DBSession): List[CustomKundentyp] = {
     getCustomKundentypenQuery.apply()
   }
