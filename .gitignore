@@ -30,3 +30,6 @@ tags
 
 # vim 
 *~
+
+# Intellij Idea specifics 
+.idea/*
