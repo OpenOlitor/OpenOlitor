@@ -42,7 +42,7 @@ trait JobQueueRoutes extends HttpService with DefaultRouteService with JobQueueJ
 
   implicit val timeout: Timeout
 
-  def jobQueueRoute(implicit subject: Subject, ec: ExecutionContext): Route =
+  def jobQueueRoute(implicit subject: Subject): Route =
     pathPrefix("queue") {
       path("jobs") {
         get {

@@ -29,6 +29,10 @@ trait EntityStoreReference {
   val entityStore: ActorRef
 }
 
+trait DBEvolutionReference {
+  val dbEvolutionActor: ActorRef
+}
+
 trait EventStoreReference {
   val eventStore: ActorRef
 }
@@ -61,5 +65,6 @@ trait ActorReferences extends ActorSystemReference
     with ReportSystemReference
     with MailServiceReference
     with AirbrakeNotifierReference
-    with JobQueueServiceReference {
+    with JobQueueServiceReference
+    with DBEvolutionReference {
 }

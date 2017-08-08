@@ -55,8 +55,13 @@ class SystemActor(sysConfig: SystemConfig, airbrakeNotifier: ActorRef) extends A
       log.debug(s"oo-system:Request child actor $name")
       val actorRef = context.actorOf(props, name)
 
+      context.watch(actorRef)
+
       //return created actor
       sender ! actorRef
+    case Terminated(child) =>
+      context.unwatch(child)
+      log.warning(s"Child actor terminated: $child")
     case e =>
       log.debug(s"oo-system:Received unknown event:$e")
   }

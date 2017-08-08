@@ -57,13 +57,13 @@ import scala.io.Source
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.core.security.Subject
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryAsyncComponent
 import ch.openolitor.buchhaltung.reporting.RechnungReportService
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
-import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryAsyncComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryAsyncComponent
 import ch.openolitor.buchhaltung.reporting.MahnungReportService
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
@@ -73,7 +73,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     with RechnungReportService
     with MahnungReportService
     with BuchhaltungDBMappings {
-  self: BuchhaltungReadRepositoryComponent with FileStoreComponent with StammdatenReadRepositoryComponent =>
+  self: BuchhaltungReadRepositoryAsyncComponent with FileStoreComponent with StammdatenReadRepositoryAsyncComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
@@ -297,6 +297,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 }
 
 class DefaultBuchhaltungRoutes(
+  override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,
@@ -309,5 +310,5 @@ class DefaultBuchhaltungRoutes(
   override val jobQueueService: ActorRef
 )
     extends BuchhaltungRoutes
-    with DefaultBuchhaltungReadRepositoryComponent
-    with DefaultStammdatenReadRepositoryComponent
+    with DefaultBuchhaltungReadRepositoryAsyncComponent
+    with DefaultStammdatenReadRepositoryAsyncComponent

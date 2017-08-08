@@ -30,12 +30,12 @@ import com.typesafe.scalalogging.LazyLogging
  */
 class BaseCommandHandler extends CommandHandler with LazyLogging {
   import EntityStore._
-  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
+  override val handle: PartialFunction[UserCommand, IdFactory => EventTransactionMetadata => Try[Seq[ResultingEvent]]] = {
     case UpdateEntityCommand(personId, id, entity) => idFactory => meta =>
       logger.debug(s"created => Update entity::$id, $entity")
-      Success(Seq(EntityUpdatedEvent(meta, id, entity)))
+      Success(Seq(EntityUpdateEvent(id, entity)))
     case DeleteEntityCommand(personId, id) => idFactory => meta =>
       logger.debug(s"created => delete entity with id: $id")
-      Success(Seq(EntityDeletedEvent(meta, id)))
+      Success(Seq(EntityDeleteEvent(id)))
   }
 }

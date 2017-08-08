@@ -56,25 +56,25 @@ import scala.io.Source
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.core.security.Subject
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
-import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenReadRepositoryAsyncComponent
 import ch.openolitor.buchhaltung.reporting.RechnungReportService
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
-import ch.openolitor.kundenportal.repositories.KundenportalReadRepositoryComponent
+import ch.openolitor.kundenportal.repositories.KundenportalReadRepositoryAsyncComponent
 import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
 import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
-import ch.openolitor.kundenportal.repositories.DefaultKundenportalReadRepositoryComponent
+import ch.openolitor.kundenportal.repositories.DefaultKundenportalReadRepositoryAsyncComponent
 
 trait KundenportalRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with StammdatenEventStoreSerializer
     with BuchhaltungJsonProtocol
     with StammdatenDBMappings {
-  self: KundenportalReadRepositoryComponent with FileStoreComponent =>
+  self: KundenportalReadRepositoryAsyncComponent with FileStoreComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
@@ -176,6 +176,7 @@ trait KundenportalRoutes extends HttpService with ActorReferences
 }
 
 class DefaultKundenportalRoutes(
+  override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,
@@ -188,4 +189,4 @@ class DefaultKundenportalRoutes(
   override val jobQueueService: ActorRef
 )
     extends KundenportalRoutes
-    with DefaultKundenportalReadRepositoryComponent
+    with DefaultKundenportalReadRepositoryAsyncComponent

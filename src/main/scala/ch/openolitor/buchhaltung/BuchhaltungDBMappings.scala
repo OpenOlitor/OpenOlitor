@@ -24,8 +24,6 @@ package ch.openolitor.buchhaltung
 
 import java.util.UUID
 import ch.openolitor.core.models._
-import ch.openolitor.core.repositories.BaseRepository
-import ch.openolitor.core.repositories.BaseRepository._
 import ch.openolitor.core.repositories.ParameterBinderMapping
 import ch.openolitor.buchhaltung.models._
 import scalikejdbc._

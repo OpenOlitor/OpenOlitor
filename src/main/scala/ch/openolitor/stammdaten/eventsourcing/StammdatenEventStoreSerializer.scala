@@ -133,14 +133,17 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     .to[V2](_.update('sprache ! set[Locale](Locale.GERMAN))))
   implicit val projektIdPersister = persister[ProjektId]("projekt-id")
 
-  implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent]("lieferplanung-abschliessen-event")
-  implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent]("lieferplanung-abrechnen-event")
-  implicit val lieferplanungDataModifiedEventPersister = persister[LieferplanungDataModifiedEvent]("lieferplanung-data-modified-event")
-  implicit val abwesenheitCreateEventPersister = persister[AbwesenheitCreateEvent]("abwesenheit-create-event")
-  implicit val sammelbestellungVersendenEventPersister = persister[SammelbestellungVersendenEvent]("lieferung-bestellen-event") // use the same identifier as before with bestellung; the structure is the same
-  implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent]("passwort-gewechselt")
-  implicit val loginDeaktiviertEventPersister = persister[LoginDeaktiviertEvent]("login-deaktiviert")
-  implicit val loginAktiviertEventPersister = persister[LoginAktiviertEvent]("login-aktiviert")
+  // custom events
+  import ch.openolitor.core.eventsourcing.events._
+
+  implicit val lieferplanungAbschliessenEventPersister = persister[LieferplanungAbschliessenEvent, V2]("lieferplanung-abschliessen-event", V1toV2metaDataMigration)
+  implicit val lieferplanungAbrechnenEventPersister = persister[LieferplanungAbrechnenEvent, V2]("lieferplanung-abrechnen-event", V1toV2metaDataMigration)
+  implicit val lieferplanungDataModifiedEventPersister = persister[LieferplanungDataModifiedEvent, V2]("lieferplanung-data-modified-event", V1toV2metaDataMigration)
+  implicit val abwesenheitCreateEventPersister = persister[AbwesenheitCreateEvent, V2]("abwesenheit-create-event", V1toV2metaDataMigration)
+  implicit val sammelbestellungVersendenEventPersister = persister[SammelbestellungVersendenEvent, V2]("lieferung-bestellen-event", V1toV2metaDataMigration) // use the same identifier as before with bestellung; the structure is the same
+  implicit val passwortGewechseltEventPersister = persister[PasswortGewechseltEvent, V2]("passwort-gewechselt", V1toV2metaDataMigration)
+  implicit val loginDeaktiviertEventPersister = persister[LoginDeaktiviertEvent, V2]("login-deaktiviert", V1toV2metaDataMigration)
+  implicit val loginAktiviertEventPersister = persister[LoginAktiviertEvent, V2]("login-aktiviert", V1toV2metaDataMigration)
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
@@ -148,17 +151,17 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val tourAuslieferungPersister = persister[TourAuslieferung]("tour-auslieferung")
   implicit val postAuslieferungPersister = persister[PostAuslieferung]("post-auslieferung")
 
-  implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent]("auslieferung-als-ausgeliefert-markieren-event")
-  implicit val sammelbestellungAlsAbgerechnetMarkierenEventPersister = persister[SammelbestellungAlsAbgerechnetMarkierenEvent]("bestellung-als-ausgeliefert-markieren-event") // use the same identifier as before with bestellung; the structure is the same
+  implicit val auslieferungAlsAusgeliefertMarkierenEventPersister = persister[AuslieferungAlsAusgeliefertMarkierenEvent, V2]("auslieferung-als-ausgeliefert-markieren-event", V1toV2metaDataMigration)
+  implicit val sammelbestellungAlsAbgerechnetMarkierenEventPersister = persister[SammelbestellungAlsAbgerechnetMarkierenEvent, V2]("bestellung-als-ausgeliefert-markieren-event", V1toV2metaDataMigration) // use the same identifier as before with bestellung; the structure is the same
 
   implicit val einladungIdPersister = persister[EinladungId]("einladung-id")
   implicit val einladungCreatePersister = persister[EinladungCreate]("einladung-create")
-  implicit val einladungGesendetEventPersister = persister[EinladungGesendetEvent]("einladung-gesendet")
-  implicit val passwortResetGesendetEventPersister = persister[PasswortResetGesendetEvent]("passwort-reset-gesendet")
-  implicit val rolleGewechseltEventPersister = persister[RolleGewechseltEvent]("rolle-gewechselt-gesendet")
+  implicit val einladungGesendetEventPersister = persister[EinladungGesendetEvent, V2]("einladung-gesendet", V1toV2metaDataMigration)
+  implicit val passwortResetGesendetEventPersister = persister[PasswortResetGesendetEvent, V2]("passwort-reset-gesendet", V1toV2metaDataMigration)
+  implicit val rolleGewechseltEventPersister = persister[RolleGewechseltEvent, V2]("rolle-gewechselt-gesendet", V1toV2metaDataMigration)
 
-  implicit val aboAktiviertEventPersister = persister[AboAktiviertEvent]("abo-aktiviert-event")
-  implicit val aboDeaktiviertEventPersister = persister[AboDeaktiviertEvent]("abo-deaktiviert-event")
+  implicit val aboAktiviertEventPersister = persister[AboAktiviertEvent, V2]("abo-aktiviert-event", V1toV2metaDataMigration)
+  implicit val aboDeaktiviertEventPersister = persister[AboDeaktiviertEvent, V2]("abo-deaktiviert-event", V1toV2metaDataMigration)
 
   val stammdatenPersisters = List(
     depotModifyPersister,

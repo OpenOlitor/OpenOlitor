@@ -60,6 +60,7 @@ import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.core.jobs.JobQueueRoutes
 
 class DefaultSystemRouteService(
+  override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
   override val mailService: ActorRef,

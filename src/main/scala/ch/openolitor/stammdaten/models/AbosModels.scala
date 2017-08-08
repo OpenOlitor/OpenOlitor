@@ -466,3 +466,28 @@ case class Tourlieferung(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends BaseEntity[AboId]
+
+object Tourlieferung {
+  def apply(heimlieferungAbo: HeimlieferungAbo, kunde: Kunde, personId: PersonId): Tourlieferung = {
+    Tourlieferung(
+      heimlieferungAbo.id,
+      heimlieferungAbo.tourId,
+      heimlieferungAbo.abotypId,
+      heimlieferungAbo.kundeId,
+      heimlieferungAbo.vertriebsartId,
+      heimlieferungAbo.vertriebId,
+      kunde.bezeichnungLieferung getOrElse kunde.bezeichnung,
+      kunde.strasseLieferung getOrElse kunde.strasse,
+      kunde.hausNummerLieferung orElse kunde.hausNummer,
+      kunde.adressZusatzLieferung orElse kunde.adressZusatz,
+      kunde.plzLieferung getOrElse kunde.plz,
+      kunde.ortLieferung getOrElse kunde.ort,
+      heimlieferungAbo.abotypName,
+      None,
+      DateTime.now,
+      personId,
+      DateTime.now,
+      personId
+    )
+  }
+}

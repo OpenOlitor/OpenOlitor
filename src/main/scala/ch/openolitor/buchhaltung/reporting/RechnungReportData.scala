@@ -35,17 +35,17 @@ import ch.openolitor.core.reporting._
 import ch.openolitor.core.reporting.ReportSystem._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.models.Projekt
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryComponent
+import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsyncComponent
 import ch.openolitor.stammdaten.models.ProjektReport
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
-import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryAsyncComponent
 import scala.Left
 import scala.Right
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 
 trait RechnungReportData extends AsyncConnectionPoolContextAware with BuchhaltungJsonProtocol {
-  self: BuchhaltungReadRepositoryComponent with ActorReferences with StammdatenReadRepositoryComponent =>
+  self: BuchhaltungReadRepositoryAsyncComponent with ActorReferences with StammdatenReadRepositoryAsyncComponent =>
 
   def rechungenById(rechnungIds: Seq[RechnungId]): Future[(Seq[ValidationError[RechnungId]], Seq[RechnungDetailReport])] = {
     stammdatenReadRepository.getProjekt flatMap {

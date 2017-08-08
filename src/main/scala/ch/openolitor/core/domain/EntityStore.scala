@@ -42,6 +42,7 @@ import scala.reflect._
 import scala.reflect.runtime.universe.{ Try => TTry, _ }
 import ch.openolitor.buchhaltung.models._
 import DefaultMessages._
+import ch.openolitor.core.DBEvolutionReference
 
 /**
  * _
@@ -50,12 +51,12 @@ import DefaultMessages._
 object EntityStore {
   import AggregateRoot._
 
-  val VERSION = 1
+  val VERSION = 2
 
   val persistenceId = "entity-store"
 
-  case class EntityStoreState(seqNr: Long, dbRevision: Int, dbSeeds: Map[Class[_ <: BaseId], Long]) extends State
-  def props(evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultEntityStore], sysConfig, evolution)
+  case class EntityStoreState(dbSeeds: Map[Class[_ <: BaseId], Long]) extends State
+  def props(dbEvolutionActor: ActorRef, evolution: Evolution)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultEntityStore], sysConfig, dbEvolutionActor, evolution)
 
   //base commands
   case class InsertEntityCommand[E <: AnyRef](originator: PersonId, entity: E) extends UserCommand {
@@ -76,10 +77,25 @@ object EntityStore {
   }
   case class EntityDeletedEvent[I <: BaseId](meta: EventMetadata, id: I) extends PersistentEvent
 
+  trait ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent
+  }
+  case class EntityInsertEvent[I <: BaseId: ClassTag, E <: AnyRef](id: I, entity: E) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = EntityInsertedEvent(factory.newMetadata(), id, entity)
+  }
+  case class EntityUpdateEvent[I <: BaseId, E <: AnyRef](id: I, entity: E) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = EntityUpdatedEvent(factory.newMetadata(), id, entity)
+  }
+  case class EntityDeleteEvent[I <: BaseId](id: I) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = EntityDeletedEvent(factory.newMetadata(), id)
+  }
+  case class DefaultResultingEvent(eventF: EventMetadataFactory => PersistentEvent) extends ResultingEvent {
+    def toPersistentEvent(implicit factory: EventMetadataFactory): PersistentEvent = eventF(factory)
+  }
+
   case object StartSnapshotCommand
 
-  // other actor messages
-  case object CheckDBEvolution
+  // other actor messages  
   case object ReadSeedsFromDB
 
   case object UserCommandFailed
@@ -89,13 +105,15 @@ object EntityStore {
 trait EntityStoreJsonProtocol extends BaseJsonProtocol {
   import EntityStore._
 
-  implicit val metadataFormat = jsonFormat5(EventMetadata)
+  implicit val metadataFormat = jsonFormat6(EventMetadata)
   implicit val eventStoreInitializedEventFormat = jsonFormat1(EntityStoreInitialized)
 }
 
 trait EntityStore extends AggregateRoot
     with ConnectionPoolContextAware
-    with CommandHandlerComponent {
+    with CommandHandlerComponent
+    with DBEvolutionReference
+    with IdFactory {
 
   import EntityStore._
   import AggregateRoot._
@@ -107,7 +125,7 @@ trait EntityStore extends AggregateRoot
   override def persistenceId: String = EntityStore.persistenceId
 
   type S = EntityStoreState
-  override var state: EntityStoreState = EntityStoreState(0, 0, Map())
+  override var state: EntityStoreState = EntityStoreState(Map())
 
   lazy val moduleCommandHandlers: List[CommandHandler] = List(
     stammdatenCommandHandler,
@@ -116,16 +134,17 @@ trait EntityStore extends AggregateRoot
     baseCommandHandler
   )
 
-  def newId(clOf: Class[_ <: BaseId]): Long = {
-    val id: Long = state.dbSeeds.get(clOf).map { id =>
+  def newId[I <: BaseId: ClassTag](cons: Long => I): I = {
+    val clOf = classTag[I].runtimeClass.asInstanceOf[Class[I]]
+    val id: Long = state.dbSeeds.get(clOf) map { id =>
       id + 1
-    }.getOrElse(sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
+    } getOrElse (sysConfig.mandantConfiguration.dbSeeds.get(clOf).getOrElse(1L))
     updateId(clOf, id)
-    id
+    cons(id)
   }
 
   def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: Long) = {
-    if (state.dbSeeds.get(clOf).map(_ < id).getOrElse(true)) {
+    if (state.dbSeeds.get(clOf) map (_ < id) getOrElse (true)) {
       log.debug(s"updateId:$clOf -> $id")
       //only update if current id is smaller than new one or no id did exist 
       state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
@@ -137,35 +156,14 @@ trait EntityStore extends AggregateRoot
    *
    * @param evt Event to apply
    */
-  override def updateState(evt: PersistentEvent): Unit = {
-    log.debug(s"updateState:$evt")
+  override def updateState(recovery: Boolean)(evt: PersistentEvent): Unit = {
     evt match {
       case EntityStoreInitialized(_) =>
-      case e @ EntityInsertedEvent(meta, id, entity) => updateId(e.idType, id.id)
+        log.debug(s"EntityStoreInitialized")
+      case e @ EntityInsertedEvent(meta, id, entity) =>
+        updateId(e.idType, id.id)
+        log.debug(s"EntityInsertedEvent, update id to:${e.idType} -> ${id.id}")
       case _ =>
-    }
-  }
-
-  def checkDBEvolution(): Try[Int] = {
-    log.debug(s"Check DB Evolution: current revision=${state.dbRevision}")
-    implicit val personId = Boot.systemPersonId
-    evolution.evolveDatabase(state.dbRevision) match {
-      case s @ Success(rev) =>
-        log.debug(s"Successfully updated to db rev:$rev")
-        updateDBRevision(rev)
-
-        readDBSeeds()
-
-        context become created
-        s
-      case f @ Failure(e) =>
-        log.warning(s"dB Evolution failed", e)
-        DB readOnly { implicit session =>
-          val newRev = evolution.currentRevision
-          updateDBRevision(newRev)
-        }
-        context become uncheckedDB
-        f
     }
   }
 
@@ -178,15 +176,6 @@ trait EntityStore extends AggregateRoot
       case Failure(e) =>
         e.printStackTrace
         log.warning(s"Coulnd't read actual seeds from db {}", e)
-    }
-  }
-
-  def updateDBRevision(newRev: Int) = {
-    if (newRev != state.dbRevision) {
-      state = state.copy(dbRevision = newRev)
-
-      //save new snapshot
-      saveSnapshot(state)
     }
   }
 
@@ -212,25 +201,14 @@ trait EntityStore extends AggregateRoot
       this.state = state
       context become created
     case Startup =>
-      context become uncheckedDB
-      //reprocess event
-      uncheckedDB(Startup)
+      context become created
       sender ! Started
     case e =>
       log.debug(s"uninitialized => Initialize eventstore with event:$e, $self")
-      state = incState
-      persist(EntityStoreInitialized(metadata(Boot.systemPersonId)))(afterEventPersisted)
-      context become uncheckedDB
+      persist(EntityStoreInitialized(metadata(Boot.systemPersonId).toMetadata(1L)))(afterEventPersisted)
+      context become created
       //reprocess event
-      uncheckedDB(e)
-  }
-
-  val uncheckedDB: Receive = {
-    case CheckDBEvolution =>
-      log.debug(s"uncheckedDB => check db evolution")
-      sender ! checkDBEvolution()
-    case x =>
-      log.error(s"uncheckedDB => unsupported command:$x")
+      created(e)
   }
 
   /**
@@ -246,15 +224,17 @@ trait EntityStore extends AggregateRoot
     case command: UserCommand =>
       val meta = metadata(command.originator)
       val result = moduleCommandHandlers collectFirst { case ch: CommandHandler if ch.handle.isDefinedAt((command)) => ch.handle(command) } map { handle =>
-        handle(newId)(meta) match {
+        handle(this)(meta) match {
           case Success(resultingEvents) =>
             log.debug(s"handled command: $command in module specific command handler.")
-            state = incState
-            resultingEvents map { resultingEvent =>
-              persist(resultingEvent)(afterEventPersisted)
+            implicit val eventFactory = new EventMetadataFactory(meta)
+            val result = resultingEvents map { resultingEvent =>
+              val persistentEvent = resultingEvent.toPersistentEvent
+              persist(persistentEvent)(afterEventPersisted)
+              persistentEvent
             }
             //return only first event to sender
-            resultingEvents.headOption map { result =>
+            result.headOption map { result =>
               sender ! result
             }
           case Failure(e) =>
@@ -277,19 +257,12 @@ trait EntityStore extends AggregateRoot
       log.error(s"SaveSnapshotFailure failed:$reason")
     case ReadSeedsFromDB =>
       readDBSeeds()
-    case CheckDBEvolution =>
-      log.debug(s"received additional CheckDBEvolution; evolution has been successful, otherwise I would be in uncheckedDB")
-      sender ! Success(state.dbRevision)
     case other =>
       log.warning(s"received unknown command:$other")
   }
 
   def metadata(personId: PersonId) = {
-    EventMetadata(personId, VERSION, DateTime.now, state.seqNr, persistenceId)
-  }
-
-  def incState = {
-    state.copy(seqNr = state.seqNr + 1)
+    EventTransactionMetadata(personId, VERSION, DateTime.now, aquireTransactionNr(), persistenceId)
   }
 
   /**
@@ -307,7 +280,7 @@ trait EntityStore extends AggregateRoot
   override val receiveCommand = uninitialized
 }
 
-class DefaultEntityStore(override val sysConfig: SystemConfig, override val evolution: Evolution) extends EntityStore
+class DefaultEntityStore(override val sysConfig: SystemConfig, override val dbEvolutionActor: ActorRef, override val evolution: Evolution) extends EntityStore
     with DefaultCommandHandlerComponent {
   val system = context.system
 }

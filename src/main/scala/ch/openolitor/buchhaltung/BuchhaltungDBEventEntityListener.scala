@@ -36,8 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.models.AboId
 import ch.openolitor.stammdaten.models.{ DepotlieferungAbo, HeimlieferungAbo, PostlieferungAbo }
-import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryComponent
-import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungUpdateRepositoryComponent
+import ch.openolitor.buchhaltung.repositories.BuchhaltungUpdateRepositoryComponent
 import ch.openolitor.core.repositories.EventPublishingImplicits._
 import ch.openolitor.core.repositories.EventPublisher
 
@@ -45,13 +45,13 @@ object BuchhaltungDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungDBEventEntityListener], sysConfig, system)
 }
 
-class DefaultBuchhaltungDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends BuchhaltungDBEventEntityListener(sysConfig) with DefaultBuchhaltungWriteRepositoryComponent
+class DefaultBuchhaltungDBEventEntityListener(sysConfig: SystemConfig, override val system: ActorSystem) extends BuchhaltungDBEventEntityListener(sysConfig) with DefaultBuchhaltungUpdateRepositoryComponent
 
 /**
  * Listen on DBEvents and adjust calculated fields within this module
  */
 class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with BuchhaltungDBMappings with AsyncConnectionPoolContextAware {
-  this: BuchhaltungWriteRepositoryComponent =>
+  this: BuchhaltungUpdateRepositoryComponent =>
   import BuchhaltungDBEventEntityListener._
 
   override def preStart() {
@@ -97,6 +97,6 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
   }
 
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(mod: E => E)(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
-    modifyEntityWithRepository(buchhaltungWriteRepository)(id, mod)
+    modifyEntityWithRepository(buchhaltungUpdateRepository)(id, mod)
   }
 }

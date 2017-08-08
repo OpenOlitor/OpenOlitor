@@ -26,7 +26,20 @@ import ch.openolitor.core.models.PersonId
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
 
-case class EventMetadata(originator: PersonId, version: Int, timestamp: DateTime, seqNr: Long, source: String)
+case class EventTransactionMetadata(originator: PersonId, version: Int, timestamp: DateTime, transactionNr: Long, source: String) {
+  def toMetadata(seqNr: Long) = {
+    EventMetadata(
+      originator,
+      version,
+      timestamp,
+      transactionNr,
+      seqNr,
+      source
+    )
+  }
+}
+
+case class EventMetadata(originator: PersonId, version: Int, timestamp: DateTime, transactionNr: Long, seqNr: Long, source: String)
 
 trait PersistentEvent extends Serializable {
   val meta: EventMetadata
@@ -43,4 +56,5 @@ object SystemEvents {
   val SystemPersonId = PersonId(0)
 
   case class PersonLoggedIn(personId: PersonId, timestamp: DateTime) extends SystemEvent
+  case class SystemStarted(timestamp: DateTime) extends SystemEvent
 }

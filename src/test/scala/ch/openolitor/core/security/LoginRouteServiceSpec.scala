@@ -255,9 +255,10 @@ class MockLoginRouteService(
   override val entityStore: ActorRef = null
   override val reportSystem: ActorRef = null
   override val jobQueueService: ActorRef = null
+  override val dbEvolutionActor: ActorRef = null
   implicit val system = ActorSystem("test")
   override val sysConfig: SystemConfig = SystemConfig(null, null, MultipleAsyncConnectionPoolContext())
-  override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(null))
+  override val eventStore: ActorRef = TestActorRef(new DefaultSystemEventStore(sysConfig, dbEvolutionActor))
   override val mailService: ActorRef = TestActorRef(new MailServiceMock)
   override val fileStore: FileStore = null
   override val actorRefFactory: ActorRefFactory = null

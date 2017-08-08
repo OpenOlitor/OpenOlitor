@@ -27,11 +27,11 @@ import scala.util.{ Failure, Success, Try }
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.db.{ AsyncConnectionPoolContextAware, ConnectionPoolContextAware }
-import ch.openolitor.core.domain.{ CommandHandler, EntityStore, EventMetadata, PersistentEvent, UserCommand }
+import ch.openolitor.core.domain.{ CommandHandler, EntityStore, EventTransactionMetadata, PersistentEvent, UserCommand, IdFactory }
 import ch.openolitor.core.exceptions.InvalidStateException
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.core.security.Subject
-import ch.openolitor.kundenportal.repositories.{ DefaultKundenportalWriteRepositoryComponent, KundenportalWriteRepositoryComponent }
+import ch.openolitor.kundenportal.repositories.{ DefaultKundenportalReadRepositorySyncComponent, KundenportalReadRepositorySyncComponent }
 import ch.openolitor.stammdaten.models.{ AboId, AbwesenheitCreate, AbwesenheitId }
 
 import akka.actor.ActorSystem
@@ -43,14 +43,14 @@ object KundenportalCommandHandler {
 }
 
 trait KundenportalCommandHandler extends CommandHandler with BuchhaltungDBMappings with ConnectionPoolContextAware with AsyncConnectionPoolContextAware {
-  self: KundenportalWriteRepositoryComponent =>
+  self: KundenportalReadRepositorySyncComponent =>
   import KundenportalCommandHandler._
   import EntityStore._
 
-  override val handle: PartialFunction[UserCommand, IdFactory => EventMetadata => Try[Seq[PersistentEvent]]] = {
+  override val handle: PartialFunction[UserCommand, IdFactory => EventTransactionMetadata => Try[Seq[ResultingEvent]]] = {
     case AbwesenheitErstellenCommand(personId, subject, entity: AbwesenheitCreate) => idFactory => meta =>
       DB readOnly { implicit session =>
-        kundenportalWriteRepository.getAbo(entity.aboId) map { abo =>
+        kundenportalReadRepository.getAbo(entity.aboId) map { abo =>
           if (subject.kundeId == abo.kundeId && abo.id == entity.aboId) {
             handleEntityInsert[AbwesenheitCreate, AbwesenheitId](idFactory, meta, entity, AbwesenheitId.apply)
           } else {
@@ -61,9 +61,9 @@ trait KundenportalCommandHandler extends CommandHandler with BuchhaltungDBMappin
 
     case AbwesenheitLoeschenCommand(personId, subject, aboId, abwesenheitId) => idFactory => meta =>
       DB readOnly { implicit session =>
-        kundenportalWriteRepository.getAbo(aboId) map { abo =>
+        kundenportalReadRepository.getAbo(aboId) map { abo =>
           if (subject.kundeId == abo.kundeId) {
-            Success(Seq(EntityDeletedEvent(meta, abwesenheitId)))
+            Success(Seq(EntityDeleteEvent(abwesenheitId)))
           } else {
             Failure(new InvalidStateException("Es können nur Abwesenheiten eigener Abos entfernt werden."))
           }
@@ -73,5 +73,5 @@ trait KundenportalCommandHandler extends CommandHandler with BuchhaltungDBMappin
 }
 
 class DefaultKundenportalCommandHandler(override val sysConfig: SystemConfig, override val system: ActorSystem) extends KundenportalCommandHandler
-    with DefaultKundenportalWriteRepositoryComponent {
+    with DefaultKundenportalReadRepositorySyncComponent {
 }

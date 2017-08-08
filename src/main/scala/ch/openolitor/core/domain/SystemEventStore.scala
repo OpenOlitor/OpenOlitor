@@ -28,6 +28,7 @@ import akka.persistence._
 import ch.openolitor.core.SystemConfig
 import akka.actor._
 import ch.openolitor.core.AkkaEventStream
+import ch.openolitor.core.domain.DefaultMessages.Startup
 
 object SystemEventStore {
   val VERSION = 1
@@ -35,7 +36,7 @@ object SystemEventStore {
 
   case class SystemEventStoreState(startTime: DateTime, seqNr: Long) extends State
 
-  def props()(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultSystemEventStore], sysConfig)
+  def props(dbEvolutionActor: ActorRef)(implicit sysConfig: SystemConfig): Props = Props(classOf[DefaultSystemEventStore], sysConfig, dbEvolutionActor)
 }
 
 /**
@@ -55,10 +56,10 @@ trait SystemEventStore extends AggregateRoot {
    *
    * @param evt Event to apply
    */
-  override def updateState(evt: PersistentEvent): Unit = {
+  override def updateState(recovery: Boolean = false)(evt: PersistentEvent): Unit = {
     log.debug(s"updateState:$evt")
     evt match {
-      case PersistentSystemEvent(meta, event) =>
+      case PersistentSystemEvent(meta, event) if !recovery =>
         //publish event to eventstream
         log.debug(s"Publish system event:$event")
         publish(event)
@@ -84,6 +85,8 @@ trait SystemEventStore extends AggregateRoot {
    * Eventlog initialized, handle entity events
    */
   val created: Receive = {
+    case Startup =>
+      log.debug(s"Startup")
     case KillAggregate =>
       log.debug(s"created => KillAggregate")
       context.stop(self)
@@ -97,7 +100,7 @@ trait SystemEventStore extends AggregateRoot {
   }
 
   def metadata = {
-    EventMetadata(SystemPersonId, VERSION, DateTime.now, state.seqNr, persistenceId)
+    EventMetadata(SystemPersonId, VERSION, DateTime.now, aquireTransactionNr(), 1L, persistenceId)
   }
 
   def incState = {
@@ -107,6 +110,6 @@ trait SystemEventStore extends AggregateRoot {
   override val receiveCommand = created
 }
 
-class DefaultSystemEventStore(sysConfig: SystemConfig) extends SystemEventStore {
+class DefaultSystemEventStore(val sysConfig: SystemConfig, override val dbEvolutionActor: ActorRef) extends SystemEventStore {
   log.debug(s"create DefaultSystemEventStore")
 }
