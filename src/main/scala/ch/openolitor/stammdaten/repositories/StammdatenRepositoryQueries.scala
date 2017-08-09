@@ -37,8 +37,9 @@ import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.util.parsing.FilterExpr
 import org.joda.time.LocalDate
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
-trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
+trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings with BuchhaltungDBMappings {
 
   lazy val aboTyp = abotypMapping.syntax("atyp")
   lazy val person = personMapping.syntax("pers")
@@ -78,6 +79,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
+
+  lazy val rechnung = rechnungMapping.syntax("rechnung")
+  lazy val rechnungsPosition = rechnungsPositionMapping.syntax("rechnungsPosition")
 
   protected def getAbotypenQuery(filter: Option[FilterExpr]) = {
     withSQL {
@@ -1778,5 +1782,13 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         }
         copyTo[Lieferplanung, LieferplanungOpenDetail](lieferplanung, "lieferungen" -> lieferungenDetails)
       }).list
+  }
+
+  protected def getRechnungsPositionenByRechnungIdQuery(id: RechnungId) = {
+    withSQL {
+      select
+        .from(rechnungsPositionMapping as rechnungsPosition)
+        .where.eq(rechnungsPosition.rechnungId, parameter(id))
+    }.map(rechnungsPositionMapping(rechnungsPosition)).list
   }
 }

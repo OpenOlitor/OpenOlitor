@@ -44,6 +44,7 @@ trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with Aut
 
   //id formats
   implicit val rechnungIdFormat = baseIdFormat(RechnungId)
+  implicit val rechnungsPositionIdFormat = baseIdFormat(RechnungsPositionId)
   implicit val zahlungsImportIdFormat = baseIdFormat(ZahlungsImportId)
   implicit val zahlungsEingangIdFormat = baseIdFormat(ZahlungsEingangId)
 

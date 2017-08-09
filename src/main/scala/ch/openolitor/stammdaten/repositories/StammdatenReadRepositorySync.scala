@@ -26,6 +26,7 @@ import ch.openolitor.core.models._
 import scalikejdbc._
 import ch.openolitor.core.repositories._
 import ch.openolitor.stammdaten.models._
+import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import akka.actor.ActorSystem
@@ -104,9 +105,14 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getPostlieferungAbo(id: AboId)(implicit session: DBSession): Option[PostlieferungAboDetail]
 
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
+  def getRechnungsPositionenByRechnungId(id: RechnungId)(implicit session: DBSession): List[RechnungsPosition]
 }
 
 trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with LazyLogging with StammdatenRepositoryQueries {
+  def getRechnungsPositionenByRechnungId(id: RechnungId)(implicit session: DBSession): List[RechnungsPosition] = {
+    getRechnungsPositionenByRechnungIdQuery(id).apply()
+  }
+
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
   }

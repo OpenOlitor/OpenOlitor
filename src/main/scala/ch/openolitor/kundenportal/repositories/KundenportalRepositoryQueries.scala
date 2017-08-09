@@ -59,6 +59,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
 
   //Buchhaltung
   lazy val rechnung = rechnungMapping.syntax("rechnung")
+  lazy val rechnungsPosition = rechnungsPositionMapping.syntax("rechnungsPosition")
 
   protected def getProjektQuery = {
     withSQL {
@@ -215,23 +216,18 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
       select
         .from(rechnungMapping as rechnung)
         .leftJoin(kundeMapping as kunde).on(rechnung.kundeId, kunde.id)
-        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(rechnung.aboId, depotlieferungAbo.id)
-        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(rechnung.aboId, heimlieferungAbo.id)
-        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(rechnung.aboId, postlieferungAbo.id)
+        .leftJoin(rechnungsPositionMapping as rechnungsPosition).on(rechnung.id, rechnungsPosition.rechnungId)
         .where.eq(rechnung.id, parameter(id))
         .and.eq(rechnung.kundeId, parameter(owner.kundeId))
         .orderBy(rechnung.rechnungsDatum)
     }.one(rechnungMapping(rechnung))
       .toManies(
         rs => kundeMapping.opt(kunde)(rs),
-        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
-        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
-        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs)
+        rs => rechnungsPositionMapping.opt(rechnungsPosition)(rs)
       )
-      .map({ (rechnung, kunden, pl, hl, dl) =>
+      .map({ (rechnung, kunden, rechnungsPositionen) =>
         val kunde = kunden.head
-        val abo = (pl ++ hl ++ dl).head
-        copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "abo" -> abo)
+        copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "rechnungsPositionen" -> rechnungsPositionen)
       }).single
   }
 }
