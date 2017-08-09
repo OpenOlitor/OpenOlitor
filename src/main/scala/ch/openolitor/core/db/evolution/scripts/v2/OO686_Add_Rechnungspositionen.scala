@@ -49,6 +49,7 @@ CREATE TABLE `RechnungsPosition` (
   `anzahl_lieferungen` int(11),
   `titel` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
   `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
+  `typ` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
   `sorting` int(11),
   `erstelldat` datetime NOT NULL,
   `ersteller` bigint(20) NOT NULL,
@@ -69,10 +70,10 @@ CREATE TABLE `RechnungsPosition` (
       sql"""
 INSERT INTO RechnungsPosition 
   (id, rechnung_id, abo_id, betrag, waehrung, anzahl_lieferungen, titel, 
-   status, erstelldat, ersteller, modifidat, modifikator)
+   status, typ, erstelldat, ersteller, modifidat, modifikator)
 SELECT 
    id, id, abo_id, betrag, waehrung, anzahl_lieferungen, titel, 
-   CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Offen' END AS status, erstelldat, ersteller, modifidat, modifikator FROM Rechnung
+   CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Offen' END AS status, 'Abo', erstelldat, ersteller, modifidat, modifikator FROM Rechnung
 """.execute.apply()
       Success(true)
     }

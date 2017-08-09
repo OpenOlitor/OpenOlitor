@@ -48,6 +48,7 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
   implicit val rechnungStatusTypeBinder: TypeBinder[RechnungStatus] = string.map(RechnungStatus.apply)
   implicit val rechnungsPositionStatusTypeBinder: TypeBinder[RechnungsPositionStatus.RechnungsPositionStatus] = string.map(RechnungsPositionStatus.apply)
+  implicit val rechnungsPositionTypTypeBinder: TypeBinder[RechnungsPositionTyp.RechnungsPositionTyp] = string.map(RechnungsPositionTyp.apply)
   implicit val optionRechnungIdBinder: TypeBinder[Option[RechnungId]] = optionBaseIdTypeBinder(RechnungId.apply _)
   implicit val optionAboIdBinder: TypeBinder[Option[AboId]] = optionBaseIdTypeBinder(AboId.apply _)
 
@@ -56,6 +57,7 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
   //DB parameter binders for write and query operationsit
   implicit val rechnungStatusBinder = toStringSqlBinder[RechnungStatus]
   implicit val rechnungsPositionStatusBinder = toStringSqlBinder[RechnungsPositionStatus.RechnungsPositionStatus]
+  implicit val rechnungsPositionTypBinder = toStringSqlBinder[RechnungsPositionTyp.RechnungsPositionTyp]
   implicit val zahlungsEingangStatusBinder = toStringSqlBinder[ZahlungsEingangStatus]
 
   implicit val rechnungIdSqlBinder = baseIdSqlBinder[RechnungId]
