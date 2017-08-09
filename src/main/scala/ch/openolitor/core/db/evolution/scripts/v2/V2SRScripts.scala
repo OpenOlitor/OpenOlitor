@@ -20,19 +20,8 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v2
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
-import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO618_DBScripts
-import ch.openolitor.core.db.evolution.scripts.v1.OO597_Index_DBScripts
-import ch.openolitor.core.db.evolution.scripts.v1.OO597_DBScripts
-
-object Scripts {
-  def current(system: ActorSystem) =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts(system) ++
-      V2SRScripts.scripts
+object V2SRScripts {
+  val scripts = OO686_Add_Rechnungspositionen.scripts
 }
