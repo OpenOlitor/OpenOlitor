@@ -75,16 +75,30 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
         .from(rechnungMapping as rechnung)
         .leftJoin(kundeMapping as kunde).on(rechnung.kundeId, kunde.id)
         .leftJoin(rechnungsPositionMapping as rechnungsPosition).on(rechnung.id, rechnungsPosition.rechnungId)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(rechnungsPosition.aboId, depotlieferungAbo.id)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(rechnungsPosition.aboId, heimlieferungAbo.id)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(rechnungsPosition.aboId, postlieferungAbo.id)
         .where.eq(rechnung.id, parameter(id))
         .orderBy(rechnung.rechnungsDatum)
     }.one(rechnungMapping(rechnung))
       .toManies(
         rs => kundeMapping.opt(kunde)(rs),
-        rs => rechnungsPositionMapping.opt(rechnungsPosition)(rs)
+        rs => rechnungsPositionMapping.opt(rechnungsPosition)(rs),
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs)
       )
-      .map({ (rechnung, kunden, rechnungsPositionen) =>
+      .map({ (rechnung, kunden, rechnungsPositionen, pl, hl, dl) =>
         val kunde = kunden.head
-        copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "rechnungsPositionen" -> rechnungsPositionen)
+        val abos = pl ++ hl ++ dl
+        val rechnungsPositionenDetail = for {
+          rechnungsPosition <- rechnungsPositionen
+          abo <- abos.filter(_.id == rechnungsPosition.aboId)
+        } yield {
+          copyTo[RechnungsPosition, RechnungsPositionDetail](rechnungsPosition, "abo" -> abo)
+        }
+
+        copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "rechnungsPositionen" -> rechnungsPositionenDetail)
       }).single
   }
 

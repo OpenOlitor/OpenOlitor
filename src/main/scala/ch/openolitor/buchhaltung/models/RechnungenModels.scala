@@ -148,13 +148,27 @@ object Rechnung {
   }
 }
 
+case class RechnungsPositionDetail(
+  id: RechnungsPositionId,
+  abo: Abo,
+  betrag: BigDecimal,
+  waehrung: Waehrung,
+  anzahlLieferungen: Option[Int],
+  titel: String,
+  // modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class RechnungDetail(
   id: RechnungId,
   kunde: Kunde,
   titel: String,
   waehrung: Waehrung,
   betrag: BigDecimal,
-  rechnungsPositionen: Seq[RechnungsPosition],
+  rechnungsPositionen: Seq[RechnungsPositionDetail],
   einbezahlterBetrag: Option[BigDecimal],
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime,
@@ -184,7 +198,7 @@ case class RechnungDetailReport(
     titel: String,
     waehrung: Waehrung,
     betrag: BigDecimal,
-    rechnungsPositionen: Seq[RechnungsPosition],
+    rechnungsPositionen: Seq[RechnungsPositionDetail],
     einbezahlterBetrag: Option[BigDecimal],
     rechnungsDatum: DateTime,
     faelligkeitsDatum: DateTime,

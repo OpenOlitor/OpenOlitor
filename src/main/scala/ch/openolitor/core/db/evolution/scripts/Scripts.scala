@@ -33,6 +33,5 @@ object Scripts {
   def current(system: ActorSystem) =
     V1Scripts.scripts ++
       V1SRScripts.scripts ++
-      V2Scripts.scripts(system) ++
-      V2SRScripts.scripts
+      V2Scripts.scripts(system)
 }
