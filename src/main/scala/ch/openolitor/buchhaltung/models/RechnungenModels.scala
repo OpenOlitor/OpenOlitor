@@ -85,12 +85,14 @@ case class RechnungsPositionId(id: Long) extends BaseId
 case class RechnungsPosition(
   id: RechnungsPositionId,
   rechnungId: Option[RechnungId],
+  parentRechnungsPositionId: Option[RechnungsPositionId],
   aboId: Option[AboId],
   betrag: BigDecimal,
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
   titel: String,
   status: RechnungsPositionStatus.RechnungsPositionStatus,
+  sorting: Option[Int],
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

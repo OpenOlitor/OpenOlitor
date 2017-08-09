@@ -42,18 +42,21 @@ object OO686_Add_Rechnungspositionen {
 CREATE TABLE `RechnungsPosition` (
   `id` bigint(20) NOT NULL,
   `rechnung_id` bigint(20),
+  `parent_rechnungs_position_id` bigint(20),
   `abo_id` bigint(20),
   `betrag` decimal(8,2) NOT NULL,
   `waehrung` varchar(10) COLLATE utf8_unicode_ci NOT NULL,
   `anzahl_lieferungen` int(11),
   `titel` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
   `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
+  `sorting` int(11),
   `erstelldat` datetime NOT NULL,
   `ersteller` bigint(20) NOT NULL,
   `modifidat` datetime NOT NULL,
   `modifikator` bigint(20) NOT NULL,
   KEY `id_index` (`id`),
   KEY `rechnung_id_index` (`rechnung_id`),
+  KEY `parent_rechnungs_position_id_index` (`parent_rechnungs_position_id`),
   KEY `abo_id_index` (`abo_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
 """.execute.apply()
