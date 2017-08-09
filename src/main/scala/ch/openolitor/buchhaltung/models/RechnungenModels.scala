@@ -69,6 +69,16 @@ object RechnungStatus {
   }
 }
 
+object RechnungsPositionStatus {
+  sealed trait RechnungsPositionStatus
+  case object Offen extends RechnungsPositionStatus
+  case object Bezahlt extends RechnungsPositionStatus
+
+  def apply(value: String): RechnungsPositionStatus = {
+    Vector(Offen, Bezahlt).find(_.toString == value).getOrElse(Offen)
+  }
+}
+
 case class RechnungId(id: Long) extends BaseId
 case class RechnungsPositionId(id: Long) extends BaseId
 
@@ -80,6 +90,7 @@ case class RechnungsPosition(
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
   titel: String,
+  status: RechnungsPositionStatus.RechnungsPositionStatus,
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -155,6 +166,7 @@ case class RechnungsPositionDetail(
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
   titel: String,
+  status: RechnungsPositionStatus.RechnungsPositionStatus,
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

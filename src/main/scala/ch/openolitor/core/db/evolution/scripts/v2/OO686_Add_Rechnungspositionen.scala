@@ -47,6 +47,7 @@ CREATE TABLE `RechnungsPosition` (
   `waehrung` varchar(10) COLLATE utf8_unicode_ci NOT NULL,
   `anzahl_lieferungen` int(11),
   `titel` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
   `erstelldat` datetime NOT NULL,
   `ersteller` bigint(20) NOT NULL,
   `modifidat` datetime NOT NULL,
@@ -63,11 +64,12 @@ CREATE TABLE `RechnungsPosition` (
   val FillRechnungsPositionenFromRechnungen = new Script with LazyLogging with StammdatenDBMappings {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"""
-INSERT INTO RechnungsPosition (id, rechnung_id, abo_id, betrag, waehrung, anzahl_lieferungen,
-                               titel, erstelldat, ersteller, modifidat, modifikator)
-SELECT id, id, abo_id, betrag, waehrung, anzahl_lieferungen, titel, erstelldat, ersteller, 
-       modifidat, modifikator 
-FROM Rechnung
+INSERT INTO RechnungsPosition 
+  (id, rechnung_id, abo_id, betrag, waehrung, anzahl_lieferungen, titel, 
+   status, erstelldat, ersteller, modifidat, modifikator)
+SELECT 
+   id, id, abo_id, betrag, waehrung, anzahl_lieferungen, titel, 
+   CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Offen' END AS status, erstelldat, ersteller, modifidat, modifikator FROM Rechnung
 """.execute.apply()
       Success(true)
     }

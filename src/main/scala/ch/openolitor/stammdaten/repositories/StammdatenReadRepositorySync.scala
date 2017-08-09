@@ -105,14 +105,9 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getPostlieferungAbo(id: AboId)(implicit session: DBSession): Option[PostlieferungAboDetail]
 
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
-  def getRechnungsPositionenByRechnungId(id: RechnungId)(implicit session: DBSession): List[RechnungsPosition]
 }
 
 trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with LazyLogging with StammdatenRepositoryQueries {
-  def getRechnungsPositionenByRechnungId(id: RechnungId)(implicit session: DBSession): List[RechnungsPosition] = {
-    getRechnungsPositionenByRechnungIdQuery(id).apply()
-  }
-
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
   }

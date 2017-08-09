@@ -126,8 +126,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
     case e @ EntityCreated(personId, entity: RechnungsPosition) => handleRechnungsPositionCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: RechnungsPosition) => handleRechnungsPositionDeleted(entity)(personId)
-    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if (orig.status != Bezahlt && entity.status == Bezahlt) =>
-      handleRechnungBezahlt(entity, orig)(personId)
+    case e @ EntityModified(personId, entity: RechnungsPosition, orig: RechnungsPosition) if (orig.status != RechnungsPositionStatus.Bezahlt && entity.status == RechnungsPositionStatus.Bezahlt) =>
+      handleRechnungsPositionBezahlt(entity, orig)(personId)
 
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
     case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) =>
@@ -595,12 +595,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleRechnungBezahlt(rechnung: Rechnung, orig: Rechnung)(implicit personId: PersonId) = {
+  def handleRechnungsPositionBezahlt(rechnungsPosition: RechnungsPosition, orig: RechnungsPosition)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      val rechnungsPositionen = stammdatenUpdateRepository.getRechnungsPositionenByRechnungId(rechnung.id)
 
       for {
-        rechnungsPosition <- rechnungsPositionen
         aboId <- rechnungsPosition.aboId
         anzahlLieferungen <- rechnungsPosition.anzahlLieferungen
       } yield {

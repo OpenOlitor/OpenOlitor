@@ -40,6 +40,7 @@ import zangelo.spray.json.AutoProductFormats
 trait BuchhaltungJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] with StammdatenJsonProtocol {
 
   implicit val rechnungStatusFormat = enumFormat(RechnungStatus.apply)
+  implicit val rechnungsPositionStatusFormat = enumFormat(RechnungsPositionStatus.apply)
   implicit val zahlungsEingangStatusFormat = enumFormat(ZahlungsEingangStatus.apply)
 
   //id formats

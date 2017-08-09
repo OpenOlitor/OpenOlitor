@@ -47,6 +47,7 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
   implicit val zahlungsEingangIdBinder: TypeBinder[ZahlungsEingangId] = baseIdTypeBinder(ZahlungsEingangId.apply _)
 
   implicit val rechnungStatusTypeBinder: TypeBinder[RechnungStatus] = string.map(RechnungStatus.apply)
+  implicit val rechnungsPositionStatusTypeBinder: TypeBinder[RechnungsPositionStatus.RechnungsPositionStatus] = string.map(RechnungsPositionStatus.apply)
   implicit val optionRechnungIdBinder: TypeBinder[Option[RechnungId]] = optionBaseIdTypeBinder(RechnungId.apply _)
   implicit val optionAboIdBinder: TypeBinder[Option[AboId]] = optionBaseIdTypeBinder(AboId.apply _)
 
@@ -54,6 +55,7 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
   //DB parameter binders for write and query operationsit
   implicit val rechnungStatusBinder = toStringSqlBinder[RechnungStatus]
+  implicit val rechnungsPositionStatusBinder = toStringSqlBinder[RechnungsPositionStatus.RechnungsPositionStatus]
   implicit val zahlungsEingangStatusBinder = toStringSqlBinder[ZahlungsEingangStatus]
 
   implicit val rechnungIdSqlBinder = baseIdSqlBinder[RechnungId]
@@ -118,7 +120,8 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
         column.betrag -> parameter(entity.betrag),
         column.waehrung -> parameter(entity.waehrung),
         column.anzahlLieferungen -> parameter(entity.anzahlLieferungen),
-        column.titel -> parameter(entity.titel)
+        column.titel -> parameter(entity.titel),
+        column.status -> parameter(entity.status)
       )
     }
   }
