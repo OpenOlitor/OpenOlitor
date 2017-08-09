@@ -34,7 +34,12 @@ import ch.openolitor.core.JSONSerializable
 import ch.openolitor.kundenportal.models.BelongsToKunde
 import ch.openolitor.core.scalax.Tuple23
 
-case class AboId(id: Long) extends BaseId
+class AboId(override val id: Long) extends BaseId
+object AboId {
+  def apply(id: Long): AboId = new AboId(id)
+}
+case class HauptAboId(override val id: Long) extends AboId(id)
+case class ZusatzAboId(override val id: Long) extends AboId(id)
 
 object IAbo {
   def calculateAktiv(start: LocalDate, ende: Option[LocalDate]): Boolean = {
@@ -43,12 +48,11 @@ object IAbo {
   }
 }
 
-trait IAbo extends BaseEntity[AboId] with BelongsToKunde {
-  val id: AboId
+trait IAbo[I <: AboId] extends BaseEntity[I] {
+  val id: I
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
   val vertriebBeschrieb: Option[String]
-  val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
   val kunde: String
@@ -67,10 +71,13 @@ trait IAbo extends BaseEntity[AboId] with BelongsToKunde {
     IAbo.calculateAktiv(start, ende)
 }
 
-sealed trait Abo extends IAbo {
+sealed trait Abo extends IAbo[HauptAboId] {
+  val id: HauptAboId
+  val abotypId: HauptAbotypId
+
 }
 
-sealed trait AboReport extends IAbo {
+sealed trait AboReport extends Abo {
   val kundeReport: KundeReport
 }
 
@@ -105,13 +112,13 @@ sealed trait AboModify extends JSONSerializable {
 }
 
 case class DepotlieferungAbo(
-  id: AboId,
+  id: HauptAboId,
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   abotypName: String,
   depotId: DepotId,
   depotName: String,
@@ -163,14 +170,14 @@ object DepotlieferungAbo {
 }
 
 case class DepotlieferungAboReport(
-  id: AboId,
+  id: HauptAboId,
   kundeId: KundeId,
   kunde: String,
   kundeReport: KundeReport,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   abotypName: String,
   depotId: DepotId,
   depotName: String,
@@ -192,13 +199,13 @@ case class DepotlieferungAboReport(
 ) extends AboReport with JSONSerializable
 
 case class DepotlieferungAboDetail(
-  id: AboId,
+  id: HauptAboId,
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   abotypName: String,
   depotId: DepotId,
   depotName: String,
@@ -233,13 +240,13 @@ case class DepotlieferungAboModify(
 ) extends AboModify
 
 case class HeimlieferungAbo(
-  id: AboId,
+  id: HauptAboId,
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   abotypName: String,
   tourId: TourId,
   tourName: String,
@@ -291,13 +298,13 @@ object HeimlieferungAbo {
 }
 
 case class HeimlieferungAboDetail(
-  id: AboId,
+  id: HauptAboId,
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   abotypName: String,
   tourId: TourId,
   tourName: String,
@@ -332,13 +339,13 @@ case class HeimlieferungAboModify(
 ) extends AboModify
 
 case class PostlieferungAbo(
-  id: AboId,
+  id: HauptAboId,
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   abotypName: String,
   start: LocalDate,
   ende: Option[LocalDate],
@@ -358,13 +365,13 @@ case class PostlieferungAbo(
 ) extends Abo
 
 case class PostlieferungAboDetail(
-  id: AboId,
+  id: HauptAboId,
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   abotypName: String,
   start: LocalDate,
   ende: Option[LocalDate],
@@ -399,7 +406,7 @@ case class AbwesenheitId(id: Long) extends BaseId
 
 case class Abwesenheit(
   id: AbwesenheitId,
-  aboId: AboId,
+  aboId: HauptAboId,
   lieferungId: LieferungId,
   datum: LocalDate,
   bemerkung: Option[String],
@@ -417,7 +424,7 @@ case class AbwesenheitModify(
 ) extends JSONSerializable
 
 case class AbwesenheitCreate(
-  aboId: AboId,
+  aboId: HauptAboId,
   lieferungId: LieferungId,
   datum: LocalDate,
   bemerkung: Option[String]
@@ -446,9 +453,9 @@ case class AboRechnungCreate(
 ) extends JSONSerializable
 
 case class Tourlieferung(
-  id: AboId,
+  id: HauptAboId,
   tourId: TourId,
-  abotypId: AbotypId,
+  abotypId: HauptAbotypId,
   kundeId: KundeId,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
@@ -465,7 +472,7 @@ case class Tourlieferung(
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends BaseEntity[AboId]
+) extends BaseEntity[HauptAboId]
 
 object Tourlieferung {
   def apply(heimlieferungAbo: HeimlieferungAbo, kunde: Kunde, personId: PersonId): Tourlieferung = {
@@ -489,5 +496,63 @@ object Tourlieferung {
       DateTime.now,
       personId
     )
+  }
+}
+
+case class ZusatzAbo(
+  id: ZusatzAboId,
+  hauptAboId: AboId,
+  hauptAbotypId: HauptAbotypId,
+  zusatzAbotypId: ZusatzAbotypId,
+  abotypName: String,
+  kundeId: KundeId,
+  kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
+  start: LocalDate,
+  ende: Option[LocalDate],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends IAbo[ZusatzAboId]
+
+object ZusatzAbo {
+  def unapply(o: ZusatzAbo) = {
+    Some(Tuple23(
+      o.id,
+      o.hauptAboId,
+      o.hauptAbotypId,
+      o.zusatzAbotypId,
+      o.abotypName,
+      o.kundeId,
+      o.kunde,
+      o.vertriebsartId,
+      o.vertriebId,
+      o.vertriebBeschrieb,
+      o.start,
+      o.ende,
+      o.guthabenVertraglich,
+      o.guthaben,
+      o.guthabenInRechnung,
+      o.letzteLieferung,
+      o.anzahlAbwesenheiten,
+      o.anzahlLieferungen,
+      o.aktiv,
+      o.erstelldat,
+      o.ersteller,
+      o.modifidat,
+      o.modifikator
+    ))
   }
 }
