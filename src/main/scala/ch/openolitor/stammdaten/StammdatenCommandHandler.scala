@@ -101,7 +101,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case _ =>
               Failure(new InvalidStateException("Die der Abwesenheit zugeordnete Lieferung muss Offen oder Ungeplant sein."))
           }
-        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferung zu Abwesenheit Nr. $id gefunden")))
+        } getOrElse Failure(new InvalidStateException(s"Keine Lieferung zu Abwesenheit Nr. $id gefunden"))
       }
 
     case LieferplanungAbschliessenCommand(personId, id) => idFactory => meta =>
@@ -123,8 +123,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
                   val lpAbschliessenEvent = DefaultResultingEvent(factory => LieferplanungAbschliessenEvent(factory.newMetadata(), id))
 
-                  val createAuslieferungHeimEvent = getCreateAuslieferungHeimEvent(lieferplanung, meta)(personId)
-                  val createAuslieferungDepotPostEvent = getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung, meta)(personId)
+                  logger.debug("Mikel: my debug")
+                  val createAuslieferungHeimEvent = getCreateAuslieferungHeimEvent(lieferplanung)(personId, session)
+                  val createAuslieferungDepotPostEvent = getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung)(personId, session)
                   Success(lpAbschliessenEvent +: bestellEvents ++: createAuslieferungHeimEvent ++: createAuslieferungDepotPostEvent)
                 case _ =>
                   Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
@@ -132,7 +133,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' abgeschlossen werden"))
           }
-        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
+        } getOrElse Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden"))
       }
 
     case LieferplanungModifyCommand(personId, lieferplanungPositionenModify) => idFactory => meta =>
@@ -167,7 +168,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' oder 'Abgeschlossen' aktualisiert werden"))
           }
-        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. ${lieferplanungPositionenModify.id} gefunden")))
+        } getOrElse Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. ${lieferplanungPositionenModify.id} gefunden"))
       }
 
     case LieferplanungAbrechnenCommand(personId, id: LieferplanungId) => idFactory => meta =>
@@ -179,7 +180,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Abgeschlossen' verrechnet werden"))
           }
-        } getOrElse (Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden")))
+        } getOrElse Failure(new InvalidStateException(s"Keine Lieferplanung mit der Nr. $id gefunden"))
       }
 
     case AbwesenheitCreateCommand(personId, abw: AbwesenheitCreate) => idFactory => meta =>
@@ -201,7 +202,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case _ =>
               Failure(new InvalidStateException("Eine Bestellung kann nur in den Status 'Offen' oder 'Abgeschlossen' versendet werden"))
           }
-        } getOrElse (Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden")))
+        } getOrElse Failure(new InvalidStateException(s"Keine Bestellung mit der Nr. $id gefunden"))
       }
 
     case AuslieferungenAlsAusgeliefertMarkierenCommand(personId, ids: Seq[AuslieferungId]) => idFactory => meta =>
@@ -224,7 +225,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                 case _ =>
                   Failure(new InvalidStateException(s"Eine Auslieferung kann nur im Status 'Erfasst' als ausgeliefert markiert werden. Nr. $id"))
               }
-            } getOrElse (Failure(new InvalidStateException(s"Keine Auslieferung mit der Nr. $id gefunden")))
+            } getOrElse Failure(new InvalidStateException(s"Keine Auslieferung mit der Nr. $id gefunden"))
         } partition (_.isSuccess)
 
         if (events.isEmpty) {
@@ -244,7 +245,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               case _ =>
                 Failure(new InvalidStateException(s"Eine Sammelbestellung kann nur im Status 'Abgeschlossen' als abgerechnet markiert werden. Nr. $id"))
             }
-          } getOrElse (Failure(new InvalidStateException(s"Keine Sammelbestellung mit der Nr. $id gefunden")))
+          } getOrElse Failure(new InvalidStateException(s"Keine Sammelbestellung mit der Nr. $id gefunden"))
         } partition (_.isSuccess)
 
         if (events.isEmpty) {
@@ -552,135 +553,125 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }
   }
 
-  private def getCreateAuslieferungHeimEvent(lieferplanung: Lieferplanung, meta: EventTransactionMetadata)(implicit personId: PersonId): Seq[ResultingEvent] = {
-    DB readOnly { implicit session =>
-      val lieferungen = stammdatenReadRepository.getLieferungen(lieferplanung.id)
+  private def getCreateAuslieferungHeimEvent(lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): Seq[ResultingEvent] = {
+    val lieferungen = stammdatenReadRepository.getLieferungen(lieferplanung.id)
 
-      //handle Tourenlieferungen: Group all entries with the same TourId on the same Date
-      val vertriebsartenDaten = (lieferungen flatMap { lieferung =>
-        stammdatenReadRepository.getVertriebsarten(lieferung.vertriebId) collect {
-          case h: HeimlieferungDetail =>
-            stammdatenReadRepository.getById(tourMapping, h.tourId) map { tour =>
-              (h.tourId, tour.name, lieferung.datum) -> h.id
+    //handle Tourenlieferungen: Group all entries with the same TourId on the same Date
+    val vertriebsartenDaten = (lieferungen flatMap { lieferung =>
+      stammdatenReadRepository.getVertriebsarten(lieferung.vertriebId) collect {
+        case h: HeimlieferungDetail =>
+          stammdatenReadRepository.getById(tourMapping, h.tourId) map { tour =>
+            (h.tourId, tour.name, lieferung.datum) -> h.id
+          }
+      }
+    }).flatten.groupBy(_._1).mapValues(_ map { _._2 })
+
+    (vertriebsartenDaten flatMap {
+      case ((tourId, tourName, lieferdatum), vertriebsartIds) => {
+        //create auslieferungen
+        if (!isAuslieferungExistingHeim(lieferdatum, tourId)) {
+          val koerbe = stammdatenReadRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
+          if (!koerbe.isEmpty) {
+            val tourAuslieferung = createTourAuslieferungHeim(lieferdatum, tourId, tourName, koerbe.size)
+            val updates = koerbe map { korb =>
+              val tourlieferung = stammdatenReadRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
+              val copy = korb.copy(auslieferungId = Some(tourAuslieferung.id), sort = tourlieferung flatMap (_.sort))
+              EntityUpdateEvent(copy.id, copy)
             }
-        }
-      }).flatten.groupBy(_._1).mapValues(_ map { _._2 })
-
-      (vertriebsartenDaten flatMap {
-        case ((tourId, tourName, lieferdatum), vertriebsartIds) => {
-          //create auslieferungen
-          if (!isAuslieferungExistingHeim(lieferdatum, tourId)) {
-            val koerbe = stammdatenReadRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
-            if (!koerbe.isEmpty) {
-              val tourAuslieferung = createTourAuslieferungHeim(lieferdatum, tourId, tourName, koerbe.size)
-              val updates = koerbe map { korb =>
-                val tourlieferung = stammdatenReadRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
-                val copy = korb.copy(auslieferungId = Some(tourAuslieferung.id), sort = tourlieferung flatMap (_.sort))
-                DefaultResultingEvent(factory => EntityUpdatedEvent(factory.newMetadata(), copy.id, copy))
-              }
-              DefaultResultingEvent(factory => EntityInsertedEvent(factory.newMetadata(), tourAuslieferung.id, tourAuslieferung)) :: updates
-            } else { Nil }
+            EntityInsertEvent(tourAuslieferung.id, tourAuslieferung) :: updates
           } else { Nil }
-        }
-      }).toSeq
-    }
+        } else { Nil }
+      }
+    }).toSeq
   }
 
-  private def getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung: Lieferplanung, meta: EventTransactionMetadata)(implicit personId: PersonId): Seq[ResultingEvent] = {
-    DB readOnly { implicit session =>
+  private def getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): Seq[ResultingEvent] = {
 
-      val lieferungen = stammdatenReadRepository.getLieferungen(lieferplanung.id)
+    val lieferungen = stammdatenReadRepository.getLieferungen(lieferplanung.id)
 
-      val updates1 = handleLieferplanungAbgeschlossen(lieferungen, meta)
-      val updates2 = recalculateValuesForLieferplanungAbgeschlossen(lieferungen, meta)
-      val updates3 = updateSammelbestellungStatus(lieferungen, lieferplanung: Lieferplanung, meta)
-      updates1 ::: updates3 ::: updates2
-    }
+    val updates1 = handleLieferplanungAbgeschlossen(lieferungen)
+    val updates2 = recalculateValuesForLieferplanungAbgeschlossen(lieferungen)
+    val updates3 = updateSammelbestellungStatus(lieferungen, lieferplanung: Lieferplanung)
+    updates1 ::: updates3 ::: updates2
   }
 
-  private def handleLieferplanungAbgeschlossen(lieferungen: List[Lieferung], meta: EventTransactionMetadata)(implicit personId: PersonId): List[ResultingEvent] = {
-    DB readOnly { implicit session =>
+  private def handleLieferplanungAbgeschlossen(lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
 
-      //handle Depot- and Postlieferungen: Group all entries with the same VertriebId on the same Date
-      val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
-      (vertriebeDaten map {
-        case (vertriebId, lieferungDatum) => {
-          logger.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
-          //create auslieferungen
-          val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
-            getAuslieferungDepotPost(lieferungDatum, vertriebsart) match {
-              case None => {
-                logger.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
-                val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-                if (!koerbe.isEmpty) {
-                  createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size) map { newAuslieferung =>
-                    val updates = koerbe map {
-                      korb =>
-                        val copy = korb.copy(auslieferungId = Some(newAuslieferung.id))
-                        DefaultResultingEvent(factory => EntityUpdatedEvent(factory.newMetadata(), copy.id, copy))
-                    }
-                    DefaultResultingEvent(factory => EntityInsertedEvent(factory.newMetadata(), newAuslieferung.id, newAuslieferung)) :: updates
-                  } getOrElse (Nil)
-                } else {
-                  Nil
-                }
+    //handle Depot- and Postlieferungen: Group all entries with the same VertriebId on the same Date
+    val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
+    (vertriebeDaten map {
+      case (vertriebId, lieferungDatum) => {
+        logger.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
+        //create auslieferungen
+        val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
+          getAuslieferungDepotPost(lieferungDatum, vertriebsart) match {
+            case None => {
+              logger.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
+              val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+              if (!koerbe.isEmpty) {
+                createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size) map { newAuslieferung =>
+                  val updates = koerbe map {
+                    korb =>
+                      val copy = korb.copy(auslieferungId = Some(newAuslieferung.id))
+                      EntityUpdateEvent(copy.id, copy)
+                  }
+                  EntityInsertEvent(newAuslieferung.id, newAuslieferung) :: updates
+                } getOrElse (Nil)
+              } else {
+                Nil
               }
-              case Some(auslieferung) => {
-                val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-                koerbe map {
-                  korb =>
-                    val copy = korb.copy(auslieferungId = Some(auslieferung.id))
-                    DefaultResultingEvent(factory => EntityUpdatedEvent(factory.newMetadata(), copy.id, copy))
-                }
+            }
+            case Some(auslieferung) => {
+              val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
+              koerbe map {
+                korb =>
+                  val copy = korb.copy(auslieferungId = Some(auslieferung.id))
+                  EntityUpdateEvent(copy.id, copy)
               }
             }
           }
-          auslieferungL.flatten
         }
-      }).flatten
-    }
+        auslieferungL.flatten
+      }
+    }).flatten
   }
 
-  private def recalculateValuesForLieferplanungAbgeschlossen(lieferungen: List[Lieferung], meta: EventTransactionMetadata)(implicit personId: PersonId): List[ResultingEvent] = {
-    DB readOnly { implicit session =>
-      //calculate new values
-      (lieferungen map { lieferung =>
-        //calculate total of lieferung
-        val total = stammdatenReadRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
-        val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
+  private def recalculateValuesForLieferplanungAbgeschlossen(lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
+    //calculate new values
+    (lieferungen map { lieferung =>
+      //calculate total of lieferung
+      val total = stammdatenReadRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
+      val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
 
-        //update durchschnittspreis
-        val updates = (stammdatenReadRepository.getProjekt map { projekt =>
-          stammdatenReadRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
-            val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
+      //update durchschnittspreis
+      val updates = (stammdatenReadRepository.getProjekt map { projekt =>
+        stammdatenReadRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
+          val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
 
-            val lieferungen = vertrieb.anzahlLieferungen.get(gjKey).getOrElse(0)
-            val durchschnittspreis: BigDecimal = vertrieb.durchschnittspreis.get(gjKey).getOrElse(0)
+          val lieferungen = vertrieb.anzahlLieferungen.get(gjKey).getOrElse(0)
+          val durchschnittspreis: BigDecimal = vertrieb.durchschnittspreis.get(gjKey).getOrElse(0)
 
-            val neuerDurchschnittspreis = calcDurchschnittspreis(durchschnittspreis, lieferungen, total)
-            val copy = vertrieb.copy(
-              anzahlLieferungen = vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
-              durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
-            )
-            DefaultResultingEvent(factory => EntityUpdatedEvent(factory.newMetadata(), copy.id, copy))
-          }
-        }).get.get
-        DefaultResultingEvent(factory => EntityUpdatedEvent(factory.newMetadata(), lieferungCopy.id, lieferungCopy)) :: updates :: Nil
-      }).flatten
-    }
+          val neuerDurchschnittspreis = calcDurchschnittspreis(durchschnittspreis, lieferungen, total)
+          val copy = vertrieb.copy(
+            anzahlLieferungen = vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
+            durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
+          )
+          EntityUpdateEvent(copy.id, copy)
+        }
+      }).get.get
+      EntityUpdateEvent(lieferungCopy.id, lieferungCopy) :: updates :: Nil
+    }).flatten
   }
 
-  private def updateSammelbestellungStatus(lieferungen: List[Lieferung], lieferplanung: Lieferplanung, meta: EventTransactionMetadata)(implicit personId: PersonId): List[ResultingEvent] = {
-    DB readOnly { implicit session =>
+  private def updateSammelbestellungStatus(lieferungen: List[Lieferung], lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
 
-      (stammdatenReadRepository.getSammelbestellungen(lieferplanung.id) map {
-        sammelbestellung =>
-          if (Offen == sammelbestellung.status) {
-            val sammelbestellungCopy = sammelbestellung.copy(status = Abgeschlossen)
-            Seq(DefaultResultingEvent(factory => EntityUpdatedEvent(factory.newMetadata(), sammelbestellungCopy.id, sammelbestellungCopy)))
-          } else { Nil }
-      }).filter(_.nonEmpty).flatten
-    }
+    (stammdatenReadRepository.getSammelbestellungen(lieferplanung.id) map {
+      sammelbestellung =>
+        if (Offen == sammelbestellung.status) {
+          val sammelbestellungCopy = sammelbestellung.copy(status = Abgeschlossen)
+          Seq(EntityUpdateEvent(sammelbestellungCopy.id, sammelbestellungCopy))
+        } else { Nil }
+    }).filter(_.nonEmpty).flatten
   }
 
   private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId): Option[Auslieferung] = {
@@ -718,7 +709,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       case _ =>
         None
     }
-
   }
 
   private def getAuslieferungDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Option[Auslieferung] = {
