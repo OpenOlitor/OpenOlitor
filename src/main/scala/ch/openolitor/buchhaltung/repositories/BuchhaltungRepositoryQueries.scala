@@ -61,6 +61,15 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
     }.map(rechnungMapping(rechnung)).list
   }
 
+  protected def getRechnungsPositionQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(rechnungsPositionMapping as rechnungsPosition)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, rechnungsPosition))
+        .orderBy(rechnungsPosition.id)
+    }.map(rechnungsPositionMapping(rechnungsPosition)).list
+  }
+
   protected def getKundenRechnungenQuery(kundeId: KundeId) = {
     withSQL {
       select

@@ -86,7 +86,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       implicit val filter = f flatMap { filterString =>
         UriQueryParamFilterParser.parse(filterString)
       }
-      rechnungenRoute ~ zahlungsImportsRoute
+      rechnungenRoute ~ rechnungspositionenRoute ~ zahlungsImportsRoute
     }
 
   def rechnungenRoute(implicit subect: Subject, filter: Option[FilterExpr]) =
@@ -178,6 +178,12 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       path("rechnungen" / rechnungIdPath / "berichte" / "mahnung") { id =>
         (post)(mahnungBericht(id))
       }
+
+  def rechnungspositionenRoute(implicit subect: Subject, filter: Option[FilterExpr]) =
+    path("rechnungspositionen" ~ exportFormatPath.?) { exportFormat =>
+      get(list(buchhaltungReadRepository.getRechnungsPositionen, exportFormat)) //~
+      //post(create[RechnungCreate, RechnungId](RechnungId.apply _))
+    }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
     path("zahlungsimports") {

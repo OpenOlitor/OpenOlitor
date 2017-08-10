@@ -179,6 +179,7 @@ case class RechnungsPositionDetail(
   anzahlLieferungen: Option[Int],
   titel: String,
   status: RechnungsPositionStatus.RechnungsPositionStatus,
+  typ: RechnungsPositionTyp.RechnungsPositionTyp,
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

@@ -867,7 +867,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       }
 
       stammdatenUpdateRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
-        stammdatenUpdateRepository.updateEntityIf[Sammelbestellung, SammelbestellungId](Offen == _.status)(sammelbestellung.id)(
+        stammdatenUpdateRepository.updateEntityIf[Sammelbestellung, SammelbestellungId](RechnungsPositionStatus.Offen == _.status)(sammelbestellung.id)(
           sammelbestellungMapping.column.status -> Abgeschlossen
         )
       }
