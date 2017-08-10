@@ -194,7 +194,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
             //detach lieferung
             logger.debug(s"detach Lieferung:${lieferung.id}:${lieferung}")
             stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(
-              lieferungMapping.column.lieferplanungId -> None
+              lieferungMapping.column.lieferplanungId -> Option.empty[LieferplanungId]
             )
           }
       }
@@ -211,7 +211,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
         lieferungMapping.column.anzahlKoerbeZuLiefern -> ZERO,
         lieferungMapping.column.anzahlAbwesenheiten -> ZERO,
         lieferungMapping.column.anzahlSaldoZuTief -> ZERO,
-        lieferungMapping.column.lieferplanungId -> None,
+        lieferungMapping.column.lieferplanungId -> Option.empty[LieferplanungId],
         lieferungMapping.column.status -> Ungeplant
       )
     }

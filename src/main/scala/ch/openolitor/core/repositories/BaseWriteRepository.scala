@@ -35,6 +35,7 @@ import ch.openolitor.core.scalax._
 import scala.concurrent.Future
 import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
 import ch.openolitor.core.db.OOAsyncDB._
+import scala.reflect.runtime.{ universe => ru }
 
 trait BaseWriteRepository extends CrudRepository
     with BaseReadRepositorySync
@@ -49,7 +50,10 @@ trait BaseWriteRepository extends CrudRepository
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
 
-    syntaxSupport.updateParameters(entity) match {
+    syntaxSupport.updateParameters(entity) map {
+      case (s, v) =>
+        (s, SqlValue(v))
+    } match {
       case head :: tail =>
         updateEntity[E, I](entity.id)(head, tail: _*)
       case _ =>
