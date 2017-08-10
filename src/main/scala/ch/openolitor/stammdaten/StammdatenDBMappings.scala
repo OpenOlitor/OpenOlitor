@@ -78,6 +78,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val projektVorlageIdBinder: TypeBinder[ProjektVorlageId] = baseIdTypeBinder(ProjektVorlageId.apply _)
   implicit val optionAuslieferungIdBinder: TypeBinder[Option[AuslieferungId]] = optionBaseIdTypeBinder(AuslieferungId.apply _)
   implicit val einladungIdBinder: TypeBinder[EinladungId] = baseIdTypeBinder(EinladungId.apply _)
+  implicit val kontoDatenIdBinder: TypeBinder[KontoDatenId] = baseIdTypeBinder(KontoDatenId.apply _)
 
   implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
   implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
@@ -164,6 +165,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
   implicit val lieferplanungIdOptionBinder = optionSqlBinder[LieferplanungId]
   implicit val einladungIdSqlBinder = baseIdSqlBinder[EinladungId]
+  implicit val kontoDatenIdSqlBinder = baseIdSqlBinder[KontoDatenId]
 
   implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
   implicit val stringBigDecimalTreeMapSqlBinder = treeMapSqlBinder[String, BigDecimal]
@@ -992,6 +994,26 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       super.updateParameters(entity) ++ Seq(
         column.expires -> parameter(entity.expires),
         column.datumVersendet -> parameter(entity.datumVersendet)
+      )
+    }
+  }
+
+  implicit val kontoDatenMapping = new BaseEntitySQLSyntaxSupport[KontoDaten] {
+    override val tableName = "KontoDaten"
+
+    override lazy val columns = autoColumns[KontoDaten]()
+
+    def apply(rn: ResultName[KontoDaten])(rs: WrappedResultSet): KontoDaten =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: KontoDaten): Seq[Any] =
+      parameters(KontoDaten.unapply(entity).get)
+
+    override def updateParameters(entity: KontoDaten) = {
+      super.updateParameters(entity) ++ Seq(
+        column.iban -> parameter(entity.iban),
+        column.teilnehmerNummer -> parameter(entity.teilnehmerNummer),
+        column.referenzNummerPrefix -> parameter(entity.referenzNummerPrefix)
       )
     }
   }

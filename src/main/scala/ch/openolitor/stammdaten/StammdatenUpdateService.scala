@@ -93,6 +93,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify) => updateTour(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AuslieferungId, entity: TourAuslieferungModify) => updateAuslieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: KontoDatenId, entity: KontoDatenModify) => updateKontoDaten(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: Lieferung) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
@@ -446,9 +447,22 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   def updateKundentyp(meta: EventMetadata, id: CustomKundentypId, update: CustomKundentypModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(customKundentypMapping, id) map { kundentyp =>
-        //map all updatable fields
+
+        // rename kundentyp
         val copy = copyFrom(kundentyp, update, "farbCode" -> "", "modifidat" -> meta.timestamp, "modifikator" -> personId)
         stammdatenWriteRepository.updateEntityFully[CustomKundentyp, CustomKundentypId](copy)
+
+        // update typen in Kunde
+        stammdatenWriteRepository.getKundenByKundentyp(kundentyp.kundentyp) map { kunde =>
+          val newKundentypen = kunde.typen - kundentyp.kundentyp + update.kundentyp
+          val newKunde = kunde.copy(
+            typen = newKundentypen,
+            modifidat = meta.timestamp,
+            modifikator = personId
+          )
+
+          stammdatenWriteRepository.updateEntityFully[Kunde, KundeId](newKunde)
+        }
       }
     }
   }
@@ -573,6 +587,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(projekt, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
         stammdatenWriteRepository.updateEntityFully[Projekt, ProjektId](copy)
+      }
+    }
+  }
+
+  def updateKontoDaten(meta: EventMetadata, id: KontoDatenId, update: KontoDatenModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.getById(kontoDatenMapping, id) map { kontoDaten =>
+        //map all updatable fields
+        val copy = copyFrom(kontoDaten, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+        stammdatenWriteRepository.updateEntityFully[KontoDaten, KontoDatenId](copy)
       }
     }
   }

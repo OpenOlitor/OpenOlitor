@@ -50,6 +50,7 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
   lazy val depotlieferungAbo = depotlieferungAboMapping.syntax("depotlieferungAbo")
   lazy val heimlieferungAbo = heimlieferungAboMapping.syntax("heimlieferungAbo")
   lazy val postlieferungAbo = postlieferungAboMapping.syntax("postlieferungAbo")
+  lazy val kontoDaten = kontoDatenMapping.syntax("kontoDaten")
 
   protected def getRechnungenQuery(filter: Option[FilterExpr]) = {
     withSQL {
@@ -140,5 +141,12 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
         .where.eq(zahlungsEingang.referenzNummer, parameter(referenzNummer))
         .orderBy(zahlungsEingang.modifidat).desc
     }.map(zahlungsEingangMapping(zahlungsEingang)).first
+  }
+
+  protected def getKontoDatenQuery = {
+    withSQL {
+      select
+        .from(kontoDatenMapping as kontoDaten)
+    }.map(kontoDatenMapping(kontoDaten)).single
   }
 }
