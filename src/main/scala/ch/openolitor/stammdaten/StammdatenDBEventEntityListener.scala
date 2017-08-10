@@ -410,7 +410,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleKorbCreated(korb: Korb)(implicit personId: PersonId) = {
-    updateLieferungWithCount(korb, +1)
+    // Lieferung Counts bereits gesetzt im InsertService
   }
 
   private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId) = {
@@ -563,6 +563,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   private def recalculateLieferungCounts(lieferung: Lieferung, korbStatusNeu: KorbStatus, korbStatusAlt: KorbStatus)(implicit personId: PersonId, session: DBSession) = {
     val zuLiefernDiff = korbStatusNeu match {
       case WirdGeliefert => 1
+      case Geliefert if korbStatusAlt == WirdGeliefert => 0 // TODO introduce additional counter for delivered baskets
       case _ if korbStatusAlt == WirdGeliefert => -1
       case _ => 0
     }
@@ -622,29 +623,35 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
+    // Only count if it is not a rename of a Kundentyp
     DB localTxPostPublish { implicit session => implicit publisher =>
-      val kundetypen = stammdatenUpdateRepository.getKundentypen
-      removed map { kundetypId =>
-        kundetypen find (kt => kt.kundentyp == kundetypId && !kt.system) map {
-          case customKundentyp: CustomKundentyp =>
-            log.debug(s"Reduce anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${customKundentyp.anzahlVerknuepfungen - 1}")
-            stammdatenUpdateRepository.updateEntity[CustomKundentyp, CustomKundentypId](customKundentyp.id) {
-              customKundentypMapping.column.anzahlVerknuepfungen -> (customKundentyp.anzahlVerknuepfungen - 1)
-            }
-        }
-      }
+      val kundetypen = stammdatenUpdateRepository.getCustomKundentypen
+      val kundentypenSet: Set[KundentypId] = kundetypen.map(_.kundentyp).toSet
+      val rename = removed.size == 1 &&
+        added.size == 1 &&
+        kundentypenSet.intersect(removed).size == 0
 
-      added map { kundetypId =>
-        kundetypen find (kt => kt.kundentyp == kundetypId && !kt.system) map {
-          case customKundentyp: CustomKundentyp =>
-            log.debug(s"Increment anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${customKundentyp.anzahlVerknuepfungen + 1}")
-            stammdatenUpdateRepository.updateEntity[CustomKundentyp, CustomKundentypId](customKundentyp.id) {
-              customKundentypMapping.column.anzahlVerknuepfungen -> (customKundentyp.anzahlVerknuepfungen + 1)
-            }
+      if (!rename) {
+        removed.map { kundetypId =>
+          kundetypen.filter(kt => kt.kundentyp == kundetypId).headOption.map {
+            case customKundentyp: CustomKundentyp =>
+              log.debug(s"Reduce anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${customKundentyp.anzahlVerknuepfungen - 1}")
+              stammdatenUpdateRepository.updateEntity[CustomKundentyp, CustomKundentypId](customKundentyp.id) {
+                customKundentypMapping.column.anzahlVerknuepfungen -> (customKundentyp.anzahlVerknuepfungen - 1)
+              }
+          }
+        }
+        added.map { kundetypId =>
+          kundetypen.filter(kt => kt.kundentyp == kundetypId).headOption.map {
+            case customKundentyp: CustomKundentyp =>
+              log.debug(s"Increment anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${customKundentyp.anzahlVerknuepfungen + 1}")
+              stammdatenUpdateRepository.updateEntity[CustomKundentyp, CustomKundentypId](customKundentyp.id) {
+                customKundentypMapping.column.anzahlVerknuepfungen -> (customKundentyp.anzahlVerknuepfungen + 1)
+              }
+          }
         }
       }
     }
-
   }
 
   def handleRechnungsPositionDeleted(rechnungsPosition: RechnungsPosition)(implicit personId: PersonId) = {

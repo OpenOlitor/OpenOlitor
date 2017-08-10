@@ -47,6 +47,7 @@ trait StammdatenPaths extends SprayDeserializers {
   implicit val produzentIdPath = long2BaseIdPathMatcher(ProduzentId.apply)
   implicit val tourIdPath = long2BaseIdPathMatcher(TourId.apply)
   implicit val projektIdPath = long2BaseIdPathMatcher(ProjektId.apply)
+  implicit val kontoDatenIdPath = long2BaseIdPathMatcher(KontoDatenId.apply)
   implicit val abwesenheitIdPath = long2BaseIdPathMatcher(AbwesenheitId.apply)
   implicit val auslieferungIdPath = long2BaseIdPathMatcher(AuslieferungId.apply)
   implicit val projektVorlageIdPath = long2BaseIdPathMatcher(ProjektVorlageId.apply)
