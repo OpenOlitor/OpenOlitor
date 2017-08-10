@@ -26,7 +26,6 @@ import ch.openolitor.core.models._
 import scalikejdbc._
 import ch.openolitor.core.repositories._
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import akka.actor.ActorSystem
