@@ -88,5 +88,6 @@ object V2Scripts {
     }
   }
 
-  def scripts(system: ActorSystem) = Seq(oo656(system))
+  def scripts(system: ActorSystem) = Seq(oo656(system)) ++
+    OO686_Add_Rechnungspositionen.scripts
 }

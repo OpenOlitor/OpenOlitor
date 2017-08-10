@@ -124,12 +124,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityDeleted(personId, entity: Pendenz) => handlePendenzDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Pendenz, orig: Pendenz) => handlePendenzModified(entity, orig)(personId)
 
-    case e @ EntityCreated(personId, entity: Rechnung) => handleRechnungCreated(entity)(personId)
-    case e @ EntityDeleted(personId, entity: Rechnung) => handleRechnungDeleted(entity)(personId)
-    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if (orig.status != Bezahlt && entity.status == Bezahlt) =>
-      handleRechnungBezahlt(entity, orig)(personId)
-    case e @ EntityModified(personId, entity: Rechnung, orig: Rechnung) if entity.anzahlLieferungen != orig.anzahlLieferungen =>
-      handleRechnungGuthabenModified(entity, orig)(personId)
+    case e @ EntityCreated(personId, entity: RechnungsPosition) => handleRechnungsPositionCreated(entity)(personId)
+    case e @ EntityDeleted(personId, entity: RechnungsPosition) => handleRechnungsPositionDeleted(entity)(personId)
+    case e @ EntityModified(personId, entity: RechnungsPosition, orig: RechnungsPosition) if (orig.status != RechnungsPositionStatus.Bezahlt && entity.status == RechnungsPositionStatus.Bezahlt) =>
+      handleRechnungsPositionBezahlt(entity, orig)(personId)
 
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
     case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) =>
@@ -575,51 +573,73 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   }
 
-  def handleRechnungDeleted(rechnung: Rechnung)(implicit personId: PersonId) = {
+  def handleRechnungsPositionDeleted(rechnungsPosition: RechnungsPosition)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      adjustGuthabenInRechnung(rechnung.aboId, 0 - rechnung.anzahlLieferungen)
-    }
-  }
-
-  def handleRechnungCreated(rechnung: Rechnung)(implicit personId: PersonId) = {
-    DB localTxPostPublish { implicit session => implicit publisher =>
-      adjustGuthabenInRechnung(rechnung.aboId, rechnung.anzahlLieferungen)
-    }
-  }
-
-  def handleRechnungBezahlt(rechnung: Rechnung, orig: Rechnung)(implicit personId: PersonId) = {
-    DB localTxPostPublish { implicit session => implicit publisher =>
-      modifyEntity[DepotlieferungAbo, AboId](rechnung.aboId) { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
-          guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
-        )
-      }
-      modifyEntity[PostlieferungAbo, AboId](rechnung.aboId) { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
-          guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
-        )
-      }
-      modifyEntity[HeimlieferungAbo, AboId](rechnung.aboId) { abo =>
-        abo.copy(
-          guthabenInRechnung = abo.guthabenInRechnung - rechnung.anzahlLieferungen,
-          guthaben = abo.guthaben + rechnung.anzahlLieferungen,
-          guthabenVertraglich = abo.guthabenVertraglich map (_ - rechnung.anzahlLieferungen) orElse (None)
-        )
+      for {
+        aboId <- rechnungsPosition.aboId
+        anzahl <- rechnungsPosition.anzahlLieferungen
+      } yield {
+        adjustGuthabenInRechnungsPosition(aboId, 0 - anzahl)
       }
     }
   }
 
-  def handleRechnungGuthabenModified(rechnung: Rechnung, orig: Rechnung)(implicit personId: PersonId) = {
+  def handleRechnungsPositionCreated(rechnungsPosition: RechnungsPosition)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      adjustGuthabenInRechnung(rechnung.aboId, rechnung.anzahlLieferungen - orig.anzahlLieferungen)
+      for {
+        aboId <- rechnungsPosition.aboId
+        anzahl <- rechnungsPosition.anzahlLieferungen
+      } yield {
+        adjustGuthabenInRechnungsPosition(aboId, anzahl)
+      }
     }
   }
 
-  private def adjustGuthabenInRechnung(aboId: AboId, diff: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+  def handleRechnungsPositionBezahlt(rechnungsPosition: RechnungsPosition, orig: RechnungsPosition)(implicit personId: PersonId) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+
+      for {
+        aboId <- rechnungsPosition.aboId
+        anzahlLieferungen <- rechnungsPosition.anzahlLieferungen
+      } yield {
+        modifyEntity[DepotlieferungAbo, AboId](aboId) { abo =>
+          abo.copy(
+            guthabenInRechnung = abo.guthabenInRechnung - anzahlLieferungen,
+            guthaben = abo.guthaben + anzahlLieferungen,
+            guthabenVertraglich = abo.guthabenVertraglich map (_ - anzahlLieferungen) orElse (None)
+          )
+        }
+        modifyEntity[PostlieferungAbo, AboId](aboId) { abo =>
+          abo.copy(
+            guthabenInRechnung = abo.guthabenInRechnung - anzahlLieferungen,
+            guthaben = abo.guthaben + anzahlLieferungen,
+            guthabenVertraglich = abo.guthabenVertraglich map (_ - anzahlLieferungen) orElse (None)
+          )
+        }
+        modifyEntity[HeimlieferungAbo, AboId](aboId) { abo =>
+          abo.copy(
+            guthabenInRechnung = abo.guthabenInRechnung - anzahlLieferungen,
+            guthaben = abo.guthaben + anzahlLieferungen,
+            guthabenVertraglich = abo.guthabenVertraglich map (_ - anzahlLieferungen) orElse (None)
+          )
+        }
+      }
+    }
+  }
+
+  def handleRechnungsPositionGuthabenModified(rechnungsPosition: RechnungsPosition, orig: RechnungsPosition)(implicit personId: PersonId) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      for {
+        aboId <- rechnungsPosition.aboId
+        anzahlLieferungen <- rechnungsPosition.anzahlLieferungen
+      } yield {
+        adjustGuthabenInRechnungsPosition(aboId, anzahlLieferungen - orig.anzahlLieferungen.getOrElse(0))
+      }
+
+    }
+  }
+
+  private def adjustGuthabenInRechnungsPosition(aboId: AboId, diff: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     modifyEntity[DepotlieferungAbo, AboId](aboId) { abo =>
       abo.copy(
         guthabenInRechnung = abo.guthabenInRechnung + diff
