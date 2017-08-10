@@ -46,8 +46,10 @@ trait StammdatenWriteRepository extends BaseWriteRepository with EventStream {
   def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo]
 
   def getProjekt(implicit session: DBSession): Option[Projekt]
+  def getKontoDaten(implicit session: DBSession): Option[KontoDaten]
   def getKunden(implicit session: DBSession): List[Kunde]
-  def getKundentypen(implicit session: DBSession): List[Kundentyp]
+  def getKundenByKundentyp(kundentyp: KundentypId)(implicit session: DBSession): List[Kunde]
+  def getCustomKundentypen(implicit session: DBSession): List[CustomKundentyp]
   def getPersonen(kundeId: KundeId)(implicit session: DBSession): List[Person]
   def getPendenzen(id: KundeId)(implicit session: DBSession): List[Pendenz]
 
@@ -137,6 +139,7 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
       sql"truncate table ${produktekategorieMapping.table}".execute.apply()
       sql"truncate table ${produzentMapping.table}".execute.apply()
       sql"truncate table ${projektMapping.table}".execute.apply()
+      sql"truncate table ${kontoDatenMapping.table}".execute.apply()
       sql"truncate table ${produktProduzentMapping.table}".execute.apply()
       sql"truncate table ${produktProduktekategorieMapping.table}".execute.apply()
       sql"truncate table ${abwesenheitMapping.table}".execute.apply()
@@ -196,6 +199,10 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
     getProjektQuery.apply()
   }
 
+  def getKontoDaten(implicit session: DBSession): Option[KontoDaten] = {
+    getKontoDatenQuery.apply()
+  }
+
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail] = {
     getDepotlieferungAbo(id) orElse getHeimlieferungAbo(id) orElse getPostlieferungAbo(id)
   }
@@ -231,9 +238,8 @@ trait StammdatenWriteRepositoryImpl extends StammdatenWriteRepository with LazyL
   def getKunden(implicit session: DBSession): List[Kunde] = {
     getKundenQuery.apply()
   }
-
-  def getKundentypen(implicit session: DBSession): List[Kundentyp] = {
-    (getCustomKundentypen ++ SystemKundentyp.ALL.toList).sortBy(_.kundentyp.id)
+  def getKundenByKundentyp(kundentyp: KundentypId)(implicit session: DBSession): List[Kunde] = {
+    getKundenByKundentypQuery(kundentyp).apply()
   }
 
   def getCustomKundentypen(implicit session: DBSession): List[CustomKundentyp] = {

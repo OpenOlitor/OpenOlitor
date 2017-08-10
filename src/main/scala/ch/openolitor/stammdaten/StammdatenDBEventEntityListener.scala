@@ -593,27 +593,35 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleKundentypenChanged(removed: Set[KundentypId], added: Set[KundentypId])(implicit personId: PersonId) = {
-    DB autoCommit { implicit session =>
-      val kundetypen = stammdatenWriteRepository.getKundentypen
-      removed.map { kundetypId =>
-        kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
-          case customKundentyp: CustomKundentyp =>
-            val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen - 1)
-            log.debug(s"Reduce anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
-            stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
-        }
-      }
 
-      added.map { kundetypId =>
-        kundetypen.filter(kt => kt.kundentyp == kundetypId && !kt.system).headOption.map {
-          case customKundentyp: CustomKundentyp =>
-            val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen + 1)
-            log.debug(s"Increment anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
-            stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+    // Only count if it is not a rename of a Kundentyp
+    DB autoCommit { implicit session =>
+
+      val kundetypen = stammdatenWriteRepository.getCustomKundentypen
+      val kundentypenSet: Set[KundentypId] = kundetypen.map(_.kundentyp).toSet
+      val rename = removed.size == 1 &&
+        added.size == 1 &&
+        kundentypenSet.intersect(removed).size == 0
+
+      if (!rename) {
+        removed.map { kundetypId =>
+          kundetypen.filter(kt => kt.kundentyp == kundetypId).headOption.map {
+            case customKundentyp: CustomKundentyp =>
+              val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen - 1)
+              log.debug(s"Reduce anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
+              stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+          }
+        }
+        added.map { kundetypId =>
+          kundetypen.filter(kt => kt.kundentyp == kundetypId).headOption.map {
+            case customKundentyp: CustomKundentyp =>
+              val copy = customKundentyp.copy(anzahlVerknuepfungen = customKundentyp.anzahlVerknuepfungen + 1)
+              log.debug(s"Increment anzahlVerknuepfung on CustomKundentyp: ${customKundentyp.kundentyp}. New count:${copy.anzahlVerknuepfungen}")
+              stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+          }
         }
       }
     }
-
   }
 
   def handleRechnungDeleted(rechnung: Rechnung)(implicit personId: PersonId) = {
