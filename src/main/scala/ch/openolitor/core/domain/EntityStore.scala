@@ -122,6 +122,11 @@ trait EntityStore extends AggregateRoot
 
   log.debug(s"EntityStore: created")
 
+  override def dbInitialized(): Unit = {
+    super.dbInitialized()
+    readDBSeeds()
+  }
+
   override def persistenceId: String = EntityStore.persistenceId
 
   type S = EntityStoreState

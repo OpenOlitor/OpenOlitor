@@ -24,6 +24,7 @@ project/plugins/project/
 # ensime
 .ensime
 .ensime_cache
+ensime.sbt
 
 # ctags
 tags

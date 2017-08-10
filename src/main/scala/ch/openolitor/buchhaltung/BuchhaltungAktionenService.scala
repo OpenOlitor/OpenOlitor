@@ -87,41 +87,36 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungPDFStored(meta: EventMetadata, id: RechnungId, fileStoreId: String)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(fileStoreId = Some(fileStoreId)))
-      }
+
+      buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](id)(
+        rechnungMapping.column.fileStoreId -> Some(fileStoreId)
+      )
     }
   }
 
   def mahnungPDFStored(meta: EventMetadata, id: RechnungId, fileStoreId: String)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(mahnungFileStoreIds = (rechnung.mahnungFileStoreIds filterNot (_ == "")) + fileStoreId))
+      buchhaltungWriteRepository.modifyEntity[Rechnung, RechnungId](id) { rechnung =>
+        Map(rechnungMapping.column.mahnungFileStoreIds -> ((rechnung.mahnungFileStoreIds filterNot (_ == "")) + fileStoreId))
       }
     }
   }
 
   def rechnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        if (Erstellt == rechnung.status) {
-          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Verschickt))
-        }
-      }
+      buchhaltungWriteRepository.updateEntityIf[Rechnung, RechnungId](Erstellt == _.status)(id)(
+        rechnungMapping.column.status -> Verschickt
+      )
     }
   }
 
   def rechnungMahnungVerschicken(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        if (Verschickt == rechnung.status) {
-          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](
-            rechnung.copy(
-              status = MahnungVerschickt,
-              anzahlMahnungen = rechnung.anzahlMahnungen + 1
-            )
-          )
-        }
+      buchhaltungWriteRepository.modifyEntityIf[Rechnung, RechnungId](Verschickt == _.status)(id) { rechnung =>
+        Map(
+          rechnungMapping.column.status -> MahnungVerschickt,
+          rechnungMapping.column.anzahlMahnungen -> (rechnung.anzahlMahnungen + 1)
+        )
       }
     }
   }
@@ -134,23 +129,21 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def rechnungBezahlenUpdate(id: RechnungId, entity: RechnungModifyBezahlt)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-      if (Verschickt == rechnung.status || MahnungVerschickt == rechnung.status) {
-        buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(
-          einbezahlterBetrag = Some(entity.einbezahlterBetrag),
-          eingangsDatum = Some(entity.eingangsDatum),
-          status = Bezahlt
-        ))
+      buchhaltungWriteRepository.modifyEntityIf[Rechnung, RechnungId](r => Verschickt == r.status || MahnungVerschickt == r.status)(id) { rechnung =>
+        Map(
+          rechnungMapping.column.status -> Bezahlt,
+          rechnungMapping.column.einbezahlterBetrag -> Some(entity.einbezahlterBetrag),
+          rechnungMapping.column.eingangsDatum -> Some(entity.eingangsDatum)
+        )
       }
     }
   }
 
   def rechnungStornieren(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      buchhaltungWriteRepository.getById(rechnungMapping, id) map { rechnung =>
-        if (Bezahlt != rechnung.status) {
-          buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](rechnung.copy(status = Storniert))
-        }
-      }
+      buchhaltungWriteRepository.updateEntityIf[Rechnung, RechnungId](Bezahlt != _.status)(id)(
+        rechnungMapping.column.status -> Storniert
+      )
     }
   }
 
@@ -207,14 +200,17 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
 
   def zahlungsEingangErledigen(meta: EventMetadata, entity: ZahlungsEingangModifyErledigt)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      buchhaltungWriteRepository.getById(zahlungsEingangMapping, entity.id) map { eingang =>
+      buchhaltungWriteRepository.modifyEntity[ZahlungsEingang, ZahlungsEingangId](entity.id) { eingang =>
         if (eingang.status == Ok) {
           eingang.rechnungId map { rechnungId =>
             rechnungBezahlenUpdate(rechnungId, RechnungModifyBezahlt(eingang.betrag, eingang.gutschriftsDatum))
           }
         }
 
-        buchhaltungWriteRepository.updateEntity[ZahlungsEingang, ZahlungsEingangId](eingang.copy(erledigt = true, bemerkung = entity.bemerkung))
+        Map(
+          zahlungsEingangMapping.column.erledigt -> true,
+          zahlungsEingangMapping.column.bemerkung -> entity.bemerkung
+        )
       }
     }
   }

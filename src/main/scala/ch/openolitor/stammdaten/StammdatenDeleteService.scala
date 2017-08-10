@@ -164,8 +164,9 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
           if (kundentyp.anzahlVerknuepfungen > 0) {
             //remove kundentyp from kunden
             stammdatenWriteRepository.getKunden.filter(_.typen.contains(kundentyp.kundentyp)).map { kunde =>
-              val copy = kunde.copy(typen = kunde.typen - kundentyp.kundentyp)
-              stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
+              stammdatenWriteRepository.updateEntity[Kunde, KundeId](kunde.id)(
+                kundeMapping.column.typen -> (kunde.typen - kundentyp.kundentyp)
+              )
             }
           }
         case None =>
@@ -192,8 +193,9 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
             //detach lieferung
             logger.debug(s"detach Lieferung:${lieferung.id}:${lieferung}")
-            val copy = lieferung.copy(lieferplanungId = None)
-            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(
+              lieferungMapping.column.lieferplanungId -> None
+            )
           }
       }
     }
@@ -202,25 +204,17 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   def removeLieferungPlanung(meta: EventMetadata, id: LieferungOnLieferplanungId)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteLieferpositionen(id.getLieferungId())
-      stammdatenWriteRepository.getById(lieferungMapping, id.getLieferungId()) map { lieferung =>
-        //map all updatable fields
-        val copy = copyTo[Lieferung, Lieferung](
-          lieferung,
-          "durchschnittspreis" -> ZERO,
-          "anzahlLieferungen" -> ZERO,
-          "anzahlKoerbeZuLiefern" -> ZERO,
-          "anzahlAbwesenheiten" -> ZERO,
-          "anzahlSaldoZuTief" -> ZERO,
-          "lieferplanungId" -> None,
-          "status" -> Ungeplant,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> personId
-        )
-        logger.debug(s"Removed lieferung $id from lieferplanung: ${lieferung.lieferplanungId} => $copy")
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-      }
-    }
 
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](id.getLieferungId())(
+        lieferungMapping.column.durchschnittspreis -> ZERO,
+        lieferungMapping.column.anzahlLieferungen -> ZERO,
+        lieferungMapping.column.anzahlKoerbeZuLiefern -> ZERO,
+        lieferungMapping.column.anzahlAbwesenheiten -> ZERO,
+        lieferungMapping.column.anzahlSaldoZuTief -> ZERO,
+        lieferungMapping.column.lieferplanungId -> None,
+        lieferungMapping.column.status -> Ungeplant
+      )
+    }
   }
 
   def deleteLieferung(meta: EventMetadata, id: LieferungId)(implicit personId: PersonId = meta.originator) = {

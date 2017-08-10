@@ -78,7 +78,7 @@ object OO314_DBScripts {
           val durchschnittspreisMap = TreeMap(lieferungenByGj.map { case (gjKey, preise) => (gjKey, preise.map(_._2.preisTotal).sum / preise.size) }.toSeq: _*)
 
           val copy = vertrieb.copy(anzahlLieferungen = anzahlLieferungenMap, durchschnittspreis = durchschnittspreisMap)
-          updateEntity[Vertrieb, VertriebId](copy)
+          updateEntityFully[Vertrieb, VertriebId](copy)
 
           //update lieferungen
           withSQL { select.from(lieferungMapping as l).where.eq(l.vertriebId, parameter(vertrieb.id)) }.map(lieferungMapping(l)).list.apply() map { lieferung =>
@@ -87,7 +87,7 @@ object OO314_DBScripts {
             val dpreis: BigDecimal = durchschnittspreisMap.get(gjKey).getOrElse(0)
 
             val lieferungCopy = lieferung.copy(anzahlLieferungen = anzahl, durchschnittspreis = dpreis)
-            updateEntity[Lieferung, LieferungId](lieferungCopy)
+            updateEntityFully[Lieferung, LieferungId](lieferungCopy)
           }
         }
 

@@ -112,30 +112,27 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
 
   def lieferplanungAbschliessen(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
-        if (Offen == lieferplanung.status) {
-          stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Abgeschlossen))
-        }
-      }
+      stammdatenWriteRepository.updateEntityIf[Lieferplanung, LieferplanungId](Offen == _.status)(id)(lieferplanungMapping.column.status -> Abgeschlossen)
     }
   }
 
   def lieferplanungVerrechnet(meta: EventMetadata, id: LieferplanungId)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
-        if (Abgeschlossen == lieferplanung.status) {
-          stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.copy(status = Verrechnet))
-        }
+      stammdatenWriteRepository.updateEntityIf[Lieferplanung, LieferplanungId](Abgeschlossen == _.status)(id) {
+        lieferplanungMapping.column.status -> Verrechnet
       }
+
       stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
-        if (Abgeschlossen == lieferung.status) {
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Verrechnet), lieferungMapping.column.status)
+        stammdatenWriteRepository.updateEntityIf[Lieferung, LieferungId](Abgeschlossen == _.status)(lieferung.id) {
+          lieferungMapping.column.status -> Verrechnet
         }
       }
       stammdatenWriteRepository.getSammelbestellungen(id) map { sammelbestellung =>
-        if (Abgeschlossen == sammelbestellung.status) {
-          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Verrechnet, datumAbrechnung = Some(DateTime.now)))
-        }
+        stammdatenWriteRepository.updateEntityIf[Sammelbestellung, SammelbestellungId](Abgeschlossen == _.status)(sammelbestellung.id)(
+          sammelbestellungMapping.column.status -> Verrechnet,
+          sammelbestellungMapping.column.datumAbrechnung -> Some(DateTime.now)
+        )
+
       }
     }
   }
@@ -221,26 +218,17 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
   def updatePasswort(meta: EventMetadata, id: PersonId, pwd: Array[Char], einladungId: Option[EinladungId])(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(personMapping, id) map { person =>
-        val updated = person.copy(passwort = Some(pwd))
-        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
-      }
+      stammdatenWriteRepository.updateEntity[Person, PersonId](id)(personMapping.column.passwort -> Some(pwd))
 
       einladungId map { id =>
-        stammdatenWriteRepository.getById(einladungMapping, id) map { einladung =>
-          val updated = einladung.copy(expires = new DateTime())
-          stammdatenWriteRepository.updateEntity[Einladung, EinladungId](updated)
-        }
+        stammdatenWriteRepository.updateEntity[Einladung, EinladungId](id)(einladungMapping.column.expires -> new DateTime())
       }
     }
   }
 
   def disableLogin(meta: EventMetadata, personId: PersonId)(implicit originator: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
-        val updated = person.copy(loginAktiv = false)
-        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
-      }
+      stammdatenWriteRepository.updateEntity[Person, PersonId](personId)(personMapping.column.loginAktiv -> false)
     }
   }
 
@@ -251,10 +239,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
   }
 
   def setLoginAktiv(meta: EventMetadata, personId: PersonId)(implicit originator: PersonId = meta.originator, session: DBSession, publisher: EventPublisher) = {
-    stammdatenWriteRepository.getById(personMapping, personId) map { person =>
-      val updated = person.copy(loginAktiv = true)
-      stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
-    }
+    stammdatenWriteRepository.updateEntity[Person, PersonId](personId)(personMapping.column.loginAktiv -> true)
   }
 
   def sendPasswortReset(meta: EventMetadata, einladungCreate: EinladungCreate)(implicit originator: PersonId = meta.originator): Unit = {
@@ -311,10 +296,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
   def changeRolle(meta: EventMetadata, personId: PersonId, rolle: Rolle)(implicit originator: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(personMapping, personId) map { person =>
-        val updated = person.copy(rolle = Some(rolle))
-        stammdatenWriteRepository.updateEntity[Person, PersonId](updated)
-      }
+      stammdatenWriteRepository.updateEntity[Person, PersonId](personId)(personMapping.column.rolle -> Some(rolle))
     }
   }
 
@@ -323,33 +305,23 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
    */
   def auslieferungAusgeliefert(meta: EventMetadata, id: AuslieferungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(depotAuslieferungMapping, id) map { auslieferung =>
-        if (Erfasst == auslieferung.status) {
-          stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
-        }
-      } orElse {
-        stammdatenWriteRepository.getById(tourAuslieferungMapping, id) map { auslieferung =>
-          if (Erfasst == auslieferung.status) {
-            stammdatenWriteRepository.updateEntity[TourAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
-          }
-        }
-      } orElse {
-        stammdatenWriteRepository.getById(postAuslieferungMapping, id) map { auslieferung =>
-          if (Erfasst == auslieferung.status) {
-            stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](auslieferung.copy(status = Ausgeliefert))
-          }
-        }
+      stammdatenWriteRepository.updateEntityIf[DepotAuslieferung, AuslieferungId](Erfasst == _.status)(id) {
+        depotAuslieferungMapping.column.status -> Ausgeliefert
+      } orElse stammdatenWriteRepository.updateEntityIf[TourAuslieferung, AuslieferungId](Erfasst == _.status)(id) {
+        tourAuslieferungMapping.column.status -> Ausgeliefert
+      } orElse stammdatenWriteRepository.updateEntityIf[PostAuslieferung, AuslieferungId](Erfasst == _.status)(id) {
+        tourAuslieferungMapping.column.status -> Ausgeliefert
       }
     }
   }
 
   def sammelbestellungAbgerechnet(meta: EventMetadata, datum: DateTime, id: SammelbestellungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(sammelbestellungMapping, id) map { sammelbestellung =>
-        if (Abgeschlossen == sammelbestellung.status) {
-          stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](sammelbestellung.copy(status = Verrechnet, datumAbrechnung = Some(datum)))
-        }
-      }
+      stammdatenWriteRepository.updateEntityIf[Sammelbestellung, SammelbestellungId](Abgeschlossen == _.status)(id)(
+        sammelbestellungMapping.column.status -> Verrechnet,
+        sammelbestellungMapping.column.datumAbrechnung -> Some(datum)
+      )
+
     }
   }
 }

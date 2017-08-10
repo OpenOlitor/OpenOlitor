@@ -22,6 +22,7 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung
 
+import ch.openolitor.stammdaten.models.AboId
 import java.util.UUID
 import ch.openolitor.core.models._
 import ch.openolitor.core.repositories.ParameterBinderMapping
@@ -41,20 +42,29 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
 
   // DB type binders for read operations
   implicit val rechnungIdBinder: TypeBinder[RechnungId] = baseIdTypeBinder(RechnungId.apply _)
+  implicit val rechnungsPositionIdBinder: TypeBinder[RechnungsPositionId] = baseIdTypeBinder(RechnungsPositionId.apply _)
   implicit val zahlungsImportIdBinder: TypeBinder[ZahlungsImportId] = baseIdTypeBinder(ZahlungsImportId.apply _)
   implicit val zahlungsEingangIdBinder: TypeBinder[ZahlungsEingangId] = baseIdTypeBinder(ZahlungsEingangId.apply _)
 
   implicit val rechnungStatusTypeBinder: TypeBinder[RechnungStatus] = string.map(RechnungStatus.apply)
+  implicit val rechnungsPositionStatusTypeBinder: TypeBinder[RechnungsPositionStatus.RechnungsPositionStatus] = string.map(RechnungsPositionStatus.apply)
+  implicit val rechnungsPositionTypTypeBinder: TypeBinder[RechnungsPositionTyp.RechnungsPositionTyp] = string.map(RechnungsPositionTyp.apply)
   implicit val optionRechnungIdBinder: TypeBinder[Option[RechnungId]] = optionBaseIdTypeBinder(RechnungId.apply _)
+  implicit val optionAboIdBinder: TypeBinder[Option[AboId]] = optionBaseIdTypeBinder(AboId.apply _)
 
   implicit val zahlungsEingangStatusTypeBinder: TypeBinder[ZahlungsEingangStatus] = string.map(ZahlungsEingangStatus.apply)
 
   //DB parameter binders for write and query operationsit
   implicit val rechnungStatusBinder = toStringSqlBinder[RechnungStatus]
+  implicit val rechnungsPositionStatusBinder = toStringSqlBinder[RechnungsPositionStatus.RechnungsPositionStatus]
+  implicit val rechnungsPositionTypBinder = toStringSqlBinder[RechnungsPositionTyp.RechnungsPositionTyp]
   implicit val zahlungsEingangStatusBinder = toStringSqlBinder[ZahlungsEingangStatus]
 
   implicit val rechnungIdSqlBinder = baseIdSqlBinder[RechnungId]
   implicit val optionRechnungIdSqlBinder = optionSqlBinder[RechnungId]
+  implicit val rechnungsPositionIdSqlBinder = baseIdSqlBinder[RechnungsPositionId]
+  implicit val optionRechnungsPositionIdSqlBinder = optionSqlBinder[RechnungsPositionId]
+  implicit val optionAboIdSqlBinder = optionSqlBinder[AboId]
   implicit val zahlungsEingangIdSqlBinder = baseIdSqlBinder[ZahlungsEingangId]
   implicit val zahlungsImportIdSqlBinder = baseIdSqlBinder[ZahlungsImportId]
 
@@ -72,12 +82,10 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
     override def updateParameters(entity: Rechnung) = {
       super.updateParameters(entity) ++ Seq(
         column.kundeId -> parameter(entity.kundeId),
-        column.aboId -> parameter(entity.aboId),
         column.titel -> parameter(entity.titel),
-        column.anzahlLieferungen -> parameter(entity.anzahlLieferungen),
-        column.waehrung -> parameter(entity.waehrung),
         column.betrag -> parameter(entity.betrag),
         column.einbezahlterBetrag -> parameter(entity.einbezahlterBetrag),
+        column.waehrung -> parameter(entity.waehrung),
         column.rechnungsDatum -> parameter(entity.rechnungsDatum),
         column.faelligkeitsDatum -> parameter(entity.faelligkeitsDatum),
         column.eingangsDatum -> parameter(entity.eingangsDatum),
@@ -92,6 +100,30 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
         column.adressZusatz -> parameter(entity.adressZusatz),
         column.plz -> parameter(entity.plz),
         column.ort -> parameter(entity.ort)
+      )
+    }
+  }
+
+  implicit val rechnungsPositionMapping = new BaseEntitySQLSyntaxSupport[RechnungsPosition] {
+    override val tableName = "RechnungsPosition"
+
+    override lazy val columns = autoColumns[RechnungsPosition]()
+
+    def apply(rn: ResultName[RechnungsPosition])(rs: WrappedResultSet): RechnungsPosition =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: RechnungsPosition): Seq[Any] =
+      parameters(RechnungsPosition.unapply(entity).get)
+
+    override def updateParameters(entity: RechnungsPosition) = {
+      super.updateParameters(entity) ++ Seq(
+        column.rechnungId -> parameter(entity.rechnungId),
+        column.aboId -> parameter(entity.aboId),
+        column.betrag -> parameter(entity.betrag),
+        column.waehrung -> parameter(entity.waehrung),
+        column.anzahlLieferungen -> parameter(entity.anzahlLieferungen),
+        column.titel -> parameter(entity.titel),
+        column.status -> parameter(entity.status)
       )
     }
   }

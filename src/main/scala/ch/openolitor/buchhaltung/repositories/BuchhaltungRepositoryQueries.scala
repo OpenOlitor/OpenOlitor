@@ -43,6 +43,7 @@ import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMappings with StammdatenDBMappings {
   lazy val rechnung = rechnungMapping.syntax("rechnung")
+  lazy val rechnungsPosition = rechnungsPositionMapping.syntax("rechnungsPosition")
   lazy val kunde = kundeMapping.syntax("kunde")
   lazy val zahlungsImport = zahlungsImportMapping.syntax("zahlungsImport")
   lazy val zahlungsEingang = zahlungsEingangMapping.syntax("zahlungsEingang")
@@ -73,22 +74,31 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
       select
         .from(rechnungMapping as rechnung)
         .leftJoin(kundeMapping as kunde).on(rechnung.kundeId, kunde.id)
-        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(rechnung.aboId, depotlieferungAbo.id)
-        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(rechnung.aboId, heimlieferungAbo.id)
-        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(rechnung.aboId, postlieferungAbo.id)
+        .leftJoin(rechnungsPositionMapping as rechnungsPosition).on(rechnung.id, rechnungsPosition.rechnungId)
+        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(rechnungsPosition.aboId, depotlieferungAbo.id)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(rechnungsPosition.aboId, heimlieferungAbo.id)
+        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(rechnungsPosition.aboId, postlieferungAbo.id)
         .where.eq(rechnung.id, parameter(id))
         .orderBy(rechnung.rechnungsDatum)
     }.one(rechnungMapping(rechnung))
       .toManies(
         rs => kundeMapping.opt(kunde)(rs),
+        rs => rechnungsPositionMapping.opt(rechnungsPosition)(rs),
         rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
         rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs)
       )
-      .map({ (rechnung, kunden, pl, hl, dl) =>
+      .map({ (rechnung, kunden, rechnungsPositionen, pl, hl, dl) =>
         val kunde = kunden.head
-        val abo = (pl ++ hl ++ dl).head
-        copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "abo" -> abo)
+        val abos = pl ++ hl ++ dl
+        val rechnungsPositionenDetail = for {
+          rechnungsPosition <- rechnungsPositionen
+          abo <- abos.filter(_.id == rechnungsPosition.aboId)
+        } yield {
+          copyTo[RechnungsPosition, RechnungsPositionDetail](rechnungsPosition, "abo" -> abo)
+        }
+
+        copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "rechnungsPositionen" -> rechnungsPositionenDetail)
       }).single
   }
 

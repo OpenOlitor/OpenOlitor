@@ -85,18 +85,14 @@ class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) ext
   def handleZahlungsEingangModified(entity: ZahlungsEingang, orig: ZahlungsEingang)(implicit userId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       if (!orig.erledigt && entity.erledigt) {
-        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId) { zahlungsImport =>
-          zahlungsImport.copy(anzahlZahlungsEingaengeErledigt = zahlungsImport.anzahlZahlungsEingaengeErledigt + 1)
+        buchhaltungUpdateRepository.modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId) { zahlungsImport =>
+          Map(zahlungsImportMapping.column.anzahlZahlungsEingaengeErledigt -> (zahlungsImport.anzahlZahlungsEingaengeErledigt + 1))
         }
       } else if (orig.erledigt && !entity.erledigt) {
-        modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId) { zahlungsImport =>
-          zahlungsImport.copy(anzahlZahlungsEingaengeErledigt = zahlungsImport.anzahlZahlungsEingaengeErledigt - 1)
+        buchhaltungUpdateRepository.modifyEntity[ZahlungsImport, ZahlungsImportId](entity.zahlungsImportId) { zahlungsImport =>
+          Map(zahlungsImportMapping.column.anzahlZahlungsEingaengeErledigt -> (zahlungsImport.anzahlZahlungsEingaengeErledigt - 1))
         }
       }
     }
-  }
-
-  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(mod: E => E)(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
-    modifyEntityWithRepository(buchhaltungUpdateRepository)(id, mod)
   }
 }
