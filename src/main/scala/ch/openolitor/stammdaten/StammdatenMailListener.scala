@@ -68,20 +68,18 @@ class StammdatenMailListener(override val sysConfig: SystemConfig) extends Actor
   protected def handleBestellungMailSent(meta: EventMetadata, id: SammelbestellungId)(implicit personId: PersonId = meta.originator) = {
     log.debug(s"handleBestellungMailSent:$id")
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(sammelbestellungMapping, id) map { sammelbestellung =>
-        val copy = sammelbestellung.copy(datumVersendet = Some(meta.timestamp))
-        stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](copy)
-      }
+      stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](id)(
+        sammelbestellungMapping.column.datumVersendet -> Some(meta.timestamp)
+      )
     }
   }
 
   protected def handleEinladungMailSent(meta: EventMetadata, id: EinladungId)(implicit personId: PersonId = meta.originator) = {
     log.debug(s"handleEinladungMailSent:$id")
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(einladungMapping, id) map { einladung =>
-        val copy = einladung.copy(datumVersendet = Some(meta.timestamp))
-        stammdatenWriteRepository.updateEntity[Einladung, EinladungId](copy)
-      }
+      stammdatenWriteRepository.updateEntity[Einladung, EinladungId](id)(
+        einladungMapping.column.datumVersendet -> Some(meta.timestamp)
+      )
     }
   }
 }

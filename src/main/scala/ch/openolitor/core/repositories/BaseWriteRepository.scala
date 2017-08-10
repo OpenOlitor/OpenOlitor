@@ -41,4 +41,19 @@ trait BaseWriteRepository extends CrudRepository
     with BaseInsertRepository
     with BaseUpdateRepository
     with BaseDeleteRepository {
+
+  def updateEntityFully[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+
+    syntaxSupport.updateParameters(entity) match {
+      case head :: tail =>
+        updateEntity[E, I](entity.id)(head, tail: _*)
+      case _ =>
+        None
+    }
+  }
 }

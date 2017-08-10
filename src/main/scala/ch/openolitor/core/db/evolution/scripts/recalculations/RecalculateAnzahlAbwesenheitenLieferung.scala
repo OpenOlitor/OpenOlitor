@@ -52,11 +52,7 @@ object RecalculateAnzahlAbwesenheitenLieferung {
           select.from(abwesenheitMapping as abw)
         }.map(abwesenheitMapping(abw)).list.apply().groupBy(_.lieferungId) map {
           case (lieferungId, abwesenheiten) =>
-            val abwCount = abwesenheiten.size
-            getById(lieferungMapping, lieferungId) map { lieferung =>
-              val copy = lieferung.copy(anzahlAbwesenheiten = abwCount)
-              updateEntity[Lieferung, LieferungId](copy)
-            }
+            updateEntity[Lieferung, LieferungId](lieferungId)(lieferungMapping.column.anzahlAbwesenheiten -> abwesenheiten.size)
         }
       }
 

@@ -26,18 +26,7 @@ import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.models.BaseId
 import scalikejdbc.DBSession
 import ch.openolitor.core.models.PersonId
+import scalikejdbc.interpolation.SQLSyntax
 
-/**
- * TODO only accept update parameters as soon as OO-660 is done
- */
 trait BaseUpdateRepositoryComponent {
-  def modifyEntityWithRepository[E <: BaseEntity[I], I <: BaseId](repository: BaseUpdateRepository)(
-    id: I, mod: E => E
-  )(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
-
-    repository.getById(syntax, id) flatMap { result =>
-      val copy = mod(result)
-      repository.updateEntity[E, I](copy)
-    }
-  }
 }
