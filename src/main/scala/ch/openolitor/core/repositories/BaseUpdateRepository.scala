@@ -37,7 +37,7 @@ import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
 import ch.openolitor.core.db.OOAsyncDB._
 
 trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository {
-  def updateEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFieldsHead: (SQLSyntax, Any), updateFieldsTail: (SQLSyntax, Any)*)(implicit
+  def updateEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
@@ -46,7 +46,7 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
     modifyEntityIf[E, I](p)(id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
   }
 
-  def updateEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFieldsHead: (SQLSyntax, Any), updateFieldsTail: (SQLSyntax, Any)*)(implicit
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
@@ -55,7 +55,7 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
     modifyEntity[E, I](id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
   }
 
-  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFunction: (E) => Map[SQLSyntax, Any])(implicit
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
@@ -64,7 +64,7 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
     modifyEntityIf[E, I](_ => true)(id)(updateFunction)
   }
 
-  def modifyEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFunction: (E) => Map[SQLSyntax, Any])(implicit
+  def modifyEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
@@ -75,10 +75,13 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
         val alias = syntaxSupport.syntax("x")
         val idAlias = alias.id
 
-        val updateFields = updateFunction(orig)
+        val updateFields = updateFunction(orig) map {
+          case (sql, v) => (sql, v.value)
+        }
+
         val allowedFields = syntaxSupport.updateParameters(orig) map (_._1)
 
-        val defaultValues = Map(syntaxSupport.column.modifidat -> DateTime.now, syntaxSupport.column.modifikator -> user)
+        val defaultValues = Map(syntaxSupport.column.modifidat -> parameter(DateTime.now), syntaxSupport.column.modifikator -> parameter(user))
 
         // filter with allowed fields
         // if there are no modification fields in the passed updateFields default values are used

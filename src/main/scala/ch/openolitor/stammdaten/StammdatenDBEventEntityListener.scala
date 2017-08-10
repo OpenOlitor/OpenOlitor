@@ -1036,13 +1036,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def updateTourlieferungenByKunde(kunde: Kunde)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     stammdatenUpdateRepository.getTourlieferungenByKunde(kunde.id) map { tourlieferung =>
+      val bezeichnung = kunde.bezeichnungLieferung getOrElse (kunde.bezeichnung)
+      val strasse = kunde.strasseLieferung getOrElse (kunde.strasse)
+      val plz = kunde.plzLieferung getOrElse (kunde.plz)
+      val ort = kunde.ortLieferung getOrElse (kunde.ort)
+
       stammdatenUpdateRepository.updateEntity[Tourlieferung, AboId](tourlieferung.id)(
-        tourlieferungMapping.column.kundeBezeichnung -> (kunde.bezeichnungLieferung getOrElse kunde.bezeichnung),
-        tourlieferungMapping.column.strasse -> (kunde.strasseLieferung getOrElse kunde.strasse),
+        tourlieferungMapping.column.kundeBezeichnung -> bezeichnung,
+        tourlieferungMapping.column.strasse -> strasse,
         tourlieferungMapping.column.hausNummer -> (kunde.hausNummerLieferung orElse kunde.hausNummer),
         tourlieferungMapping.column.adressZusatz -> (kunde.adressZusatzLieferung orElse kunde.adressZusatz),
-        tourlieferungMapping.column.plz -> (kunde.plzLieferung getOrElse kunde.plz),
-        tourlieferungMapping.column.ort -> (kunde.ortLieferung getOrElse kunde.ort)
+        tourlieferungMapping.column.plz -> plz,
+        tourlieferungMapping.column.ort -> ort
       )
     }
   }
