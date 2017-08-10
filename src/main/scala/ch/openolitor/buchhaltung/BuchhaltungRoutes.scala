@@ -76,6 +76,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   self: BuchhaltungReadRepositoryAsyncComponent with FileStoreComponent with StammdatenReadRepositoryAsyncComponent =>
 
   implicit val rechnungIdPath = long2BaseIdPathMatcher(RechnungId.apply)
+  implicit val rechnungsPositionIdPath = long2BaseIdPathMatcher(RechnungsPositionId.apply)
   implicit val zahlungsImportIdPath = long2BaseIdPathMatcher(ZahlungsImportId.apply)
   implicit val zahlungsEingangIdPath = long2BaseIdPathMatcher(ZahlungsEingangId.apply)
 
@@ -181,9 +182,11 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
 
   def rechnungspositionenRoute(implicit subect: Subject, filter: Option[FilterExpr]) =
     path("rechnungspositionen" ~ exportFormatPath.?) { exportFormat =>
-      get(list(buchhaltungReadRepository.getRechnungsPositionen, exportFormat)) //~
-      //post(create[RechnungCreate, RechnungId](RechnungId.apply _))
-    }
+      get(list(buchhaltungReadRepository.getRechnungsPositionen, exportFormat))
+    } ~
+      path("rechnungspositionen" / rechnungsPositionIdPath) { id =>
+        (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
+      }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
     path("zahlungsimports") {
