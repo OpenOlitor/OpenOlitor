@@ -123,7 +123,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
                   val lpAbschliessenEvent = DefaultResultingEvent(factory => LieferplanungAbschliessenEvent(factory.newMetadata(), id))
 
-                  logger.debug("Mikel: my debug")
                   val createAuslieferungHeimEvent = getCreateAuslieferungHeimEvent(lieferplanung)(personId, session)
                   val createAuslieferungDepotPostEvent = getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung)(personId, session)
                   Success(lpAbschliessenEvent +: bestellEvents ++: createAuslieferungHeimEvent ++: createAuslieferungDepotPostEvent)
@@ -592,7 +591,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     val updates1 = handleLieferplanungAbgeschlossen(lieferungen)
     val updates2 = recalculateValuesForLieferplanungAbgeschlossen(lieferungen)
     val updates3 = updateSammelbestellungStatus(lieferungen, lieferplanung: Lieferplanung)
-    updates1 ::: updates3 ::: updates2
+    updates1 ::: updates2 ::: updates3
   }
 
   private def handleLieferplanungAbgeschlossen(lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
@@ -612,8 +611,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                 createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size) map { newAuslieferung =>
                   val updates = koerbe map {
                     korb =>
-                      val copy = korb.copy(auslieferungId = Some(newAuslieferung.id))
-                      EntityUpdateEvent(copy.id, copy)
+                      EntityUpdateEvent(korb.id, new KorbModify_Auslieferung(newAuslieferung.id))
                   }
                   EntityInsertEvent(newAuslieferung.id, newAuslieferung) :: updates
                 } getOrElse (Nil)
@@ -659,6 +657,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           EntityUpdateEvent(copy.id, copy)
         }
       }).get.get
+
+      logger.debug(s"Mikel, changing status to lieferung: $lieferungCopy.id, $lieferungCopy")
       EntityUpdateEvent(lieferungCopy.id, lieferungCopy) :: updates :: Nil
     }).flatten
   }
