@@ -37,6 +37,10 @@ import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
 import ch.openolitor.core.db.OOAsyncDB._
 
 trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository {
+  /**
+   * Modify the entity with the given id according to the provided field/value list
+   * if the predicate p succeeds for the entity fetched by the given id.
+   */
   def updateEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
@@ -46,6 +50,9 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
     modifyEntityIf[E, I](p)(id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
   }
 
+  /**
+   * Modify the entity with the given id according to the provided field/value list.
+   */
   def updateEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
@@ -55,6 +62,11 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
     modifyEntity[E, I](id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
   }
 
+  /**
+   * Modify the entity with the given id according to the given updateFunction.
+   * The updateFunction is a Map of the form SQLSyntax -> SqlValue. E.g.:
+   * Map(property.column.status -> value)
+   */
   def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
@@ -64,6 +76,12 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
     modifyEntityIf[E, I](_ => true)(id)(updateFunction)
   }
 
+  /**
+   * Modify the entity with the given id according to the given updateFunction.
+   * The predicate will be evaluated against the entity fetched by the given id.
+   * The updateFunction is a Map of the form SQLSyntax -> SqlValue. E.g.:
+   * Map(property.column.status -> value)
+   */
   def modifyEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
