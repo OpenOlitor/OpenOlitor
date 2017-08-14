@@ -155,6 +155,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(userId, entity: Depot, orig: Depot) => handleDepotModified(entity, orig)(userId)
     case e @ EntityModified(userId, entity: Korb, orig: Korb) if entity.status != orig.status => handleKorbStatusChanged(entity, orig.status)(userId)
 
+    case e @ EntityCreated(personId, entity: Korb) => handleKorbCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Korb) => handleKorbDeleted(entity)(personId)
 
     case x => //log.debug(s"receive unused event $x")
@@ -345,14 +346,22 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession) = {
     // koerbe erstellen, modifizieren, loeschen falls noetig
-    stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
-      stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
-        if (orig.isDefined && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
-          deleteKorb(lieferung, abo)
-        } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
-          upsertKorb(lieferung, abo, abotyp) match {
-            case (Some(korb), existingKorb) => updateLieferungWithKorbCounts(lieferung, korb, existingKorb)
-            case _ => // nothing to update
+    val isExistingAbo = orig.isDefined
+    // only modify koerbe if the start or end of this abo has changed or we're creating them for a new abo
+    if (!isExistingAbo || abo.start != orig.get.start || abo.ende != orig.get.ende) {
+      stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+        stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+          if (isExistingAbo && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
+            deleteKorb(lieferung, abo)
+          } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
+            upsertKorb(lieferung, abo, abotyp) match {
+              case (Some(created), None) =>
+                // nur im created Fall muss eins dazu gezählt werden
+                // bei Statuswechsel des Korbs wird handleKorbStatusChanged die Counts justieren
+                updateLieferungWithCount(created, 1)
+              case _ =>
+              // counts werden andersweitig angepasst
+            }
           }
         }
       }
@@ -360,43 +369,32 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession) = {
-    // koerbe der offenen lieferungen loeschen
+    // Koerbe der offenen Lieferungen loeschen
     stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
       deleteKorb(lieferung, abo)
     }
   }
 
   def handleKorbDeleted(korb: Korb)(implicit personId: PersonId) = {
+    updateLieferungWithCount(korb, -1)
+  }
+
+  def handleKorbCreated(korb: Korb)(implicit personId: PersonId) = {
+    // Lieferung Counts bereits gesetzt im InsertService
+  }
+
+  private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId) = {
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
-        val copy = updateLieferungWithCount(lieferung, korb, -1)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-      }
-    }
-  }
-
-  private def updateLieferungWithKorbCounts(lieferung: Lieferung, korb: Korb, orig: Option[Korb])(implicit personId: PersonId, session: DBSession) = {
-    orig map { existing =>
-      if (korb.status != existing.status) {
-        // -1 on existing status, +1 on new status
-        val copy = updateLieferungWithCount(
-          updateLieferungWithCount(lieferung, existing, -1),
-          korb, 1
+        val copy = lieferung.copy(
+          anzahlKoerbeZuLiefern = if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern,
+          anzahlAbwesenheiten = if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten,
+          anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
         )
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-      }
-    } getOrElse {
-      val copy = updateLieferungWithCount(lieferung, korb, 1)
-      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
-    }
-  }
 
-  private def updateLieferungWithCount(lieferung: Lieferung, korb: Korb, add: Int): Lieferung = {
-    lieferung.copy(
-      anzahlKoerbeZuLiefern = if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern,
-      anzahlAbwesenheiten = if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten,
-      anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
-    )
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy, lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
+      }
+    }
   }
 
   def handleKundeModified(kunde: Kunde, orig: Kunde)(implicit personId: PersonId) = {
@@ -527,7 +525,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     DB autoCommit { implicit session =>
       stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
         log.debug(s"Korb Status changed:${korb.aboId}/${korb.lieferungId}")
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](recalculateLieferungCounts(lieferung, korb.status, statusAlt))
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](recalculateLieferungCounts(lieferung, korb.status, statusAlt), lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
       }
     }
   }
@@ -535,6 +533,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   private def recalculateLieferungCounts(lieferung: Lieferung, korbStatusNeu: KorbStatus, korbStatusAlt: KorbStatus)(implicit personId: PersonId, session: DBSession) = {
     val zuLiefernDiff = korbStatusNeu match {
       case WirdGeliefert => 1
+      case Geliefert if korbStatusAlt == WirdGeliefert => 0 // TODO introduce additional counter for delivered baskets
       case _ if korbStatusAlt == WirdGeliefert => -1
       case _ => 0
     }
@@ -783,7 +782,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         //calculate total of lieferung
         val total = stammdatenWriteRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
         val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferungCopy, lieferungMapping.column.preisTotal, lieferungMapping.column.status)
 
         //update durchschnittspreis
         stammdatenWriteRepository.getProjekt map { projekt =>
@@ -1071,7 +1070,13 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         modifidat = DateTime.now,
         modifikator = personId
       )
-      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](
+        updatedLieferung,
+        lieferungMapping.column.durchschnittspreis,
+        lieferungMapping.column.anzahlLieferungen,
+        lieferungMapping.column.modifidat,
+        lieferungMapping.column.modifikator
+      )
     }
   }
 

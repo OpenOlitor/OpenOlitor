@@ -56,15 +56,17 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
    */
   def parameterMappings(entity: E): Seq[Any]
 
-  /**
-   * Declare update parameters for this entity used on update. Is by default an empty set
-   */
-  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
+  def defaultColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
     column.erstelldat -> parameter(entity.erstelldat),
     column.ersteller -> parameter(entity.ersteller),
     column.modifidat -> parameter(entity.modifidat),
     column.modifikator -> parameter(entity.modifikator)
   )
+
+  /**
+   * Declare update parameters for this entity used on update. Is by default an empty set
+   */
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = defaultColumns(entity)
 }
 
 trait ParameterBinderMapping[A] {
@@ -151,7 +153,10 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
     }
   }
 
-  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
+  /*
+   * @param updateFields restrict the updated fields to this list
+   */
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E, updateFields: SQLSyntax*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
@@ -159,7 +164,10 @@ trait BaseWriteRepository extends BaseRepositoryQueries {
     getById(syntaxSupport, entity.id).map { orig =>
       val alias = syntaxSupport.syntax("x")
       val id = alias.id
-      val updateParams = syntaxSupport.updateParameters(entity)
+      val updateParams = updateFields.toList match {
+        case Nil => syntaxSupport.updateParameters(entity)
+        case specifiedFields => (syntaxSupport.updateParameters(entity) filter (f => specifiedFields.contains(f._1))) ++ syntaxSupport.defaultColumns(entity)
+      }
 
       logger.debug(s"update entity:${entity.id} with values:$updateParams")
 
