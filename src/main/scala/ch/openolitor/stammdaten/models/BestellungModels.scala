@@ -146,6 +146,10 @@ case class SammelbestellungModify(
   datum: DateTime
 ) extends JSONSerializable
 
+case class SammelbestellungStatusModify(
+  status: LieferungStatus
+) extends JSONSerializable
+
 case class SammelbestellungCreate(
   id: SammelbestellungId,
   produzentId: ProduzentId,

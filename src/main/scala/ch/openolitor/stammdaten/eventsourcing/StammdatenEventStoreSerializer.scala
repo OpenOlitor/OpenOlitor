@@ -60,6 +60,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val abwesenheitIdPersister = persister[AbwesenheitId]("abwesenheit-id")
 
   implicit val vertriebModifyPersister = persister[VertriebModify]("vertrieb-modify")
+  implicit val vertriebRecalculationsModifyPersister = persister[VertriebRecalculationsModify]("vertrieb-recalculations-modify")
   implicit val vertriebIdPersister = persister[VertriebId]("vertrieb-id")
 
   implicit val vertriebsartDLAbotypPersister = persister[DepotlieferungAbotypModify]("depotlieferungabotyp-modify")
@@ -96,6 +97,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferungIdPersister = persister[LieferungId]("lieferung-id")
   implicit val lieferungOnLieferplanungIdPersister = persister[LieferungOnLieferplanungId]("lieferung-on-lieferplanung-id")
   implicit val lieferungModifyPersister = persister[LieferungModify]("lieferung-modify")
+  implicit val lieferungAbgeschlossenModifyPersister = persister[LieferungAbgeschlossenModify]("lieferung-abgeschlossen-modify")
   implicit val lieferungPlanungAddPersister = persister[LieferungPlanungAdd]("lieferung-planungadd-modify")
   implicit val lieferungPlanungRemovePersister = persister[LieferungPlanungRemove]("lieferung-planungremove-modify")
   implicit val lieferplanungModifyPersister = persister[LieferplanungModify]("lieferplanung-modify")
@@ -182,6 +184,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     pendenzIdPersister,
     pendenzCreatePersister,
     vertriebModifyPersister,
+    vertriebRecalculationsModifyPersister,
     vertriebIdPersister,
     vertriebsartDLPersister,
     vertriebsartPLPersister,
@@ -205,6 +208,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferungIdPersister,
     lieferungOnLieferplanungIdPersister,
     lieferungModifyPersister,
+    lieferungAbgeschlossenModifyPersister,
     lieferungPlanungAddPersister,
     lieferungPlanungRemovePersister,
     lieferplanungModifyPersister,

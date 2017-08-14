@@ -590,7 +590,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
     val updates1 = handleLieferplanungAbgeschlossen(lieferungen)
     val updates2 = recalculateValuesForLieferplanungAbgeschlossen(lieferungen)
-    val updates3 = updateSammelbestellungStatus(lieferungen, lieferplanung: Lieferplanung)
+    val updates3 = updateSammelbestellungStatus(lieferungen, lieferplanung)
     updates1 ::: updates2 ::: updates3
   }
 
@@ -623,8 +623,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
               koerbe map {
                 korb =>
-                  val copy = korb.copy(auslieferungId = Some(auslieferung.id))
-                  EntityUpdateEvent(copy.id, copy)
+                  EntityUpdateEvent(korb.id, KorbAuslieferungModify(auslieferung.id))
               }
             }
           }
@@ -640,6 +639,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       //calculate total of lieferung
       val total = stammdatenReadRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
       val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
+      val lieferungModifyCopy = LieferungAbgeschlossenModify(Abgeschlossen, total)
 
       //update durchschnittspreis
       val updates = (stammdatenReadRepository.getProjekt map { projekt =>
@@ -650,15 +650,16 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           val durchschnittspreis: BigDecimal = vertrieb.durchschnittspreis.get(gjKey).getOrElse(0)
 
           val neuerDurchschnittspreis = calcDurchschnittspreis(durchschnittspreis, lieferungen, total)
-          val copy = vertrieb.copy(
+          val vertriebCopy = vertrieb.copy(
             anzahlLieferungen = vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
             durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
           )
-          EntityUpdateEvent(copy.id, copy)
+          val vertriebModifyCopy = VertriebRecalculationsModify(vertrieb.anzahlLieferungen, vertrieb.durchschnittspreis)
+          EntityUpdateEvent(vertrieb.id, vertriebModifyCopy)
         }
       }).get.get
 
-      EntityUpdateEvent(lieferungCopy.id, lieferungCopy) :: updates :: Nil
+      EntityUpdateEvent(lieferungCopy.id, lieferungModifyCopy) :: updates :: Nil
     }).flatten
   }
 
@@ -668,7 +669,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       sammelbestellung =>
         if (Offen == sammelbestellung.status) {
           val sammelbestellungCopy = sammelbestellung.copy(status = Abgeschlossen)
-          Seq(EntityUpdateEvent(sammelbestellungCopy.id, sammelbestellungCopy))
+          val sammelbestellungStatusModifyCopy = SammelbestellungStatusModify(sammelbestellungCopy.status)
+
+          Seq(EntityUpdateEvent(sammelbestellungCopy.id, sammelbestellungStatusModifyCopy))
         } else { Nil }
     }).filter(_.nonEmpty).flatten
   }
