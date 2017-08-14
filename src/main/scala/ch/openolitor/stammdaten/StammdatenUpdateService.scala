@@ -101,7 +101,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: ProjektVorlageId, entity: ProjektVorlageModify) => updateProjektVorlage(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektVorlageId, entity: ProjektVorlageUpload) => updateProjektVorlageDocument(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AuslieferungId, entity: Auslieferung) => updateAuslieferungAusgeliefert(meta, id, entity)
-    case EntityUpdatedEvent(meta, id: KorbId, entity: KorbModify_Auslieferung) => updateKorbAuslieferungId(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: KorbId, entity: KorbAuslieferungModify) => updateKorbAuslieferungId(meta, id, entity)
     case e =>
   }
 
@@ -649,7 +649,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def updateKorbAuslieferungId(meta: EventMetadata, id: KorbId, entity: KorbModify_Auslieferung)(implicit personId: PersonId = meta.originator) = {
+  def updateKorbAuslieferungId(meta: EventMetadata, id: KorbId, entity: KorbAuslieferungModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(korbMapping, id) map { korb =>
         val copy = copyFrom(korb, Some(entity), "modifidat" -> meta.timestamp, "modifikator" -> personId)

@@ -413,7 +413,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
 
   implicit val korbCreateFormat = autoProductFormat[KorbCreate]
-  implicit val korbModifyAuslieferungFormat = autoProductFormat[KorbModify_Auslieferung]
+  implicit val korbModifyAuslieferungFormat = autoProductFormat[KorbAuslieferungModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
   implicit val kontoDatenModifyFormat = autoProductFormat[KontoDatenModify]

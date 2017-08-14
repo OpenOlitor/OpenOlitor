@@ -611,7 +611,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                 createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size) map { newAuslieferung =>
                   val updates = koerbe map {
                     korb =>
-                      EntityUpdateEvent(korb.id, new KorbModify_Auslieferung(newAuslieferung.id))
+                      EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id))
                   }
                   EntityInsertEvent(newAuslieferung.id, newAuslieferung) :: updates
                 } getOrElse (Nil)
@@ -658,7 +658,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }).get.get
 
-      logger.debug(s"Mikel, changing status to lieferung: $lieferungCopy.id, $lieferungCopy")
       EntityUpdateEvent(lieferungCopy.id, lieferungCopy) :: updates :: Nil
     }).flatten
   }
