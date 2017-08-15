@@ -74,11 +74,12 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
 
   def updateRechnungsPosition(meta: EventMetadata, id: RechnungsPositionId, update: RechnungsPositionModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      buchhaltungWriteRepository.getById(rechnungsPositionMapping, id) map { entity =>
-        //map all updatable fields
-        val copy = copyFrom(entity, update)
-        buchhaltungWriteRepository.updateEntity[RechnungsPosition, RechnungsPositionId](copy)
-      }
+      buchhaltungWriteRepository.updateEntity(id)(
+        rechnungsPositionMapping.column.titel -> update.titel,
+        rechnungsPositionMapping.column.anzahlLieferungen -> update.anzahlLieferungen,
+        rechnungsPositionMapping.column.betrag -> update.betrag,
+        rechnungsPositionMapping.column.status -> update.status
+      )
     }
   }
 }
