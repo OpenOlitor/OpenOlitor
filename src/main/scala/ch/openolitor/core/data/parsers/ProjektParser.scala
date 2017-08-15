@@ -35,7 +35,7 @@ object ProjektParser extends EntityParser {
 
   def parse(implicit loggingAdapter: LoggingAdapter) = {
     parseEntity[Projekt, ProjektId]("id", Seq("bezeichnung", "strasse", "haus_nummer", "adress_zusatz", "plz", "ort",
-      "preise_sichtbar", "preise_editierbar", "email_erforderlich", "waehrung", "geschaeftsjahr_monat", "geschaeftsjahr_tag", "two_factor_auth", "sprache", "welcome_Message_1", "welcome_Message_2", "maintenance_Mode") ++ modifyColumns) { id => indexes =>
+      "preise_sichtbar", "preise_editierbar", "email_erforderlich", "waehrung", "geschaeftsjahr_monat", "geschaeftsjahr_tag", "two_factor_auth", "sprache", "welcome_message_1", "welcome_message_2", "maintenance_mode") ++ modifyColumns) { id => indexes =>
       row =>
         //match column indexes
         val Seq(indexBezeichnung, indexStrasse, indexHausNummer, indexAdressZusatz, indexPlz, indexOrt, indexPreiseSichtbar,
