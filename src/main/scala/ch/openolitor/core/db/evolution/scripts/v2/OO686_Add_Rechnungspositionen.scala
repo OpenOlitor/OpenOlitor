@@ -44,6 +44,7 @@ CREATE TABLE `RechnungsPosition` (
   `rechnung_id` bigint(20),
   `parent_rechnungs_position_id` bigint(20),
   `abo_id` bigint(20),
+  `kunde_id` bigint(20) NOT NULL,
   `betrag` decimal(8,2) NOT NULL,
   `waehrung` varchar(10) COLLATE utf8_unicode_ci NOT NULL,
   `anzahl_lieferungen` int(11),
@@ -69,10 +70,10 @@ CREATE TABLE `RechnungsPosition` (
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"""
 INSERT INTO RechnungsPosition 
-  (id, rechnung_id, abo_id, betrag, waehrung, anzahl_lieferungen, titel, 
+  (id, rechnung_id, abo_id, kunde_id, betrag, waehrung, anzahl_lieferungen, titel, 
    status, typ, erstelldat, ersteller, modifidat, modifikator)
 SELECT 
-   id, id, abo_id, betrag, waehrung, anzahl_lieferungen, titel, 
+   id, id, abo_id, kunde_id, betrag, waehrung, anzahl_lieferungen, titel, 
    CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Offen' END AS status, 'Abo', erstelldat, ersteller, modifidat, modifikator FROM Rechnung
 """.execute.apply()
       Success(true)

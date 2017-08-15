@@ -95,6 +95,7 @@ case class RechnungsPosition(
   id: RechnungsPositionId,
   rechnungId: Option[RechnungId],
   parentRechnungsPositionId: Option[RechnungsPositionId],
+  kundeId: KundeId,
   aboId: Option[AboId],
   betrag: BigDecimal,
   waehrung: Waehrung,
@@ -179,6 +180,7 @@ case class RechnungsPositionDetail(
   anzahlLieferungen: Option[Int],
   titel: String,
   status: RechnungsPositionStatus.RechnungsPositionStatus,
+  typ: RechnungsPositionTyp.RechnungsPositionTyp,
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -281,9 +283,9 @@ case class RechnungModify(
 
 case class RechnungsPositionModify(
   titel: String,
-  anzahlLieferungen: Int,
-  waehrung: Waehrung,
-  betrag: BigDecimal
+  anzahlLieferungen: Option[Int],
+  betrag: BigDecimal,
+  status: RechnungsPositionStatus.RechnungsPositionStatus
 ) extends JSONSerializable
 
 case class RechnungModifyBezahlt(

@@ -58,6 +58,7 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
 
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: RechnungId, entity: RechnungModify) => updateRechnung(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: RechnungsPositionId, entity: RechnungsPositionModify) => updateRechnungsPosition(meta, id, entity)
     case e =>
   }
 
@@ -68,6 +69,17 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
         val copy = copyFrom(entity, update)
         buchhaltungWriteRepository.updateEntityFully[Rechnung, RechnungId](copy)
       }
+    }
+  }
+
+  def updateRechnungsPosition(meta: EventMetadata, id: RechnungsPositionId, update: RechnungsPositionModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      buchhaltungWriteRepository.updateEntity(id)(
+        rechnungsPositionMapping.column.titel -> update.titel,
+        rechnungsPositionMapping.column.anzahlLieferungen -> update.anzahlLieferungen,
+        rechnungsPositionMapping.column.betrag -> update.betrag,
+        rechnungsPositionMapping.column.status -> update.status
+      )
     }
   }
 }
