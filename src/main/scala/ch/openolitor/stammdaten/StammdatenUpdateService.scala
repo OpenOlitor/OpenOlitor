@@ -93,6 +93,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: TourId, entity: TourModify) => updateTour(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AuslieferungId, entity: TourAuslieferungModify) => updateAuslieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: ProjektId, entity: ProjektModify) => updateProjekt(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: KontoDatenId, entity: KontoDatenModify) => updateKontoDaten(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, entity: Lieferung) => updateLieferung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferplanungId, entity: LieferplanungModify) => updateLieferplanung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: LieferungId, lieferpositionen: LieferpositionenModify) =>
@@ -108,39 +109,23 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(vertriebMapping, id) map { vertrieb =>
         //map all updatable fields
         val copy = copyFrom(vertrieb, update)
-        stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
+        stammdatenWriteRepository.updateEntityFully[Vertrieb, VertriebId](copy)
       }
 
       stammdatenWriteRepository.getAbosByVertrieb(id) map { abo =>
         abo match {
           case dlAbo: DepotlieferungAbo =>
             logger.debug(s"Update abo with data -> vertriebBeschrieb")
-            val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
-              dlAbo,
-              "vertriebBeschrieb" -> update.beschrieb
-            )
-            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](abo.id)(depotlieferungAboMapping.column.vertriebBeschrieb -> update.beschrieb)
           case hlAbo: HeimlieferungAbo =>
             logger.debug(s"Update abo with data -> vertriebBeschrieb")
-            val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
-              hlAbo,
-              "vertriebBeschrieb" -> update.beschrieb
-            )
-            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](abo.id)(heimlieferungAboMapping.column.vertriebBeschrieb -> (update.beschrieb))
           case plAbo: PostlieferungAbo =>
             logger.debug(s"Update abo with data -> vertriebBeschrieb")
-            val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
-              plAbo,
-              "vertriebBeschrieb" -> update.beschrieb
-            )
-            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](abo.id)(postlieferungAboMapping.column.vertriebBeschrieb -> update.beschrieb)
           case zAbo: ZusatzAbo =>
             logger.debug(s"Update abo with data -> vertriebBeschrieb")
-            val copy = copyTo[ZusatzAbo, ZusatzAbo](
-              zAbo,
-              "vertriebBeschrieb" -> update.beschrieb
-            )
-            stammdatenWriteRepository.updateEntity[ZusatzAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[ZusatzAbo, AboId](abo.id)(zusatzAboMapping.column.vertriebBeschrieb -> update.beschrieb)
           case _ =>
         }
       }
@@ -152,18 +137,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(abotypMapping, id) map { abotyp =>
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
-        stammdatenWriteRepository.updateEntity[Abotyp, AbotypId](copy)
+        stammdatenWriteRepository.updateEntityFully[Abotyp, AbotypId](copy)
       }
 
       stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
-        //update einiger Felder auf den Lieferungen
-        val updatedLieferung = copyTo[Lieferung, Lieferung](
-          lieferung,
-          "zielpreis" -> update.zielpreis,
-          "modifidat" -> meta.timestamp,
-          "modifikator" -> personId
-        )
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](updatedLieferung)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(lieferungMapping.column.zielpreis -> update.zielpreis)
       }
     }
   }
@@ -173,7 +151,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(depotlieferungMapping, id) map { depotlieferung =>
         //map all updatable fields
         val copy = copyFrom(depotlieferung, vertriebsart)
-        stammdatenWriteRepository.updateEntity[Depotlieferung, VertriebsartId](copy)
+        stammdatenWriteRepository.updateEntityFully[Depotlieferung, VertriebsartId](copy)
       }
     }
   }
@@ -183,7 +161,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(postlieferungMapping, id) map { lieferung =>
         //map all updatable fields
         val copy = copyFrom(lieferung, vertriebsart)
-        stammdatenWriteRepository.updateEntity[Postlieferung, VertriebsartId](copy)
+        stammdatenWriteRepository.updateEntityFully[Postlieferung, VertriebsartId](copy)
       }
     }
   }
@@ -193,7 +171,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(heimlieferungMapping, id) map { lieferung =>
         //map all updatable fields
         val copy = copyFrom(lieferung, vertriebsart)
-        stammdatenWriteRepository.updateEntity[Heimlieferung, VertriebsartId](copy)
+        stammdatenWriteRepository.updateEntityFully[Heimlieferung, VertriebsartId](copy)
       }
     }
   }
@@ -218,7 +196,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       val bez = update.bezeichnung.getOrElse(update.ansprechpersonen.head.fullName)
       val copy = copyFrom(kunde, update, "bezeichnung" -> bez, "anzahlPersonen" -> update.ansprechpersonen.length,
         "anzahlPendenzen" -> update.pendenzen.length, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-      stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
+      stammdatenWriteRepository.updateEntityFully[Kunde, KundeId](copy)
     }
   }
 
@@ -231,7 +209,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             logger.debug(s"Update person with at index:$index, data -> $updatePerson")
             val copy = copyFrom(person, updatePerson, "id" -> person.id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
 
-            stammdatenWriteRepository.updateEntity[Person, PersonId](copy)
+            stammdatenWriteRepository.updateEntityFully[Person, PersonId](copy)
           }
         }
     }
@@ -246,7 +224,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             logger.debug(s"Update pendenz with data -> updatePendenz")
             val copy = copyFrom(pendenz, updatePendenz, "id" -> pendenz.id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
 
-            stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
+            stammdatenWriteRepository.updateEntityFully[Pendenz, PendenzId](copy)
           }
         }
     }
@@ -263,32 +241,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         updateAbo match {
           case dlAbo: DepotlieferungAbo =>
             logger.debug(s"Update abo with data -> kundeBez")
-            val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
-              dlAbo,
-              "kunde" -> kundeBez
-            )
-            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](dlAbo.id)(depotlieferungAboMapping.column.kunde -> kundeBez)
           case hlAbo: HeimlieferungAbo =>
             logger.debug(s"Update abo with data -> kundeBez")
-            val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
-              hlAbo,
-              "kunde" -> kundeBez
-            )
-            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](hlAbo.id)(heimlieferungAboMapping.column.kunde -> kundeBez)
           case plAbo: PostlieferungAbo =>
             logger.debug(s"Update abo with data -> kundeBez")
-            val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
-              plAbo,
-              "kunde" -> kundeBez
-            )
-            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](plAbo.id)(postlieferungAboMapping.column.kunde -> kundeBez)
           case zAbo: ZusatzAbo =>
             logger.debug(s"Update abo with data -> kundeBez")
-            val copy = copyTo[ZusatzAbo, ZusatzAbo](
-              zAbo,
-              "kunde" -> kundeBez
-            )
-            stammdatenWriteRepository.updateEntity[ZusatzAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[ZusatzAbo, AboId](zAbo.id)(zusatzAboMapping.column.kunde -> kundeBez)
           case _ =>
         }
       }
@@ -300,7 +262,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(pendenzMapping, id) map { pendenz =>
         //map all updatable fields
         val copy = copyFrom(pendenz, update, "id" -> id, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Pendenz, PendenzId](copy)
+        stammdatenWriteRepository.updateEntityFully[Pendenz, PendenzId](copy)
       }
     }
   }
@@ -312,21 +274,21 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
           if (abo.guthaben == update.guthabenAlt) {
             val copy = abo.copy(guthaben = update.guthabenNeu)
-            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
             adjustGuthabenVorLieferung(id, update.guthabenNeu)
           }
         }
         stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
           if (abo.guthaben == update.guthabenAlt) {
             val copy = abo.copy(guthaben = update.guthabenNeu)
-            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
             adjustGuthabenVorLieferung(id, update.guthabenNeu)
           }
         }
         stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
           if (abo.guthaben == update.guthabenAlt) {
             val copy = abo.copy(guthaben = update.guthabenNeu)
-            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntityFully[PostlieferungAbo, AboId](copy)
             adjustGuthabenVorLieferung(id, update.guthabenNeu)
           }
         }
@@ -336,7 +298,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   private def adjustGuthabenVorLieferung(id: AboId, guthaben: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     stammdatenWriteRepository.getKoerbeNichtAusgeliefertByAbo(id) map { korb =>
-      stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.copy(guthabenVorLieferung = guthaben), korbMapping.column.guthabenVorLieferung)
+      stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(korbMapping.column.guthabenVorLieferung -> guthaben)
     }
   }
 
@@ -344,11 +306,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       update match {
         case u: DepotAuslieferung =>
-          stammdatenWriteRepository.updateEntity[DepotAuslieferung, AuslieferungId](u)
+          stammdatenWriteRepository.updateEntityFully[DepotAuslieferung, AuslieferungId](u)
         case u: TourAuslieferung =>
-          stammdatenWriteRepository.updateEntity[TourAuslieferung, AuslieferungId](u)
+          stammdatenWriteRepository.updateEntityFully[TourAuslieferung, AuslieferungId](u)
         case u: PostAuslieferung =>
-          stammdatenWriteRepository.updateEntity[PostAuslieferung, AuslieferungId](u)
+          stammdatenWriteRepository.updateEntityFully[PostAuslieferung, AuslieferungId](u)
       }
     }
   }
@@ -360,7 +322,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           case abo: DepotlieferungAbo =>
             // wechsel innerhalb selber vertriebart-art
             val copy = abo.copy(vertriebId = va.vertriebId, vertriebsartId = update.vertriebsartIdNeu, depotId = va.depotId, depotName = depot.name)
-            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
           case abo: Abo =>
             // wechsel
             val aboNeu = copyTo[Abo, DepotlieferungAbo](
@@ -385,7 +347,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           case abo: HeimlieferungAbo =>
             // wechsel innerhalb selber vertriebart-art
             val copy = abo.copy(vertriebId = va.vertriebId, vertriebsartId = update.vertriebsartIdNeu, tourId = va.tourId, tourName = tour.name)
-            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
           case abo: Abo =>
             // wechsel
             val aboNeu = copyTo[Abo, HeimlieferungAbo](abo, "vertriebId" -> va.vertriebId, "tourId" -> va.tourId, "tourName" -> tour.name, "vertriebsartId" -> update.vertriebsartIdNeu)
@@ -435,7 +397,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val aktiv = IAbo.calculateAktiv(update.start, update.ende)
         val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
-        stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](copy)
+        stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
 
         modifyKoerbeForAbo(copy, Some(abo))
       }
@@ -448,7 +410,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val aktiv = IAbo.calculateAktiv(update.start, update.ende)
         val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
-        stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](copy)
+        stammdatenWriteRepository.updateEntityFully[PostlieferungAbo, AboId](copy)
 
         modifyKoerbeForAbo(copy, Some(abo))
       }
@@ -461,7 +423,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val aktiv = IAbo.calculateAktiv(update.start, update.ende)
         val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
-        stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](copy)
+        stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
 
         modifyKoerbeForAbo(copy, Some(abo))
       }
@@ -473,7 +435,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(depotMapping, id) map { depot =>
         //map all updatable fields
         val copy = copyFrom(depot, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Depot, DepotId](copy)
+        stammdatenWriteRepository.updateEntityFully[Depot, DepotId](copy)
       }
     }
   }
@@ -481,9 +443,22 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   def updateKundentyp(meta: EventMetadata, id: CustomKundentypId, update: CustomKundentypModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(customKundentypMapping, id) map { kundentyp =>
-        //map all updatable fields
+
+        // rename kundentyp
         val copy = copyFrom(kundentyp, update, "farbCode" -> "", "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[CustomKundentyp, CustomKundentypId](copy)
+        stammdatenWriteRepository.updateEntityFully[CustomKundentyp, CustomKundentypId](copy)
+
+        // update typen in Kunde
+        stammdatenWriteRepository.getKundenByKundentyp(kundentyp.kundentyp) map { kunde =>
+          val newKundentypen = kunde.typen - kundentyp.kundentyp + update.kundentyp
+          val newKunde = kunde.copy(
+            typen = newKundentypen,
+            modifidat = meta.timestamp,
+            modifikator = personId
+          )
+
+          stammdatenWriteRepository.updateEntityFully[Kunde, KundeId](newKunde)
+        }
       }
     }
   }
@@ -493,7 +468,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(produzentMapping, id) map { produzent =>
         //map all updatable fields
         val copy = copyFrom(produzent, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Produzent, ProduzentId](copy)
+        stammdatenWriteRepository.updateEntityFully[Produzent, ProduzentId](copy)
       }
     }
   }
@@ -503,7 +478,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(produktMapping, id) map { produkt =>
         //map all updatable fields
         val copy = copyFrom(produkt, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Produkt, ProduktId](copy)
+        stammdatenWriteRepository.updateEntityFully[Produkt, ProduktId](copy)
 
         //remove all ProduktProduzent-Mappings
         stammdatenWriteRepository.getProduktProduzenten(id) map { produktProduzent =>
@@ -556,12 +531,12 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
               "ersteller" -> personId,
               "modifidat" -> meta.timestamp,
               "modifikator" -> personId)
-            stammdatenWriteRepository.updateEntity[Produkt, ProduktId](copyProdukt)
+            stammdatenWriteRepository.updateEntityFully[Produkt, ProduktId](copyProdukt)
         }
 
         //map all updatable fields
         val copy = copyFrom(produktekategorie, update)
-        stammdatenWriteRepository.updateEntity[Produktekategorie, ProduktekategorieId](copy)
+        stammdatenWriteRepository.updateEntityFully[Produktekategorie, ProduktekategorieId](copy)
       }
     }
   }
@@ -569,7 +544,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   private def updateTourlieferungen(meta: EventMetadata, tourId: TourId, update: TourModify)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId = meta.originator) = {
     update.tourlieferungen.map { tourLieferung =>
       val copy = tourLieferung.copy(modifidat = meta.timestamp, modifikator = meta.originator)
-      stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](copy)
+      stammdatenWriteRepository.updateEntityFully[Tourlieferung, AboId](copy)
     }
   }
 
@@ -580,12 +555,12 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           case (korbModify, index) =>
             stammdatenWriteRepository.getById(korbMapping, korbModify.id) map { korb =>
               val copy = korb.copy(sort = Some(index), modifidat = meta.timestamp, modifikator = meta.originator)
-              stammdatenWriteRepository.updateEntity[Korb, KorbId](copy)
+              stammdatenWriteRepository.updateEntityFully[Korb, KorbId](copy)
             }
         }
 
         // update modifydat
-        stammdatenWriteRepository.updateEntity[TourAuslieferung, AuslieferungId](tourAuslieferung)
+        stammdatenWriteRepository.updateEntityFully[TourAuslieferung, AuslieferungId](tourAuslieferung)
       }
     }
   }
@@ -595,7 +570,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(tourMapping, id) map { tour =>
         //map all updatable fields
         val copy = copyFrom(tour, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Tour, TourId](copy)
+        stammdatenWriteRepository.updateEntityFully[Tour, TourId](copy)
 
         updateTourlieferungen(meta, id, update)
       }
@@ -607,7 +582,17 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(projektMapping, id) map { projekt =>
         //map all updatable fields
         val copy = copyFrom(projekt, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Projekt, ProjektId](copy)
+        stammdatenWriteRepository.updateEntityFully[Projekt, ProjektId](copy)
+      }
+    }
+  }
+
+  def updateKontoDaten(meta: EventMetadata, id: KontoDatenId, update: KontoDatenModify)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.getById(kontoDatenMapping, id) map { kontoDaten =>
+        //map all updatable fields
+        val copy = copyFrom(kontoDaten, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
+        stammdatenWriteRepository.updateEntityFully[KontoDaten, KontoDatenId](copy)
       }
     }
   }
@@ -617,7 +602,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
         //map all updatable fields
         val copy = copyFrom(lieferung, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy)
+        stammdatenWriteRepository.updateEntityFully[Lieferung, LieferungId](copy)
       }
     }
   }
@@ -627,7 +612,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(lieferplanungMapping, id) map { lieferplanung =>
         //map all updatable fields
         val copy = copyFrom(lieferplanung, update, "modifidat" -> meta.timestamp, "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](copy)
+        stammdatenWriteRepository.updateEntityFully[Lieferplanung, LieferplanungId](copy)
       }
     }
   }
@@ -645,7 +630,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         val copy = copyFrom(vorlage, update,
           "modifidat" -> meta.timestamp,
           "modifikator" -> personId)
-        stammdatenWriteRepository.updateEntity[ProjektVorlage, ProjektVorlageId](copy)
+        stammdatenWriteRepository.updateEntityFully[ProjektVorlage, ProjektVorlageId](copy)
       }
     }
   }
@@ -654,7 +639,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(projektVorlageMapping, vorlageId) map { vorlage =>
         val copy = vorlage.copy(fileStoreId = Some(update.fileStoreId), modifidat = meta.timestamp, modifikator = personId)
-        stammdatenWriteRepository.updateEntity[ProjektVorlage, ProjektVorlageId](copy)
+        stammdatenWriteRepository.updateEntityFully[ProjektVorlage, ProjektVorlageId](copy)
       }
     }
   }

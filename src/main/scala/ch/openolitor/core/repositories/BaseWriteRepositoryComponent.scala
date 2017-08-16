@@ -27,14 +27,5 @@ import ch.openolitor.core.models.BaseId
 import scalikejdbc.DBSession
 import ch.openolitor.core.models.PersonId
 
-trait BaseWriteRepositoryComponent {
-  def modifyEntityWithRepository[E <: BaseEntity[I], I <: BaseId](repository: BaseWriteRepository)(
-    id: I, mod: E => E
-  )(implicit session: DBSession, publisher: EventPublisher, syntax: BaseEntitySQLSyntaxSupport[E], binder: SqlBinder[I], personId: PersonId): Option[E] = {
-
-    repository.getById(syntax, id) flatMap { result =>
-      val copy = mod(result)
-      repository.updateEntity[E, I](copy)
-    }
-  }
+trait BaseWriteRepositoryComponent extends BaseUpdateRepositoryComponent {
 }

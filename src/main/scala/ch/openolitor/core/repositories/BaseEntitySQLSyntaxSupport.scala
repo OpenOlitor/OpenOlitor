@@ -63,9 +63,15 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
    */
   def parameterMappings(entity: E): Seq[Any]
 
-  def defaultColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
+  def defaultColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] =
+    defaultInsertColumns(entity) ++ defaultUpdateColumns(entity)
+
+  def defaultInsertColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
     column.erstelldat -> parameter(entity.erstelldat),
-    column.ersteller -> parameter(entity.ersteller),
+    column.ersteller -> parameter(entity.ersteller)
+  )
+
+  def defaultUpdateColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
     column.modifidat -> parameter(entity.modifidat),
     column.modifikator -> parameter(entity.modifikator)
   )
@@ -73,6 +79,6 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
   /**
    * Declare update parameters for this entity used on update. Is by default an empty set
    */
-  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = defaultColumns(entity)
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = defaultUpdateColumns(entity)
 }
 

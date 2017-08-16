@@ -37,6 +37,7 @@ import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.util.parsing.FilterExpr
 import org.joda.time.LocalDate
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
 
@@ -65,6 +66,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   lazy val produktekategorie = produktekategorieMapping.syntax("produktekategorie")
   lazy val produzent = produzentMapping.syntax("produzent")
   lazy val projekt = projektMapping.syntax("projekt")
+  lazy val kontoDaten = kontoDatenMapping.syntax("kontoDaten")
   lazy val produktProduzent = produktProduzentMapping.syntax("produktProduzent")
   lazy val produktProduktekategorie = produktProduktekategorieMapping.syntax("produktProduktekategorie")
   lazy val abwesenheit = abwesenheitMapping.syntax("abwesenheit")
@@ -95,6 +97,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(kundeMapping as kunde)
         .orderBy(kunde.bezeichnung)
     }.map(kundeMapping(kunde)).list
+  }
+
+  protected def getKundenByKundentypQuery(kundentyp: KundentypId) = {
+    // search for kundentyp in typen spalte von Kunde (Komma separierte liste von Kundentypen)
+    val kundentypRegex: String = SQLSyntax.createUnsafely(s"""([ ,]|^)${kundentyp.id}([ ,]|$$)+""")
+    sql"""
+      SELECT ${kunde.result.*} FROM ${kundeMapping as kunde}
+      WHERE typen REGEXP ${kundentypRegex}
+    """.map(kundeMapping(kunde)).list
   }
 
   protected def getKundenUebersichtQuery(filter: Option[FilterExpr]) = {
@@ -830,6 +841,13 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(projektMapping as projekt)
     }.map(projektMapping(projekt)).single
+  }
+
+  protected def getKontoDatenQuery = {
+    withSQL {
+      select
+        .from(kontoDatenMapping as kontoDaten)
+    }.map(kontoDatenMapping(kontoDaten)).single
   }
 
   protected def getProduktProduzentenQuery(id: ProduktId) = {
@@ -1806,4 +1824,5 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         copyTo[Lieferplanung, LieferplanungOpenDetail](lieferplanung, "lieferungen" -> lieferungenDetails)
       }).list
   }
+
 }

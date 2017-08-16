@@ -20,7 +20,7 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts.recalculations
+package ch.openolitor.core.db.evolution.scripts.v1
 
 import ch.openolitor.core.db.evolution.Script
 import com.typesafe.scalalogging.LazyLogging
@@ -29,34 +29,51 @@ import ch.openolitor.core.SystemConfig
 import scalikejdbc._
 import scala.util.Try
 import scala.util.Success
-import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
-import ch.openolitor.core.NoPublishEventStream
-import ch.openolitor.stammdaten.models.Abwesenheit
-import scala.collection.immutable.TreeMap
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.Boot
+import ch.openolitor.util.ConfigUtil._
+import ch.openolitor.core.models.PersonId
+import org.joda.time.DateTime
 import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
+import ch.openolitor.core.models.PersonId
 
-object RecalculateAnzahlAbwesenheitenLieferung {
-  val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
-
+object OO281_DBScripts extends DefaultDBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      // recalculate abwesenheiten
+      logger.debug(s"Create table KontoDaten")
 
-      val abw = abwesenheitMapping.syntax("abw")
-      implicit val personId = Boot.systemPersonId
-
-      getProjekt map { projekt =>
-        withSQL {
-          select.from(abwesenheitMapping as abw)
-        }.map(abwesenheitMapping(abw)).list.apply().groupBy(_.lieferungId) map {
-          case (lieferungId, abwesenheiten) =>
-            updateEntity[Lieferung, LieferungId](lieferungId)(lieferungMapping.column.anzahlAbwesenheiten -> abwesenheiten.size)
-        }
-      }
+      sql"""create table ${kontoDatenMapping.table} (
+        id BIGINT not null,
+        iban VARCHAR(34),
+        referenz_nummer_prefix varchar(27),
+        teilnehmer_nummer varchar(9),
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
 
       Success(true)
     }
   }
+
+  val StammdatenInitialData = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      lazy val config = sysConfig.mandantConfiguration.config
+      lazy val iban = config.getStringOption(s"buchhaltung.iban")
+      lazy val referenznummerPrefix = config.getStringOption(s"buchhaltung.referenznummer-prefix")
+      lazy val teilnehmernummer = config.getStringOption(s"buchhaltung.teilnehmernummer")
+
+      logger.debug(s"Initial data for KontoDaten")
+
+      val pid = sysConfig.mandantConfiguration.dbSeeds.get(classOf[PersonId]).getOrElse(1L)
+      implicit val personId = PersonId(pid)
+
+      sql"""insert into ${kontoDatenMapping.table}
+        (id, iban, referenz_nummer_prefix, teilnehmer_nummer, erstelldat, ersteller, modifidat, modifikator) values (1, ${iban}, ${referenznummerPrefix}, ${teilnehmernummer}, ${personId}, ${DateTime.now}, ${personId}, ${DateTime.now})""".execute.apply()
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(StammdatenScripts, StammdatenInitialData)
+
 }

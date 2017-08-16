@@ -20,43 +20,55 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts.recalculations
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.Script
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.StammdatenDBMappings
+import scala.util.{ Try, Success }
 import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.db.evolution.Script
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import com.typesafe.scalalogging.LazyLogging
 import scalikejdbc._
-import scala.util.Try
-import scala.util.Success
-import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
-import ch.openolitor.core.NoPublishEventStream
-import ch.openolitor.stammdaten.models.Abwesenheit
-import scala.collection.immutable.TreeMap
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.Boot
-import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object RecalculateAnzahlAbwesenheitenLieferung {
-  val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
+object OO291_OO396_DBScripts {
+  import scalikejdbc._
+  GlobalSettings.loggingSQLAndTime = LoggingSQLAndTimeSettings(
+    enabled = true,
+    singleLineMode = false,
+    printUnprocessedStackTrace = false,
+    stackTraceDepth = 15,
+    logLevel = 'debug,
+    warningEnabled = false,
+    warningThresholdMillis = 3000L,
+    warningLogLevel = 'warn
+  )
 
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      // recalculate abwesenheiten
 
-      val abw = abwesenheitMapping.syntax("abw")
-      implicit val personId = Boot.systemPersonId
+      // insert Kundentypen welche bisher fix im Code waren
+      sql"""INSERT INTO Kundentyp (id, kundentyp, anzahl_verknuepfungen, erstelldat, ersteller, modifidat, modifikator) VALUES
+            (10, 'Vereinsmitglied', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100),
+            (11, 'Goenner', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100),
+            (12, 'Genossenschafterin', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100)""".execute.apply()
 
-      getProjekt map { projekt =>
-        withSQL {
-          select.from(abwesenheitMapping as abw)
-        }.map(abwesenheitMapping(abw)).list.apply().groupBy(_.lieferungId) map {
-          case (lieferungId, abwesenheiten) =>
-            updateEntity[Lieferung, LieferungId](lieferungId)(lieferungMapping.column.anzahlAbwesenheiten -> abwesenheiten.size)
+      // update der anzahl_verknüpfungen pro Kundentyp
+      val kundentypen: Seq[String] = sql"SELECT kundentyp from Kundentyp".map(rs => rs.string("kundentyp")).list.apply()
+
+      val counts: Seq[Int] = kundentypen.map { kundentyp =>
+        val kundentypUnsafe = SQLSyntax.createUnsafely(s"%$kundentyp%")
+        sql"SELECT COUNT(*) c FROM Kunde WHERE typen LIKE '$kundentypUnsafe'".map(rs => rs.int("c")).single.apply().getOrElse(0)
+      }
+
+      (kundentypen zip counts).foreach {
+        case (typ, count) => {
+          val kundentypUnsafe = SQLSyntax.createUnsafely(s"'$typ'")
+          sql"UPDATE Kundentyp SET anzahl_verknuepfungen = ${count} WHERE kundentyp = $kundentypUnsafe".update.apply()
         }
       }
 
       Success(true)
     }
   }
+
+  val scripts = Seq(StammdatenScripts)
 }

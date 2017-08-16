@@ -35,10 +35,34 @@ import ch.openolitor.core.scalax._
 import scala.concurrent.Future
 import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
 import ch.openolitor.core.db.OOAsyncDB._
+import scala.reflect.runtime.{ universe => ru }
 
 trait BaseWriteRepository extends CrudRepository
     with BaseReadRepositorySync
     with BaseInsertRepository
     with BaseUpdateRepository
     with BaseDeleteRepository {
+
+  /**
+   * Updates the given entity with all its properties.
+   * Usually, updating all fields is not required and should be avoided.
+   * Use with care.
+   */
+  def updateEntityFully[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+
+    syntaxSupport.updateParameters(entity) map {
+      case (s, v) =>
+        (s, SqlValue(v))
+    } match {
+      case head :: tail =>
+        updateEntity[E, I](entity.id)(head, tail: _*)
+      case _ =>
+        None
+    }
+  }
 }

@@ -82,7 +82,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     .to[V2](in => fixToOptionLocalDate(fixToLocalDate(in, 'start), 'ende)))
 
   implicit val customKundetypCreatePersister = persister[CustomKundentypCreate]("custom-kundetyp-create")
-  implicit val customKundetypModifyPersister = persister[CustomKundentypModify]("custom-kundetyp-modify")
+  implicit val customKundetypModifyV1Persister = persister[CustomKundentypModifyV1]("custom-kundetyp-modify")
+  implicit val customKundetypModifyPersister = persister[CustomKundentypModify]("custom-kundetyp-modify-v2")
   implicit val customKundetypIdPersister = persister[CustomKundentypId]("custom-kundetyp-id")
 
   implicit val pendenzModifyPersister = persister[PendenzModify]("pendenz-modify")
@@ -145,6 +146,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val loginDeaktiviertEventPersister = persister[LoginDeaktiviertEvent, V2]("login-deaktiviert", V1toV2metaDataMigration)
   implicit val loginAktiviertEventPersister = persister[LoginAktiviertEvent, V2]("login-aktiviert", V1toV2metaDataMigration)
 
+  implicit val kontoDatenModifyPersister = persister[KontoDatenModify]("konto-daten-modify")
+  implicit val kontoDatenIdPersister = persister[KontoDatenId]("konto-daten-id")
+
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
   implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
   implicit val depotAuslieferungPersister = persister[DepotAuslieferung]("depot-auslieferung")
@@ -189,6 +193,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     aboGuthabenModifyV2Persister,
     aboVertriebsartModifyPersister,
     customKundetypCreatePersister,
+    customKundetypModifyV1Persister,
     customKundetypModifyPersister,
     customKundetypIdPersister,
     pendenzModifyPersister,
@@ -235,6 +240,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     vorlageIdPersister,
     einladungIdPersister,
     einladungCreatePersister,
+    kontoDatenIdPersister,
+    kontoDatenModifyPersister,
 
     //event persisters
     lieferplanungAbschliessenEventPersister,

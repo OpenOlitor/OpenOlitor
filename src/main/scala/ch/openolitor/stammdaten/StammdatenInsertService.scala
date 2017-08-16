@@ -108,6 +108,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createTour(meta, id, tour)
     case EntityInsertedEvent(meta, id: ProjektId, projekt: ProjektModify) =>
       createProjekt(meta, id, projekt)
+    case EntityInsertedEvent(meta, id: KontoDatenId, kontoDaten: KontoDatenModify) =>
+      createKontoDaten(meta, id, kontoDaten)
     case EntityInsertedEvent(meta, id: AbwesenheitId, abw: AbwesenheitCreate) =>
       createAbwesenheit(meta, id, abw)
     case EntityInsertedEvent(meta, id: LieferplanungId, lieferplanungCreateData: LieferplanungCreate) =>
@@ -536,6 +538,20 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
+  def createKontoDaten(meta: EventMetadata, id: KontoDatenId, create: KontoDatenModify)(implicit personId: PersonId = meta.originator) = {
+    val kontoDaten = copyTo[KontoDatenModify, KontoDaten](
+      create,
+      "id" -> id,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator
+    )
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[KontoDaten, KontoDatenId](kontoDaten)
+    }
+  }
+
   def createAbwesenheit(meta: EventMetadata, id: AbwesenheitId, create: AbwesenheitCreate)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.countAbwesend(create.lieferungId, create.aboId) match {
@@ -604,19 +620,28 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           val adjustedLieferung = createKoerbe(updatedLieferung)
 
           //update Lieferung
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
+            lieferungMapping.column.lieferplanungId -> adjustedLieferung.lieferplanungId,
+            lieferungMapping.column.status -> adjustedLieferung.status,
+            lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
+            lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
+            lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
+            lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
+            lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief
+          )
 
           (dateFormat.print(adjustedLieferung.datum), adjustedLieferung.abotypBeschrieb)
         }
+
         val abotypDates = (abotypDepotTour.groupBy(_._1).mapValues(_ map { _._2 }) map {
           case (datum, abotypBeschrieb) =>
             datum + ": " + abotypBeschrieb.mkString(", ")
         }).mkString("; ")
 
-        val updatedObj = lieferplanung.copy(abotypDepotTour = abotypDates)
-
         //update lieferplanung
-        stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](updatedObj)
+        stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.id)(
+          lieferplanungMapping.column.abotypDepotTour -> abotypDates
+        )
       }
     }
 
@@ -676,7 +701,15 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           val adjustedLieferung = createKoerbe(updatedLieferung)
 
           //update Lieferung
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung)
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
+            lieferungMapping.column.lieferplanungId -> adjustedLieferung.lieferplanungId,
+            lieferungMapping.column.status -> adjustedLieferung.status,
+            lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
+            lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
+            lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
+            lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
+            lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief
+          )
         }
       }
     }

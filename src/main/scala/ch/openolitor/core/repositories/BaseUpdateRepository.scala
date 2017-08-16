@@ -37,33 +37,87 @@ import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
 import ch.openolitor.core.db.OOAsyncDB._
 
 trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository {
-  /*
-   * @param updateFields restrict the updated fields to this list
+  /**
+   * Modify the entity with the given id according to the provided field/value list
+   * if the predicate p succeeds for the entity fetched by the given id.
    */
-  def updateEntity[E <: BaseEntity[I], I <: BaseId](entity: E, updateFields: SQLSyntax*)(implicit
+  def updateEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
     binder: SqlBinder[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
-    getById(syntaxSupport, entity.id).map { orig =>
-      val alias = syntaxSupport.syntax("x")
-      val id = alias.id
-      val updateParams = updateFields.toList match {
-        case Nil => syntaxSupport.updateParameters(entity)
-        case specifiedFields => (syntaxSupport.updateParameters(entity) filter (f => specifiedFields.contains(f._1))) ++ syntaxSupport.defaultColumns(entity)
+    modifyEntityIf[E, I](p)(id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
+  }
+
+  /**
+   * Modify the entity with the given id according to the provided field/value list.
+   */
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+    modifyEntity[E, I](id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
+  }
+
+  /**
+   * Modify the entity with the given id according to the given updateFunction.
+   * The updateFunction is a Map of the form SQLSyntax -> SqlValue. E.g.:
+   * Map(property.column.status -> value)
+   */
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+    modifyEntityIf[E, I](_ => true)(id)(updateFunction)
+  }
+
+  /**
+   * Modify the entity with the given id according to the given updateFunction.
+   * The predicate will be evaluated against the entity fetched by the given id.
+   * The updateFunction is a Map of the form SQLSyntax -> SqlValue. E.g.:
+   * Map(property.column.status -> value)
+   */
+  def modifyEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
+    session: DBSession,
+    syntaxSupport: BaseEntitySQLSyntaxSupport[E],
+    binder: SqlBinder[I],
+    user: PersonId,
+    eventPublisher: EventPublisher): Option[E] = {
+    getById(syntaxSupport, id) map { orig =>
+      if (p(orig)) {
+        val alias = syntaxSupport.syntax("x")
+        val idAlias = alias.id
+
+        val updateFields = updateFunction(orig) map {
+          case (sql, v) => (sql, v.value)
+        }
+
+        val allowedFields = syntaxSupport.updateParameters(orig) map (_._1)
+
+        val defaultValues = Map(syntaxSupport.column.modifidat -> parameter(DateTime.now), syntaxSupport.column.modifikator -> parameter(user))
+
+        // filter with allowed fields
+        // if there are no modification fields in the passed updateFields default values are used
+        val updateParams = (defaultValues ++ updateFields.filterKeys(allowedFields.contains)).toSeq
+
+        logger.debug(s"update entity:${id} with values:$updateParams")
+
+        withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(idAlias, parameter(id))).update.apply()
+
+        //publish event to stream
+        val result = getById(syntaxSupport, id).get
+        eventPublisher.registerPublish(EntityModified(user, result, orig))
+        Some(result)
+      } else {
+        None
       }
-
-      logger.debug(s"update entity:${entity.id} with values:$updateParams")
-
-      withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(id, parameter(entity.id))).update.apply()
-
-      //publish event to stream
-      eventPublisher.registerPublish(EntityModified(user, entity, orig))
-
-      entity
-    } orElse {
-      logger.debug(s"Entity with id:${entity.id} not found, ignore update")
+    } getOrElse {
+      logger.debug(s"Entity with id:${id} not found, ignore update")
       None
     }
   }

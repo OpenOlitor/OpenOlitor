@@ -63,6 +63,7 @@ trait BuchhaltungWriteRepositoryImpl extends BuchhaltungReadRepositorySyncImpl
   override def cleanupDatabase(implicit cpContext: ConnectionPoolContext) = {
     DB autoCommit { implicit session =>
       sql"truncate table ${rechnungMapping.table}".execute.apply()
+      sql"truncate table ${rechnungsPositionMapping.table}".execute.apply()
       sql"truncate table ${zahlungsImportMapping.table}".execute.apply()
       sql"truncate table ${zahlungsEingangMapping.table}".execute.apply()
     }
