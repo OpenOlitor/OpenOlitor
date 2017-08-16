@@ -118,12 +118,16 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
     override def updateParameters(entity: RechnungsPosition) = {
       super.updateParameters(entity) ++ Seq(
         column.rechnungId -> parameter(entity.rechnungId),
+        column.parentRechnungsPositionId -> parameter(entity.parentRechnungsPositionId),
         column.aboId -> parameter(entity.aboId),
+        column.kundeId -> parameter(entity.kundeId),
         column.betrag -> parameter(entity.betrag),
         column.waehrung -> parameter(entity.waehrung),
         column.anzahlLieferungen -> parameter(entity.anzahlLieferungen),
         column.titel -> parameter(entity.titel),
-        column.status -> parameter(entity.status)
+        column.status -> parameter(entity.status),
+        column.typ -> parameter(entity.typ),
+        column.sorting -> parameter(entity.sorting)
       )
     }
   }

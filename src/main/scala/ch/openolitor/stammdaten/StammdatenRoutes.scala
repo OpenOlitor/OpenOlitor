@@ -327,17 +327,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     path("abos" ~ exportFormatPath.?) { exportFormat =>
       get(list(stammdatenReadRepository.getAbos, exportFormat))
     } ~
-      path("abos" / "aktionen" / "anzahllieferungenrechnungen") {
+      path("abos" / "aktionen" / "anzahllieferungenrechnungspositionen") {
         post {
-          entity(as[AboRechnungCreate]) { rechnungCreate =>
-            createAnzahlLieferungenRechnungen(rechnungCreate)
+          entity(as[AboRechnungsPositionBisAnzahlLieferungenCreate]) { rechnungCreate =>
+            createAnzahlLieferungenRechnungsPositionen(rechnungCreate)
           }
         }
       } ~
-      path("abos" / "aktionen" / "bisguthabenrechnungen") {
+      path("abos" / "aktionen" / "bisguthabenrechnungspositionen") {
         post {
-          entity(as[AboRechnungCreate]) { rechnungCreate =>
-            createBisGuthabenRechnungen(rechnungCreate)
+          entity(as[AboRechnungsPositionBisGuthabenCreate]) { rechnungCreate =>
+            createBisGuthabenRechnungsPositionen(rechnungCreate)
           }
         }
       }
@@ -694,8 +694,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
-  def createAnzahlLieferungenRechnungen(rechnungCreate: AboRechnungCreate)(implicit idPersister: Persister[AboId, _], subject: Subject) = {
-    onSuccess((entityStore ? StammdatenCommandHandler.CreateAnzahlLieferungenRechnungenCommand(subject.personId, rechnungCreate))) {
+  def createAnzahlLieferungenRechnungsPositionen(rechnungCreate: AboRechnungsPositionBisAnzahlLieferungenCreate)(implicit idPersister: Persister[AboId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.CreateAnzahlLieferungenRechnungsPositionenCommand(subject.personId, rechnungCreate))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen AboIds erstellt werden.")
       case _ =>
@@ -703,8 +703,8 @@ trait StammdatenRoutes extends HttpService with ActorReferences
     }
   }
 
-  def createBisGuthabenRechnungen(rechnungCreate: AboRechnungCreate)(implicit idPersister: Persister[AboId, _], subject: Subject) = {
-    onSuccess((entityStore ? StammdatenCommandHandler.CreateBisGuthabenRechnungenCommand(subject.personId, rechnungCreate))) {
+  def createBisGuthabenRechnungsPositionen(rechnungCreate: AboRechnungsPositionBisGuthabenCreate)(implicit idPersister: Persister[AboId, _], subject: Subject) = {
+    onSuccess((entityStore ? StammdatenCommandHandler.CreateBisGuthabenRechnungsPositionenCommand(subject.personId, rechnungCreate))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen AboIds erstellt werden.")
       case _ =>

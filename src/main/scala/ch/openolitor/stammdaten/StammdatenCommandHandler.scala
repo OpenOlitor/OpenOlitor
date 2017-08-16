@@ -22,6 +22,7 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
+import ch.openolitor.buchhaltung.models.{ RechnungsPositionStatus, RechnungsPositionTyp }
 import ch.openolitor.core.domain._
 import ch.openolitor.core.models._
 import scala.util._
@@ -36,6 +37,8 @@ import ch.openolitor.core.Macros._
 import com.fasterxml.jackson.databind.JsonSerializable
 import ch.openolitor.buchhaltung.models.RechnungCreate
 import ch.openolitor.buchhaltung.models.RechnungId
+import ch.openolitor.buchhaltung.models.RechnungsPositionCreate
+import ch.openolitor.buchhaltung.models.RechnungsPositionId
 import org.joda.time.DateTime
 import java.util.UUID
 import scalikejdbc.DBSession
@@ -49,8 +52,8 @@ object StammdatenCommandHandler {
   case class SammelbestellungAnProduzentenVersendenCommand(originator: PersonId, id: SammelbestellungId) extends UserCommand
   case class PasswortWechselCommand(originator: PersonId, personId: PersonId, passwort: Array[Char], einladung: Option[EinladungId]) extends UserCommand
   case class AuslieferungenAlsAusgeliefertMarkierenCommand(originator: PersonId, ids: Seq[AuslieferungId]) extends UserCommand
-  case class CreateAnzahlLieferungenRechnungenCommand(originator: PersonId, aboRechnungCreate: AboRechnungCreate) extends UserCommand
-  case class CreateBisGuthabenRechnungenCommand(originator: PersonId, aboRechnungCreate: AboRechnungCreate) extends UserCommand
+  case class CreateAnzahlLieferungenRechnungsPositionenCommand(originator: PersonId, aboRechnungCreate: AboRechnungsPositionBisAnzahlLieferungenCreate) extends UserCommand
+  case class CreateBisGuthabenRechnungsPositionenCommand(originator: PersonId, aboRechnungCreate: AboRechnungsPositionBisGuthabenCreate) extends UserCommand
   case class LoginDeaktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class LoginAktivierenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
   case class EinladungSendenCommand(originator: PersonId, kundeId: KundeId, personId: PersonId) extends UserCommand
@@ -253,11 +256,11 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       }
 
-    case CreateAnzahlLieferungenRechnungenCommand(originator, aboRechnungCreate) => idFactory => meta =>
-      createAboRechnungen(idFactory, meta, aboRechnungCreate)
+    case CreateAnzahlLieferungenRechnungsPositionenCommand(originator, aboRechnungCreate) => idFactory => meta =>
+      createAboRechnungsPositionenAnzahlLieferungen(idFactory, meta, aboRechnungCreate)
 
-    case CreateBisGuthabenRechnungenCommand(originator, aboRechnungCreate) => idFactory => meta =>
-      createAboRechnungen(idFactory, meta, aboRechnungCreate)
+    case CreateBisGuthabenRechnungsPositionenCommand(originator, aboRechnungCreate) => idFactory => meta =>
+      createAboRechnungsPositionenBisGuthaben(idFactory, meta, aboRechnungCreate)
 
     case PasswortWechselCommand(originator, personId, pwd, einladungId) => idFactory => meta =>
       Success(Seq(DefaultResultingEvent(factory => PasswortGewechseltEvent(factory.newMetadata(), personId, pwd, einladungId))))
@@ -438,55 +441,91 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }
   }
 
-  def createAboRechnungen(idFactory: IdFactory, meta: EventTransactionMetadata, aboRechnungCreate: AboRechnungCreate) = {
+  def createAboRechnungsPositionenAnzahlLieferungen(idFactory: IdFactory, meta: EventTransactionMetadata, aboRechnungCreate: AboRechnungsPositionBisAnzahlLieferungenCreate) = {
     DB readOnly { implicit session =>
-      val (events, failures) = aboRechnungCreate.ids map { id =>
-        stammdatenReadRepository.getAboDetail(id) flatMap { aboDetail =>
+      val (events, failures) = aboRechnungCreate.ids map { aboId =>
+        stammdatenReadRepository.getAboDetail(aboId) flatMap { aboDetail =>
           stammdatenReadRepository.getById(abotypMapping, aboDetail.abotypId) flatMap { abotyp =>
             stammdatenReadRepository.getById(kundeMapping, aboDetail.kundeId) map { kunde =>
 
               // TODO check preisEinheit
               if (abotyp.preiseinheit != ProLieferung) {
-                Failure(new InvalidStateException(s"Für den Abotyp dieses Abos ($id) kann keine Guthabenrechnung erstellt werden"))
+                Failure(new InvalidStateException(s"Für den Abotyp dieses Abos ($aboId) kann keine Guthabenrechngsposition erstellt werden"))
               } else {
                 // has to be refactored as soon as more modes are available
-                val anzahlLieferungen = aboRechnungCreate.anzahlLieferungen getOrElse {
-                  math.max(((aboRechnungCreate.bisGuthaben getOrElse aboDetail.guthaben) - aboDetail.guthaben), 0)
-                }
-
+                val anzahlLieferungen = aboRechnungCreate.anzahlLieferungen
                 if (anzahlLieferungen > 0) {
-                  val betrag = aboRechnungCreate.betrag getOrElse abotyp.preis * anzahlLieferungen
+                  val betrag = aboRechnungCreate.betrag.getOrElse(abotyp.preis * anzahlLieferungen)
 
-                  val rechnung = RechnungCreate(
+                  val rechnungsPosition = RechnungsPositionCreate(
                     aboDetail.kundeId,
-                    id,
+                    Some(aboId),
                     aboRechnungCreate.titel,
-                    anzahlLieferungen,
-                    aboRechnungCreate.waehrung,
+                    Some(anzahlLieferungen),
                     betrag,
-                    None,
-                    aboRechnungCreate.rechnungsDatum,
-                    aboRechnungCreate.faelligkeitsDatum,
-                    None,
-                    kunde.strasseLieferung getOrElse kunde.strasse,
-                    kunde.hausNummerLieferung orElse kunde.hausNummer,
-                    kunde.adressZusatzLieferung orElse kunde.adressZusatz,
-                    kunde.plzLieferung getOrElse kunde.plz,
-                    kunde.ortLieferung getOrElse kunde.ort
+                    aboRechnungCreate.waehrung,
+                    RechnungsPositionStatus.Offen,
+                    RechnungsPositionTyp.Abo
                   )
 
-                  Success(insertEntityEvent(idFactory, meta, rechnung, RechnungId.apply))
+                  Success(insertEntityEvent(idFactory, meta, rechnungsPosition, RechnungsPositionId.apply))
                 } else {
-                  Failure(new InvalidStateException(s"Für das Abo mit der Id $id wurde keine Rechnung erstellt. Anzahl Lieferungen 0"))
+                  Failure(new InvalidStateException(s"Für das Abo mit der Id $aboId wurde keine RechnungsPositionen erstellt. Anzahl Lieferungen 0"))
                 }
               }
             }
           }
-        } getOrElse (Failure(new InvalidStateException(s"Für das Abo mit der Id $id konnte keine Rechnung erstellt werden.")))
+        } getOrElse (Failure(new InvalidStateException(s"Für das Abo mit der Id $aboId konnte keine RechnunsPositioneng erstellt werden.")))
       } partition (_.isSuccess)
 
       if (events.isEmpty) {
-        Failure(new InvalidStateException(s"Keine der Rechnungen konnte erstellt werden"))
+        Failure(new InvalidStateException(s"Keine der RechnungsPositionen konnte erstellt werden"))
+      } else {
+        Success(events map (_.get))
+      }
+    }
+  }
+
+  def createAboRechnungsPositionenBisGuthaben(idFactory: IdFactory, meta: EventTransactionMetadata, aboRechnungCreate: AboRechnungsPositionBisGuthabenCreate) = {
+    DB readOnly { implicit session =>
+      val (events, failures) = aboRechnungCreate.ids map { aboId =>
+        stammdatenReadRepository.getAboDetail(aboId) flatMap { aboDetail =>
+          stammdatenReadRepository.getById(abotypMapping, aboDetail.abotypId) flatMap { abotyp =>
+            stammdatenReadRepository.getById(kundeMapping, aboDetail.kundeId) map { kunde =>
+
+              // TODO check preisEinheit
+              if (abotyp.preiseinheit != ProLieferung) {
+                Failure(new InvalidStateException(s"Für den Abotyp dieses Abos ($aboId) kann keine Guthabenrechngsposition erstellt werden"))
+              } else {
+                // has to be refactored as soon as more modes are available
+                val anzahlLieferungen = math.max((aboRechnungCreate.bisGuthaben - aboDetail.guthaben), 0)
+
+                if (anzahlLieferungen > 0) {
+                  val betrag = abotyp.preis * anzahlLieferungen
+
+                  val rechnungsPosition = RechnungsPositionCreate(
+                    aboDetail.kundeId,
+                    Some(aboId),
+                    aboRechnungCreate.titel,
+                    Some(anzahlLieferungen),
+                    betrag,
+                    aboRechnungCreate.waehrung,
+                    RechnungsPositionStatus.Offen,
+                    RechnungsPositionTyp.Abo
+                  )
+
+                  Success(insertEntityEvent(idFactory, meta, rechnungsPosition, RechnungsPositionId.apply))
+                } else {
+                  Failure(new InvalidStateException(s"Für das Abo mit der Id $aboId wurde keine Rechnungsposition erstellt. Anzahl Lieferungen 0"))
+                }
+              }
+            }
+          }
+        } getOrElse (Failure(new InvalidStateException(s"Für das Abo mit der Id $aboId konnte keine Rechnungsposition erstellt werden.")))
+      } partition (_.isSuccess)
+
+      if (events.isEmpty) {
+        Failure(new InvalidStateException(s"Keine der Rechnungspositionen konnte erstellt werden"))
       } else {
         Success(events map (_.get))
       }

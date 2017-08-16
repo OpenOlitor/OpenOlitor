@@ -434,15 +434,19 @@ case class AboVertriebsartModify(
   bemerkung: String
 ) extends JSONSerializable
 
-case class AboRechnungCreate(
+case class AboRechnungsPositionBisGuthabenCreate(
   ids: Seq[AboId],
   titel: String,
-  anzahlLieferungen: Option[Int],
-  bisGuthaben: Option[Int],
-  waehrung: Waehrung,
+  bisGuthaben: Int,
+  waehrung: Waehrung
+) extends JSONSerializable
+
+case class AboRechnungsPositionBisAnzahlLieferungenCreate(
+  ids: Seq[AboId],
+  titel: String,
+  anzahlLieferungen: Int,
   betrag: Option[BigDecimal],
-  rechnungsDatum: DateTime,
-  faelligkeitsDatum: DateTime
+  waehrung: Waehrung
 ) extends JSONSerializable
 
 case class Tourlieferung(
