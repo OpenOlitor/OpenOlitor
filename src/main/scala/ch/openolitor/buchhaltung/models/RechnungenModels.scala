@@ -95,8 +95,8 @@ case class RechnungsPosition(
   id: RechnungsPositionId,
   rechnungId: Option[RechnungId],
   parentRechnungsPositionId: Option[RechnungsPositionId],
-  kundeId: KundeId,
   aboId: Option[AboId],
+  kundeId: KundeId,
   betrag: BigDecimal,
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
@@ -279,6 +279,17 @@ case class RechnungModify(
   adressZusatz: Option[String],
   plz: String,
   ort: String
+) extends JSONSerializable
+
+case class RechnungsPositionCreate(
+  kundeId: KundeId,
+  aboId: Option[AboId],
+  titel: String,
+  anzahlLieferungen: Option[Int],
+  betrag: BigDecimal,
+  waehrung: Waehrung,
+  status: RechnungsPositionStatus.RechnungsPositionStatus,
+  typ: RechnungsPositionTyp.RechnungsPositionTyp
 ) extends JSONSerializable
 
 case class RechnungsPositionModify(

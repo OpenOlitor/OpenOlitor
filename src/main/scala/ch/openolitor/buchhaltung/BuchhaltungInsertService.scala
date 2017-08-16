@@ -75,9 +75,29 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   val checkSumDefinition = List(0, 9, 4, 6, 8, 2, 7, 1, 3, 5)
 
   val handle: Handle = {
-    case EntityInsertedEvent(meta, id: RechnungId, entity: RechnungCreate) =>
-      createRechnung(meta, id, entity)
+    case EntityInsertedEvent(meta, id: RechnungsPositionId, entity: RechnungsPositionCreate) =>
+      createRechnungsPosition(meta, id, entity)
     case e =>
+  }
+
+  def createRechnungsPosition(meta: EventMetadata, id: RechnungsPositionId, entity: RechnungsPositionCreate)(implicit personId: PersonId = meta.originator): Option[RechnungsPosition] = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+
+      val rp = copyTo[RechnungsPositionCreate, RechnungsPosition](
+        entity,
+        "id" -> id,
+        "rechnungId" -> None,
+        "parentRechnungsPositionId" -> None,
+        "status" -> RechnungsPositionStatus.Offen,
+        "sorting" -> None,
+        "erstelldat" -> meta.timestamp,
+        "ersteller" -> meta.originator,
+        "modifidat" -> meta.timestamp,
+        "modifikator" -> meta.originator
+      )
+
+      buchhaltungWriteRepository.insertEntity[RechnungsPosition, RechnungsPositionId](rp)
+    }
   }
 
   def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungCreate)(implicit personId: PersonId = meta.originator): Option[Rechnung] = {
