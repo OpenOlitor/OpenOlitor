@@ -31,7 +31,7 @@ import scala.collection.immutable.TreeMap
 
 case class VertriebId(id: Long) extends BaseId
 
-case class Vertrieb(id: VertriebId, abotypId: HauptAbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
+case class Vertrieb(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
   durchschnittspreis: TreeMap[String, BigDecimal],
   anzahlLieferungen: TreeMap[String, Int],
@@ -42,7 +42,7 @@ case class Vertrieb(id: VertriebId, abotypId: HauptAbotypId, liefertag: Lieferze
   modifidat: DateTime,
   modifikator: PersonId) extends BaseEntity[VertriebId]
 
-case class VertriebVertriebsarten(id: VertriebId, abotypId: HauptAbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
+case class VertriebVertriebsarten(id: VertriebId, abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String],
   anzahlAbos: Int,
   anzahlAbosAktiv: Int,
   depotlieferungen: Seq[DepotlieferungDetail],
@@ -54,7 +54,7 @@ case class VertriebVertriebsarten(id: VertriebId, abotypId: HauptAbotypId, liefe
   modifidat: DateTime,
   modifikator: PersonId) extends BaseEntity[VertriebId]
 
-case class VertriebModify(abotypId: HauptAbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String]) extends JSONSerializable
+case class VertriebModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String]) extends JSONSerializable
 
 case class VertriebsartId(id: Long) extends BaseId
 

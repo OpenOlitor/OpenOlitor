@@ -48,8 +48,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder(TourId.apply _)
   implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder(DepotId.apply _)
   implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder(AbotypId.apply _)
-  val hauptAboTypIdBinder: TypeBinder[HauptAbotypId] = baseIdTypeBinder(HauptAbotypId.apply _)
-  val zusatzAboTypIdBinder: TypeBinder[ZusatzAbotypId] = baseIdTypeBinder(ZusatzAbotypId.apply _)
   implicit val vertriebIdBinder: TypeBinder[VertriebId] = baseIdTypeBinder(VertriebId.apply _)
   implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
   implicit val vertriebsartIdSetBinder: TypeBinder[Set[VertriebsartId]] = string.map(s => s.split(",").map(_.toLong).map(VertriebsartId.apply _).toSet)
@@ -57,8 +55,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
   implicit val pendenzIdBinder: TypeBinder[PendenzId] = baseIdTypeBinder(PendenzId.apply _)
   implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
-  val hauptAboIdBinder: TypeBinder[HauptAboId] = baseIdTypeBinder(HauptAboId.apply _)
-  val zusatzAboIdBinder: TypeBinder[ZusatzAboId] = baseIdTypeBinder(ZusatzAboId.apply _)
   implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
   implicit val lieferplanungIdBinder: TypeBinder[LieferplanungId] = baseIdTypeBinder(LieferplanungId.apply _)
   implicit val optionLieferplanungIdBinder: TypeBinder[Option[LieferplanungId]] = optionBaseIdTypeBinder(LieferplanungId.apply _)
@@ -132,8 +128,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val vorlageTypeSqlBinder = toStringSqlBinder[VorlageTyp]
 
   implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
-  val hauptAbotypIdSqlBinder = baseIdSqlBinder[HauptAbotypId]
-  val zusatzAbotypIdSqlBinder = baseIdSqlBinder[ZusatzAbotypId]
   implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
   implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
   implicit val vertriebIdSqlBinder = baseIdSqlBinder[VertriebId]
@@ -146,8 +140,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   implicit val kundentypIdSqlBinder = new SqlBinder[KundentypId] { def apply(value: KundentypId): Any = value.id }
   implicit val kundentypIdSetSqlBinder = setSqlBinder[KundentypId]
   implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
-  val hauptAboIdSqlBinder = baseIdSqlBinder[HauptAboId]
-  val zusatzAboIdSqlBinder = baseIdSqlBinder[ZusatzAboId]
   implicit val lieferungIdSqlBinder = baseIdSqlBinder[LieferungId]
   implicit val lieferplanungIdSqlBinder = baseIdSqlBinder[LieferplanungId]
   implicit val lieferpositionIdSqlBinder = baseIdSqlBinder[LieferpositionId]
@@ -197,10 +189,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Abotyp]()
 
-    def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp = {
-      implicit val binder = hauptAboTypIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Abotyp): Seq[Any] =
       parameters(Abotyp.unapply(entity).get)
@@ -237,10 +226,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[ZusatzAbotyp]()
 
-    def apply(rn: ResultName[ZusatzAbotyp])(rs: WrappedResultSet): ZusatzAbotyp = {
-      implicit val binder = zusatzAboTypIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[ZusatzAbotyp])(rs: WrappedResultSet): ZusatzAbotyp = autoConstruct(rs, rn)
 
     def parameterMappings(entity: ZusatzAbotyp): Seq[Any] =
       parameters(ZusatzAbotyp.unapply(entity).get)
@@ -592,10 +578,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Vertrieb]()
 
-    def apply(rn: ResultName[Vertrieb])(rs: WrappedResultSet): Vertrieb = {
-      implicit val binder2 = hauptAboTypIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[Vertrieb])(rs: WrappedResultSet): Vertrieb = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Vertrieb): Seq[Any] = parameters(Vertrieb.unapply(entity).get)
 
@@ -699,10 +682,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[DepotlieferungAbo]()
 
-    def apply(rn: ResultName[DepotlieferungAbo])(rs: WrappedResultSet): DepotlieferungAbo = {
-      implicit val binder = hauptAboIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[DepotlieferungAbo])(rs: WrappedResultSet): DepotlieferungAbo = autoConstruct(rs, rn)
 
     def parameterMappings(entity: DepotlieferungAbo): Seq[Any] = parameters(DepotlieferungAbo.unapply(entity).get)
 
@@ -719,11 +699,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[HeimlieferungAbo]()
 
-    def apply(rn: ResultName[HeimlieferungAbo])(rs: WrappedResultSet): HeimlieferungAbo = {
-      implicit val binder1 = hauptAboIdBinder
-      implicit val binder2 = hauptAboTypIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[HeimlieferungAbo])(rs: WrappedResultSet): HeimlieferungAbo = autoConstruct(rs, rn)
 
     def parameterMappings(entity: HeimlieferungAbo): Seq[Any] = parameters(HeimlieferungAbo.unapply(entity).get)
 
@@ -741,11 +717,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[PostlieferungAbo]()
 
-    def apply(rn: ResultName[PostlieferungAbo])(rs: WrappedResultSet): PostlieferungAbo = {
-      implicit val binder1 = hauptAboTypIdBinder
-      implicit val binder2 = hauptAboIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[PostlieferungAbo])(rs: WrappedResultSet): PostlieferungAbo = autoConstruct(rs, rn)
 
     def parameterMappings(entity: PostlieferungAbo): Seq[Any] = parameters(PostlieferungAbo.unapply(entity).get)
   }
@@ -755,12 +727,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[ZusatzAbo]()
 
-    def apply(rn: ResultName[ZusatzAbo])(rs: WrappedResultSet): ZusatzAbo = {
-      implicit val binder1 = zusatzAboIdBinder
-      implicit val binder2 = hauptAboTypIdBinder
-      implicit val binder3 = zusatzAboTypIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[ZusatzAbo])(rs: WrappedResultSet): ZusatzAbo = autoConstruct(rs, rn)
 
     def parameterMappings(entity: ZusatzAbo): Seq[Any] = {
       parameters(ZusatzAbo.unapply(entity).get)
@@ -773,7 +740,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.vertriebId -> parameter(abo.vertriebId),
         column.vertriebsartId -> parameter(abo.vertriebsartId),
         column.hauptAbotypId -> parameter(abo.hauptAbotypId),
-        column.zusatzAbotypId -> parameter(abo.zusatzAbotypId),
+        column.abotypId -> parameter(abo.abotypId),
         column.abotypName -> parameter(abo.abotypName),
         column.start -> parameter(abo.start),
         column.ende -> parameter(abo.ende),
@@ -934,10 +901,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Abwesenheit]()
 
-    def apply(rn: ResultName[Abwesenheit])(rs: WrappedResultSet): Abwesenheit = {
-      implicit val binder = hauptAboIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[Abwesenheit])(rs: WrappedResultSet): Abwesenheit = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Abwesenheit): Seq[Any] = parameters(Abwesenheit.unapply(entity).get)
 
@@ -956,11 +920,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Tourlieferung]()
 
-    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung = {
-      implicit val binder1 = hauptAboIdBinder
-      implicit val binder2 = hauptAboTypIdBinder
-      autoConstruct(rs, rn)
-    }
+    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Tourlieferung): Seq[Any] = parameters(Tourlieferung.unapply(entity).get)
 

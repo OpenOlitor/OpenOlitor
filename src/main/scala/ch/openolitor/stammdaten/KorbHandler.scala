@@ -39,7 +39,7 @@ trait KorbHandler extends KorbStatusHandler
    * insert or update Korb
    * @return (created/updated, existing)
    */
-  def upsertKorb(lieferung: Lieferung, abo: IAbo[_ <: AboId], abotyp: IAbotyp[_ <: AbotypId])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (Option[Korb], Option[Korb]) = {
+  def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: IAbotyp)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (Option[Korb], Option[Korb]) = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
       case None if (lieferung.lieferplanungId.isDefined) =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
@@ -87,7 +87,7 @@ trait KorbHandler extends KorbStatusHandler
     }
   }
 
-  def modifyKoerbeForAbo(abo: IAbo[_ <: AboId], orig: Option[IAbo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+  def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     // koerbe erstellen, modifizieren, loeschen falls noetig
     stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
       stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>

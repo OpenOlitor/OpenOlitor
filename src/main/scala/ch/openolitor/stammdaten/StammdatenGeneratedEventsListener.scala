@@ -100,7 +100,11 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
               modifyEntity[PostlieferungAbo, AboId](p.id) { a =>
                 a.copy(aktiv = aktiv)
               }
-
+            case z: ZusatzAbo =>
+              modifyEntity[ZusatzAbo, AboId](z.id) { a =>
+                a.copy(aktiv = aktiv)
+              }
+            case _ =>
           }
         }
       }

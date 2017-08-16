@@ -74,7 +74,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   val FALSE = false
 
   val handle: Handle = {
-    case EntityInsertedEvent(meta, id: HauptAbotypId, abotyp: AbotypModify) =>
+    case EntityInsertedEvent(meta, id: AbotypId, abotyp: AbotypModify) =>
       createAbotyp(meta, id, abotyp)
     case EntityInsertedEvent(meta, id: KundeId, kunde: KundeModify) =>
       createKunde(meta, id, kunde)
@@ -84,7 +84,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createPendenz(meta, id, pendenz)
     case EntityInsertedEvent(meta, id: DepotId, depot: DepotModify) =>
       createDepot(meta, id, depot)
-    case EntityInsertedEvent(meta, id: HauptAboId, abo: AboModify) =>
+    case EntityInsertedEvent(meta, id: AboId, abo: AboModify) =>
       createAbo(meta, id, abo)
     case EntityInsertedEvent(meta, id: LieferungId, lieferung: LieferungAbotypCreate) =>
       createLieferung(meta, id, lieferung)
@@ -121,7 +121,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     case e =>
   }
 
-  def createAbotyp(meta: EventMetadata, id: HauptAbotypId, abotyp: AbotypModify)(implicit personId: PersonId = meta.originator) = {
+  def createAbotyp(meta: EventMetadata, id: AbotypId, abotyp: AbotypModify)(implicit personId: PersonId = meta.originator) = {
     val typ = copyTo[AbotypModify, Abotyp](
       abotyp,
       "id" -> id,
@@ -137,7 +137,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       //create abotyp
-      stammdatenWriteRepository.insertEntity[Abotyp, HauptAbotypId](typ)
+      stammdatenWriteRepository.insertEntity[Abotyp, AbotypId](typ)
     }
   }
 
@@ -337,7 +337,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(postlieferungMapping, vertriebsartId)
   }
 
-  private def abotypById(abotypId: HauptAbotypId)(implicit session: DBSession): Option[Abotyp] = {
+  private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     stammdatenWriteRepository.getById(abotypMapping, abotypId)
   }
 
@@ -357,7 +357,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     stammdatenWriteRepository.getById(tourMapping, tourId)
   }
 
-  def createAbo(meta: EventMetadata, id: HauptAboId, create: AboModify)(implicit personId: PersonId = meta.originator) = {
+  def createAbo(meta: EventMetadata, id: AboId, create: AboModify)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       val emptyMap: TreeMap[String, Int] = TreeMap()
       abotypByVertriebartId(create.vertriebsartId) map {
@@ -368,7 +368,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 case create: DepotlieferungAboModify =>
                   val depotName = depotById(create.depotId).map(_.name).getOrElse("")
 
-                  stammdatenWriteRepository.insertEntity[DepotlieferungAbo, HauptAboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](
+                  stammdatenWriteRepository.insertEntity[DepotlieferungAbo, AboId](copyTo[DepotlieferungAboModify, DepotlieferungAbo](
                     create,
                     "id" -> id,
                     "vertriebId" -> vertrieb.id,
@@ -392,7 +392,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 case create: HeimlieferungAboModify =>
                   val tourName = tourById(create.tourId).map(_.name).getOrElse("")
 
-                  stammdatenWriteRepository.insertEntity[HeimlieferungAbo, HauptAboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](
+                  stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](copyTo[HeimlieferungAboModify, HeimlieferungAbo](
                     create,
                     "id" -> id,
                     "vertriebId" -> vertrieb.id,
@@ -415,12 +415,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                   )) map { heimlieferungAbo =>
                     // create the corresponding tourlieferung as well
                     stammdatenWriteRepository.getById(kundeMapping, heimlieferungAbo.kundeId) map { kunde =>
-                      stammdatenWriteRepository.insertEntity[Tourlieferung, HauptAboId](Tourlieferung(heimlieferungAbo, kunde, personId))
+                      stammdatenWriteRepository.insertEntity[Tourlieferung, AboId](Tourlieferung(heimlieferungAbo, kunde, personId))
                     }
                     heimlieferungAbo
                   }
                 case create: PostlieferungAboModify =>
-                  stammdatenWriteRepository.insertEntity[PostlieferungAbo, HauptAboId](copyTo[PostlieferungAboModify, PostlieferungAbo](
+                  stammdatenWriteRepository.insertEntity[PostlieferungAbo, AboId](copyTo[PostlieferungAboModify, PostlieferungAbo](
                     create,
                     "id" -> id,
                     "vertriebId" -> vertrieb.id,

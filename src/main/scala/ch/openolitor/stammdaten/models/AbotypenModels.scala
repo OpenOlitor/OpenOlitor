@@ -99,12 +99,7 @@ trait AktivRange {
   }
 }
 
-class AbotypId(override val id: Long) extends BaseId
-object AbotypId {
-  def apply(id: Long): AbotypId = new AbotypId(id)
-}
-case class HauptAbotypId(override val id: Long) extends AbotypId(id)
-case class ZusatzAbotypId(override val id: Long) extends AbotypId(id)
+case class AbotypId(id: Long) extends BaseId
 
 sealed trait Fristeinheit
 case object Wochenfrist extends Fristeinheit
@@ -112,8 +107,8 @@ case object Monatsfrist extends Fristeinheit
 
 case class Frist(wert: Int, einheit: Fristeinheit) extends Product with JSONSerializable
 
-trait IAbotyp[I <: AbotypId] extends BaseEntity[I] with AktivRange with Product {
-  val id: I
+trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product {
+  val id: AbotypId
   val name: String
   val beschreibung: Option[String]
   val aktivVon: Option[DateTime]
@@ -142,7 +137,7 @@ trait IAbotyp[I <: AbotypId] extends BaseEntity[I] with AktivRange with Product 
 }
 
 case class Abotyp(
-  id: HauptAbotypId,
+  id: AbotypId,
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
@@ -170,7 +165,7 @@ case class Abotyp(
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends IAbotyp[HauptAbotypId]
+) extends IAbotyp
 
 object Abotyp {
   def unapply(a: Abotyp) = {
@@ -228,7 +223,7 @@ case class AbotypModify(
 ) extends AktivRange with JSONSerializable
 
 case class ZusatzAbotyp(
-  id: ZusatzAbotypId,
+  id: AbotypId,
   name: String,
   beschreibung: Option[String],
   aktivVon: Option[DateTime],
@@ -255,7 +250,7 @@ case class ZusatzAbotyp(
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends IAbotyp[ZusatzAbotypId]
+) extends IAbotyp
 
 object ZusatzAbotyp {
   def unapply(a: ZusatzAbotyp) = {
