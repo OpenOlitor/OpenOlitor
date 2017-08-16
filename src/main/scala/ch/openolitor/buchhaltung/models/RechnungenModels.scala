@@ -138,6 +138,7 @@ object Rechnung {
 case class RechnungDetail(
   id: RechnungId,
   kunde: Kunde,
+  //  kontoDaten: KontoDaten,
   abo: Abo,
   titel: String,
   anzahlLieferungen: Int,
@@ -169,6 +170,7 @@ case class RechnungDetail(
 case class RechnungDetailReport(
     id: RechnungId,
     kunde: Kunde,
+    kontoDaten: KontoDaten,
     abo: Abo,
     titel: String,
     anzahlLieferungen: Int,

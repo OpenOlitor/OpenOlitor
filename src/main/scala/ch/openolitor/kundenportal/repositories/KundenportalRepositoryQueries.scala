@@ -44,6 +44,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
 
   //Stammdaten
   lazy val projekt = projektMapping.syntax("projekt")
+  lazy val kontoDaten = kontoDatenMapping.syntax("kontoDaten")
   lazy val kunde = kundeMapping.syntax("kunde")
   lazy val kundentyp = customKundentypMapping.syntax("kundentyp")
   lazy val person = personMapping.syntax("pers")
@@ -66,6 +67,13 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
       select
         .from(projektMapping as projekt)
     }.map(projektMapping(projekt)).single
+  }
+
+  protected def getKontoDatenQuery = {
+    withSQL {
+      select
+        .from(kontoDatenMapping as kontoDaten)
+    }.map(kontoDatenMapping(kontoDaten)).single
   }
 
   protected def getDepotlieferungAbosQuery(filter: Option[FilterExpr])(implicit owner: Subject) = {

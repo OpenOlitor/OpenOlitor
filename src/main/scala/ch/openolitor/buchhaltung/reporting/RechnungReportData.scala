@@ -48,26 +48,30 @@ trait RechnungReportData extends AsyncConnectionPoolContextAware with Buchhaltun
   self: BuchhaltungReadRepositoryComponent with ActorReferences with StammdatenReadRepositoryComponent =>
 
   def rechungenById(rechnungIds: Seq[RechnungId]): Future[(Seq[ValidationError[RechnungId]], Seq[RechnungDetailReport])] = {
-    stammdatenReadRepository.getProjekt flatMap {
-      _ map { projekt =>
-        val results = Future.sequence(rechnungIds.map { rechnungId =>
-          buchhaltungReadRepository.getRechnungDetail(rechnungId).map(_.map { rechnung =>
-            rechnung.status match {
-              case Storniert =>
-                Left(ValidationError[RechnungId](rechnungId, s"Für stornierte Rechnungen können keine Berichte mehr erzeugt werden"))
-              case Bezahlt =>
-                Left(ValidationError[RechnungId](rechnungId, s"Für bezahlte Rechnungen können keine Berichte mehr erzeugt werden"))
-              case _ =>
-                val projektReport = copyTo[Projekt, ProjektReport](projekt)
-                Right(copyTo[RechnungDetail, RechnungDetailReport](rechnung, "projekt" -> projektReport))
-            }
+    stammdatenReadRepository.getProjekt flatMap { maybeProjekt =>
+      stammdatenReadRepository.getKontoDaten flatMap { maybeKontoDaten =>
+        maybeProjekt flatMap { projekt =>
+          maybeKontoDaten map { kontoDaten =>
+            val results = Future.sequence(rechnungIds.map { rechnungId =>
+              buchhaltungReadRepository.getRechnungDetail(rechnungId).map(_.map { rechnung =>
+                rechnung.status match {
+                  case Storniert =>
+                    Left(ValidationError[RechnungId](rechnungId, s"Für stornierte Rechnungen können keine Berichte mehr erzeugt werden"))
+                  case Bezahlt =>
+                    Left(ValidationError[RechnungId](rechnungId, s"Für bezahlte Rechnungen können keine Berichte mehr erzeugt werden"))
+                  case _ =>
+                    val projektReport = copyTo[Projekt, ProjektReport](projekt)
+                    Right(copyTo[RechnungDetail, RechnungDetailReport](rechnung, "projekt" -> projektReport, "kontoDaten" -> kontoDaten))
+                }
 
-          }.getOrElse(Left(ValidationError[RechnungId](rechnungId, s"Rechnung konnte nicht gefunden werden"))))
-        })
-        results.map(_.partition(_.isLeft) match {
-          case (a, b) => (a.map(_.left.get), b.map(_.right.get))
-        })
-      } getOrElse Future { (Seq(ValidationError[RechnungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
+              }.getOrElse(Left(ValidationError[RechnungId](rechnungId, s"Rechnung konnte nicht gefunden werden"))))
+            })
+            results.map(_.partition(_.isLeft) match {
+              case (a, b) => (a.map(_.left.get), b.map(_.right.get))
+            })
+          }
+        } getOrElse Future { (Seq(ValidationError[RechnungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
+      }
     }
   }
 }
