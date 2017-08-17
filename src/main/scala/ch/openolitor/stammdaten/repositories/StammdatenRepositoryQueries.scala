@@ -1600,7 +1600,9 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         korbAbo <- abos.filter(_.id == korb.aboId).headOption
         abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
         kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
-      } yield copyTo[Korb, KorbDetail](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde)
+        //TODO remove dummy data
+        val zusatzKoerbe = List(ZusatzKorbDetail(KorbId(10), LieferungId(11), korbAbo, WirdGeliefert, 1, None, None, kunde, abotyp, DateTime.now(), PersonId(1), DateTime.now(), PersonId(1)))
+      } yield copyTo[Korb, KorbDetail](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde, "zusatzKoerbe" -> zusatzKoerbe)
     }.flatten
   }
 
