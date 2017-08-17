@@ -18,13 +18,6 @@ case class KontoDaten(
   modifikator: PersonId
 ) extends BaseEntity[KontoDatenId]
 
-case class KontoDatenPublik(
-  id: KontoDatenId,
-  iban: Option[String],
-  teilnehmerNummer: Option[String],
-  referenzNummerPrefix: Option[String]
-) extends JSONSerializable
-
 case class KontoDatenModify(
   iban: Option[String],
   teilnehmerNummer: Option[String],
