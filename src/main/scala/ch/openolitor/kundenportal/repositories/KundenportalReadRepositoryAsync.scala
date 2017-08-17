@@ -44,6 +44,7 @@ import ch.openolitor.buchhaltung.models.RechnungDetail
 
 trait KundenportalReadRepositoryAsync {
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]]
+  def getKontoDaten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KontoDaten]]
 
   def getAbos(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[AboDetail]]
 
@@ -57,6 +58,10 @@ trait KundenportalReadRepositoryAsync {
 class KundenportalReadRepositoryAsyncImpl extends KundenportalReadRepositoryAsync with LazyLogging with KundenportalRepositoryQueries {
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]] = {
     getProjektQuery.future map (_ map (projekt => copyTo[Projekt, ProjektPublik](projekt)))
+  }
+
+  def getKontoDaten(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[KontoDaten]] = {
+    getKontoDatenQuery.future
   }
 
   def getDepotlieferungAbos(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr], owner: Subject): Future[List[DepotlieferungAboDetail]] = {

@@ -91,7 +91,7 @@ trait KundenportalRoutes extends HttpService with ActorReferences
         UriQueryParamFilterParser.parse(filterString)
       }
       pathPrefix("kundenportal") {
-        abosRoute ~ rechnungenRoute ~ projektRoute
+        abosRoute ~ rechnungenRoute ~ projektRoute ~ kontoDatenRoute
       }
     }
 
@@ -104,6 +104,14 @@ trait KundenportalRoutes extends HttpService with ActorReferences
       path("projekt" / projektIdPath / "logo") { id =>
         get(download(ProjektStammdaten, "logo"))
       }
+  }
+
+  def kontoDatenRoute(implicit subject: Subject) = {
+    path("kontodaten") {
+      get {
+        get(detail(kundenportalReadRepository.getKontoDaten))
+      }
+    }
   }
 
   def rechnungenRoute(implicit subject: Subject) = {

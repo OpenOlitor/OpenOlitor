@@ -221,6 +221,7 @@ case class RechnungDetail(
 case class RechnungDetailReport(
     id: RechnungId,
     kunde: Kunde,
+    kontoDaten: KontoDaten,
     titel: String,
     waehrung: Waehrung,
     betrag: BigDecimal,
