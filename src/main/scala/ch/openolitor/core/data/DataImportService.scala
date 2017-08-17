@@ -93,8 +93,8 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
     case e: ParseError =>
       e.error.printStackTrace
       originator map (_ ! e)
-    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, vertriebe, lieferungen,
-      lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
+    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, zusatzAbotypen, vertriebsarten, vertriebe, lieferungen,
+      lieferplanungen, lieferpositionen, abos, zusatzAbos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
       produzenten, produktProduzenten, sammelbestellungen, bestellungen, bestellpositionen, tourlieferungen) =>
       log.debug(s"Received parse result, start importing...")
       try {
@@ -120,6 +120,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
           result = importEntityList[Tour, TourId]("Touren", touren, result)
           result = importEntityList[Depot, DepotId]("Depots", depots, result)
           result = importEntityList[Abotyp, AbotypId]("Abotypen", abotypen, result)
+          result = importEntityList[ZusatzAbotyp, AbotypId]("ZusatzAbotypen", zusatzAbotypen, result)
 
           log.debug(s"Import ${vertriebsarten.length} Vertriebsarten...")
           vertriebsarten map {
@@ -130,6 +131,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
             case pl: Postlieferung =>
               insertEntity[Postlieferung, VertriebsartId](pl)
           }
+          result = importEntityList[ZusatzAbo, AboId]("ZusatzAbo", zusatzAbos, result)
           result = result + ("Vertriebsarten" -> vertriebsarten.length)
 
           result = importEntityList[Vertrieb, VertriebId]("Vertriebe", vertriebe, result)
@@ -145,6 +147,8 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
               insertEntity[HeimlieferungAbo, AboId](hl)
             case pl: PostlieferungAbo =>
               insertEntity[PostlieferungAbo, AboId](pl)
+            case _ =>
+            // unsupported / unknown
           }
           result = result + ("Abos" -> abos.length)
 

@@ -651,7 +651,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     logger.debug(s"Create Koerbe:${lieferung.id}")
-    stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
+    stammdatenWriteRepository.getAbotypById(lieferung.abotypId) map { abotyp =>
       val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
       val statusL = (abos map { abo =>
         upsertKorb(lieferung, abo, abotyp)

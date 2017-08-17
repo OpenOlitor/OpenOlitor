@@ -63,7 +63,11 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script]) extends CoreDBMap
     DB readOnly { implicit session =>
       try {
         val dbIds = Seq(
-          adjustSeed[Abotyp, AbotypId](seeds, abotypMapping),
+          adjustSeeds[AbotypId](
+            seeds,
+            maxId[Abotyp, AbotypId](abotypMapping),
+            maxId[ZusatzAbotyp, AbotypId](zusatzAbotypMapping)
+          ),
           adjustSeed[Depot, DepotId](seeds, depotMapping),
           adjustSeed[Vertrieb, VertriebId](seeds, vertriebMapping),
           adjustSeeds[VertriebsartId](
@@ -76,7 +80,8 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script]) extends CoreDBMap
             seeds,
             maxId[DepotlieferungAbo, AboId](depotlieferungAboMapping),
             maxId[HeimlieferungAbo, AboId](heimlieferungAboMapping),
-            maxId[PostlieferungAbo, AboId](postlieferungAboMapping)
+            maxId[PostlieferungAbo, AboId](postlieferungAboMapping),
+            maxId[ZusatzAbo, AboId](zusatzAboMapping)
           ),
           adjustSeed[Kunde, KundeId](seeds, kundeMapping),
           adjustSeed[CustomKundentyp, CustomKundentypId](seeds, customKundentypMapping),

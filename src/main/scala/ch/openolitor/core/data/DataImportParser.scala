@@ -79,11 +79,13 @@ class DataImportParser extends Actor with ActorLogging {
       (pendenzen, _) <- Try(doc.withSheet("Pendenzen")(PendenzParser.parse(kunden)))
       (tours, tourIdMapping) <- Try(doc.withSheet("Touren")(TourParser.parse))
       (abotypen, abotypIdMapping) <- Try(doc.withSheet("Abotypen")(AbotypParser.parse))
+      (zusatzAbotypen, abotypIdMapping) <- Try(doc.withSheet("ZusatzAbotypen")(ZusatzAbotypParser.parse))
       (depots, depotIdMapping) <- Try(doc.withSheet("Depots")(DepotParser.parse))
       (abwesenheiten, _) <- Try(doc.withSheet("Abwesenheiten")(AbwesenheitParser.parse))
       (vertriebsarten, vertriebsartIdMapping) <- Try(doc.withSheet("Vertriebsarten")(VertriebsartParser.parse))
       (vertriebe, _) <- Try(doc.withSheet("Vertriebe")(VertriebParser.parse(vertriebsarten)))
       (abos, _) <- Try(doc.withSheet("Abos")(AboParser.parse(kundeIdMapping, kunden, vertriebsartIdMapping, vertriebsarten, vertriebe, abotypen, depotIdMapping, depots, tourIdMapping, tours, abwesenheiten)))
+      (zusatzAbos, _) <- Try(doc.withSheet("ZusatzAbos")(ZusatzAboParser.parse(kundeIdMapping, kunden, vertriebsartIdMapping, vertriebsarten, vertriebe, zusatzAbotypen, abos, abwesenheiten)))
       (lieferplanungen, _) <- Try(doc.withSheet("Lieferplanungen")(LieferplanungParser.parse))
       (lieferungen, _) <- Try(doc.withSheet("Lieferungen")(LieferungParser.parse(abotypen, vertriebe, abwesenheiten, lieferplanungen, depots, tours)))
       (produzenten, _) <- Try(doc.withSheet("Produzenten")(ProduzentParser.parse))
@@ -107,12 +109,14 @@ class DataImportParser extends Actor with ActorLogging {
         tours,
         depots,
         abotypen,
+        zusatzAbotypen,
         vertriebsarten,
         vertriebe,
         lieferungen,
         lieferplanungen,
         lieferpositionen,
         abos,
+        zusatzAbos,
         abwesenheiten,
         produkte,
         produktkategorien,
@@ -142,12 +146,14 @@ object DataImportParser {
     touren: List[Tour],
     depots: List[Depot],
     abotypen: List[Abotyp],
+    zusatzAbotypem: List[ZusatzAbotyp],
     vertriebsarten: List[Vertriebsart],
     vertriebe: List[Vertrieb],
     lieferungen: List[Lieferung],
     lieferplanungen: List[Lieferplanung],
     lieferpositionen: List[Lieferposition],
     abos: List[Abo],
+    zusatzAbos: List[ZusatzAbo],
     abwesenheiten: List[Abwesenheit],
     produkte: List[Produkt],
     produktekategorien: List[Produktekategorie],

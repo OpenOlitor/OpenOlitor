@@ -100,6 +100,11 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
               stammdatenUpdateRepository.updateEntity[PostlieferungAbo, AboId](p.id) {
                 postlieferungAboMapping.column.aktiv -> aktiv
               }
+            case z: ZusatzAbo =>
+              stammdatenUpdateRepository.updateEntity[ZusatzAbo, AboId](z.id) {
+                zusatzAboMapping.column.aktiv -> aktiv
+              }
+            case _ =>
           }
         }
       }

@@ -127,6 +127,10 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           case plAbo: PostlieferungAbo =>
             logger.debug(s"Update abo with data -> vertriebBeschrieb")
             stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](abo.id)(postlieferungAboMapping.column.vertriebBeschrieb -> update.beschrieb)
+          case zAbo: ZusatzAbo =>
+            logger.debug(s"Update abo with data -> vertriebBeschrieb")
+            stammdatenWriteRepository.updateEntity[ZusatzAbo, AboId](abo.id)(zusatzAboMapping.column.vertriebBeschrieb -> update.beschrieb)
+          case _ =>
         }
       }
     }
@@ -241,25 +245,17 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         updateAbo match {
           case dlAbo: DepotlieferungAbo =>
             logger.debug(s"Update abo with data -> kundeBez")
-            val copy = copyTo[DepotlieferungAbo, DepotlieferungAbo](
-              dlAbo,
-              "kunde" -> kundeBez
-            )
-            stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[DepotlieferungAbo, AboId](dlAbo.id)(depotlieferungAboMapping.column.kunde -> kundeBez)
           case hlAbo: HeimlieferungAbo =>
             logger.debug(s"Update abo with data -> kundeBez")
-            val copy = copyTo[HeimlieferungAbo, HeimlieferungAbo](
-              hlAbo,
-              "kunde" -> kundeBez
-            )
-            stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[HeimlieferungAbo, AboId](hlAbo.id)(heimlieferungAboMapping.column.kunde -> kundeBez)
           case plAbo: PostlieferungAbo =>
             logger.debug(s"Update abo with data -> kundeBez")
-            val copy = copyTo[PostlieferungAbo, PostlieferungAbo](
-              plAbo,
-              "kunde" -> kundeBez
-            )
-            stammdatenWriteRepository.updateEntityFully[PostlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.updateEntity[PostlieferungAbo, AboId](plAbo.id)(postlieferungAboMapping.column.kunde -> kundeBez)
+          case zAbo: ZusatzAbo =>
+            logger.debug(s"Update abo with data -> kundeBez")
+            stammdatenWriteRepository.updateEntity[ZusatzAbo, AboId](zAbo.id)(zusatzAboMapping.column.kunde -> kundeBez)
+          case _ =>
         }
       }
     }

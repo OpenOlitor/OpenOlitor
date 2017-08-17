@@ -223,6 +223,38 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     }
   }
 
+  implicit val zusatzAbotypMapping = new BaseEntitySQLSyntaxSupport[ZusatzAbotyp] {
+    override val tableName = "ZusatzAbotyp"
+
+    override lazy val columns = autoColumns[ZusatzAbotyp]()
+
+    def apply(rn: ResultName[ZusatzAbotyp])(rs: WrappedResultSet): ZusatzAbotyp = autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ZusatzAbotyp): Seq[Any] =
+      parameters(ZusatzAbotyp.unapply(entity).get)
+
+    override def updateParameters(abotyp: ZusatzAbotyp) = {
+      super.updateParameters(abotyp) ++ Seq(
+        column.name -> parameter(abotyp.name),
+        column.beschreibung -> parameter(abotyp.beschreibung),
+        column.aktivVon -> parameter(abotyp.aktivVon),
+        column.aktivBis -> parameter(abotyp.aktivBis),
+        column.preis -> parameter(abotyp.preis),
+        column.preiseinheit -> parameter(abotyp.preiseinheit),
+        column.laufzeit -> parameter(abotyp.laufzeit),
+        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
+        column.vertragslaufzeit -> parameter(abotyp.vertragslaufzeit),
+        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
+        column.farbCode -> parameter(abotyp.farbCode),
+        column.zielpreis -> parameter(abotyp.zielpreis),
+        column.adminProzente -> parameter(abotyp.adminProzente),
+        column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(abotyp.anzahlAbonnentenAktiv),
+        column.letzteLieferung -> parameter(abotyp.letzteLieferung)
+      )
+    }
+  }
+
   implicit val customKundentypMapping = new BaseEntitySQLSyntaxSupport[CustomKundentyp] {
     override val tableName = "Kundentyp"
 
@@ -548,8 +580,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Vertrieb]()
 
-    def apply(rn: ResultName[Vertrieb])(rs: WrappedResultSet): Vertrieb =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[Vertrieb])(rs: WrappedResultSet): Vertrieb = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Vertrieb): Seq[Any] = parameters(Vertrieb.unapply(entity).get)
 
@@ -670,8 +701,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[HeimlieferungAbo]()
 
-    def apply(rn: ResultName[HeimlieferungAbo])(rs: WrappedResultSet): HeimlieferungAbo =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[HeimlieferungAbo])(rs: WrappedResultSet): HeimlieferungAbo = autoConstruct(rs, rn)
 
     def parameterMappings(entity: HeimlieferungAbo): Seq[Any] = parameters(HeimlieferungAbo.unapply(entity).get)
 
@@ -689,13 +719,41 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[PostlieferungAbo]()
 
-    def apply(rn: ResultName[PostlieferungAbo])(rs: WrappedResultSet): PostlieferungAbo =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[PostlieferungAbo])(rs: WrappedResultSet): PostlieferungAbo = autoConstruct(rs, rn)
 
     def parameterMappings(entity: PostlieferungAbo): Seq[Any] = parameters(PostlieferungAbo.unapply(entity).get)
+  }
 
-    override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
-      super.updateParameters(postlieferungAbo)
+  implicit val zusatzAboMapping = new BaseEntitySQLSyntaxSupport[ZusatzAbo] {
+    override val tableName = "ZusatzAbo"
+
+    override lazy val columns = autoColumns[ZusatzAbo]()
+
+    def apply(rn: ResultName[ZusatzAbo])(rs: WrappedResultSet): ZusatzAbo = autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ZusatzAbo): Seq[Any] = {
+      parameters(ZusatzAbo.unapply(entity).get)
+    }
+
+    override def updateParameters(abo: ZusatzAbo) = {
+      super.updateParameters(abo) ++ Seq(
+        column.kundeId -> parameter(abo.kundeId),
+        column.kunde -> parameter(abo.kunde),
+        column.vertriebId -> parameter(abo.vertriebId),
+        column.vertriebsartId -> parameter(abo.vertriebsartId),
+        column.hauptAbotypId -> parameter(abo.hauptAbotypId),
+        column.abotypId -> parameter(abo.abotypId),
+        column.abotypName -> parameter(abo.abotypName),
+        column.start -> parameter(abo.start),
+        column.ende -> parameter(abo.ende),
+        column.guthabenVertraglich -> parameter(abo.guthabenVertraglich),
+        column.guthaben -> parameter(abo.guthaben),
+        column.guthabenInRechnung -> parameter(abo.guthabenInRechnung),
+        column.letzteLieferung -> parameter(abo.letzteLieferung),
+        column.anzahlAbwesenheiten -> parameter(abo.anzahlAbwesenheiten),
+        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen),
+        column.aktiv -> parameter(abo.aktiv)
+      )
     }
   }
 
@@ -845,8 +903,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Abwesenheit]()
 
-    def apply(rn: ResultName[Abwesenheit])(rs: WrappedResultSet): Abwesenheit =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[Abwesenheit])(rs: WrappedResultSet): Abwesenheit = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Abwesenheit): Seq[Any] = parameters(Abwesenheit.unapply(entity).get)
 
@@ -865,8 +922,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Tourlieferung]()
 
-    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung = autoConstruct(rs, rn)
 
     def parameterMappings(entity: Tourlieferung): Seq[Any] = parameters(Tourlieferung.unapply(entity).get)
 

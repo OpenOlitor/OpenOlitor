@@ -39,6 +39,7 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
   def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo]
+  def getAbotypById(id: AbotypId)(implicit session: DBSession): Option[IAbotyp]
 
   def getProjekt(implicit session: DBSession): Option[Projekt]
   def getKontoDaten(implicit session: DBSession): Option[KontoDaten]
@@ -109,6 +110,12 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
 }
 
 trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with LazyLogging with StammdatenRepositoryQueries {
+
+  def getAbotypById(id: AbotypId)(implicit session: DBSession): Option[IAbotyp] = {
+    getById(abotypMapping, id) orElse
+      getById(zusatzAbotypMapping, id)
+  }
+
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
   }
@@ -130,7 +137,10 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
   }
 
   def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo] = {
-    getDepotlieferungAbosByVertrieb(vertriebId) ::: getHeimlieferungAbosByVertrieb(vertriebId) ::: getPostlieferungAbosByVertrieb(vertriebId)
+    getDepotlieferungAbosByVertrieb(vertriebId) :::
+      getHeimlieferungAbosByVertrieb(vertriebId) :::
+      getPostlieferungAbosByVertrieb(vertriebId) :::
+      getZusatzAbosByVertrieb(vertriebId)
   }
 
   def getDepotlieferungAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[DepotlieferungAbo] = {
@@ -143,6 +153,10 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getPostlieferungAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[PostlieferungAbo] = {
     getPostlieferungAbosByVertriebQuery(vertriebId).apply()
+  }
+
+  def getZusatzAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[ZusatzAbo] = {
+    getZusatzAbosByVertriebQuery(vertriebId).apply()
   }
 
   def getProjekt(implicit session: DBSession): Option[Projekt] = {
@@ -287,7 +301,8 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
   def getAktiveAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[Abo] = {
     getAktiveDepotlieferungAbos(vertriebId, lieferdatum) :::
       getAktiveHeimlieferungAbos(vertriebId, lieferdatum) :::
-      getAktivePostlieferungAbos(vertriebId, lieferdatum)
+      getAktivePostlieferungAbos(vertriebId, lieferdatum) :::
+      getAktiveZusatzAbos(vertriebId, lieferdatum)
   }
 
   def getAktiveDepotlieferungAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[DepotlieferungAbo] = {
@@ -300,6 +315,10 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getAktivePostlieferungAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[PostlieferungAbo] = {
     getAktivePostlieferungAbosQuery(vertriebId, lieferdatum).apply
+  }
+
+  def getAktiveZusatzAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[ZusatzAbo] = {
+    getAktiveZusatzAbosQuery(vertriebId, lieferdatum).apply
   }
 
   def countKoerbe(auslieferungId: AuslieferungId)(implicit session: DBSession): Option[Int] = {
@@ -423,7 +442,7 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
   }
 
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
-    getSingleDepotlieferungAbo(id)() orElse getSingleHeimlieferungAbo(id)() orElse getSinglePostlieferungAbo(id)()
+    getSingleDepotlieferungAbo(id)() orElse getSingleHeimlieferungAbo(id)() orElse getSinglePostlieferungAbo(id)() orElse getSingleZusatzAbo(id)()
   }
 
   def getLieferungenOffenByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung] = {

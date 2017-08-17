@@ -121,14 +121,14 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   //id formats
   implicit val vertriebIdFormat = baseIdFormat(VertriebId)
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId)
-  implicit val abotypIdFormat = baseIdFormat(AbotypId)
+  implicit val abotypIdFormat = baseIdFormat(AbotypId.apply _)
   implicit val depotIdFormat = baseIdFormat(DepotId)
   implicit val tourIdFormat = baseIdFormat(TourId)
   implicit val auslieferungIdFormat = baseIdFormat(AuslieferungId)
   implicit val optionAuslieferungIdFormat = new OptionFormat[AuslieferungId]
   implicit val kundeIdFormat = baseIdFormat(KundeId)
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
-  implicit val aboIdFormat = baseIdFormat(AboId)
+  implicit val aboIdFormat = baseIdFormat(AboId.apply _)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId)
   implicit val lieferungOnLieferplanungIdFormat = baseIdFormat(LieferungOnLieferplanungId)
   implicit val lieferplanungIdFormat = baseIdFormat(LieferplanungId)

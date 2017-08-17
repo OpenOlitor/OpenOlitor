@@ -40,11 +40,12 @@ import ch.openolitor.core.eventsourcing.EventStoreSerializer
 import ch.openolitor.core.domain.PersistentEvent
 import ch.openolitor.core.repositories.BaseWriteRepository
 import akka.actor.ActorSystem
+import ch.openolitor.stammdaten.StammdatenDBMappings
 
 object V2Scripts {
 
-  def oo656(sytem: ActorSystem) = new Script with LazyLogging with CoreDBMappings with DefaultDBScripts with CoreRepositoryQueries {
-    lazy val system: ActorSystem = sytem
+  def oo656(sys: ActorSystem) = new Script with LazyLogging with CoreDBMappings with DefaultDBScripts with CoreRepositoryQueries {
+    lazy val system: ActorSystem = sys
 
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       logger.debug(s"creating PersistenceEventState")
@@ -88,6 +89,63 @@ object V2Scripts {
     }
   }
 
-  def scripts(system: ActorSystem) = Seq(oo656(system)) ++
+  val oo688 = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      sql"""create table ${zusatzAbotypMapping.table} (
+        id BIGINT not null,
+        name varchar(50) not null,
+        beschreibung varchar(256),
+        aktiv_von datetime default null,
+        aktiv_bis datetime default null,
+        preis DECIMAL(7,2) not null,
+        preiseinheit varchar(20) not null,
+        laufzeit int,
+        laufzeiteinheit varchar(50),
+        vertragslaufzeit varchar(50),
+        kuendigungsfrist varchar(50),
+        anzahl_abwesenheiten int, farb_code varchar(20),
+        zielpreis DECIMAL(7,2),
+        guthaben_mindestbestand int,
+        admin_prozente DECIMAL(5,2),
+        wird_geplant varchar(1) not null,
+        anzahl_abonnenten INT not null,
+        letzte_lieferung datetime default null,
+        waehrung varchar(10),
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      sql"""create table ${zusatzAboMapping.table}  (
+        id BIGINT not null,
+        haupt_abo_id BIGINT not null,
+        haupt_abotyp_id BIGINT not null,
+        kunde_id BIGINT not null,
+        kunde varchar(100),
+        vertriebsart_id BIGINT not null,
+        vertrieb_id BIGINT not null,
+        vertrieb_beschrieb varchar(2000),
+        abotyp_id BIGINT not null,
+        abotyp_name varchar(50),
+        start datetime not null,
+        ende datetime,
+        guthaben_vertraglich int,
+        guthaben int not null default 0,
+        guthaben_in_rechnung int not null default 0,
+        letzte_lieferung datetime,
+        anzahl_abwesenheiten varchar(500),
+        anzahl_lieferungen varchar(500),
+        aktiv varchar(1),
+        erstelldat datetime not null,
+        ersteller BIGINT not null,
+        modifidat datetime not null,
+        modifikator BIGINT not null)""".execute.apply()
+
+      Success(true)
+    }
+  }
+
+  def scripts(system: ActorSystem) = Seq(oo656(system), oo688) ++
     OO686_Add_Rechnungspositionen.scripts
 }
