@@ -11,7 +11,7 @@
 * the Free Software Foundation, either version 3 of the License,              *
 * or (at your option) any later version.                                      *
 *                                                                             *
-* This program is distributed in the hope .that it will be useful, but         *
+* This program is distributed in the hope that it will be useful, but         *
 * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY  *
 * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for *
 * more details.                                                               *
@@ -635,14 +635,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
   private def recalculateValuesForLieferplanungAbgeschlossen(lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
     //calculate new values
-    (lieferungen map { lieferung =>
+    (lieferungen flatMap { lieferung =>
       //calculate total of lieferung
       val total = stammdatenReadRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
       val lieferungCopy = lieferung.copy(preisTotal = total, status = Abgeschlossen)
       val lieferungModifyCopy = LieferungAbgeschlossenModify(Abgeschlossen, total)
 
       //update durchschnittspreis
-      val updates = (stammdatenReadRepository.getProjekt map { projekt =>
+      val updates = (stammdatenReadRepository.getProjekt flatMap { projekt =>
         stammdatenReadRepository.getVertrieb(lieferung.vertriebId) map { vertrieb =>
           val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
 
@@ -655,12 +655,12 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             durchschnittspreis = vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
           )
           val vertriebModifyCopy = VertriebRecalculationsModify(vertrieb.anzahlLieferungen, vertrieb.durchschnittspreis)
-          EntityUpdateEvent(vertrieb.id, vertriebModifyCopy)
+          EntityUpdateEvent(vertrieb.id, vertriebModifyCopy) :: Nil
         }
-      }).get.get
+      }).getOrElse(Nil)
 
-      EntityUpdateEvent(lieferungCopy.id, lieferungModifyCopy) :: updates :: Nil
-    }).flatten
+      EntityUpdateEvent(lieferungCopy.id, lieferungModifyCopy) :: updates
+    })
   }
 
   private def updateSammelbestellungStatus(lieferungen: List[Lieferung], lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
@@ -730,7 +730,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
   private def createTourAuslieferungHeim(lieferungDatum: DateTime, tourId: TourId, tourName: String, anzahlKoerbe: Int)(implicit personId: PersonId): TourAuslieferung = {
     val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
-    val result = TourAuslieferung(
+    TourAuslieferung(
       auslieferungId,
       Erfasst,
       tourId,
@@ -742,7 +742,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       DateTime.now,
       personId
     )
-    result
   }
 
   private def getDistinctSammelbestellungModifyByLieferplan(lieferplanungId: LieferplanungId)(implicit session: DBSession): Set[SammelbestellungModify] = {

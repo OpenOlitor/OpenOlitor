@@ -653,17 +653,16 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   def updateKorbAuslieferungId(meta: EventMetadata, id: KorbId, entity: KorbAuslieferungModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(korbMapping, id) map { korb =>
-        val copy = korb.copy(auslieferungId = Some(entity.auslieferungId), modifidat = meta.timestamp, modifikator = personId)
-        stammdatenWriteRepository.updateEntityFully[Korb, KorbId](copy)
-      }
+      stammdatenWriteRepository.updateEntity[Korb, KorbId](id)(
+        korbMapping.column.auslieferungId -> Some(entity.auslieferungId)
+      )
     }
   }
 
   def updateVertriebRecalculationsModify(meta: EventMetadata, id: VertriebId, entity: VertriebRecalculationsModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(vertriebMapping, id) map { vertrieb =>
-        val copy = copyFrom(vertrieb, Some(entity), "modifidat" -> meta.timestamp, "modifikator" -> personId, "anzahlLieferungen" -> entity.anzahlLieferungen, "durchschnittspreis" -> entity.durchschnittspreis)
+        val copy = copyFrom(vertrieb, entity)
         stammdatenWriteRepository.updateEntityFully[Vertrieb, VertriebId](copy)
       }
     }
@@ -672,7 +671,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   def updateSammelbestellungStatusModify(meta: EventMetadata, id: SammelbestellungId, entity: SammelbestellungStatusModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(sammelbestellungMapping, id) map { sammelbestellung =>
-        val copy = copyFrom(sammelbestellung, Some(entity), "modifidat" -> meta.timestamp, "modifikator" -> personId, "status" -> entity.status)
+        val copy = copyFrom(sammelbestellung, entity)
         stammdatenWriteRepository.updateEntityFully[Sammelbestellung, SammelbestellungId](copy)
       }
     }
@@ -681,7 +680,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   def updateLieferungAbgeschlossen(meta: EventMetadata, id: LieferungId, entity: LieferungAbgeschlossenModify)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(lieferungMapping, id) map { lieferung =>
-        val copy = copyFrom(lieferung, Some(entity), "modifidat" -> meta.timestamp, "modifikator" -> personId, "status" -> entity.status, "preisTotal" -> entity.preisTotal)
+        val copy = copyFrom(lieferung, entity)
         stammdatenWriteRepository.updateEntityFully[Lieferung, LieferungId](copy)
       }
     }
