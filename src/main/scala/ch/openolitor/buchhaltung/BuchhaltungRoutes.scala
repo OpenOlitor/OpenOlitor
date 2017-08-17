@@ -185,7 +185,8 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungsPositionen, exportFormat))
     } ~
       path("rechnungspositionen" / rechnungsPositionIdPath) { id =>
-        (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
+        delete(remove(id)) ~
+          (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
       }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
