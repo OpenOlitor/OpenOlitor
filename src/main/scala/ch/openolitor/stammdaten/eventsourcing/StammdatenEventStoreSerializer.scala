@@ -44,6 +44,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val depotIdPersister = persister[DepotId]("depot-id")
 
   implicit val aboIdPersister = persister[AboId]("abo-id")
+  implicit val korbIdPersister = persister[KorbId]("korb-id")
 
   implicit val abotypModifyPersister = persister[AbotypModify]("abotyp-modify")
   implicit val abotypIdPersister = persister[AbotypId]("abotyp-id")
@@ -59,6 +60,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val abwesenheitIdPersister = persister[AbwesenheitId]("abwesenheit-id")
 
   implicit val vertriebModifyPersister = persister[VertriebModify]("vertrieb-modify")
+  implicit val vertriebRecalculationsModifyPersister = persister[VertriebRecalculationsModify]("vertrieb-recalculations-modify")
   implicit val vertriebIdPersister = persister[VertriebId]("vertrieb-id")
 
   implicit val vertriebsartDLAbotypPersister = persister[DepotlieferungAbotypModify]("depotlieferungabotyp-modify")
@@ -95,6 +97,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val lieferungIdPersister = persister[LieferungId]("lieferung-id")
   implicit val lieferungOnLieferplanungIdPersister = persister[LieferungOnLieferplanungId]("lieferung-on-lieferplanung-id")
   implicit val lieferungModifyPersister = persister[LieferungModify]("lieferung-modify")
+  implicit val lieferungAbgeschlossenModifyPersister = persister[LieferungAbgeschlossenModify]("lieferung-abgeschlossen-modify")
   implicit val lieferungPlanungAddPersister = persister[LieferungPlanungAdd]("lieferung-planungadd-modify")
   implicit val lieferungPlanungRemovePersister = persister[LieferungPlanungRemove]("lieferung-planungremove-modify")
   implicit val lieferplanungModifyPersister = persister[LieferplanungModify]("lieferplanung-modify")
@@ -150,6 +153,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   implicit val kontoDatenIdPersister = persister[KontoDatenId]("konto-daten-id")
 
   implicit val korbCreatePersister = persister[KorbCreate]("korb-create")
+  implicit val korbModifyAuslieferungPersister = persister[KorbAuslieferungModify]("korb-modify-auslieferung")
+
   implicit val tourAuslieferungModifyPersister = persister[TourAuslieferungModify]("tour-auslieferung-modify")
   implicit val depotAuslieferungPersister = persister[DepotAuslieferung]("depot-auslieferung")
   implicit val tourAuslieferungPersister = persister[TourAuslieferung]("tour-auslieferung")
@@ -179,6 +184,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     pendenzIdPersister,
     pendenzCreatePersister,
     vertriebModifyPersister,
+    vertriebRecalculationsModifyPersister,
     vertriebIdPersister,
     vertriebsartDLPersister,
     vertriebsartPLPersister,
@@ -202,6 +208,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     lieferungIdPersister,
     lieferungOnLieferplanungIdPersister,
     lieferungModifyPersister,
+    lieferungAbgeschlossenModifyPersister,
     lieferungPlanungAddPersister,
     lieferungPlanungRemovePersister,
     lieferplanungModifyPersister,
@@ -229,6 +236,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     abwesenheitCreateV2Persister,
     abwesenheitIdPersister,
     korbCreatePersister,
+    korbModifyAuslieferungPersister,
     tourAuslieferungModifyPersister,
     depotAuslieferungPersister,
     tourAuslieferungPersister,
@@ -258,7 +266,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     passwortResetGesendetEventPersister,
     rolleGewechseltEventPersister,
     aboAktiviertEventPersister,
-    aboDeaktiviertEventPersister
+    aboDeaktiviertEventPersister,
+    korbIdPersister
   )
 
   def fixToOptionLocalDate(in: JsValue, attribute: Symbol): JsValue = {

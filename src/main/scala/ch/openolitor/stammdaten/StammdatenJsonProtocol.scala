@@ -401,8 +401,10 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
     }
   }
 
+  implicit val vertriebRecalculationModify = autoProductFormat[VertriebRecalculationsModify]
   implicit val lieferungAbotypCreateFormat = autoProductFormat[LieferungAbotypCreate]
   implicit val lieferungModifyFormat = autoProductFormat[LieferungModify]
+  implicit val lieferungAbgeschlossenModifyFormat = autoProductFormat[LieferungAbgeschlossenModify]
   implicit val lieferplanungModifyFormat = autoProductFormat[LieferplanungModify]
   implicit val lieferplanungCreateFormat = autoProductFormat[LieferplanungCreate]
   implicit val lieferpositionModifyFormat = autoProductFormat[LieferpositionModify]
@@ -410,9 +412,11 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val lieferungPlanungAddFormat = autoProductFormat[LieferungPlanungAdd]
   implicit val lieferungPlanungRemoveFormat = autoProductFormat[LieferungPlanungRemove]
   implicit val bestellungenCreateFormat = autoProductFormat[BestellungenCreate]
+  implicit val bestellungStatusModify = autoProductFormat[SammelbestellungStatusModify]
   implicit val bestellpositionModifyFormat = autoProductFormat[BestellpositionModify]
 
   implicit val korbCreateFormat = autoProductFormat[KorbCreate]
+  implicit val korbModifyAuslieferungFormat = autoProductFormat[KorbAuslieferungModify]
 
   implicit val projektModifyFormat = autoProductFormat[ProjektModify]
   implicit val kontoDatenModifyFormat = autoProductFormat[KontoDatenModify]

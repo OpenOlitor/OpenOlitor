@@ -28,21 +28,16 @@ import spray.json._
 import scalikejdbc._
 import ch.openolitor.core.models._
 import ch.openolitor.core.domain._
-import ch.openolitor.core.ws._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.db._
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.util.IdUtil
-import scala.concurrent.ExecutionContext.Implicits.global;
 import org.joda.time.DateTime
-import org.joda.time.LocalDate
 import com.github.nscala_time.time.Imports._
-import scala.concurrent.Future
 import org.joda.time.format.DateTimeFormat
 import BigDecimal.RoundingMode._
 import ch.openolitor.core.repositories.EventPublishingImplicits._
@@ -130,8 +125,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleRechnungsPositionBezahlt(entity, orig)(personId)
 
     case e @ EntityCreated(personId, entity: Lieferplanung) => handleLieferplanungCreated(entity)(personId)
-    case e @ EntityModified(personId, entity: Lieferplanung, orig: Lieferplanung) if (orig.status != Abgeschlossen && entity.status == Abgeschlossen) =>
-      handleLieferplanungAbgeschlossen(entity)(personId)
 
     case e @ EntityDeleted(personId, entity: Lieferplanung) => handleLieferplanungDeleted(entity)(personId)
     case e @ PersonLoggedIn(personId, timestamp) => handlePersonLoggedIn(personId, timestamp)
@@ -747,205 +740,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def handleLieferplanungDeleted(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
 
-  }
-
-  def handleLieferplanungAbgeschlossen(lieferplanung: Lieferplanung)(implicit personId: PersonId) = {
-    DB localTxPostPublish { implicit session => implicit publisher =>
-      val lieferungen = stammdatenUpdateRepository.getLieferungen(lieferplanung.id)
-
-      //handle Tourenlieferungen: Group all entries with the same TourId on the same Date
-      val vertriebsartenDaten = (lieferungen flatMap { lieferung =>
-        stammdatenUpdateRepository.getVertriebsarten(lieferung.vertriebId) collect {
-          case h: HeimlieferungDetail =>
-            stammdatenUpdateRepository.getById(tourMapping, h.tourId) map { tour =>
-              (h.tourId, tour.name, lieferung.datum) -> h.id
-            }
-        }
-      }).flatten.groupBy(_._1).mapValues(_ map { _._2 })
-
-      vertriebsartenDaten map {
-        case ((tourId, tourName, lieferdatum), vertriebsartIds) => {
-          //create auslieferungen
-          if (!isAuslieferungExistingHeim(lieferdatum, tourId)) {
-            val koerbe = stammdatenUpdateRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
-            if (!koerbe.isEmpty) {
-              val auslieferung = createAuslieferungHeim(lieferdatum, tourId, tourName, koerbe.size)
-
-              koerbe map { korb =>
-                val tourlieferung = stammdatenUpdateRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
-
-                stammdatenUpdateRepository.updateEntity[Korb, KorbId](korb.id)(
-                  korbMapping.column.auslieferungId -> Some(auslieferung.id),
-                  korbMapping.column.sort -> (tourlieferung flatMap (_.sort))
-                )
-              }
-            }
-          }
-        }
-      }
-
-      //handle Depot- and Postlieferungen: Group all entries with the same VertriebId on the same Date
-      val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
-
-      vertriebeDaten map {
-        case (vertriebId, lieferungDatum) => {
-
-          log.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
-          //create auslieferungen
-          val auslieferungL = stammdatenUpdateRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
-
-            val auslieferungO = getAuslieferungDepotPost(lieferungDatum, vertriebsart)
-
-            val auslieferungC = auslieferungO match {
-              case Some(auslieferung) => {
-                Some(auslieferung)
-              }
-              case None => {
-                log.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
-                createAuslieferungDepotPost(lieferungDatum, vertriebsart, 0)
-              }
-            }
-
-            auslieferungC map { _ =>
-              val koerbe = stammdatenUpdateRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-              if (!koerbe.isEmpty) {
-                koerbe map { korb =>
-                  stammdatenUpdateRepository.updateEntity[Korb, KorbId](korb.id)(korbMapping.column.auslieferungId -> Some(auslieferungC.head.id))
-                }
-              }
-            }
-            auslieferungC
-          }
-
-          auslieferungL.distinct.collect {
-            case Some(auslieferung) => {
-              val koerbeC = stammdatenUpdateRepository.countKoerbe(auslieferung.id) getOrElse 0
-              auslieferung match {
-                case d: DepotAuslieferung => {
-                  stammdatenUpdateRepository.updateEntity[DepotAuslieferung, AuslieferungId](d.id)(
-                    depotAuslieferungMapping.column.anzahlKoerbe -> koerbeC
-                  )
-                }
-                case p: PostAuslieferung => {
-                  stammdatenUpdateRepository.updateEntity[PostAuslieferung, AuslieferungId](p.id)(
-                    postAuslieferungMapping.column.anzahlKoerbe -> koerbeC
-                  )
-                }
-                case _ =>
-              }
-            }
-          }
-        }
-      }
-      //calculate new values
-      lieferungen map { lieferung =>
-        //calculate total of lieferung
-        val total = stammdatenUpdateRepository.getLieferpositionenByLieferung(lieferung.id).map(_.preis.getOrElse(0.asInstanceOf[BigDecimal])).sum
-
-        stammdatenUpdateRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(
-          lieferungMapping.column.preisTotal -> total,
-          lieferungMapping.column.status -> Abgeschlossen
-        )
-
-        //update durchschnittspreis
-        stammdatenUpdateRepository.getProjekt map { projekt =>
-
-          stammdatenUpdateRepository.modifyEntity[Vertrieb, VertriebId](lieferung.vertriebId) { vertrieb =>
-            val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
-
-            val lieferungen = vertrieb.anzahlLieferungen.get(gjKey).getOrElse(0)
-            val durchschnittspreis: BigDecimal = vertrieb.durchschnittspreis.get(gjKey).getOrElse(0)
-
-            val neuerDurchschnittspreis = calcDurchschnittspreis(durchschnittspreis, lieferungen, total)
-
-            Map(
-              vertriebMapping.column.anzahlLieferungen -> vertrieb.anzahlLieferungen.updated(gjKey, lieferungen + 1),
-              vertriebMapping.column.durchschnittspreis -> vertrieb.durchschnittspreis.updated(gjKey, neuerDurchschnittspreis)
-            )
-          }
-        }
-      }
-
-      stammdatenUpdateRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
-        stammdatenUpdateRepository.updateEntityIf[Sammelbestellung, SammelbestellungId](Offen == _.status)(sammelbestellung.id)(
-          sammelbestellungMapping.column.status -> Abgeschlossen
-        )
-      }
-    }
-  }
-
-  private def isAuslieferungExistingHeim(datum: DateTime, tourId: TourId)(implicit session: DBSession): Boolean = {
-    stammdatenUpdateRepository.getTourAuslieferung(tourId, datum).isDefined
-  }
-
-  private def getAuslieferungDepotPost(datum: DateTime, vertriebsart: VertriebsartDetail)(implicit session: DBSession): Option[Auslieferung] = {
-    vertriebsart match {
-      case d: DepotlieferungDetail =>
-        stammdatenUpdateRepository.getDepotAuslieferung(d.depotId, datum)
-      case p: PostlieferungDetail =>
-        stammdatenUpdateRepository.getPostAuslieferung(datum)
-      case _ =>
-        None
-    }
-  }
-
-  private def createAuslieferungHeim(lieferungDatum: DateTime, tourId: TourId, tourName: String, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Auslieferung = {
-    val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
-
-    val result = TourAuslieferung(
-      auslieferungId,
-      Erfasst,
-      tourId,
-      tourName,
-      lieferungDatum,
-      anzahlKoerbe,
-      DateTime.now,
-      personId,
-      DateTime.now,
-      personId
-    )
-    // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[TourAuslieferung, AuslieferungId](result)
-
-    result
-  }
-
-  private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Option[Auslieferung] = {
-    val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
-
-    vertriebsart match {
-      case d: DepotlieferungDetail =>
-        val result = DepotAuslieferung(
-          auslieferungId,
-          Erfasst,
-          d.depotId,
-          d.depot.name,
-          lieferungDatum,
-          anzahlKoerbe,
-          DateTime.now,
-          personId,
-          DateTime.now,
-          personId
-        )
-        // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[DepotAuslieferung, AuslieferungId](result)
-        Some(result)
-
-      case p: PostlieferungDetail =>
-        val result = PostAuslieferung(
-          auslieferungId,
-          Erfasst,
-          lieferungDatum,
-          anzahlKoerbe,
-          DateTime.now,
-          personId,
-          DateTime.now,
-          personId
-        )
-        // FIXME: OO-655: stammdatenUpdateRepository.insertEntity[PostAuslieferung, AuslieferungId](result)
-        Some(result)
-      case _ =>
-        //nothing to create for Tour, see createAuslieferungHeim
-        None
-    }
   }
 
   def handleAuslieferungAusgeliefert(entity: Auslieferung)(implicit personId: PersonId) = {

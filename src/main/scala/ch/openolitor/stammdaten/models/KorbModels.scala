@@ -111,6 +111,10 @@ case class KorbModify(
   id: KorbId
 ) extends JSONSerializable
 
+case class KorbAuslieferungModify(
+  auslieferungId: AuslieferungId
+) extends JSONSerializable
+
 case class KorbCreate(
   LieferungId: LieferungId,
   aboId: AboId,

@@ -172,6 +172,11 @@ case class LieferungModify(
   lieferplanungId: Option[LieferplanungId]
 ) extends JSONSerializable
 
+case class LieferungAbgeschlossenModify(
+  status: LieferungStatus,
+  preisTotal: BigDecimal
+) extends JSONSerializable
+
 case class LieferungPlanungAdd(
   id: LieferungId,
   lieferplanungId: LieferplanungId

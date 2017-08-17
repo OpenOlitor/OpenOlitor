@@ -55,6 +55,7 @@ case class VertriebVertriebsarten(id: VertriebId, abotypId: AbotypId, liefertag:
   modifikator: PersonId) extends BaseEntity[VertriebId]
 
 case class VertriebModify(abotypId: AbotypId, liefertag: Lieferzeitpunkt, beschrieb: Option[String]) extends JSONSerializable
+case class VertriebRecalculationsModify(anzahlLieferungen: TreeMap[String, Int], durchschnittspreis: TreeMap[String, BigDecimal]) extends JSONSerializable
 
 case class VertriebsartId(id: Long) extends BaseId
 

@@ -491,6 +491,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def lieferplanungAbschliessen(id: LieferplanungId)(implicit idPersister: Persister[LieferplanungId, _], subject: Subject) = {
+    implicit val timeout = Timeout(30.seconds)
     onSuccess(entityStore ? StammdatenCommandHandler.LieferplanungAbschliessenCommand(subject.personId, id)) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Could not transit Lieferplanung to status Abschliessen")
