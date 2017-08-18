@@ -184,7 +184,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getZahlungsImports)) ~
         (put | post)(upload { (form, content, fileName) =>
           // parse
-          ZahlungsImportParser.parse(Source.fromInputStream(content).getLines) match {
+          ZahlungsImportParser.parse(content) match {
             case Success(importResult) =>
               storeToFileStore(ZahlungsImportDaten, None, content, fileName) { (fileId, meta) =>
                 createZahlungsImport(fileId, importResult.records)

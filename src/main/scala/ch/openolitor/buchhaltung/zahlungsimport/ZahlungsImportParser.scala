@@ -32,6 +32,8 @@ import java.io.InputStream
 
 class ZahlungsImportParseException(message: String) extends Exception(message)
 
+case class ZahlungsImportParseError(message: String)
+
 class ZahlungsImportParser {
   def parse(line: String): Try[ZahlungsImportRecordResult] = line.trim match {
     case EsrRecordTyp3(record) =>
@@ -52,5 +54,9 @@ object ZahlungsImportParser {
     val result = lines map (parser.parse)
 
     Try(ZahlungsImportResult((result map (_.get)).toList))
+  }
+
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    parse(Source.fromInputStream(is).getLines)
   }
 }

@@ -28,8 +28,14 @@ case object EUR extends Waehrung
 case object USD extends Waehrung
 
 object Waehrung {
+  val waehrungen = Vector(CHF, EUR, USD)
+
   def apply(value: String): Waehrung = {
-    Vector(CHF, EUR, USD) find (_.toString == value) getOrElse (CHF)
+    waehrungen find (_.toString == value) getOrElse (CHF)
+  }
+
+  def applyUnsafe(value: String): Waehrung = {
+    waehrungen find (_.toString == value) getOrElse (throw new IllegalArgumentException(s"Waehrung $value is unknown to OpenOlitor"))
   }
 }
 

@@ -20,49 +20,25 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.zahlungsimport.esr
+package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
 import org.joda.time.DateTime
 import ch.openolitor.buchhaltung.zahlungsimport._
 import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
+import ch.openolitor.stammdaten.models.Waehrung
+import ch.openolitor.stammdaten.models.CHF
+import scala.util._
+import scala.io.Source
+import scala.xml.XML
+import java.io.InputStream
+import iso.std.iso.n20022.tech.xsd.camt05400106.BankToCustomerDebitCreditNotificationV06
 
-object EsrTotalRecordTyp3Transaktionsartcode {
-  def apply(c: String): Transaktionsart = c match {
-    case "999" => Gutschrift // Gutschrift/Korrektur
-    case "995" => Storno
+class Camt054Parser {
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    Try(XML.load(is)) flatMap { node =>
+      Try(scalaxb.fromXML[BankToCustomerDebitCreditNotificationV06](node)) flatMap {
+        (new Camt054ToZahlungsImportTransformer).transform
+      }
+    }
   }
 }
-
-case class EsrTotalRecordTyp3(
-  transaktionsart: Transaktionsart,
-  teilnehmerNummer: String,
-  sortierSchluessel: String,
-  betrag: BigDecimal,
-  anzahlTransaktionen: Int,
-  erstellungsDatumMedium: DateTime,
-  preiseFuerEinzahlungen: BigDecimal,
-  nachbearbeitungEsrPlus: BigDecimal,
-  reserve: String
-) extends ZahlungsImportTotalRecord
-
-object EsrTotalRecordTyp3 {
-  private val R = """(\w{3})(\d{9})(\d{27})(\d{12})(\d{12})(\d{6})(\d{9})(\d{9})([\w\s]{0,13})""".r
-
-  def unapply(line: String): Option[EsrTotalRecordTyp3] = line match {
-    case R(transaktionsartcode, teilnehmernummer, sortierSchluessel, betrag, anzahlTransaktionen, erstellungsDatumMedium, preiseFuerEinzahlungen, nachbearbeitungEsrPlus, reserve) =>
-      Some(EsrTotalRecordTyp3(
-        EsrTotalRecordTyp3Transaktionsartcode(transaktionsartcode),
-        teilnehmernummer,
-        sortierSchluessel,
-        BigDecimal(betrag.toInt, Scale),
-        anzahlTransaktionen.toInt,
-        DateTime.parse(erstellungsDatumMedium, Format),
-        BigDecimal(preiseFuerEinzahlungen.toInt, Scale),
-        BigDecimal(nachbearbeitungEsrPlus.toInt, Scale),
-        reserve
-      ))
-    case _ =>
-      None
-  }
-}
-
