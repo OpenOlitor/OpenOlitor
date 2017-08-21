@@ -91,6 +91,7 @@ import scala.collection.Iterable
 import collection.JavaConverters._
 import java.io.File
 import java.io.FileInputStream
+import ch.openolitor.util.ZipBuilderWithFile
 
 sealed trait ResponseType
 case object Download extends ResponseType
@@ -416,7 +417,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
   }
 
   protected def downloadAsZip(zipFileName: String, fileReferences: Seq[FileStoreFileReference]) = {
-    val builder = new ZipBuilder()
+    val builder = new ZipBuilderWithFile()
     fileReferences map { ref =>
       fileStore.getFile(ref.fileType.bucket, ref.id.id) map {
         case Left(e) =>

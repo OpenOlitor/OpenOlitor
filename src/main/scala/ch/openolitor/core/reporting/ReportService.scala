@@ -138,7 +138,7 @@ trait ReportService extends LazyLogging with AsyncConnectionPoolContextAware wit
     val collector =
       if (pdfAblage.isDefined) FileStoreReportResultCollector.props(reportSystem, jobQueueService, downloadFile)
       else if (data.rows.size == 1) HeadReportResultCollector.props(reportSystem, jobQueueService)
-      else ZipReportResultCollector.props(reportSystem, jobQueueService)
+      else ChunkedReportResultCollector.props(fileStore, "Report_" + filenameDateFormat.print(System.currentTimeMillis()) + ".zip", reportSystem, jobQueueService)
 
     val ref = actorSystem.actorOf(collector)
 
