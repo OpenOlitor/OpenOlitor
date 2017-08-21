@@ -127,7 +127,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       }
       stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
         if (Abgeschlossen == lieferung.status) {
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Verrechnet))
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.copy(status = Verrechnet), lieferungMapping.column.status)
         }
       }
       stammdatenWriteRepository.getSammelbestellungen(id) map { sammelbestellung =>
