@@ -103,7 +103,7 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
         val abos = pl ++ hl ++ dl
         val rechnungsPositionenDetail = for {
           rechnungsPosition <- rechnungsPositionen
-          abo <- abos.filter(_.id == rechnungsPosition.aboId)
+          abo <- abos.find(_.id == rechnungsPosition.aboId.orNull)
         } yield {
           copyTo[RechnungsPosition, RechnungsPositionDetail](rechnungsPosition, "abo" -> abo)
         }
