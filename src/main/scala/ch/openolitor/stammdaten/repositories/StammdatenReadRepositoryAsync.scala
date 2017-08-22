@@ -45,8 +45,11 @@ import Scalaz._
 import scalaz.OptionT.optionT
 
 trait StammdatenReadRepositoryAsync extends ReportReadRepository {
+
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
+
+  def getZusatzAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[ZusatzAbotyp]]
 
   def getUngeplanteLieferungen(abotypId: AbotypId, vertriebId: VertriebId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getUngeplanteLieferungen(abotypId: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
@@ -159,6 +162,10 @@ trait StammdatenReadRepositoryAsync extends ReportReadRepository {
 class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with StammdatenReadRepositoryAsync with LazyLogging with StammdatenRepositoryQueries {
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]] = {
     getAbotypenQuery(filter).future
+  }
+
+  def getZusatzAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[ZusatzAbotyp]] = {
+    getZusatzAbotypenQuery(filter).future
   }
 
   def getKunden(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kunde]] = {

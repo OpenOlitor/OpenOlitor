@@ -76,6 +76,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityInsertedEvent(meta, id: AbotypId, abotyp: AbotypModify) =>
       createAbotyp(meta, id, abotyp)
+    case EntityInsertedEvent(meta, id: AbotypId, zusatzabotyp: ZusatzAbotypModify) =>
+      createZusatzAbotyp(meta, id, zusatzabotyp)
     case EntityInsertedEvent(meta, id: KundeId, kunde: KundeModify) =>
       createKunde(meta, id, kunde)
     case EntityInsertedEvent(meta, id: PersonId, person: PersonCreate) =>
@@ -140,6 +142,26 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       //create abotyp
       stammdatenWriteRepository.insertEntity[Abotyp, AbotypId](typ)
+    }
+  }
+
+  def createZusatzAbotyp(meta: EventMetadata, id: AbotypId, zusatzabotyp: ZusatzAbotypModify)(implicit personId: PersonId = meta.originator) = {
+    val typ = copyTo[ZusatzAbotypModify, ZusatzAbotyp](
+      zusatzabotyp,
+      "id" -> id,
+      "anzahlAbonnenten" -> ZERO,
+      "anzahlAbonnentenAktiv" -> ZERO,
+      "letzteLieferung" -> None,
+      "waehrung" -> CHF,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator
+    )
+
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      //create abotyp
+      stammdatenWriteRepository.insertEntity[ZusatzAbotyp, AbotypId](typ)
     }
   }
 

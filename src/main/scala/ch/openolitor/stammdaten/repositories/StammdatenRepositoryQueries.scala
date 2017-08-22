@@ -22,14 +22,10 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.repositories
 
-import ch.openolitor.core.models._
 import scalikejdbc._
 import sqls.{ distinct, count }
-import ch.openolitor.core.db._
-import ch.openolitor.core.repositories._
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
@@ -37,11 +33,11 @@ import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.util.parsing.FilterExpr
 import org.joda.time.LocalDate
-import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 
 trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
 
   lazy val aboTyp = abotypMapping.syntax("atyp")
+  lazy val zusatzAboTyp = zusatzAbotypMapping.syntax("zatyp")
   lazy val person = personMapping.syntax("pers")
   lazy val lieferplanung = lieferplanungMapping.syntax("lieferplanung")
   lazy val lieferung = lieferungMapping.syntax("lieferung")
@@ -89,6 +85,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .where(UriQueryParamToSQLSyntaxBuilder.build(filter, aboTyp))
         .orderBy(aboTyp.name)
     }.map(abotypMapping(aboTyp)).list
+  }
+
+  protected def getZusatzAbotypenQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(zusatzAbotypMapping as zusatzAboTyp)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, zusatzAboTyp))
+        .orderBy(zusatzAboTyp.name)
+    }.map(zusatzAbotypMapping(zusatzAboTyp)).list
   }
 
   protected def getKundenQuery = {
