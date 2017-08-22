@@ -72,6 +72,7 @@ object RechnungStatus {
 object RechnungsPositionStatus {
   sealed trait RechnungsPositionStatus
   case object Offen extends RechnungsPositionStatus
+  case object Zugewiesen extends RechnungsPositionStatus
   case object Bezahlt extends RechnungsPositionStatus
 
   def apply(value: String): RechnungsPositionStatus = {
