@@ -44,6 +44,7 @@ import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungWriteRepositoryC
 import ch.openolitor.buchhaltung.repositories.BuchhaltungWriteRepositoryComponent
 import ch.openolitor.core.repositories.EventPublishingImplicits._
 import ch.openolitor.core.repositories.EventPublisher
+import ch.openolitor.stammdaten.models.KundeId
 
 object BuchhaltungInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): BuchhaltungInsertService = new DefaultBuchhaltungInsertService(sysConfig, system)
@@ -77,6 +78,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   val handle: Handle = {
     case EntityInsertedEvent(meta, id: RechnungsPositionId, entity: RechnungsPositionCreate) =>
       createRechnungsPosition(meta, id, entity)
+    case EntityInsertedEvent(meta, id: RechnungId, entity: RechnungCreateFromRechnungsPositionen) => createRechnung(meta, id, entity)
     case e =>
   }
 
@@ -100,15 +102,16 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
     }
   }
 
-  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungCreate)(implicit personId: PersonId = meta.originator): Option[Rechnung] = {
+  def createRechnung(meta: EventMetadata, id: RechnungId, entity: RechnungCreateFromRechnungsPositionen)(implicit personId: PersonId = meta.originator): Option[Rechnung] = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.getKontoDaten flatMap { kontoDaten =>
-        val referenzNummer = generateReferenzNummer(kontoDaten, entity, id)
-        val esrNummer = generateEsrNummer(kontoDaten, entity, referenzNummer)
+        val referenzNummer = generateReferenzNummer(kontoDaten, entity.kundeId, id)
+        val esrNummer = generateEsrNummer(kontoDaten, entity.betrag, entity.waehrung, referenzNummer)
 
-        val typ = copyTo[RechnungCreate, Rechnung](
+        val typ = copyTo[RechnungCreateFromRechnungsPositionen, Rechnung](
           entity,
           "id" -> id,
+          "einbezahlterBetrag" -> None,
           "status" -> Erstellt,
           "referenzNummer" -> referenzNummer,
           "fileStoreId" -> None,
@@ -128,25 +131,25 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
   /**
    * Generieren einer Referenznummer, die die Kundennummer und Rechnungsnummer enthält.
    */
-  def generateReferenzNummer(kontoDaten: KontoDaten, rechnung: RechnungCreate, id: RechnungId): String = {
+  def generateReferenzNummer(kontoDaten: KontoDaten, kundeId: KundeId, id: RechnungId): String = {
     val referenzNummerPrefix = kontoDaten.referenzNummerPrefix getOrElse ("")
 
-    val filled = s"${referenzNummerPrefix}%0${ReferenznummerLength - referenzNummerPrefix.size - RechnungIdLength}d%0${RechnungIdLength}d".format(rechnung.kundeId.id, id.id)
+    val filled = s"${referenzNummerPrefix}%0${ReferenznummerLength - referenzNummerPrefix.size - RechnungIdLength}d%0${RechnungIdLength}d".format(kundeId.id, id.id)
     val checksum = calculateChecksum(filled.toList map (_.asDigit))
 
     s"$filled$checksum"
   }
 
-  def generateEsrNummer(kontoDaten: KontoDaten, rechnung: RechnungCreate, referenzNummer: String): String = {
+  def generateEsrNummer(kontoDaten: KontoDaten, betrag: BigDecimal, waehrung: Waehrung, referenzNummer: String): String = {
     val teilnehmerNummer = kontoDaten.teilnehmerNummer getOrElse ("")
 
-    val bc = belegarten(rechnung.waehrung)
+    val bc = belegarten(waehrung)
     val zeroes = s"%0${BetragLength}d".format(0)
-    val betrag = (s"$zeroes${(rechnung.betrag * 100).toBigInt}") takeRight (BetragLength)
-    val checksum = calculateChecksum((bc + betrag).toList map (_.asDigit))
+    val formated_betrag = (s"$zeroes${(betrag * 100).toBigInt}") takeRight (BetragLength)
+    val checksum = calculateChecksum((bc + formated_betrag).toList map (_.asDigit))
     val filledTeilnehmernummer = (s"%0${TeilnehmernummerLength}d".format(0) + teilnehmerNummer) takeRight (TeilnehmernummerLength)
 
-    s"$bc$betrag$checksum>$referenzNummer+ $filledTeilnehmernummer>"
+    s"$bc$formated_betrag$checksum>$referenzNummer+ $filledTeilnehmernummer>"
   }
 
   def calculateChecksum(digits: List[Int], buffer: Int = 0): Int = digits match {

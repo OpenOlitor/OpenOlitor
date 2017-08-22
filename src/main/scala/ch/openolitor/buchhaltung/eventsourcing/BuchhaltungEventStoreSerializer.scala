@@ -22,6 +22,7 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung.eventsourcing
 
+import spray.json.DefaultJsonProtocol
 import stamina._
 import stamina.json._
 import ch.openolitor.buchhaltung._
@@ -35,11 +36,24 @@ import ch.openolitor.core.JSONSerializable
 trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
   import ch.openolitor.core.eventsourcing.events._
 
+  object MigrationToEmpty extends DefaultJsonProtocol {
+    case class Empty() extends JSONSerializable
+
+    val V1toV2toEmpty: JsonMigrator[V2] = from[V1].to[V2] { _ =>
+      Empty().toJson
+    }
+  }
+
+  // No longer used events
+  implicit val rechnungCreatePersisterV1 = persister[MigrationToEmpty.Empty, V2]("rechnung-create", MigrationToEmpty.V1toV2toEmpty)
+
   // V1 persisters
-  implicit val rechnungCreatePersister = persister[RechnungCreate]("rechnung-create")
+  implicit val rechnungCreatePersisterV2 = persister[RechnungCreateFromRechnungsPositionen]("rechnung-create-from-rechnungsposition")
+
   implicit val rechnungModifyPersister = persister[RechnungModify]("rechnung-modify")
   implicit val rechnungsPositionCreatePersister = persister[RechnungsPositionCreate]("rechnungs-position-create")
   implicit val rechnungsPositionModifyPersister = persister[RechnungsPositionModify]("rechnungs-position-modify")
+  implicit val rechnungsPositionChangeAboIdModifyPersister = persister[RechnungsPositionAssignToRechnung]("rechnungs-position-change-abo-id")
   implicit val rechnungVerschicktEventPersister = persister[RechnungVerschicktEvent, V2]("rechnung-verschickt-event", V1toV2metaDataMigration)
   implicit val rechnungMahnungVerschicktEventPersister = persister[RechnungMahnungVerschicktEvent, V2]("rechnung-mahnung-verschickt-event", V1toV2metaDataMigration)
   implicit val rechnungBezahltEventPersister = persister[RechnungBezahltEvent, V2]("rechnung-bezahlt-event", V1toV2metaDataMigration)
@@ -56,10 +70,12 @@ trait BuchhaltungEventStoreSerializer extends BuchhaltungJsonProtocol with Entit
   implicit val mahnungPDFStoreEventPersister = persister[MahnungPDFStoredEvent, V2]("mahnung-pdf-stored-event", V1toV2metaDataMigration)
 
   val buchhaltungPersisters = List(
-    rechnungCreatePersister,
+    rechnungCreatePersisterV1,
+    rechnungCreatePersisterV2,
     rechnungModifyPersister,
     rechnungsPositionCreatePersister,
     rechnungsPositionModifyPersister,
+    rechnungsPositionChangeAboIdModifyPersister,
     rechnungIdPersister,
     rechnungsPositionIdPersister,
     rechnungVerschicktEventPersister,

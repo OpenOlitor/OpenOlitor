@@ -25,6 +25,7 @@ package ch.openolitor.buchhaltung
 import ch.openolitor.core.domain._
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.models._
+import ch.openolitor.stammdaten.models.{ KundeId, Kunde }
 import scala.util._
 import scalikejdbc.DB
 import ch.openolitor.buchhaltung.models._
@@ -49,6 +50,7 @@ import scala.concurrent.Future
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositorySyncComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositorySyncComponent
+import org.joda.time.DateTime
 
 object BuchhaltungCommandHandler {
   case class RechnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
@@ -64,6 +66,9 @@ object BuchhaltungCommandHandler {
   case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungBezahltEvent(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt) extends PersistentEvent with JSONSerializable
   case class RechnungStorniertEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
+  case class CreateRechnungenCommand(originator: PersonId, rechnungsPositionenCreateRechnungen: RechnungsPositionenCreateRechnungen) extends UserCommand
+  case class CreateRechnungenEvent(originator: PersonId, createRechnungen: RechnungsPositionenCreateRechnungen) extends UserCommand
+  case class DeleteRechnungsPositionenCommand(originator: PersonId, rechnungsPositionId: RechnungsPositionId) extends UserCommand
 
   case class ZahlungsImportCreateCommand(originator: PersonId, file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult]) extends UserCommand
   case class ZahlungsEingangErledigenCommand(originator: PersonId, entity: ZahlungsEingangModifyErledigt) extends UserCommand
@@ -192,11 +197,66 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
     case MahnungPDFStoredCommand(personId, id, fileStoreId) => idFactory => meta =>
       Success(Seq(DefaultResultingEvent(factory => MahnungPDFStoredEvent(factory.newMetadata(), id, fileStoreId))))
 
+    case CreateRechnungenCommand(personeId, rechnungsPositionenCreateRechnungen) => idFactory => meta =>
+      DB readOnly { implicit session =>
+
+        val offeneRechnungsPositionenByKunde: Map[KundeId, Seq[RechnungsPosition]] = rechnungsPositionenCreateRechnungen.ids.map { id =>
+          buchhaltungReadRepository.getById(rechnungsPositionMapping, id)
+        }.flatten.filter(_.status == RechnungsPositionStatus.Offen).groupBy { _.kundeId }
+
+        val createRechnungen: Seq[Seq[ResultingEvent]] =
+          for {
+            (kundeId, rechnungsPositionen) <- offeneRechnungsPositionenByKunde.toSeq
+            kunde <- buchhaltungReadRepository.getById(kundeMapping, kundeId)
+          } yield {
+            val rechnungCreate = EntityInsertEvent(
+              idFactory.newId(RechnungId.apply),
+              RechnungCreateFromRechnungsPositionen(
+                kundeId,
+                rechnungsPositionenCreateRechnungen.titel,
+                rechnungsPositionen.head.waehrung,
+                rechnungsPositionen.map(_.betrag).sum,
+                rechnungsPositionenCreateRechnungen.rechnungsDatum,
+                rechnungsPositionenCreateRechnungen.faelligkeitsDatum,
+                Some(new DateTime),
+                kunde.strasse,
+                kunde.hausNummer,
+                kunde.adressZusatz,
+                kunde.plz,
+                kunde.ort
+              )
+            )
+
+            val assignRechnungsPositionen = rechnungsPositionen.map { rp =>
+              EntityUpdateEvent(
+                rp.id,
+                RechnungsPositionAssignToRechnung(rechnungCreate.id)
+              )
+            }
+
+            Seq(rechnungCreate) ++ assignRechnungsPositionen
+          }
+
+        Success(createRechnungen.flatten)
+      }
+
+    case DeleteRechnungsPositionenCommand(personId, rechnungsPositionId) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        val rechnungsPosition = buchhaltungReadRepository.getById(rechnungsPositionMapping, rechnungsPositionId)
+        rechnungsPosition.map { rp =>
+          if (rp.status == RechnungsPositionStatus.Offen) {
+            Success(Seq(EntityDeleteEvent(rechnungsPositionId)))
+          } else {
+            Failure(new InvalidStateException(s"Die Rechnungsposition Nr. $rechnungsPositionId muss im State Offen sein"))
+          }
+        }
+      } getOrElse Failure(new InvalidStateException(s"Kein Rechnungsposition mit id $rechnungsPositionId gefunden"))
+
     /*
        * Insert command handling
        */
-    case e @ InsertEntityCommand(personId, entity: RechnungCreate) => idFactory => meta =>
-      handleEntityInsert[RechnungCreate, RechnungId](idFactory, meta, entity, RechnungId.apply)
+    case e @ InsertEntityCommand(personId, entity: RechnungCreateFromRechnungsPositionen) => idFactory => meta =>
+      handleEntityInsert[RechnungCreateFromRechnungsPositionen, RechnungId](idFactory, meta, entity, RechnungId.apply)
   }
 }
 

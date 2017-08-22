@@ -70,7 +70,6 @@ class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends Eve
 
   def deleteRechnungsPosition(meta: EventMetadata, id: RechnungsPositionId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      ////// Was macht das? was ist mit dem Status?
       buchhaltungWriteRepository.deleteEntity[RechnungsPosition, RechnungsPositionId](id)
     }
   }

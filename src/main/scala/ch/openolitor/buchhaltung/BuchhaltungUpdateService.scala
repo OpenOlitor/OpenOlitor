@@ -59,7 +59,17 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: RechnungId, entity: RechnungModify) => updateRechnung(meta, id, entity)
     case EntityUpdatedEvent(meta, id: RechnungsPositionId, entity: RechnungsPositionModify) => updateRechnungsPosition(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: RechnungsPositionId, entity: RechnungsPositionAssignToRechnung) => assignRechnungsPositionToRechnung(meta, id, entity)
     case e =>
+  }
+
+  def assignRechnungsPositionToRechnung(meta: EventMetadata, id: RechnungsPositionId, update: RechnungsPositionAssignToRechnung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      buchhaltungWriteRepository.updateEntity(id)(
+        rechnungsPositionMapping.column.rechnungId -> Some(update.rechnungId),
+        rechnungsPositionMapping.column.status -> RechnungsPositionStatus.Zugewiesen
+      )
+    }
   }
 
   def updateRechnung(meta: EventMetadata, id: RechnungId, update: RechnungModify)(implicit personId: PersonId = meta.originator) = {
