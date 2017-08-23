@@ -169,6 +169,7 @@ case class RechnungDetail(
 case class RechnungDetailReport(
     id: RechnungId,
     kunde: Kunde,
+    kontoDaten: KontoDaten,
     abo: Abo,
     titel: String,
     anzahlLieferungen: Int,
