@@ -76,7 +76,7 @@ object RechnungsPositionStatus {
   case object Bezahlt extends RechnungsPositionStatus
 
   def apply(value: String): RechnungsPositionStatus = {
-    Vector(Offen, Bezahlt).find(_.toString == value).getOrElse(Offen)
+    Vector(Offen, Zugewiesen, Bezahlt).find(_.toString == value).getOrElse(Offen)
   }
 }
 
@@ -101,10 +101,10 @@ case class RechnungsPosition(
   betrag: BigDecimal,
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
-  titel: String,
+  beschrieb: String,
   status: RechnungsPositionStatus.RechnungsPositionStatus,
   typ: RechnungsPositionTyp.RechnungsPositionTyp,
-  sorting: Option[Int],
+  sort: Option[Int],
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -179,9 +179,10 @@ case class RechnungsPositionDetail(
   betrag: BigDecimal,
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
-  titel: String,
+  beschrieb: String,
   status: RechnungsPositionStatus.RechnungsPositionStatus,
   typ: RechnungsPositionTyp.RechnungsPositionTyp,
+  sort: Option[Int],
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -286,7 +287,7 @@ case class RechnungModify(
 case class RechnungsPositionCreate(
   kundeId: KundeId,
   aboId: Option[AboId],
-  titel: String,
+  beschrieb: String,
   anzahlLieferungen: Option[Int],
   betrag: BigDecimal,
   waehrung: Waehrung,
@@ -295,7 +296,7 @@ case class RechnungsPositionCreate(
 ) extends JSONSerializable
 
 case class RechnungsPositionModify(
-  titel: String,
+  beschrieb: String,
   anzahlLieferungen: Option[Int],
   betrag: BigDecimal,
   status: RechnungsPositionStatus.RechnungsPositionStatus

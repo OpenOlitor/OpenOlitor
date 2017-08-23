@@ -89,7 +89,7 @@ class BuchhaltungInsertService(override val sysConfig: SystemConfig) extends Eve
         "rechnungId" -> None,
         "parentRechnungsPositionId" -> None,
         "status" -> RechnungsPositionStatus.Offen,
-        "sorting" -> None,
+        "sort" -> None,
         "erstelldat" -> meta.timestamp,
         "ersteller" -> meta.originator,
         "modifidat" -> meta.timestamp,
