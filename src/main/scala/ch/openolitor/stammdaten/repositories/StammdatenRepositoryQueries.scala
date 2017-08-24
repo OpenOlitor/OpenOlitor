@@ -42,6 +42,7 @@ import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings {
 
   lazy val aboTyp = abotypMapping.syntax("atyp")
+  lazy val zusatzAboTyp = zusatzAbotypMapping.syntax("zatyp")
   lazy val person = personMapping.syntax("pers")
   lazy val lieferplanung = lieferplanungMapping.syntax("lieferplanung")
   lazy val lieferung = lieferungMapping.syntax("lieferung")
@@ -1477,16 +1478,17 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.list
   }
 
+  //RS1
   protected def getDepotAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
-    getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden) =>
-      val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden)
+    getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, zusatzAbotypen, kunden) =>
+      val korbDetails = getKorbDetails(koerbe, abos, abotypen, zusatzAbotypen, kunden)
 
       copyTo[DepotAuslieferung, DepotAuslieferungDetail](auslieferung, "depot" -> depot, "koerbe" -> korbDetails)
     }
   }
 
   protected def getDepotAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
-    getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden) =>
+    getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, zusatzAbotypen, kunden) =>
       val korbReports = getKorbReports(koerbe, abos, abotypen, kunden).sortBy(_.abotyp.name)
 
       val depotReport = copyTo[Depot, DepotReport](depot)
@@ -1494,7 +1496,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }
   }
 
-  private def getDepotAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (DepotAuslieferung, Depot, Seq[Korb], Seq[DepotlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
+  private def getDepotAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (DepotAuslieferung, Depot, Seq[Korb], Seq[DepotlieferungAbo], Seq[Abotyp], Seq[ZusatzAbotyp], Seq[Kunde]) => A) = {
     withSQL {
       select
         .from(depotAuslieferungMapping as depotAuslieferung)
@@ -1502,6 +1504,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(korbMapping as korb).on(korb.auslieferungId, depotAuslieferung.id)
         .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(korb.aboId, depotlieferungAbo.id)
         .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(kundeMapping as kunde).on(depotlieferungAbo.kundeId, kunde.id)
         .where.eq(depotAuslieferung.id, parameter(auslieferungId))
     }.one(depotAuslieferungMapping(depotAuslieferung))
@@ -1510,30 +1513,31 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         rs => korbMapping.opt(korb)(rs),
         rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
         rs => abotypMapping.opt(aboTyp)(rs),
+        rs => zusatzAbotypMapping.opt(zusatzAboTyp)(rs),
         rs => kundeMapping.opt(kunde)(rs)
       )
-      .map((auslieferung, depots, koerbe, abos, abotypen, kunden) => {
-        f(auslieferung, depots.head, koerbe, abos, abotypen, kunden)
+      .map((auslieferung, depots, koerbe, abos, abotypen, zusatzAboTypen, kunden) => {
+        f(auslieferung, depots.head, koerbe, abos, abotypen, zusatzAboTypen, kunden)
       }).single
   }
 
   protected def getTourAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
-    getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, kunden) =>
-      val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden)
+    getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, zusatzAbotypen, kunden) =>
+      val korbDetails = getKorbDetails(koerbe, abos, abotypen, zusatzAbotypen, kunden)
 
       copyTo[TourAuslieferung, TourAuslieferungDetail](auslieferung, "tour" -> tour, "koerbe" -> korbDetails)
     }
   }
 
   protected def getTourAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
-    getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, kunden) =>
+    getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, zusatzAbotypen, kunden) =>
       val korbReports = getKorbReports(koerbe, abos, abotypen, kunden).sortBy(_.abotyp.name)
 
       copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour, "koerbe" -> korbReports, "projekt" -> projekt)
     }
   }
 
-  private def getTourAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (TourAuslieferung, Tour, Seq[Korb], Seq[HeimlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
+  private def getTourAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (TourAuslieferung, Tour, Seq[Korb], Seq[HeimlieferungAbo], Seq[Abotyp], Seq[ZusatzAbotyp], Seq[Kunde]) => A) = {
     withSQL {
       select
         .from(tourAuslieferungMapping as tourAuslieferung)
@@ -1541,6 +1545,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(korbMapping as korb).on(korb.auslieferungId, tourAuslieferung.id)
         .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(korb.aboId, heimlieferungAbo.id)
         .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(kundeMapping as kunde).on(heimlieferungAbo.kundeId, kunde.id)
         .where.eq(tourAuslieferung.id, parameter(auslieferungId))
         .orderBy(korb.sort)
@@ -1550,36 +1555,38 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         rs => korbMapping.opt(korb)(rs),
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
         rs => abotypMapping.opt(aboTyp)(rs),
+        rs => zusatzAbotypMapping.opt(zusatzAboTyp)(rs),
         rs => kundeMapping.opt(kunde)(rs)
       )
-      .map((auslieferung, tour, koerbe, abos, abotypen, kunden) => {
-        f(auslieferung, tour.head, koerbe, abos, abotypen, kunden)
+      .map((auslieferung, tour, koerbe, abos, abotypen, zusatzAboTypen, kunden) => {
+        f(auslieferung, tour.head, koerbe, abos, abotypen, zusatzAboTypen, kunden)
       }).single
   }
 
   protected def getPostAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
-    getPostAuslieferungQuery(auslieferungId) { (auslieferung, koerbe, abos, abotypen, kunden) =>
-      val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden)
+    getPostAuslieferungQuery(auslieferungId) { (auslieferung, koerbe, abos, abotypen, zusatzAbotypen, kunden) =>
+      val korbDetails = getKorbDetails(koerbe, abos, abotypen, zusatzAbotypen, kunden)
 
       copyTo[PostAuslieferung, PostAuslieferungDetail](auslieferung, "koerbe" -> korbDetails)
     }
   }
 
   protected def getPostAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
-    getPostAuslieferungQuery(auslieferungId) { (auslieferung, koerbe, abos, abotypen, kunden) =>
+    getPostAuslieferungQuery(auslieferungId) { (auslieferung, koerbe, abos, abotypen, zusatzAbotypen, kunden) =>
       val korbReports = getKorbReports(koerbe, abos, abotypen, kunden).sortBy(_.abotyp.name)
 
       copyTo[PostAuslieferung, PostAuslieferungReport](auslieferung, "koerbe" -> korbReports, "projekt" -> projekt)
     }
   }
 
-  private def getPostAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (PostAuslieferung, Seq[Korb], Seq[PostlieferungAbo], Seq[Abotyp], Seq[Kunde]) => A) = {
+  private def getPostAuslieferungQuery[A](auslieferungId: AuslieferungId)(f: (PostAuslieferung, Seq[Korb], Seq[PostlieferungAbo], Seq[Abotyp], Seq[ZusatzAbotyp], Seq[Kunde]) => A) = {
     withSQL {
       select
         .from(postAuslieferungMapping as postAuslieferung)
         .leftJoin(korbMapping as korb).on(korb.auslieferungId, postAuslieferung.id)
         .leftJoin(postlieferungAboMapping as postlieferungAbo).on(korb.aboId, postlieferungAbo.id)
         .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
+        .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(kundeMapping as kunde).on(postlieferungAbo.kundeId, kunde.id)
         .where.eq(postAuslieferung.id, parameter(auslieferungId))
     }.one(postAuslieferungMapping(postAuslieferung))
@@ -1587,21 +1594,22 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         rs => korbMapping.opt(korb)(rs),
         rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
         rs => abotypMapping.opt(aboTyp)(rs),
+        rs => zusatzAbotypMapping.opt(zusatzAboTyp)(rs),
         rs => kundeMapping.opt(kunde)(rs)
       )
-      .map((auslieferung, koerbe, abos, abotypen, kunden) => {
-        f(auslieferung, koerbe, abos, abotypen, kunden)
+      .map((auslieferung, koerbe, abos, abotypen, zusatzAboTypen, kunden) => {
+        f(auslieferung, koerbe, abos, abotypen, zusatzAboTypen, kunden)
       }).single
   }
 
-  private def getKorbDetails(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], kunden: Seq[Kunde]): Seq[KorbDetail] = {
+  private def getKorbDetails(koerbe: Seq[Korb], abos: Seq[Abo], abotypen: Seq[Abotyp], zusatzAbotypen: Seq[ZusatzAbotyp], kunden: Seq[Kunde]): Seq[KorbDetail] = {
     koerbe.map { korb =>
       for {
         korbAbo <- abos.filter(_.id == korb.aboId).headOption
         abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
         kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
-        //TODO remove dummy data
         val zusatzKoerbe = List(ZusatzKorbDetail(KorbId(10), LieferungId(11), korbAbo, WirdGeliefert, 1, None, None, kunde, abotyp, DateTime.now(), PersonId(1), DateTime.now(), PersonId(1)))
+        //        zusatzKoerbe: Seq[ZusatzKorbDetail] <- zusatzKorbDetails.filter(_.id == korbAbo.kundeId)
       } yield copyTo[Korb, KorbDetail](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde, "zusatzKoerbe" -> zusatzKoerbe)
     }.flatten
   }

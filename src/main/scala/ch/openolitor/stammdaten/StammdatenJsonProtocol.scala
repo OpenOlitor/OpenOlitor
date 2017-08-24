@@ -365,6 +365,23 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
     }
   }
 
+  implicit val iAboTypFormat = new RootJsonFormat[IAbotyp] {
+    def write(obj: IAbotyp): JsValue =
+      obj match {
+        case a: Abotyp => a.toJson
+        case z: ZusatzAbotyp => z.toJson
+        case _ => JsObject()
+      }
+
+    def read(json: JsValue): IAbotyp = {
+      if (!json.asJsObject.getFields("lieferrhythmus").isEmpty) {
+        json.convertTo[Abotyp]
+      } else {
+        json.convertTo[ZusatzAbotyp]
+      }
+    }
+  }
+
   implicit val aboFormat = new RootJsonFormat[Abo] {
     def write(obj: Abo): JsValue =
       obj match {

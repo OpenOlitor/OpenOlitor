@@ -107,7 +107,7 @@ case object Monatsfrist extends Fristeinheit
 
 case class Frist(wert: Int, einheit: Fristeinheit) extends Product with JSONSerializable
 
-trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product {
+trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product with JSONSerializable {
   val id: AbotypId
   val name: String
   val beschreibung: Option[String]

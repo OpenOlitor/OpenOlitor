@@ -82,7 +82,7 @@ case class KorbDetail(
   auslieferungId: Option[AuslieferungId],
   sort: Option[Int],
   kunde: Kunde,
-  abotyp: Abotyp,
+  abotyp: IAbotyp,
   zusatzKoerbe: Seq[ZusatzKorbDetail],
   //modification flags
   erstelldat: DateTime,
@@ -100,7 +100,7 @@ case class ZusatzKorbDetail(
   auslieferungId: Option[AuslieferungId],
   sort: Option[Int],
   kunde: Kunde,
-  abotyp: Abotyp,
+  abotyp: IAbotyp,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
