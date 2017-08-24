@@ -62,71 +62,16 @@ class BuchhaltungInsertServiceSpec extends Specification {
     }
 
     "calculate correct referenzNummer" in {
-
-      val rechnung = RechnungCreate(
-        KundeId(123),
-        AboId(111),
-        "titel",
-        3,
-        CHF,
-        20.5,
-        None,
-        new DateTime,
-        new DateTime,
-        None,
-        "street",
-        None,
-        None,
-        "3000",
-        "Bern"
-      )
-
-      service.generateReferenzNummer(kontoDaten, rechnung, RechnungId(777)) === "123456000000000001230007772"
+      service.generateReferenzNummer(kontoDaten, KundeId(123), RechnungId(777)) === "123456000000000001230007772"
     }
 
     "calculate correct referenzNummer with kundeId length same as allowed size" in {
-      val rechnung = RechnungCreate(
-        KundeId(12345),
-        AboId(111),
-        "titel",
-        3,
-        CHF,
-        20.5,
-        None,
-        new DateTime,
-        new DateTime,
-        None,
-        "street",
-        None,
-        None,
-        "3000",
-        "Bern"
-      )
-
-      service.generateReferenzNummer(kontoDaten, rechnung, RechnungId(777)) === "123456000000000123450007773"
+      service.generateReferenzNummer(kontoDaten, KundeId(12345), RechnungId(777)) === "123456000000000123450007773"
     }
 
     "calculate correct esrNummer" in {
-      val rechnung = RechnungCreate(
-        KundeId(321),
-        AboId(565656),
-        "titel",
-        5,
-        CHF,
-        20.57,
-        None,
-        new DateTime,
-        new DateTime,
-        None,
-        "street",
-        None,
-        None,
-        "3000",
-        "Bern"
-      )
-
-      val referenzNummer = service.generateReferenzNummer(kontoDaten, rechnung, RechnungId(555))
-      service.generateEsrNummer(kontoDaten, rechnung, referenzNummer) === "0100000020573>123456000000000003210005556+ 777777777>"
+      val referenzNummer = service.generateReferenzNummer(kontoDaten, KundeId(321), RechnungId(555))
+      service.generateEsrNummer(kontoDaten, 20.57, CHF, referenzNummer) === "0100000020573>123456000000000003210005556+ 777777777>"
     }
   }
 
@@ -140,26 +85,8 @@ class BuchhaltungInsertServiceSpec extends Specification {
     val service = new MockBuchhaltungInsertService(config, null, 6, 5)
 
     "fill teilnehmernummer from right" in {
-      val rechnung = RechnungCreate(
-        KundeId(321),
-        AboId(565656),
-        "titel",
-        5,
-        CHF,
-        20.57,
-        None,
-        new DateTime,
-        new DateTime,
-        None,
-        "street",
-        None,
-        None,
-        "3000",
-        "Bern"
-      )
-
-      val referenzNummer = service.generateReferenzNummer(kontoDaten, rechnung, RechnungId(555))
-      service.generateEsrNummer(kontoDaten, rechnung, referenzNummer) === "0100000020573>000000000000000003210005550+ 000000132>"
+      val referenzNummer = service.generateReferenzNummer(kontoDaten, KundeId(321), RechnungId(555))
+      service.generateEsrNummer(kontoDaten, 20.57, CHF, referenzNummer) === "0100000020573>000000000000000003210005550+ 000000132>"
     }
   }
 }

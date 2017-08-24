@@ -121,6 +121,9 @@ trait KundenportalRoutes extends HttpService with ActorReferences
         list(kundenportalReadRepository.getRechnungen)
       }
     } ~
+      path("rechnungen" / rechnungIdPath) { id =>
+        get(detail(kundenportalReadRepository.getRechnungDetail(id)))
+      } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
         (get)(
           onSuccess(kundenportalReadRepository.getRechnungDetail(id)) { detail =>
