@@ -74,9 +74,10 @@ object RechnungsPositionStatus {
   case object Offen extends RechnungsPositionStatus
   case object Zugewiesen extends RechnungsPositionStatus
   case object Bezahlt extends RechnungsPositionStatus
+  case object Storniert extends RechnungsPositionStatus
 
   def apply(value: String): RechnungsPositionStatus = {
-    Vector(Offen, Zugewiesen, Bezahlt).find(_.toString == value).getOrElse(Offen)
+    Vector(Offen, Zugewiesen, Bezahlt, Storniert).find(_.toString == value).getOrElse(Offen)
   }
 }
 
