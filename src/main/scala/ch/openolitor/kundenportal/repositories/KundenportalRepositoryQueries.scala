@@ -187,7 +187,6 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         val sortedLieferungen = lieferungen.filter(_.abotypId == abo.abotypId).sortBy(_.datum)
         val filteredZusatzAboTypen = aboTyp.filter(_.id == abo.abotypId)
         val filteredVertriebe = vertriebe.filter(_.id == abo.vertriebId)
-        logger.warn(s"***************** $abo ********** $aboTyp ********** $filteredZusatzAboTypen");
         copyTo[ZusatzAbo, ZusatzAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> sortedLieferungen,
           "abotyp" -> filteredZusatzAboTypen.headOption, "vertrieb" -> filteredVertriebe.headOption)
       }).list
