@@ -72,7 +72,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     case RechnungBezahltEvent(meta, id: RechnungId, entity: RechnungModifyBezahlt) =>
       rechnungenUndRechnungsPositionBezahlen(meta, id, entity)
     case RechnungStorniertEvent(meta, id: RechnungId) =>
-      rechnungStornieren(meta, id)
+      rechungUndRechnungsPositionenStornieren(meta, id)
     case ZahlungsImportCreatedEvent(meta, entity: ZahlungsImportCreate) =>
       createZahlungsImport(meta, entity)
     case ZahlungsEingangErledigtEvent(meta, entity: ZahlungsEingangModifyErledigt) =>
@@ -135,7 +135,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
           rechnungMapping.column.einbezahlterBetrag -> Some(entity.einbezahlterBetrag),
           rechnungMapping.column.eingangsDatum -> Some(entity.eingangsDatum)
         )
-      }.map { resj =>
+      }.map { _ =>
         val rechnungsPositionen = buchhaltungWriteRepository.getRechnungsPositionenByRechnungsId(rechnung.id)
         rechnungsPositionen.map { rp =>
           buchhaltungWriteRepository.modifyEntity[RechnungsPosition, RechnungsPositionId](rp.id) { r =>
@@ -146,11 +146,18 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     }
   }
 
-  private def rechnungStornieren(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
+  private def rechungUndRechnungsPositionenStornieren(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator): Unit = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.updateEntityIf[Rechnung, RechnungId](Bezahlt != _.status)(id)(
         rechnungMapping.column.status -> Storniert
-      )
+      ).map { resj =>
+          val rechnungsPositionen = buchhaltungWriteRepository.getRechnungsPositionenByRechnungsId(id)
+          rechnungsPositionen.map { rp =>
+            buchhaltungWriteRepository.modifyEntity[RechnungsPosition, RechnungsPositionId](rp.id) { r =>
+              Map(rechnungsPositionMapping.column.status -> RechnungsPositionStatus.Storniert)
+            }
+          }
+        }
     }
   }
 
