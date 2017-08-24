@@ -47,6 +47,8 @@ trait BuchhaltungReadRepositorySync extends BaseReadRepositorySync {
   def getRechnungDetail(id: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[RechnungDetail]
   def getRechnungByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Rechnung]
 
+  def getRechnungsPositionenByRechnungsId(rechnungId: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[RechnungsPosition]
+
   def getZahlungsImports(implicit session: DBSession, cpContext: ConnectionPoolContext): List[ZahlungsImport]
   def getZahlungsImportDetail(id: ZahlungsImportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsImportDetail]
   def getZahlungsEingangByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[ZahlungsEingang]
@@ -69,6 +71,10 @@ trait BuchhaltungReadRepositorySyncImpl extends BuchhaltungReadRepositorySync wi
 
   def getRechnungByReferenznummer(referenzNummer: String)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Rechnung] = {
     getRechnungByReferenznummerQuery(referenzNummer).apply()
+  }
+
+  def getRechnungsPositionenByRechnungsId(rechnungId: RechnungId)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[RechnungsPosition] = {
+    getRechnungsPositionenByRechnungsIdQuery(rechnungId).apply()
   }
 
   def getZahlungsImports(implicit session: DBSession, cpContext: ConnectionPoolContext): List[ZahlungsImport] = {
