@@ -124,10 +124,10 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings {
         column.betrag -> parameter(entity.betrag),
         column.waehrung -> parameter(entity.waehrung),
         column.anzahlLieferungen -> parameter(entity.anzahlLieferungen),
-        column.titel -> parameter(entity.titel),
+        column.beschrieb -> parameter(entity.beschrieb),
         column.status -> parameter(entity.status),
         column.typ -> parameter(entity.typ),
-        column.sorting -> parameter(entity.sorting)
+        column.sort -> parameter(entity.sort)
       )
     }
   }

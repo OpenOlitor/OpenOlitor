@@ -550,3 +550,35 @@ object ZusatzAbo {
     ))
   }
 }
+
+case class ZusatzAboDetail(
+  id: AboId,
+  hauptAboId: AboId,
+  hauptAbotypId: AbotypId,
+  kundeId: KundeId,
+  kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
+  abotypId: AbotypId,
+  abotypName: String,
+  start: LocalDate,
+  ende: Option[LocalDate],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId,
+  abwesenheiten: Seq[Abwesenheit],
+  lieferdaten: Seq[Lieferung],
+  abotyp: Option[ZusatzAbotyp],
+  vertrieb: Option[Vertrieb]
+) extends AboDetail
