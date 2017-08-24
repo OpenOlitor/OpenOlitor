@@ -253,14 +253,11 @@ case class RechnungDetailReport(
   lazy val betragRappen = (betrag - betrag.toLong) * 100
 }
 
-case class RechnungCreate(
+case class RechnungCreateFromRechnungsPositionen(
   kundeId: KundeId,
-  aboId: AboId,
   titel: String,
-  anzahlLieferungen: Int,
   waehrung: Waehrung,
   betrag: BigDecimal,
-  einbezahlterBetrag: Option[BigDecimal],
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime,
   eingangsDatum: Option[DateTime],
@@ -308,3 +305,14 @@ case class RechnungModifyBezahlt(
 ) extends JSONSerializable
 
 case class RechnungenContainer(ids: Seq[RechnungId]) extends JSONSerializable
+
+case class RechnungsPositionenCreateRechnungen(
+  ids: Seq[RechnungsPositionId],
+  titel: String,
+  rechnungsDatum: DateTime,
+  faelligkeitsDatum: DateTime
+) extends JSONSerializable
+
+case class RechnungsPositionAssignToRechnung(
+  rechnungId: RechnungId
+) extends JSONSerializable
