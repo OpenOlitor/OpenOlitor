@@ -47,9 +47,9 @@ object OO291_OO396_DBScripts {
 
       // insert Kundentypen welche bisher fix im Code waren
       sql"""INSERT INTO Kundentyp (id, kundentyp, anzahl_verknuepfungen, erstelldat, ersteller, modifidat, modifikator) VALUES
-            (10, 'Vereinsmitglied', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100),
-            (11, 'Goenner', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100),
-            (12, 'Genossenschafterin', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100)""".execute.apply()
+            (1000, 'Vereinsmitglied', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100),
+            (1001, 'Goenner', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100),
+            (1002, 'Genossenschafterin', 0, '2016-01-01 00:00:00', 100, '2016-01-01 00:00:00', 100)""".execute.apply()
 
       // update der anzahl_verknüpfungen pro Kundentyp
       val kundentypen: Seq[String] = sql"SELECT kundentyp from Kundentyp".map(rs => rs.string("kundentyp")).list.apply()
