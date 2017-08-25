@@ -138,7 +138,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
-          delete(remove(id)) ~
+          deleteRechnung(id) ~
           (put | post)(update[RechnungModify, RechnungId](id))
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
@@ -316,6 +316,15 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     onSuccess((entityStore ? BuchhaltungCommandHandler.CreateRechnungenCommand(subject.personId, rechnungenCreate))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen RechnungsPositionen erstellt werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def deleteRechnung(rechnungId: RechnungId)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungCommand(subject.personId, rechnungId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnung kann nur gelöscht werden wenn sie im Status Erstellt ist.")
       case _ =>
         complete("")
     }

@@ -73,6 +73,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       rechnungenUndRechnungsPositionBezahlen(meta, id, entity)
     case RechnungStorniertEvent(meta, id: RechnungId) =>
       rechungUndRechnungsPositionenStornieren(meta, id)
+    case RechnungDeleteEvent(meta, id: RechnungId) =>
+      rechungDelete(meta, id)
     case ZahlungsImportCreatedEvent(meta, entity: ZahlungsImportCreate) =>
       createZahlungsImport(meta, entity)
     case ZahlungsEingangErledigtEvent(meta, entity: ZahlungsEingangModifyErledigt) =>
@@ -146,13 +148,27 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     }
   }
 
+  private def rechungDelete(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator): Unit = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      buchhaltungWriteRepository.deleteEntity[Rechnung, RechnungId](id).map { _ =>
+        buchhaltungWriteRepository.getRechnungsPositionenByRechnungsId(id).map { rp =>
+          buchhaltungWriteRepository.modifyEntity[RechnungsPosition, RechnungsPositionId](rp.id) { _ =>
+            Map(
+              rechnungsPositionMapping.column.status -> RechnungsPositionStatus.Offen,
+              rechnungsPositionMapping.column.rechnungId -> Option.empty[RechnungId]
+            )
+          }
+        }
+      }
+    }
+  }
+
   private def rechungUndRechnungsPositionenStornieren(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator): Unit = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.updateEntityIf[Rechnung, RechnungId](Bezahlt != _.status)(id)(
         rechnungMapping.column.status -> Storniert
-      ).map { resj =>
-          val rechnungsPositionen = buchhaltungWriteRepository.getRechnungsPositionenByRechnungsId(id)
-          rechnungsPositionen.map { rp =>
+      ).map { _ =>
+          buchhaltungWriteRepository.getRechnungsPositionenByRechnungsId(id).map { rp =>
             buchhaltungWriteRepository.modifyEntity[RechnungsPosition, RechnungsPositionId](rp.id) { r =>
               Map(rechnungsPositionMapping.column.status -> RechnungsPositionStatus.Storniert)
             }
