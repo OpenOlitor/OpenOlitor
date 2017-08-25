@@ -57,6 +57,7 @@ object BuchhaltungCommandHandler {
   case class RechnungenVerschickenCommand(originator: PersonId, ids: Seq[RechnungId]) extends UserCommand
   case class RechnungMahnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
   case class RechnungBezahlenCommand(originator: PersonId, id: RechnungId, entity: RechnungModifyBezahlt) extends UserCommand
+  case class DeleteRechnungCommand(originator: PersonId, id: RechnungId) extends UserCommand
   case class RechnungStornierenCommand(originator: PersonId, id: RechnungId) extends UserCommand
 
   case class RechnungPDFStoredCommand(originator: PersonId, id: RechnungId, fileStoreId: String) extends UserCommand
@@ -66,6 +67,7 @@ object BuchhaltungCommandHandler {
   case class RechnungMahnungVerschicktEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class RechnungBezahltEvent(meta: EventMetadata, id: RechnungId, entity: RechnungModifyBezahlt) extends PersistentEvent with JSONSerializable
   case class RechnungStorniertEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
+  case class RechnungDeleteEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class CreateRechnungenCommand(originator: PersonId, rechnungsPositionenCreateRechnungen: RechnungsPositionenCreateRechnungen) extends UserCommand
   case class CreateRechnungenEvent(originator: PersonId, createRechnungen: RechnungsPositionenCreateRechnungen) extends UserCommand
   case class DeleteRechnungsPositionenCommand(originator: PersonId, rechnungsPositionId: RechnungsPositionId) extends UserCommand
@@ -143,6 +145,17 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
           }
         } getOrElse (Failure(new InvalidStateException(s"Keine Rechnung mit der Nr. $id gefunden")))
       }
+
+    case DeleteRechnungCommand(personId, rechnungId) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        buchhaltungReadRepository.getById(rechnungMapping, rechnungId) map { rp =>
+          if (rp.status == Erstellt) {
+            Success(Seq(DefaultResultingEvent(factory => RechnungDeleteEvent(factory.newMetadata(), rechnungId))))
+          } else {
+            Failure(new InvalidStateException(s"Die Rechnung Nr. $rechnungId muss im State Erstellt sein"))
+          }
+        }
+      } getOrElse Failure(new InvalidStateException(s"Kein Rechnung mit id $rechnungId gefunden"))
 
     case ZahlungsImportCreateCommand(personId, file, zahlungsEingaengeRecords) => idFactory => meta =>
       val id = idFactory.newId(ZahlungsImportId.apply)
