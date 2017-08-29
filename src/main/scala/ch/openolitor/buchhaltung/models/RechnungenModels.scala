@@ -315,5 +315,6 @@ case class RechnungsPositionenCreateRechnungen(
 ) extends JSONSerializable
 
 case class RechnungsPositionAssignToRechnung(
-  rechnungId: RechnungId
+  rechnungId: RechnungId,
+  sort: Int
 ) extends JSONSerializable
