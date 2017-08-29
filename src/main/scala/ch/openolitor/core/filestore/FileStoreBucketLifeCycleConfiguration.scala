@@ -23,14 +23,37 @@
 package ch.openolitor.core.filestore
 
 import scala.concurrent.Future
+import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model.BucketLifecycleConfiguration
+import com.amazonaws.AmazonClientException
+import scala.collection.JavaConversions._
 
-sealed trait FileStoreBucket
-case object VorlagenBucket extends FileStoreBucket
-case object GeneriertBucket extends FileStoreBucket
-case object StammdatenBucket extends FileStoreBucket
-case object ZahlungsImportBucket extends FileStoreBucket
-case object TemporaryDataBucket extends FileStoreBucket
+trait FileStoreBucketLifeCycleConfiguration {
+  def client: AmazonS3Client
 
-object FileStoreBucket {
-  val AllFileStoreBuckets = List(VorlagenBucket, GeneriertBucket, StammdatenBucket, ZahlungsImportBucket, TemporaryDataBucket)
+  def bucketName(bucket: FileStoreBucket): String
+
+  def configureLifeCycle(bucket: FileStoreBucket): Future[Either[FileStoreError, FileStoreSuccess]] = {
+    Future.successful {
+      try {
+        bucket match {
+          case TemporaryDataBucket =>
+            updateLifeCycle(bucket, new BucketLifecycleConfiguration.Rule().withExpirationInDays(7))
+
+          case _ =>
+          // nothing to configure
+        }
+
+        Right(FileStoreSuccess())
+      } catch {
+        case e: AmazonClientException =>
+          Left(FileStoreError(s"Could not update the lifecycle of this bucket. $e"))
+      }
+    }
+  }
+
+  private def updateLifeCycle(bucket: FileStoreBucket, rules: BucketLifecycleConfiguration.Rule*) = {
+    val configuration = new BucketLifecycleConfiguration().withRules(rules)
+    client.setBucketLifecycleConfiguration(bucketName(bucket), configuration)
+  }
 }
