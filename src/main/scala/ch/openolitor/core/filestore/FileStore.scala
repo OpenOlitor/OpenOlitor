@@ -164,7 +164,7 @@ trait FileStore {
   }
 }
 
-class S3FileStore(override val mandant: String, mandantConfiguration: MandantConfiguration, actorSystem: ActorSystem) extends FileStore with LazyLogging {
+class S3FileStore(override val mandant: String, mandantConfiguration: MandantConfiguration, actorSystem: ActorSystem) extends FileStore with FileStoreBucketLifeCycleConfiguration with LazyLogging {
   val opts = new ClientConfiguration
   opts.setSignerOverride("S3SignerType")
 
@@ -314,8 +314,10 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
   override def createBuckets: Future[Either[FileStoreError, FileStoreSuccess]] = {
     Future.successful {
       try {
-        val result = FileStoreBucket.AllFileStoreBuckets map { b =>
-          client.createBucket(new CreateBucketRequest(bucketName(b)))
+        val result = FileStoreBucket.AllFileStoreBuckets map { bucket =>
+          client.createBucket(new CreateBucketRequest(bucketName(bucket)))
+
+          configureLifeCycle(bucket)
         }
         Right(FileStoreSuccess())
       } catch {
