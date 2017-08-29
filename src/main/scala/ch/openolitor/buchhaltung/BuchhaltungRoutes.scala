@@ -187,7 +187,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       path("rechnungspositionen" / rechnungsPositionIdPath) { id =>
         delete(deleteRechnungsPosition(id)) ~
           // TODO nur updaten im richtigen State!
-          (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
+          (put | post)(entity(as[RechnungsPositionModify]) { entity => safeRechnungsPosition(id, entity) })
       } ~
       path("rechnungspositionen" / "aktionen" / "createrechnungen") {
         post {
@@ -341,9 +341,18 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   }
 
   def deleteRechnungsPosition(rechnungsPositionId: RechnungsPositionId)(implicit subject: Subject) = {
-    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungsPositionenCommand(subject.personId, rechnungsPositionId))) {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungsPositionCommand(subject.personId, rechnungsPositionId))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Rechnungsposition kann nur gelöscht werden wenn sie im Status Offen ist.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def safeRechnungsPosition(rechnungsPositionId: RechnungsPositionId, rechnungsPositionModify: RechnungsPositionModify)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.SafeRechnungsPositionCommand(subject.personId, rechnungsPositionId, rechnungsPositionModify))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnungsposition kann nur gespeichert werden wenn sie im Status Offen ist.")
       case _ =>
         complete("")
     }

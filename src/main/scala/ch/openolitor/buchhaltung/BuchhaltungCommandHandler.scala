@@ -71,7 +71,8 @@ object BuchhaltungCommandHandler {
   case class RechnungDeleteEvent(meta: EventMetadata, id: RechnungId) extends PersistentEvent with JSONSerializable
   case class CreateRechnungenCommand(originator: PersonId, rechnungsPositionenCreateRechnungen: RechnungsPositionenCreateRechnungen) extends UserCommand
   case class CreateRechnungenEvent(originator: PersonId, createRechnungen: RechnungsPositionenCreateRechnungen) extends UserCommand
-  case class DeleteRechnungsPositionenCommand(originator: PersonId, rechnungsPositionId: RechnungsPositionId) extends UserCommand
+  case class DeleteRechnungsPositionCommand(originator: PersonId, rechnungsPositionId: RechnungsPositionId) extends UserCommand
+  case class SafeRechnungsPositionCommand(originator: PersonId, rechnungsPositionId: RechnungsPositionId, entity: RechnungsPositionModify) extends UserCommand
 
   case class ZahlungsImportCreateCommand(originator: PersonId, file: String, zahlungsEingaenge: Seq[ZahlungsImportRecordResult]) extends UserCommand
   case class ZahlungsEingangErledigenCommand(originator: PersonId, entity: ZahlungsEingangModifyErledigt) extends UserCommand
@@ -266,12 +267,24 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
         Success(createRechnungen.flatten)
       }
 
-    case DeleteRechnungsPositionenCommand(personId, rechnungsPositionId) => idFactory => meta =>
+    case DeleteRechnungsPositionCommand(personId, rechnungsPositionId) => idFactory => meta =>
       DB readOnly { implicit session =>
         val rechnungsPosition = buchhaltungReadRepository.getById(rechnungsPositionMapping, rechnungsPositionId)
         rechnungsPosition.map { rp =>
           if (rp.status == RechnungsPositionStatus.Offen) {
             Success(Seq(EntityDeleteEvent(rechnungsPositionId)))
+          } else {
+            Failure(new InvalidStateException(s"Die Rechnungsposition Nr. $rechnungsPositionId muss im State Offen sein"))
+          }
+        }
+      } getOrElse Failure(new InvalidStateException(s"Kein Rechnungsposition mit id $rechnungsPositionId gefunden"))
+
+    case SafeRechnungsPositionCommand(personId, rechnungsPositionId, modify) => idFactory => meta =>
+      DB readOnly { implicit session =>
+        val rechnungsPosition = buchhaltungReadRepository.getById(rechnungsPositionMapping, rechnungsPositionId)
+        rechnungsPosition.map { rp =>
+          if (rp.status == RechnungsPositionStatus.Offen) {
+            Success(Seq(EntityUpdateEvent(rechnungsPositionId, modify)))
           } else {
             Failure(new InvalidStateException(s"Die Rechnungsposition Nr. $rechnungsPositionId muss im State Offen sein"))
           }
