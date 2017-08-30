@@ -138,8 +138,8 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
-          deleteRechnung(id) ~
-          (put | post)(update[RechnungModify, RechnungId](id))
+          delete(deleteRechnung(id)) ~
+          (put | post)(entity(as[RechnungModify]) { entity => safeRechnung(id, entity) })
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
         (get)(
@@ -185,8 +185,8 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungsPositionen, exportFormat))
     } ~
       path("rechnungspositionen" / rechnungsPositionIdPath) { id =>
-        deleteRechnungsPosition(id) ~
-          (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
+        delete(deleteRechnungsPosition(id)) ~
+          (put | post)(entity(as[RechnungsPositionModify]) { entity => safeRechnungsPosition(id, entity) })
       } ~
       path("rechnungspositionen" / "aktionen" / "createrechnungen") {
         post {
@@ -330,10 +330,28 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     }
   }
 
+  def safeRechnung(rechnungId: RechnungId, rechnungModify: RechnungModify)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.SafeRechnungCommand(subject.personId, rechnungId, rechnungModify))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnung kann nur gespeichert werden wenn sie im Status Erstellt ist und keine Rechnungspositionen hat.")
+      case _ =>
+        complete("")
+    }
+  }
+
   def deleteRechnungsPosition(rechnungsPositionId: RechnungsPositionId)(implicit subject: Subject) = {
-    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungsPositionenCommand(subject.personId, rechnungsPositionId))) {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungsPositionCommand(subject.personId, rechnungsPositionId))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Rechnungsposition kann nur gelöscht werden wenn sie im Status Offen ist.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def safeRechnungsPosition(rechnungsPositionId: RechnungsPositionId, rechnungsPositionModify: RechnungsPositionModify)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.SafeRechnungsPositionCommand(subject.personId, rechnungsPositionId, rechnungsPositionModify))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnungsposition kann nur gespeichert werden wenn sie im Status Offen ist.")
       case _ =>
         complete("")
     }
