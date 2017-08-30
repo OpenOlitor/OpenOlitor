@@ -43,7 +43,7 @@ trait BaseRepositoryQueries extends DBMappings with LazyLogging {
     withSQL {
       select
         .from(syntax as alias)
-        .where.in(alias.id, ids.map(parameter(_)))
+        .where.in(alias.id, ids.map(_))
     }.map(syntax.apply(alias)).list
   }
 
@@ -53,7 +53,7 @@ trait BaseRepositoryQueries extends DBMappings with LazyLogging {
     withSQL {
       select
         .from(syntax as alias)
-        .where.eq(alias.id, parameter(id))
+        .where.eq(alias.id, id)
     }.map(syntax.apply(alias)).single
   }
 }

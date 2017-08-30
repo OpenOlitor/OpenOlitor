@@ -194,7 +194,7 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script]) extends CoreDBMap
     withSQL {
       select(max(schema.revision))
         .from(dbSchemaMapping as schema)
-        .where.eq(schema.status, parameter(Done))
+        .where.eq(schema.status, Done)
     }.map(_.intOpt(1).getOrElse(0)).single.apply().getOrElse(0)
   }
 }

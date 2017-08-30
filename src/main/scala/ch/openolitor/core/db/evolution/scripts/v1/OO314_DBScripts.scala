@@ -66,7 +66,7 @@ object OO314_DBScripts {
           val lieferungenByGj = withSQL {
             select.from(lieferungMapping as l).
               join(lieferplanungMapping as lp).on(l.lieferplanungId, lp.id).
-              where.eq(lp.status, parameter(Abgeschlossen)).and.eq(l.vertriebId, parameter(vertrieb.id))
+              where.eq(lp.status, Abgeschlossen).and.eq(l.vertriebId, vertrieb.id)
           }.
             map(lieferungMapping(l)).list.apply() map { lieferung =>
 
@@ -81,7 +81,7 @@ object OO314_DBScripts {
           updateEntityFully[Vertrieb, VertriebId](copy)
 
           //update lieferungen
-          withSQL { select.from(lieferungMapping as l).where.eq(l.vertriebId, parameter(vertrieb.id)) }.map(lieferungMapping(l)).list.apply() map { lieferung =>
+          withSQL { select.from(lieferungMapping as l).where.eq(l.vertriebId, vertrieb.id) }.map(lieferungMapping(l)).list.apply() map { lieferung =>
             val gjKey = projekt.geschaftsjahr.key(lieferung.datum.toLocalDate)
             val anzahl = anzahlLieferungenMap.get(gjKey).getOrElse(0)
             val dpreis: BigDecimal = durchschnittspreisMap.get(gjKey).getOrElse(0)

@@ -92,7 +92,7 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
     withSQL {
       select
         .from(persistenceEventStateMapping as peState)
-        .where.eq(peState.persistenceId, parameter(persistenceId))
+        .where.eq(peState.persistenceId, persistenceId)
     }.map(persistenceEventStateMapping.apply(peState)).single.apply()
   }
 
@@ -117,7 +117,7 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
           val modEntity = entity.copy(lastTransactionNr = lastTransactionNr, lastSequenceNr = lastSequenceNr, modifidat = DateTime.now)
           val params = persistenceEventStateMapping.updateParameters(modEntity)
           val id = peState.id
-          withSQL(update(persistenceEventStateMapping as peState).set(params: _*).where.eq(id, parameter(modEntity.id))).update.apply() == 1
+          withSQL(update(persistenceEventStateMapping as peState).set(params: _*).where.eq(id, modEntity.id)).update.apply() == 1
         case None =>
           val entity = PersistenceEventState(PersistenceEventStateId(), persistenceStateStoreId, lastTransactionNr, lastSequenceNr, DateTime.now, personId, DateTime.now, personId)
           val params = persistenceEventStateMapping.parameterMappings(entity)

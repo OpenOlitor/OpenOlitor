@@ -117,8 +117,19 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val rolleMapBinders: Binders[Map[Rolle, Boolean]] = mapBinders(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean, _.toString, _.toString)
   implicit val rolleBinders: Binders[Option[Rolle]] = toStringBinder(Rolle.apply)
 
-  implicit val stringSeqBinders: Binders[Seq[String]] = seqSqlBinder(identity, identity)
-  implicit val stringSetBinders: Binders[Set[String]] = setSqlBinder(identity, identity)
+  // declare parameterbinderfactories for enum type to allow dynamic type convertion of enum subtypes
+  implicit def pendenzStatusParameterBinderFactory[A <: PendenzStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def rhythmusParameterBinderFactory[A <: Rhythmus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def waehrungParameterBinderFactory[A <: Waehrung]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def lieferungStatusParameterBinderFactory[A <: LieferungStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def korbStatusParameterBinderFactory[A <: KorbStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def auslieferungStatusParameterBinderFactory[A <: AuslieferungStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def preiseinheitParameterBinderFactory[A <: Preiseinheit]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def lieferzeitpunktParameterBinderFactory[A <: Lieferzeitpunkt]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def laufzeiteinheitParameterBinderFactory[A <: Laufzeiteinheit]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def liefereinheitParameterBinderFactory[A <: Liefereinheit]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def liefersaisonParameterBinderFactory[A <: Liefersaison]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def vorlageParameterBinderFactory[A <: VorlageTyp]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"

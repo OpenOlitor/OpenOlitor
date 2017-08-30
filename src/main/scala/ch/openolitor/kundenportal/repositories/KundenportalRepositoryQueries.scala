@@ -87,9 +87,9 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(depotlieferungAbo.vertriebId, vertrieb.id)
-        .where.eq(depotlieferungAbo.kundeId, parameter(owner.kundeId))
+        .where.eq(depotlieferungAbo.kundeId, owner.kundeId)
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, depotlieferungAbo))
-        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
     }
       .one(depotlieferungAboMapping(depotlieferungAbo))
       .toManies(
@@ -115,9 +115,9 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(heimlieferungAbo.vertriebId, vertrieb.id)
-        .where.eq(heimlieferungAbo.kundeId, parameter(owner.kundeId))
+        .where.eq(heimlieferungAbo.kundeId, owner.kundeId)
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, heimlieferungAbo))
-        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
     }
       .one(heimlieferungAboMapping(heimlieferungAbo))
       .toManies(
@@ -143,9 +143,9 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(postlieferungAbo.vertriebId, vertrieb.id)
-        .where.eq(postlieferungAbo.kundeId, parameter(owner.kundeId))
+        .where.eq(postlieferungAbo.kundeId, owner.kundeId)
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
-        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
     }
       .one(postlieferungAboMapping(postlieferungAbo))
       .toManies(
@@ -171,9 +171,9 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(zusatzAbo.abotypId, zusatzAboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(zusatzAbo.vertriebId, vertrieb.id)
-        .where.eq(zusatzAbo.kundeId, parameter(owner.kundeId)).and.eq(zusatzAbo.hauptAboId, parameter(aboId))
+        .where.eq(zusatzAbo.kundeId, owner.kundeId).and.eq(zusatzAbo.hauptAboId, aboId)
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, zusatzAbo))
-        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
     }
       .one(zusatzAboMapping(zusatzAbo))
       .toManies(
@@ -199,9 +199,9 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
         .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferplanung.id, lieferung.lieferplanungId)
-        .where.eq(lieferung.abotypId, parameter(id))
+        .where.eq(lieferung.abotypId, id)
         .and(UriQueryParamToSQLSyntaxBuilder.build(filter, lieferung))
-        .and.withRoundBracket { _.eq(lieferung.status, parameter(Abgeschlossen)).or.eq(lieferung.status, parameter(Verrechnet)) }
+        .and.withRoundBracket { _.eq(lieferung.status, Abgeschlossen).or.eq(lieferung.status, Verrechnet) }
         .orderBy(lieferung.datum).desc
     }
       .one(lieferungMapping(lieferung))
@@ -226,7 +226,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .join(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
         .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferplanung.id, lieferung.lieferplanungId)
-        .where.eq(lieferung.id, parameter(id))
+        .where.eq(lieferung.id, id)
     }.one(lieferungMapping(lieferung))
       .toManies(
         rs => abotypMapping.opt(aboTyp)(rs),
@@ -246,7 +246,7 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
     withSQL {
       select
         .from(rechnungMapping as rechnung)
-        .where.eq(rechnung.kundeId, parameter(owner.kundeId))
+        .where.eq(rechnung.kundeId, owner.kundeId)
         .orderBy(rechnung.rechnungsDatum)
     }.map(rechnungMapping(rechnung)).list
   }
@@ -260,8 +260,8 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(rechnungsPosition.aboId, depotlieferungAbo.id)
         .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(rechnungsPosition.aboId, heimlieferungAbo.id)
         .leftJoin(postlieferungAboMapping as postlieferungAbo).on(rechnungsPosition.aboId, postlieferungAbo.id)
-        .where.eq(rechnung.id, parameter(id))
-        .and.eq(rechnung.kundeId, parameter(owner.kundeId))
+        .where.eq(rechnung.id, id)
+        .and.eq(rechnung.kundeId, owner.kundeId)
         .orderBy(rechnung.rechnungsDatum)
     }.one(rechnungMapping(rechnung))
       .toManies(

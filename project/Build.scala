@@ -51,7 +51,7 @@ object BuildSettings {
 	    "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.4.+",
 	    // use currently own fork, until PR was merged and a new release is available
 	    // "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.5.+",
-	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.20",
+	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.+",
 	    //                             
 	    "org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
 	    "org.scalikejdbc"              %%  "scalikejdbc-test"                     % scalalikeV   % "test",

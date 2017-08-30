@@ -40,7 +40,8 @@ trait DBMappings extends BaseParameter
     with Parameters25
     with Parameters26
     with Parameters27
-    with Parameters28 {
+    with Parameters28
+    with LowPriorityImplicitsParameterBinderFactory1 {
   import Binders._
   import ParameterBinderFactory._
 
@@ -85,6 +86,9 @@ trait DBMappings extends BaseParameter
   implicit val charArrayBinder: Binders[Array[Char]] = Binders.string.xmap(_.toCharArray, x => new String(x))
   implicit val optionCharArrayBinder: Binders[Option[Array[Char]]] = Binders.string.xmap(s => Option(s).map(_.toCharArray), _.map(x => new String(x)).getOrElse(null))
 
+  implicit val stringSeqBinders: Binders[Seq[String]] = seqSqlBinder(identity, identity)
+  implicit val stringSetBinders: Binders[Set[String]] = setSqlBinder(identity, identity)
+
   // low level binders
   import TypeBinder._
   import ParameterBinderFactory._
@@ -108,4 +112,7 @@ trait DBMappings extends BaseParameter
   implicit val optionDatetimeBinder = Binders.option[DateTime]
   implicit val bigDecimalBinder = Binders.bigDecimal
   implicit val optionBigDecimalBinder = Binders.option[BigDecimal]
+
+  // low level parameterbinderfactories
+
 }
