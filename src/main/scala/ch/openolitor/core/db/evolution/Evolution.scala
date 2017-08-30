@@ -35,7 +35,6 @@ import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.repositories.SqlBinder
 import scala.reflect._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings

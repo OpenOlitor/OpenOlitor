@@ -32,7 +32,6 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.db._
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.util.IdUtil

@@ -31,7 +31,6 @@ import ch.openolitor.core.db._
 import scalikejdbc._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.Boot
-import ch.openolitor.core.repositories.SqlBinder
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.stammdaten.models.AboId

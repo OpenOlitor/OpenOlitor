@@ -39,13 +39,13 @@ import ch.openolitor.core.db.OOAsyncDB._
 trait BaseReadRepositoryAsync extends BaseRepositoryQueries {
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
     asyncCpContext: MultipleAsyncConnectionPoolContext,
-    binder: SqlBinder[I]): Future[Option[E]] = {
+    binder: Binders[I]): Future[Option[E]] = {
     getByIdQuery(syntax, id).future
   }
 
   def getByIds[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], ids: Seq[I])(implicit
     asyncCpContext: MultipleAsyncConnectionPoolContext,
-    binder: SqlBinder[I]): Future[List[E]] = {
+    binder: Binders[I]): Future[List[E]] = {
     getByIdsQuery(syntax, ids).future
   }
 }

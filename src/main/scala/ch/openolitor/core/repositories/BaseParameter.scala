@@ -22,12 +22,7 @@
 \*                                                                           */
 package ch.openolitor.core.repositories
 
-case class SqlValue(value: Any)
+import scalikejdbc._
 
 trait BaseParameter {
-  def parameter[V](value: V)(implicit binder: SqlBinder[V]): Any = binder.apply(value)
-
-  implicit def valueToSqlValue[V](value: V)(implicit binder: SqlBinder[V]): SqlValue = {
-    SqlValue(binder.apply(value))
-  }
 }

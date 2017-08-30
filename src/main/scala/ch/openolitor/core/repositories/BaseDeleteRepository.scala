@@ -40,7 +40,7 @@ trait BaseDeleteRepository extends BaseReadRepositorySync with DeleteRepository 
   def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Validator[E])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
     deleteEntity[E, I](id, Some(validator))
@@ -49,7 +49,7 @@ trait BaseDeleteRepository extends BaseReadRepositorySync with DeleteRepository 
   def deleteEntity[E <: BaseEntity[I], I <: BaseId](id: I, validator: Option[Validator[E]] = None)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
     logger.debug(s"delete from ${syntaxSupport.tableName}: $id")
@@ -57,7 +57,7 @@ trait BaseDeleteRepository extends BaseReadRepositorySync with DeleteRepository 
       val validation = validator.getOrElse(TrueValidator)
       validation(entity) match {
         case true =>
-          withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, parameter(id))).update.apply()
+          withSQL(deleteFrom(syntaxSupport).where.eq(syntaxSupport.column.id, id)).update.apply()
 
           //publish event to stream
           eventPublisher.registerPublish(EntityDeleted(user, entity))

@@ -38,7 +38,6 @@ import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 import ch.openolitor.core.repositories.BaseWriteRepository
 import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.core.repositories.SqlBinder
 import java.io.InputStream
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.SystemConfig
@@ -186,7 +185,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
   def importEntityList[E <: BaseEntity[I], I <: BaseId](name: String, entities: List[E], result: Map[String, Int])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I]) = {
+    binder: Binders[I]) = {
     log.debug(s"Import ${entities.length} $name...")
     entities map { entity =>
       insertEntity[E, I](entity)

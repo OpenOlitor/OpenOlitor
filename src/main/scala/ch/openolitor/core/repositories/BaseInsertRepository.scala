@@ -40,7 +40,7 @@ trait BaseInsertRepository extends BaseReadRepositorySync with InsertRepository 
   def insertEntity[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
     val params = syntaxSupport.parameterMappings(entity)
