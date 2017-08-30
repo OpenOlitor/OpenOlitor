@@ -9,7 +9,7 @@ object BuildSettings {
   val specs2V = "2.4.17" // based on spray 1.3.x built in support 
   val akkaV = "2.4.+"
   val sprayV = "1.3.+"
-  val scalalikeV = "2.3.+"
+  val scalalikeV = "3.0.+"
  
   val buildSettings = SbtScalariform.scalariformSettings ++ Seq(
     organization := "ch.openolitor.scalamacros",
@@ -48,9 +48,10 @@ object BuildSettings {
 	    //use scala logging to log outside of the actor system
 	    "com.typesafe.scala-logging"   %%  "scala-logging"				                % "3.1.0",
 	    //akka persistence journal driver
-	    "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.3.+",
-	    "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.5.+",
-	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.16",
+	    "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.4.+",
+	    // use currently own fork, until PR was merged and a new release is available
+	    // "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.5.+",
+	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.20",
 	    //                             
 	    "org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
 	    "org.scalikejdbc"              %%  "scalikejdbc-test"                     % scalalikeV   % "test",
@@ -78,9 +79,13 @@ object BuildSettings {
 object OpenOlitorBuild extends Build {
   import BuildSettings._
 
+  // lazy val scalikeJdbcAsyncFork = RootProject(uri("git://github.com/OpenOlitor/scalikejdbc-async#fix/%2336_parameterbinderfactory_support"))
+  val scalikeJdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/%2336_parameterbinderfactory_support")
+  val scalikeJdbcAsyncCore = ProjectRef(scalikeJdbcAsyncForkUri, "core") // sub-module I want
+  
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro)
+  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro, scalikeJdbcAsyncCore) 
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }
