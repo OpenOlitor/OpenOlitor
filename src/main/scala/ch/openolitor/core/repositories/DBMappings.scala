@@ -42,8 +42,10 @@ trait DBMappings extends BaseParameter
     with Parameters27
     with Parameters28 {
   import Binders._
+  import ParameterBinderFactory._
 
   def baseIdBinders[T <: BaseId](f: Long => T): Binders[T] = Binders.long.xmap(l => f(l), _.id)
+  def optionBaseIdBinders[T <: BaseId](f: Long => T): Binders[Option[T]] = Binders.optionLong.xmap(_.map(l => f(l)), _.map(_.id))
   def toStringBinder[V](f: String => V): Binders[V] = Binders.string.xmap(f(_), _.toString)
   def seqSqlBinder[V](f: String => V, g: V => String): Binders[Seq[V]] = Binders.string.xmap({ x => x.split(",") map (f) }, { values => values map (g) mkString (",") })
   def setSqlBinder[V](f: String => V, g: V => String): Binders[Set[V]] = Binders.string.xmap({ x => x.split(",") map (f) toSet }, { values => values map (g) mkString (",") })
@@ -77,10 +79,33 @@ trait DBMappings extends BaseParameter
       map.toIterable.map { case (k, v) => kg(k) + "=" + vg(v) }.mkString(",")
     })
 
-
   implicit val localeBinder: Binders[Locale] = Binders.string.xmap(l => Locale.forLanguageTag(l), _.toLanguageTag)
   implicit val personIdBinder: Binders[PersonId] = baseIdBinders(PersonId.apply _)
 
   implicit val charArrayBinder: Binders[Array[Char]] = Binders.string.xmap(_.toCharArray, x => new String(x))
+  implicit val optionCharArrayBinder: Binders[Option[Array[Char]]] = Binders.string.xmap(s => Option(s).map(_.toCharArray), _.map(x => new String(x)).getOrElse(null))
 
+  // low level binders
+  import TypeBinder._
+  import ParameterBinderFactory._
+  implicit val stringBinder = Binders.string
+  implicit val optionStringBinder = Binders.option[String]
+  implicit val intBinder = Binders.int
+  implicit val optionIntBinder = Binders.optionInt
+  implicit val longBinder = Binders.long
+  implicit val optionLongBinder = Binders.optionLong
+  implicit val shortBinder = Binders.short
+  implicit val optionShortBinder = Binders.optionShort
+  implicit val floatBinder = Binders.float
+  implicit val optionFloatBinder = Binders.optionFloat
+  implicit val doubleBinder = Binders.double
+  implicit val optionDoubleBinder = Binders.optionDouble
+  implicit val booleanBinder = Binders.boolean
+  implicit val optionBooleanBinder = Binders.optionBoolean
+  implicit val localDateBinder = Binders.jodaLocalDate
+  implicit val optionLocalDateBinder = Binders.option[LocalDate]
+  implicit val datetimeBinder = Binders.jodaDateTime
+  implicit val optionDatetimeBinder = Binders.option[DateTime]
+  implicit val bigDecimalBinder = Binders.bigDecimal
+  implicit val optionBigDecimalBinder = Binders.option[BigDecimal]
 }

@@ -27,7 +27,6 @@ import ch.openolitor.core.models._
 import ch.openolitor.core.models.VorlageTyp
 import ch.openolitor.stammdaten.models._
 import scalikejdbc._
-import scalikejdbc.Binders._
 import ch.openolitor.core.repositories.DBMappings
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.models.PendenzStatus
@@ -36,7 +35,6 @@ import ch.openolitor.core.scalax._
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.filestore.VorlageRechnung
 import scala.math.Ordering.StringOrdering
-import ch.openolitor.core.repositories.ParameterBinder
 import ch.openolitor.core.repositories.BaseParameter
 
 //DB Model bindig
@@ -57,7 +55,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val aboIdBinder: Binders[AboId] = baseIdBinders(AboId.apply _)
   implicit val lierferungIdBinder: Binders[LieferungId] = baseIdBinders(LieferungId.apply _)
   implicit val lieferplanungIdBinder: Binders[LieferplanungId] = baseIdBinders(LieferplanungId.apply _)
-  //implicit val optionLieferplanungIdBinder: Binders[Option[LieferplanungId]] = optionBaseIdBinders(LieferplanungId.apply _)
+  implicit val optionLieferplanungIdBinder: Binders[Option[LieferplanungId]] = optionBaseIdBinders(LieferplanungId.apply _)
   implicit val lieferpositionIdBinder: Binders[LieferpositionId] = baseIdBinders(LieferpositionId.apply _)
   implicit val bestellungIdBinder: Binders[BestellungId] = baseIdBinders(BestellungId.apply _)
   implicit val sammelbestellungIdBinder: Binders[SammelbestellungId] = baseIdBinders(SammelbestellungId.apply _)
@@ -67,6 +65,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val produktekategorieIdBinder: Binders[ProduktekategorieId] = baseIdBinders(ProduktekategorieId.apply _)
   implicit val baseProduktekategorieIdBinder: Binders[BaseProduktekategorieId] = Binders.string.xmap(BaseProduktekategorieId.apply _, _.id)
   implicit val produktIdBinder: Binders[ProduktId] = baseIdBinders(ProduktId.apply _)
+  implicit val optionProduktIdBinder: Binders[Option[ProduktId]] = optionBaseIdBinders(ProduktId.apply _)
   implicit val produzentIdBinder: Binders[ProduzentId] = baseIdBinders(ProduzentId.apply _)
   implicit val baseProduzentIdBinder: Binders[BaseProduzentId] = Binders.string.xmap(BaseProduzentId.apply _, _.id)
   implicit val projektIdBinder: Binders[ProjektId] = baseIdBinders(ProjektId.apply _)
@@ -76,7 +75,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val korbIdBinder: Binders[KorbId] = baseIdBinders(KorbId.apply _)
   implicit val auslieferungIdBinder: Binders[AuslieferungId] = baseIdBinders(AuslieferungId.apply _)
   implicit val projektVorlageIdBinder: Binders[ProjektVorlageId] = baseIdBinders(ProjektVorlageId.apply _)
-  // implicit val optionAuslieferungIdBinder: Binders[Option[AuslieferungId]] = optionBaseIdBinders(AuslieferungId.apply _)
+  implicit val optionAuslieferungIdBinder: Binders[Option[AuslieferungId]] = optionBaseIdBinders(AuslieferungId.apply _)
   implicit val einladungIdBinder: Binders[EinladungId] = baseIdBinders(EinladungId.apply _)
   implicit val kontoDatenIdBinder: Binders[KontoDatenId] = baseIdBinders(KontoDatenId.apply _)
 

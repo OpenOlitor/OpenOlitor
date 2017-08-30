@@ -41,14 +41,15 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings with Ba
   // DB type binders for read operations
   implicit val rechnungIdBinder: Binders[RechnungId] = baseIdBinders(RechnungId.apply _)
   implicit val rechnungsPositionIdBinder: Binders[RechnungsPositionId] = baseIdBinders(RechnungsPositionId.apply _)
+  implicit val optionRechnungsPositionIdBinder: Binders[Option[RechnungsPositionId]] = optionBaseIdBinders(RechnungsPositionId.apply _)
   implicit val zahlungsImportIdBinder: Binders[ZahlungsImportId] = baseIdBinders(ZahlungsImportId.apply _)
   implicit val zahlungsEingangIdBinder: Binders[ZahlungsEingangId] = baseIdBinders(ZahlungsEingangId.apply _)
 
   implicit val rechnungStatusBinders: Binders[RechnungStatus] = toStringBinder(RechnungStatus.apply)
   implicit val rechnungsPositionStatusBinders: Binders[RechnungsPositionStatus.RechnungsPositionStatus] = toStringBinder(RechnungsPositionStatus.apply)
   implicit val rechnungsPositionTypBinders: Binders[RechnungsPositionTyp.RechnungsPositionTyp] = toStringBinder(RechnungsPositionTyp.apply)
-  // implicit val optionRechnungIdBinder: Binders[Option[RechnungId]] = optionBaseIdBinders(RechnungId.apply _)
-  // implicit val optionAboIdBinder: Binders[Option[AboId]] = optionBaseIdBinders(AboId.apply _)
+  implicit val optionRechnungIdBinder: Binders[Option[RechnungId]] = optionBaseIdBinders(RechnungId.apply _)
+  implicit val optionAboIdBinder: Binders[Option[AboId]] = optionBaseIdBinders(AboId.apply _)
 
   implicit val zahlungsEingangStatusBinders: Binders[ZahlungsEingangStatus] = toStringBinder(ZahlungsEingangStatus.apply)
 

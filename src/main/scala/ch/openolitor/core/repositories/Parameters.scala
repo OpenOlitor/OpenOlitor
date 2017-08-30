@@ -23,6 +23,7 @@
 package ch.openolitor.core.repositories
 
 import ch.openolitor.core.scalax._
+import scalikejdbc._
 
 trait Parameters {
   def parameters[A](params: Tuple1[A])(
@@ -31,7 +32,7 @@ trait Parameters {
   ): Seq[ParameterBinder] = {
     Seq(
       binder0(params._1)
-     )
+    )
   }
 
   def parameters[A, B](params: Tuple2[A, B])(
@@ -42,7 +43,7 @@ trait Parameters {
     Seq(
       binder0(params._1),
       binder1(params._2)
-     )
+    )
   }
 
   def parameters[A, B, C](params: Tuple3[A, B, C])(
@@ -55,7 +56,7 @@ trait Parameters {
       binder0(params._1),
       binder1(params._2),
       binder2(params._3)
-     )
+    )
   }
 
   def parameters[A, B, C, D](params: Tuple4[A, B, C, D])(
@@ -70,7 +71,7 @@ trait Parameters {
       binder1(params._2),
       binder2(params._3),
       binder3(params._4)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E](params: Tuple5[A, B, C, D, E])(
@@ -87,7 +88,7 @@ trait Parameters {
       binder2(params._3),
       binder3(params._4),
       binder4(params._5)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F](params: Tuple6[A, B, C, D, E, F])(
@@ -106,7 +107,7 @@ trait Parameters {
       binder3(params._4),
       binder4(params._5),
       binder5(params._6)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G](params: Tuple7[A, B, C, D, E, F, G])(
@@ -127,7 +128,7 @@ trait Parameters {
       binder4(params._5),
       binder5(params._6),
       binder6(params._7)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H](params: Tuple8[A, B, C, D, E, F, G, H])(
@@ -150,7 +151,7 @@ trait Parameters {
       binder5(params._6),
       binder6(params._7),
       binder7(params._8)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I](params: Tuple9[A, B, C, D, E, F, G, H, I])(
@@ -175,9 +176,9 @@ trait Parameters {
       binder6(params._7),
       binder7(params._8),
       binder8(params._9)
-     )
+    )
   }
-  
+
   def parameters[A, B, C, D, E, F, G, H, I, J](params: Tuple10[A, B, C, D, E, F, G, H, I, J])(
     implicit
     binder0: Binders[A],
@@ -202,7 +203,7 @@ trait Parameters {
       binder7(params._8),
       binder8(params._9),
       binder9(params._10)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K](params: Tuple11[A, B, C, D, E, F, G, H, I, J, K])(
@@ -231,7 +232,7 @@ trait Parameters {
       binder8(params._9),
       binder9(params._10),
       binder10(params._11)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L](params: Tuple12[A, B, C, D, E, F, G, H, I, J, K, L])(
@@ -262,7 +263,7 @@ trait Parameters {
       binder9(params._10),
       binder10(params._11),
       binder11(params._12)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M](params: Tuple13[A, B, C, D, E, F, G, H, I, J, K, L, M])(
@@ -295,7 +296,7 @@ trait Parameters {
       binder10(params._11),
       binder11(params._12),
       binder12(params._13)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N](params: Tuple14[A, B, C, D, E, F, G, H, I, J, K, L, M, N])(
@@ -330,7 +331,7 @@ trait Parameters {
       binder11(params._12),
       binder12(params._13),
       binder13(params._14)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O](params: Tuple15[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O])(
@@ -367,7 +368,7 @@ trait Parameters {
       binder12(params._13),
       binder13(params._14),
       binder14(params._15)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P](params: Tuple16[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P])(
@@ -406,7 +407,7 @@ trait Parameters {
       binder13(params._14),
       binder14(params._15),
       binder15(params._16)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q](params: Tuple17[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q])(
@@ -447,7 +448,7 @@ trait Parameters {
       binder14(params._15),
       binder15(params._16),
       binder16(params._17)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R](params: Tuple18[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R])(
@@ -490,7 +491,7 @@ trait Parameters {
       binder15(params._16),
       binder16(params._17),
       binder17(params._18)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S](params: Tuple19[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S])(
@@ -535,7 +536,7 @@ trait Parameters {
       binder16(params._17),
       binder17(params._18),
       binder18(params._19)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T](params: Tuple20[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T])(
@@ -582,7 +583,7 @@ trait Parameters {
       binder17(params._18),
       binder18(params._19),
       binder19(params._20)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U](params: Tuple21[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U])(
@@ -631,7 +632,7 @@ trait Parameters {
       binder18(params._19),
       binder19(params._20),
       binder20(params._21)
-     )
+    )
   }
 
   def parameters[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V](params: Tuple22[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V])(
@@ -682,6 +683,6 @@ trait Parameters {
       binder19(params._20),
       binder20(params._21),
       binder21(params._22)
-     )
+    )
   }
 }

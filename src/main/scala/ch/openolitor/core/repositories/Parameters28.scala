@@ -85,7 +85,7 @@ trait Parameters28 extends BaseParameter {
       binder25(params._25),
       binder26(params._26),
       binder27(params._27),
-      binder28(params._28)      
-     )    
+      binder28(params._28)
+    )
   }
 }

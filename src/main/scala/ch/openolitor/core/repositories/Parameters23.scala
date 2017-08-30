@@ -76,6 +76,6 @@ trait Parameters23 extends BaseParameter {
       binder21(params._21),
       binder22(params._22),
       binder23(params._23)
-     )
+    )
   }
 }

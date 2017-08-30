@@ -36,7 +36,6 @@ import scala.concurrent.Future
 import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
 import ch.openolitor.core.db.OOAsyncDB._
 
-
 trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging with DBMappings {
 
   //override def columnNames 
