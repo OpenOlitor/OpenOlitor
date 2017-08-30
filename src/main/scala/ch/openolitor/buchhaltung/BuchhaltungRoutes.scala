@@ -186,7 +186,6 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     } ~
       path("rechnungspositionen" / rechnungsPositionIdPath) { id =>
         delete(deleteRechnungsPosition(id)) ~
-          // TODO nur updaten im richtigen State!
           (put | post)(entity(as[RechnungsPositionModify]) { entity => safeRechnungsPosition(id, entity) })
       } ~
       path("rechnungspositionen" / "aktionen" / "createrechnungen") {
@@ -334,7 +333,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   def safeRechnung(rechnungId: RechnungId, rechnungModify: RechnungModify)(implicit subject: Subject) = {
     onSuccess((entityStore ? BuchhaltungCommandHandler.SafeRechnungCommand(subject.personId, rechnungId, rechnungModify))) {
       case UserCommandFailed =>
-        complete(StatusCodes.BadRequest, s"Die Rechnung kann nur gespeichert werden wenn sie im Status Erstellt ist.")
+        complete(StatusCodes.BadRequest, s"Die Rechnung kann nur gespeichert werden wenn sie im Status Erstellt ist und keine Rechnungspositionen hat.")
       case _ =>
         complete("")
     }

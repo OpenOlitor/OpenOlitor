@@ -161,8 +161,8 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
 
     case SafeRechnungCommand(personId, rechnungId, rechnungModify) => idFactory => meta =>
       DB readOnly { implicit session =>
-        buchhaltungReadRepository.getById(rechnungMapping, rechnungId) map { rechnung =>
-          if (rechnung.status == Erstellt) {
+        buchhaltungReadRepository.getRechnungDetail(rechnungId) map { rechnung =>
+          if (rechnung.status == Erstellt && (rechnung.betrag == rechnungModify.betrag || rechnung.rechnungsPositionen.length == 0)) {
             Success(Seq(EntityUpdateEvent(rechnungId, rechnungModify)))
           } else {
             Failure(new InvalidStateException(s"Die Rechnung Nr. $rechnungId muss im State Erstellt sein"))

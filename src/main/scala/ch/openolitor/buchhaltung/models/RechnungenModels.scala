@@ -271,8 +271,8 @@ case class RechnungCreateFromRechnungsPositionen(
 
 case class RechnungModify(
   titel: String,
-  // How to handle modify betrag? old events? 
-  //betrag: BigDecimal,
+  waehrung: Waehrung,
+  betrag: BigDecimal,
   einbezahlterBetrag: Option[BigDecimal],
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime,
