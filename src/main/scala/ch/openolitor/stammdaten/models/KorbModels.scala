@@ -118,6 +118,8 @@ case class KorbReport(
   sort: Option[Int],
   kunde: KundeReport,
   abotyp: Abotyp,
+  zusatzKoerbe: Seq[ZusatzKorbDetail],
+  zusatzKoerbeConcatenation: String,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

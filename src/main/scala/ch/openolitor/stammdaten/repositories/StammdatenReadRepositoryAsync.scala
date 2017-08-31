@@ -652,7 +652,10 @@ class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with Sta
     } yield {
       auslieferungReport.copy(koerbe =
         auslieferungReport.koerbe map { korbReport =>
-          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
+          korbReport.copy(
+            kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)),
+            zusatzKoerbeConcatenation = korbReport.zusatzKoerbe.map { _.abotyp.name }.mkString(", ")
+          )
         })
     }
 
