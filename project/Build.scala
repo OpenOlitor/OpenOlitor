@@ -50,7 +50,7 @@ object BuildSettings {
 	    //akka persistence journal driver
 	    "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.4.+",
 	    // use currently own fork, until PR was merged and a new release is available
-	    // "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.5.+",
+	    "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.8.+",
 	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.+",
 	    //                             
 	    "org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
@@ -79,13 +79,9 @@ object BuildSettings {
 object OpenOlitorBuild extends Build {
   import BuildSettings._
 
-  // lazy val scalikeJdbcAsyncFork = RootProject(uri("git://github.com/OpenOlitor/scalikejdbc-async#fix/%2336_parameterbinderfactory_support"))
-  val scalikeJdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/%2336_parameterbinderfactory_support")
-  val scalikeJdbcAsyncCore = ProjectRef(scalikeJdbcAsyncForkUri, "core") // sub-module I want
-  
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro, scalikeJdbcAsyncCore) 
+  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro) 
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }

@@ -53,6 +53,12 @@ trait BuchhaltungDBMappings extends DBMappings with StammdatenDBMappings with Ba
 
   implicit val zahlungsEingangStatusBinders: Binders[ZahlungsEingangStatus] = toStringBinder(ZahlungsEingangStatus.apply)
 
+  // declare parameterbinderfactories for enum type to allow dynamic type convertion of enum subtypes
+  implicit def rechnungStatusParameterBinderFactory[A <: RechnungStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def rechnungsPositionStatusStatusParameterBinderFactory[A <: RechnungsPositionStatus.RechnungsPositionStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def rechnungsPositionTypStatusParameterBinderFactory[A <: RechnungsPositionTyp.RechnungsPositionTyp]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def zahlungsEingangStatusParameterBinderFactory[A <: ZahlungsEingangStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+
   implicit val rechnungMapping = new BaseEntitySQLSyntaxSupport[Rechnung] {
     override val tableName = "Rechnung"
 
