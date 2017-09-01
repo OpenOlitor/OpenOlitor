@@ -22,27 +22,29 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
-import org.joda.time.DateTime
-import ch.openolitor.buchhaltung.zahlungsimport._
-import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
-import ch.openolitor.stammdaten.models.Waehrung
-import ch.openolitor.stammdaten.models.CHF
-import scala.util._
-import scala.io.Source
-import scala.xml.XML
-import java.io.InputStream
-import javax.xml.datatype.XMLGregorianCalendar
-import iso.std.iso.n20022.tech.xsd.camt05400106.BankToCustomerDebitCreditNotificationV06
+import scala.util.Try
 
-object Camt054Transaktionsart {
+import ch.openolitor.buchhaltung.zahlungsimport.{ Gutschrift, Transaktionsart, ZahlungsImportParseException, ZahlungsImportResult }
+import ch.openolitor.generated.xsd.{ BankToCustomerDebitCreditNotificationV04, DocumentType }
+import ch.openolitor.stammdaten.models.Waehrung
+
+import org.joda.time.format.ISODateTimeFormat
+
+import javax.xml.datatype.XMLGregorianCalendar
+
+object Camt054v04Transaktionsart {
   def apply(c: String): Transaktionsart = c match {
     case "CRDT" => Gutschrift
     case _ => throw new ZahlungsImportParseException(s"unable to match $c")
   }
 }
 
-class Camt054ToZahlungsImportTransformer {
-  def transform(input: BankToCustomerDebitCreditNotificationV06): Try[ZahlungsImportResult] = {
+class Camt054v04ToZahlungsImportTransformer {
+  def transform(input: DocumentType): Try[ZahlungsImportResult] = {
+    transform(input.BkToCstmrDbtCdtNtfctn)
+  }
+
+  def transform(input: BankToCustomerDebitCreditNotificationV04): Try[ZahlungsImportResult] = {
     val groupHeader = input.GrpHdr // Level A
 
     Try(ZahlungsImportResult(input.Ntfctn flatMap { notification => // Level B
@@ -51,7 +53,7 @@ class Camt054ToZahlungsImportTransformer {
           entryDetail.TxDtls map { transactionDetail => // Level D.2
             Camt054Record(
               entry.NtryRef,
-              notification.Acct.Id.accountidentification4choiceoption.as[Option[String]],
+              Some(notification.Acct.Id.accountidentification4choicetypeoption.as[String]),
               (transactionDetail.RltdPties flatMap (_.Dbtr flatMap (_.Nm))),
               transactionDetail.RmtInf map (_.Strd match {
                 case Nil => ""
@@ -59,11 +61,11 @@ class Camt054ToZahlungsImportTransformer {
               }) getOrElse "", // Referenznummer
               (transactionDetail.AmtDtls flatMap (_.TxAmt map (_.Amt.value))) getOrElse (throw new ZahlungsImportParseException("Missing Betrag")),
               (transactionDetail.AmtDtls flatMap (_.TxAmt map (txAmt => Waehrung.applyUnsafe(txAmt.Amt.Ccy)))).getOrElse(throw new ZahlungsImportParseException("Missing Waehrung")),
-              Camt054Transaktionsart(transactionDetail.CdtDbtInd.toString),
+              Camt054v04Transaktionsart(transactionDetail.CdtDbtInd.toString),
               "",
-              new DateTime(groupHeader.CreDtTm.toGregorianCalendar.getTime),
-              new DateTime(entry.BookgDt.get.dateanddatetimechoiceoption.as[XMLGregorianCalendar].toGregorianCalendar.getTime),
-              new DateTime(entry.ValDt.get.dateanddatetimechoiceoption.as[XMLGregorianCalendar].toGregorianCalendar.getTime),
+              ISODateTimeFormat.dateOptionalTimeParser.parseDateTime(groupHeader.CreDtTm.toString),
+              ISODateTimeFormat.dateOptionalTimeParser.parseDateTime(entry.BookgDt.get.dateanddatetimechoicetypeoption.as[XMLGregorianCalendar].toString),
+              ISODateTimeFormat.dateOptionalTimeParser.parseDateTime(entry.ValDt.get.dateanddatetimechoicetypeoption.as[XMLGregorianCalendar].toString),
               "",
               0.0
             )

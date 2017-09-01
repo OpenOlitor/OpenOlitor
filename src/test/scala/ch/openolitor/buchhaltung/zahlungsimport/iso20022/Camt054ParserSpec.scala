@@ -22,24 +22,38 @@
 \*                                                                           */
 package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
-import ch.openolitor.buchhaltung.zahlungsimport.{ Transaktionsart, ZahlungsImportRecord }
-import ch.openolitor.stammdaten.models.{ CHF, Waehrung }
-
+import org.specs2.mutable._
 import org.joda.time.DateTime
+import java.nio.file.{ Files, Paths }
+import scala.io.Source
+import ch.openolitor.stammdaten.models.CHF
+import ch.openolitor.buchhaltung.zahlungsimport.Gutschrift
+import org.joda.time.format.ISODateTimeFormat
 
-case class Camt054Record(
-    teilnehmerNummer: Option[String],
-    iban: Option[String],
-    debitor: Option[String],
-    referenzNummer: String,
-    betrag: BigDecimal,
-    waehrung: Waehrung = CHF,
-    transaktionsart: Transaktionsart,
-    aufgabereferenzen: String,
-    aufgabeDatum: DateTime,
-    verarbeitungsDatum: DateTime,
-    gutschriftsDatum: DateTime,
-    reserve: String,
-    preiseFuerEinzahlungen: BigDecimal
-) extends ZahlungsImportRecord {
+class Camt054ParserSpec extends Specification {
+  "Camt054Parser" should {
+    "parse camt.054 XML file" in {
+      val is = getClass.getResourceAsStream("/camt_054_Beispiel_ZA1_ESR_ZE.xml")
+
+      val result = Camt054Parser.parse(is)
+
+      beSuccessfulTry(result)
+
+      result.get.records.head === Camt054Record(
+        Some("010391391"),
+        Some("CH160077401231234567"),
+        Some("Pia Rutschmann"),
+        "210000000003139471430009017",
+        3949.75,
+        CHF,
+        Gutschrift,
+        "",
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-15T09:30:47Z"),
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-07"),
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-07"),
+        "",
+        0.0
+      )
+    }
+  }
 }

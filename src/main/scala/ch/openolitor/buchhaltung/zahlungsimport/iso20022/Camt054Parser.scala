@@ -31,13 +31,19 @@ import scala.util._
 import scala.io.Source
 import scala.xml.XML
 import java.io.InputStream
-import iso.std.iso.n20022.tech.xsd.camt05400106.BankToCustomerDebitCreditNotificationV06
+import ch.openolitor.generated.xsd.DocumentType
+import ch.openolitor.generated.xsd.Document
 
-class Camt054Parser extends ZahlungsImportParser {
+class Camt054Parser {
   def parse(is: InputStream): Try[ZahlungsImportResult] = {
     Try(XML.load(is)) flatMap { node =>
-      Try(scalaxb.fromXML[BankToCustomerDebitCreditNotificationV06](node)) flatMap {
-        (new Camt054ToZahlungsImportTransformer).transform
+      // try available versions for the given xml document
+      Try(scalaxb.fromXML[Document](node)) flatMap {
+        (new Camt054v06ToZahlungsImportTransformer).transform
+      } orElse {
+        Try(scalaxb.fromXML[DocumentType](node)) flatMap {
+          (new Camt054v04ToZahlungsImportTransformer).transform
+        }
       }
     }
   }

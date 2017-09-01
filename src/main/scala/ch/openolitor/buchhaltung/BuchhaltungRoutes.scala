@@ -185,9 +185,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getZahlungsImports)) ~
         (put | post)(upload { (form, content, fileName) =>
           // read the file once and pass the same content along
-          val buffer = new Array[Byte](2048)
-          val uploadData = Iterator.continually(content.read(buffer))
-            .takeWhile(_ != -1).map(_.toByte).toArray
+          val uploadData = Iterator continually content.read takeWhile (-1 !=) map (_.toByte) toArray
 
           ZahlungsImportParser.parse(uploadData) match {
             case Success(importResult) =>
