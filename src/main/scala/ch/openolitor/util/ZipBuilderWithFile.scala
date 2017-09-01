@@ -20,17 +20,22 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.filestore
+package ch.openolitor.util
 
-import scala.concurrent.Future
+import java.util.zip._
+import java.io.ByteArrayOutputStream
+import scala.util.Try
+import java.io.InputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileInputStream
+import java.io.OutputStream
 
-sealed trait FileStoreBucket
-case object VorlagenBucket extends FileStoreBucket
-case object GeneriertBucket extends FileStoreBucket
-case object StammdatenBucket extends FileStoreBucket
-case object ZahlungsImportBucket extends FileStoreBucket
-case object TemporaryDataBucket extends FileStoreBucket
+class ZipBuilderWithFile(file: File = File.createTempFile("report", ".zip")) extends ZipBuilder(new FileOutputStream(file)) {
+  file.deleteOnExit()
 
-object FileStoreBucket {
-  val AllFileStoreBuckets = List(VorlagenBucket, GeneriertBucket, StammdatenBucket, ZahlungsImportBucket, TemporaryDataBucket)
+  override def close(): Option[File] = {
+    super.close()
+    Try(file).toOption
+  }
 }
