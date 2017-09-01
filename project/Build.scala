@@ -79,8 +79,8 @@ object ScalaxbSettings {
   import sbtscalaxb.ScalaxbKeys._
   
   lazy val scalaxbSettings = Seq(
+      scalaxbXsdSource in (Compile, scalaxb) := baseDirectory.value / "src" / "main" / "resources" / "xsd",
       scalaxbPackageName in (Compile, scalaxb) := "ch.openolitor.generated.xsd"
-      // scalaxbAutoPackages in (Compile, scalaxb) := true
     )
 }
 
