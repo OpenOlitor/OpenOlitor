@@ -22,48 +22,33 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts
 
-object Scripts {
-  val current =
-    V1Scripts.scripts ++
-      OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts ++
-      OO297_DBScripts.scripts ++
-      OO311_DBScripts.scripts ++
-      OO314_DBScripts.scripts ++
-      OO325_DBScripts.scripts ++
-      OO326_DBScripts.scripts ++
-      OO328_DBScripts.scripts ++
-      OO327_DBScripts.scripts ++
-      OO254_DBScripts.scripts ++
-      OO152_DBScripts.scripts ++
-      OO330_DBScripts.scripts ++
-      OO337_DBScripts.scripts ++
-      OO382_DBScripts.scripts ++
-      OO106_DBScripts_Mahnungen.scripts ++
-      OO374_DBScripts.scripts ++
-      OO374_DBScripts_aktiv_to_abo.scripts ++
-      OO461_DBScripts.scripts ++
-      OO468_DBScripts.scripts ++
-      OO433_DBScripts.scripts ++
-      OO476_DBScripts.scripts ++
-      OO499_DBScripts.scripts ++
-      OO506_DBScripts.scripts ++
-      OO501_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO564_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO597_DBScripts.scripts ++
-      OO597_Index_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO554_DBScripts.scripts ++
-      OO291_OO396_DBScripts.scripts ++
-      OO281_DBScripts.scripts ++
-      OO618_DBScripts.scripts ++
-      OO556_DBScripts.scripts ++
-      OO350_DBScripts.scripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import com.typesafe.config.Config
+import ch.openolitor.util.ConfigUtil._
+import ch.openolitor.core.models.PersonId
+import org.joda.time.DateTime
+
+object OO350_DBScripts extends DefaultDBScripts {
+  val BuchhaltungScripts = new Script with LazyLogging with BuchhaltungDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Add IBAN to ZahlungsEingang")
+
+      alterTableAddColumnIfNotExists(zahlungsEingangMapping, "iban", "VARCHAR(34)", "teilnehmer_nummer")
+      alterTableAddColumnIfNotExists(zahlungsEingangMapping, "debitor", "VARCHAR(2000)", "gutschrifts_datum")
+
+      // teilnehmernummer nullable
+      sql"""alter table ${zahlungsEingangMapping.table} modify teilnehmer_nummer varchar(10)"""
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(BuchhaltungScripts)
 }
