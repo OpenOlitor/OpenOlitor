@@ -850,7 +850,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
       implicit val pid = SystemEvents.SystemPersonId
       stammdatenUpdateRepository.updateEntity[Person, PersonId](personId)(
-        personMapping.column.letzteAnmeldung -> Some(timestamp)
+        personMapping.column.letzteAnmeldung -> Option(timestamp)
       )
     }
   }
