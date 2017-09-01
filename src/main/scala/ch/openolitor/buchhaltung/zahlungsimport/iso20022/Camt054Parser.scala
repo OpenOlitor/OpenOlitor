@@ -33,12 +33,18 @@ import scala.xml.XML
 import java.io.InputStream
 import iso.std.iso.n20022.tech.xsd.camt05400106.BankToCustomerDebitCreditNotificationV06
 
-class Camt054Parser {
+class Camt054Parser extends ZahlungsImportParser {
   def parse(is: InputStream): Try[ZahlungsImportResult] = {
     Try(XML.load(is)) flatMap { node =>
       Try(scalaxb.fromXML[BankToCustomerDebitCreditNotificationV06](node)) flatMap {
         (new Camt054ToZahlungsImportTransformer).transform
       }
     }
+  }
+}
+
+object Camt054Parser extends ZahlungsImportParser {
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    new Camt054Parser().parse(is)
   }
 }

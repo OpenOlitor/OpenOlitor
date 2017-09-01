@@ -20,39 +20,40 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.zahlungsimport
+package ch.openolitor.buchhaltung.zahlungsimport.esr
 
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import ch.openolitor.buchhaltung.zahlungsimport.esr.EsrRecordTyp3
-import ch.openolitor.buchhaltung.zahlungsimport.esr.EsrTotalRecordTyp3
 import scala.util._
 import scala.io.Source
 import java.io.InputStream
-import ch.openolitor.buchhaltung.zahlungsimport.esr.EsrParser
-import ch.openolitor.buchhaltung.zahlungsimport.iso20022.Camt054Parser
-import java.io.ByteArrayInputStream
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportResult
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 
-class ZahlungsImportParseException(message: String) extends Exception(message)
-
-case class ZahlungsImportParseError(message: String)
-
-trait ZahlungsImportParser {
-  def parse(is: InputStream): Try[ZahlungsImportResult]
+class EsrParser {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = line.trim match {
+    case EsrRecordTyp3(record) =>
+      Success(record)
+    case EsrTotalRecordTyp3(record) =>
+      Success(record)
+  }
 }
 
-object ZahlungsImportParser {
-  val importParsers: List[ZahlungsImportParser] =
-    Camt054Parser :: EsrParser :: Nil
+object EsrParser extends ZahlungsImportParser {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = {
+    (new EsrParser).parse(line)
+  }
 
-  /**
-   * Try parsing the given bytes using all available import parsers until the first succeeds.
-   *
-   * @param bytes the data of the given file.
-   * @return either a ZahlungsImportResult or Failure
-   */
-  def parse(bytes: Array[Byte]): Try[ZahlungsImportResult] = {
-    importParsers map (_.parse(new ByteArrayInputStream(bytes))) find (_.isSuccess) getOrElse
-      Failure(new IllegalArgumentException(s"Could not parse the input stream using the following parsers: $importParsers"))
+  def parse(lines: Iterator[String]): Try[ZahlungsImportResult] = {
+    val parser = new EsrParser
+
+    val result = lines map (parser.parse)
+
+    Try(ZahlungsImportResult((result map (_.get)).toList))
+  }
+
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    parse(Source.fromInputStream(is).getLines)
   }
 }

@@ -23,22 +23,15 @@
 package ch.openolitor.buchhaltung.zahlungsimport
 
 import org.specs2.mutable._
-import scala.io.Source
+import java.nio.file.{ Files, Paths }
 
 class ZahlungsImportParserSpec extends Specification {
   "ZahlungsImportParser" should {
-    val parser = new ZahlungsImportParser
 
-    "parse line by line" in {
-      val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
-      val result = source.getLines map (parser.parse)
+    "parse example esr file" in {
+      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport.esr").toURI()))
 
-      result.size === 225
-    }
-
-    "parse example file" in {
-      val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
-      val result = ZahlungsImportParser.parse(source.getLines)
+      val result = ZahlungsImportParser.parse(bytes)
 
       beSuccessfulTry(result)
 

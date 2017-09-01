@@ -73,4 +73,3 @@ class Camt054ToZahlungsImportTransformer {
     }))
   }
 }
-
