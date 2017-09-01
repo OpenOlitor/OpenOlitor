@@ -58,7 +58,7 @@ trait DataImportServiceComponent {
 }
 
 class DefaultDataImportService(override val sysConfig: SystemConfig, override val entityStore: ActorRef,
-  override val system: ActorSystem, override implicit val personId: PersonId) extends DataImportService
+  override val system: ActorSystem, override implicit val personId: PersonId) extends DataImportService()(personId)
     with DefaultStammdatenWriteRepositoryComponent
     with DefaultBuchhaltungWriteRepositoryComponent
 

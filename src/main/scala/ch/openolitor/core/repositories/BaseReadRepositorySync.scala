@@ -46,6 +46,7 @@ trait BaseReadRepositorySync extends BaseRepositoryQueries {
   def getByIds[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], ids: Seq[I])(implicit
     session: DBSession,
     binder: Binders[I]): List[E] = {
-    getByIdsQuery(syntax, ids).apply()
+    val result = getByIdsQuery(syntax, ids)
+    result.apply()
   }
 }

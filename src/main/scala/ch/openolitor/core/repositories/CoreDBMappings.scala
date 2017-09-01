@@ -30,6 +30,8 @@ trait CoreDBMappings extends DBMappings {
   implicit val dbSchemaIdBinder = baseIdBinders(DBSchemaId.apply _)
   implicit val evolutionStatusBinder = toStringBinder(EvolutionStatus.apply _)
 
+  implicit def evolutionStatusParameterBinderFactory[A <: EvolutionStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+
   implicit val persistenceEventStateIdBinders: Binders[PersistenceEventStateId] = baseIdBinders(PersistenceEventStateId.apply _)
 
   implicit val dbSchemaMapping = new BaseEntitySQLSyntaxSupport[DBSchema] {
