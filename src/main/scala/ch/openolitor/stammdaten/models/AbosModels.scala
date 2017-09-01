@@ -22,16 +22,11 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
-import java.util.UUID
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
-import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.kundenportal.models.BelongsToKunde
 import ch.openolitor.core.scalax.Tuple23
 
 case class AboId(id: Long) extends BaseId

@@ -303,69 +303,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(stammdatenReadRepository.getPersonenAboAktivByAbotypen))
       } ~
       path("zusatzabotypen" / zusatzAbotypIdPath) { id =>
-        get(detail(stammdatenReadRepository.getAbotypDetail(id))) ~
-          (put | post)(update[AbotypModify, AbotypId](id)) ~
+        get(detail(stammdatenReadRepository.getZusatzAbotypDetail(id))) ~
+          (put | post)(update[ZusatzAbotypModify, AbotypId](id)) ~
           delete(remove(id))
-      } ~
-      path("zusatzabotypen" / zusatzAbotypIdPath / "vertriebe") { abotypId =>
-        get(list(stammdatenReadRepository.getVertriebe(abotypId))) ~
-          post(create[VertriebModify, VertriebId](VertriebId.apply _))
-      } ~
-      path("zusatzabotypen" / zusatzAbotypIdPath / "vertriebe" / vertriebIdPath) { (abotypId, vertriebId) =>
-        get(detail(stammdatenReadRepository.getVertrieb(vertriebId))) ~
-          (put | post)(update[VertriebModify, VertriebId](vertriebId)) ~
-          delete(remove(vertriebId))
-      } ~
-      path("zusatzabotypen" / zusatzAbotypIdPath / "vertriebe" / vertriebIdPath / "vertriebsarten") { (abotypId, vertriebId) =>
-        get(list(stammdatenReadRepository.getVertriebsarten(vertriebId))) ~
-          post {
-            requestInstance { request =>
-              entity(as[VertriebsartModify]) {
-                case dl: DepotlieferungModify =>
-                  created(request)(copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "vertriebId" -> vertriebId))
-                case hl: HeimlieferungModify =>
-                  created(request)(copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "vertriebId" -> vertriebId))
-                case pl: PostlieferungModify =>
-                  created(request)(copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "vertriebId" -> vertriebId))
-              }
-            }
-          }
-      } ~
-      path("zusatzabotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "vertriebsarten" / vertriebsartIdPath) { (abotypId, vertriebId, vertriebsartId) =>
-        get(detail(stammdatenReadRepository.getVertriebsart(vertriebsartId))) ~
-          (put | post) {
-            entity(as[VertriebsartModify]) {
-              case dl: DepotlieferungModify =>
-                updated(vertriebsartId, copyTo[DepotlieferungModify, DepotlieferungAbotypModify](dl, "vertriebId" -> vertriebId))
-              case hl: HeimlieferungModify =>
-                updated(vertriebsartId, copyTo[HeimlieferungModify, HeimlieferungAbotypModify](hl, "vertriebId" -> vertriebId))
-              case pl: PostlieferungModify =>
-                updated(vertriebsartId, copyTo[PostlieferungModify, PostlieferungAbotypModify](pl, "vertriebId" -> vertriebId))
-            }
-          } ~
-          delete(remove(vertriebsartId))
-      } ~
-      path("zusatzabotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen") { (abotypId, vertriebId) =>
-        get(list(stammdatenReadRepository.getUngeplanteLieferungen(abotypId, vertriebId))) ~
-          post {
-            requestInstance { request =>
-              entity(as[LieferungAbotypCreate]) { entity =>
-                created(request)(entity)
-              }
-            }
-          }
-      } ~
-      path("zusatzabotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / "aktionen" / "generieren") { (abotypId, vertriebId) =>
-        post {
-          requestInstance { request =>
-            entity(as[LieferungenAbotypCreate]) { entity =>
-              created(request)(entity)
-            }
-          }
-        }
-      } ~
-      path("zusatzabotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / lieferungIdPath) { (abotypId, vertriebId, lieferungId) =>
-        delete(remove(lieferungId))
       }
 
   def depotsRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
