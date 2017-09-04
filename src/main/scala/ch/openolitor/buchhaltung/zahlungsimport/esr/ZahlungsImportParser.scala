@@ -20,16 +20,40 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.buchhaltung.zahlungsimport.esr
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
-import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO350_DBScripts
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
+import scala.util._
+import scala.io.Source
+import java.io.InputStream
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportResult
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 
-object Scripts {
-  def current(system: ActorSystem) =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts(system)
+class EsrParser {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = line.trim match {
+    case EsrRecordTyp3(record) =>
+      Success(record)
+    case EsrTotalRecordTyp3(record) =>
+      Success(record)
+  }
+}
+
+object EsrParser extends ZahlungsImportParser {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = {
+    (new EsrParser).parse(line)
+  }
+
+  def parse(lines: Iterator[String]): Try[ZahlungsImportResult] = {
+    val parser = new EsrParser
+
+    val result = lines map (parser.parse)
+
+    Try(ZahlungsImportResult((result map (_.get)).toList))
+  }
+
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    parse(Source.fromInputStream(is).getLines)
+  }
 }

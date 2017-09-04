@@ -23,26 +23,34 @@
 package ch.openolitor.buchhaltung.zahlungsimport
 
 import org.specs2.mutable._
-import scala.io.Source
+import java.nio.file.{ Files, Paths }
+import java.io.FileInputStream
+import java.io.File
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.util.stream.Collectors
 
 class ZahlungsImportParserSpec extends Specification {
   "ZahlungsImportParser" should {
-    val parser = new ZahlungsImportParser
 
-    "parse line by line" in {
-      val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
-      val result = source.getLines map (parser.parse)
+    "parse example esr file" in {
+      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport.esr").toURI()))
 
-      result.size === 225
-    }
-
-    "parse example file" in {
-      val source = Source.fromURL(getClass.getResource("/esrimport.esr"))
-      val result = ZahlungsImportParser.parse(source.getLines)
+      val result = ZahlungsImportParser.parse(bytes)
 
       beSuccessfulTry(result)
 
       result.get.records.size === 225
+    }
+
+    "parse example camt.054 file" in {
+      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/camt_054_Beispiel_ZA1_ESR_ZE.xml").toURI()))
+
+      val result = ZahlungsImportParser.parse(bytes)
+
+      beSuccessfulTry(result)
+
+      result.get.records.size === 1
     }
   }
 }
