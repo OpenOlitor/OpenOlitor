@@ -65,6 +65,7 @@ import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryComponent
 import ch.openolitor.buchhaltung.reporting.MahnungReportService
+import java.io.ByteArrayInputStream
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -183,10 +184,12 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     path("zahlungsimports") {
       get(list(buchhaltungReadRepository.getZahlungsImports)) ~
         (put | post)(upload { (form, content, fileName) =>
-          // parse
-          ZahlungsImportParser.parse(Source.fromInputStream(content).getLines) match {
+          // read the file once and pass the same content along
+          val uploadData = Iterator continually content.read takeWhile (-1 !=) map (_.toByte) toArray
+
+          ZahlungsImportParser.parse(uploadData) match {
             case Success(importResult) =>
-              storeToFileStore(ZahlungsImportDaten, None, content, fileName) { (fileId, meta) =>
+              storeToFileStore(ZahlungsImportDaten, None, new ByteArrayInputStream(uploadData), fileName) { (fileId, meta) =>
                 createZahlungsImport(fileId, importResult.records)
               }
             case Failure(e) => complete(StatusCodes.BadRequest, s"Die Datei konnte nicht gelesen werden: $e")

@@ -20,37 +20,26 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.zahlungsimport
+package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
-import org.specs2.mutable._
-import java.nio.file.{ Files, Paths }
-import java.io.FileInputStream
-import java.io.File
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.util.stream.Collectors
+import ch.openolitor.buchhaltung.zahlungsimport.{ Transaktionsart, ZahlungsImportRecord }
+import ch.openolitor.stammdaten.models.{ CHF, Waehrung }
 
-class ZahlungsImportParserSpec extends Specification {
-  "ZahlungsImportParser" should {
+import org.joda.time.DateTime
 
-    "parse example esr file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport.esr").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
-
-      beSuccessfulTry(result)
-
-      result.get.records.size === 225
-    }
-
-    "parse example camt.054 file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/camt_054_Beispiel_ZA1_ESR_ZE.xml").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
-
-      beSuccessfulTry(result)
-
-      result.get.records.size === 1
-    }
-  }
+case class Camt054Record(
+    teilnehmerNummer: Option[String],
+    iban: Option[String],
+    debitor: Option[String],
+    referenzNummer: String,
+    betrag: BigDecimal,
+    waehrung: Waehrung = CHF,
+    transaktionsart: Transaktionsart,
+    aufgabereferenzen: String,
+    aufgabeDatum: DateTime,
+    verarbeitungsDatum: DateTime,
+    gutschriftsDatum: DateTime,
+    reserve: String,
+    preiseFuerEinzahlungen: BigDecimal
+) extends ZahlungsImportRecord {
 }

@@ -20,37 +20,40 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.zahlungsimport
+package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
 import org.specs2.mutable._
+import org.joda.time.DateTime
 import java.nio.file.{ Files, Paths }
-import java.io.FileInputStream
-import java.io.File
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.util.stream.Collectors
+import scala.io.Source
+import ch.openolitor.stammdaten.models.CHF
+import ch.openolitor.buchhaltung.zahlungsimport.Gutschrift
+import org.joda.time.format.ISODateTimeFormat
 
-class ZahlungsImportParserSpec extends Specification {
-  "ZahlungsImportParser" should {
+class Camt054ParserSpec extends Specification {
+  "Camt054Parser" should {
+    "parse camt.054 XML file" in {
+      val is = getClass.getResourceAsStream("/camt_054_Beispiel_ZA1_ESR_ZE.xml")
 
-    "parse example esr file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport.esr").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
+      val result = Camt054Parser.parse(is)
 
       beSuccessfulTry(result)
 
-      result.get.records.size === 225
-    }
-
-    "parse example camt.054 file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/camt_054_Beispiel_ZA1_ESR_ZE.xml").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
-
-      beSuccessfulTry(result)
-
-      result.get.records.size === 1
+      result.get.records.head === Camt054Record(
+        Some("010391391"),
+        Some("CH160077401231234567"),
+        Some("Pia Rutschmann"),
+        "210000000003139471430009017",
+        3949.75,
+        CHF,
+        Gutschrift,
+        "",
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-15T09:30:47Z"),
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-07"),
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-07"),
+        "",
+        0.0
+      )
     }
   }
 }

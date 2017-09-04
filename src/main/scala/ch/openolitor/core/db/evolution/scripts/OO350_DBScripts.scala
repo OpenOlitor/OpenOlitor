@@ -20,37 +20,35 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.zahlungsimport
+package ch.openolitor.core.db.evolution.scripts
 
-import org.specs2.mutable._
-import java.nio.file.{ Files, Paths }
-import java.io.FileInputStream
-import java.io.File
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.util.stream.Collectors
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import com.typesafe.config.Config
+import ch.openolitor.util.ConfigUtil._
+import ch.openolitor.core.models.PersonId
+import org.joda.time.DateTime
 
-class ZahlungsImportParserSpec extends Specification {
-  "ZahlungsImportParser" should {
+object OO350_DBScripts extends DefaultDBScripts {
+  val BuchhaltungScripts = new Script with LazyLogging with BuchhaltungDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Add IBAN to ZahlungsEingang")
 
-    "parse example esr file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport.esr").toURI()))
+      alterTableAddColumnIfNotExists(zahlungsEingangMapping, "iban", "VARCHAR(34)", "teilnehmer_nummer")
+      alterTableAddColumnIfNotExists(zahlungsEingangMapping, "debitor", "VARCHAR(2000)", "gutschrifts_datum")
 
-      val result = ZahlungsImportParser.parse(bytes)
+      // teilnehmernummer nullable
+      sql"""alter table ${zahlungsEingangMapping.table} modify teilnehmer_nummer varchar(10)"""
 
-      beSuccessfulTry(result)
-
-      result.get.records.size === 225
-    }
-
-    "parse example camt.054 file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/camt_054_Beispiel_ZA1_ESR_ZE.xml").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
-
-      beSuccessfulTry(result)
-
-      result.get.records.size === 1
+      Success(true)
     }
   }
+
+  val scripts = Seq(BuchhaltungScripts)
 }

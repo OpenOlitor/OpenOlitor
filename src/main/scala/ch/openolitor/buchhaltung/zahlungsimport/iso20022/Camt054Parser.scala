@@ -20,37 +20,37 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.zahlungsimport
+package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
-import org.specs2.mutable._
-import java.nio.file.{ Files, Paths }
-import java.io.FileInputStream
-import java.io.File
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.util.stream.Collectors
+import org.joda.time.DateTime
+import ch.openolitor.buchhaltung.zahlungsimport._
+import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
+import ch.openolitor.stammdaten.models.Waehrung
+import ch.openolitor.stammdaten.models.CHF
+import scala.util._
+import scala.io.Source
+import scala.xml.XML
+import java.io.InputStream
+import ch.openolitor.generated.xsd.DocumentType
+import ch.openolitor.generated.xsd.Document
 
-class ZahlungsImportParserSpec extends Specification {
-  "ZahlungsImportParser" should {
-
-    "parse example esr file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport.esr").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
-
-      beSuccessfulTry(result)
-
-      result.get.records.size === 225
+class Camt054Parser {
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    Try(XML.load(is)) flatMap { node =>
+      // try available versions for the given xml document
+      Try(scalaxb.fromXML[Document](node)) flatMap {
+        (new Camt054v06ToZahlungsImportTransformer).transform
+      } orElse {
+        Try(scalaxb.fromXML[DocumentType](node)) flatMap {
+          (new Camt054v04ToZahlungsImportTransformer).transform
+        }
+      }
     }
+  }
+}
 
-    "parse example camt.054 file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/camt_054_Beispiel_ZA1_ESR_ZE.xml").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
-
-      beSuccessfulTry(result)
-
-      result.get.records.size === 1
-    }
+object Camt054Parser extends ZahlungsImportParser {
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    new Camt054Parser().parse(is)
   }
 }

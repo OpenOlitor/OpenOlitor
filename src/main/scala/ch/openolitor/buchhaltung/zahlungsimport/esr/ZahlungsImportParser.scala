@@ -20,37 +20,40 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.buchhaltung.zahlungsimport
+package ch.openolitor.buchhaltung.zahlungsimport.esr
 
-import org.specs2.mutable._
-import java.nio.file.{ Files, Paths }
-import java.io.FileInputStream
-import java.io.File
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.util.stream.Collectors
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
+import scala.util._
+import scala.io.Source
+import java.io.InputStream
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportResult
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
+import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 
-class ZahlungsImportParserSpec extends Specification {
-  "ZahlungsImportParser" should {
+class EsrParser {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = line.trim match {
+    case EsrRecordTyp3(record) =>
+      Success(record)
+    case EsrTotalRecordTyp3(record) =>
+      Success(record)
+  }
+}
 
-    "parse example esr file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport.esr").toURI()))
+object EsrParser extends ZahlungsImportParser {
+  def parse(line: String): Try[ZahlungsImportRecordResult] = {
+    (new EsrParser).parse(line)
+  }
 
-      val result = ZahlungsImportParser.parse(bytes)
+  def parse(lines: Iterator[String]): Try[ZahlungsImportResult] = {
+    val parser = new EsrParser
 
-      beSuccessfulTry(result)
+    val result = lines map (parser.parse)
 
-      result.get.records.size === 225
-    }
+    Try(ZahlungsImportResult((result map (_.get)).toList))
+  }
 
-    "parse example camt.054 file" in {
-      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/camt_054_Beispiel_ZA1_ESR_ZE.xml").toURI()))
-
-      val result = ZahlungsImportParser.parse(bytes)
-
-      beSuccessfulTry(result)
-
-      result.get.records.size === 1
-    }
+  def parse(is: InputStream): Try[ZahlungsImportResult] = {
+    parse(Source.fromInputStream(is).getLines)
   }
 }

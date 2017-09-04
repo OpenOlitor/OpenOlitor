@@ -75,12 +75,22 @@ object BuildSettings {
   )
 }
 
+object ScalaxbSettings {
+  import sbtscalaxb.ScalaxbKeys._
+  
+  lazy val scalaxbSettings = Seq(
+      scalaxbXsdSource in (Compile, scalaxb) := baseDirectory.value / "src" / "main" / "resources" / "xsd",
+      scalaxbPackageName in (Compile, scalaxb) := "ch.openolitor.generated.xsd"
+    )
+}
+
 object OpenOlitorBuild extends Build {
   import BuildSettings._
+  import ScalaxbSettings._
 
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro)
+  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings) dependsOn (macroSub, sprayJsonMacro)
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }

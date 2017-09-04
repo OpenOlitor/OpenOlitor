@@ -152,6 +152,8 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
             None,
             result.transaktionsart.toString,
             result.teilnehmerNummer,
+            result.iban,
+            result.debitor,
             result.referenzNummer,
             result.waehrung,
             result.betrag,
