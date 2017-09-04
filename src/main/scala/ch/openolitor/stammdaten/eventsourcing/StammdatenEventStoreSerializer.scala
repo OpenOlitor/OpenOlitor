@@ -27,7 +27,6 @@ import stamina.json._
 import spray.json.lenses.JsonLenses._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.domain.EntityStoreJsonProtocol
 import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
@@ -48,6 +47,8 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val abotypModifyPersister = persister[AbotypModify]("abotyp-modify")
   implicit val abotypIdPersister = persister[AbotypId]("abotyp-id")
+
+  implicit val zusatzAbotypModifyPersister = persister[ZusatzAbotypModify]("zusatzabotyp-modify")
 
   implicit val kundeModifyPersister = persister[KundeModify]("kunde-modify")
   implicit val kundeIdPersister = persister[KundeId]("kunde-id")
@@ -178,6 +179,7 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     aboIdPersister,
     abotypModifyPersister,
     abotypIdPersister,
+    zusatzAbotypModifyPersister,
     kundeModifyPersister,
     kundeIdPersister,
     personCreatePersister,

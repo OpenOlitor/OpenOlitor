@@ -32,12 +32,8 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.db._
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.repositories.SqlBinder
-import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models._
-import ch.openolitor.util.IdUtil
 import org.joda.time.DateTime
-import com.github.nscala_time.time.Imports._
 import org.joda.time.format.DateTimeFormat
 import BigDecimal.RoundingMode._
 import ch.openolitor.core.repositories.EventPublishingImplicits._

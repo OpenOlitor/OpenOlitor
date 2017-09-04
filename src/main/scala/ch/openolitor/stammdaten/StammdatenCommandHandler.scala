@@ -328,6 +328,10 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       handleEntityInsert[AbwesenheitCreate, AbwesenheitId](idFactory, meta, entity, AbwesenheitId.apply)
     case e @ InsertEntityCommand(personId, entity: AbotypModify) => idFactory => meta =>
       handleEntityInsert[AbotypModify, AbotypId](idFactory, meta, entity, AbotypId.apply)
+    case e @ InsertEntityCommand(personId, entity: ZusatzAbotypModify) => idFactory => meta =>
+      handleEntityInsert[ZusatzAbotypModify, AbotypId](idFactory, meta, entity, AbotypId.apply)
+    case e @ InsertEntityCommand(personId, entity: ZusatzAbotypModify) => idFactory => meta =>
+      handleEntityInsert[ZusatzAbotypModify, AbotypId](idFactory, meta, entity, AbotypId.apply)
     case e @ InsertEntityCommand(personId, entity: DepotModify) => idFactory => meta =>
       handleEntityInsert[DepotModify, DepotId](idFactory, meta, entity, DepotId.apply)
     case e @ InsertEntityCommand(personId, entity: DepotlieferungModify) => idFactory => meta =>

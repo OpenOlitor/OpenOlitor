@@ -233,24 +233,24 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def parameterMappings(entity: ZusatzAbotyp): Seq[Any] =
       parameters(ZusatzAbotyp.unapply(entity).get)
 
-    override def updateParameters(abotyp: ZusatzAbotyp) = {
-      super.updateParameters(abotyp) ++ Seq(
-        column.name -> parameter(abotyp.name),
-        column.beschreibung -> parameter(abotyp.beschreibung),
-        column.aktivVon -> parameter(abotyp.aktivVon),
-        column.aktivBis -> parameter(abotyp.aktivBis),
-        column.preis -> parameter(abotyp.preis),
-        column.preiseinheit -> parameter(abotyp.preiseinheit),
-        column.laufzeit -> parameter(abotyp.laufzeit),
-        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
-        column.vertragslaufzeit -> parameter(abotyp.vertragslaufzeit),
-        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
-        column.farbCode -> parameter(abotyp.farbCode),
-        column.zielpreis -> parameter(abotyp.zielpreis),
-        column.adminProzente -> parameter(abotyp.adminProzente),
-        column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
-        column.anzahlAbonnentenAktiv -> parameter(abotyp.anzahlAbonnentenAktiv),
-        column.letzteLieferung -> parameter(abotyp.letzteLieferung)
+    override def updateParameters(zusatzabotyp: ZusatzAbotyp) = {
+      super.updateParameters(zusatzabotyp) ++ Seq(
+        column.name -> parameter(zusatzabotyp.name),
+        column.beschreibung -> parameter(zusatzabotyp.beschreibung),
+        column.aktivVon -> parameter(zusatzabotyp.aktivVon),
+        column.aktivBis -> parameter(zusatzabotyp.aktivBis),
+        column.preis -> parameter(zusatzabotyp.preis),
+        column.preiseinheit -> parameter(zusatzabotyp.preiseinheit),
+        column.laufzeit -> parameter(zusatzabotyp.laufzeit),
+        column.laufzeiteinheit -> parameter(zusatzabotyp.laufzeiteinheit),
+        column.vertragslaufzeit -> parameter(zusatzabotyp.vertragslaufzeit),
+        column.kuendigungsfrist -> parameter(zusatzabotyp.kuendigungsfrist),
+        column.farbCode -> parameter(zusatzabotyp.farbCode),
+        column.zielpreis -> parameter(zusatzabotyp.zielpreis),
+        column.adminProzente -> parameter(zusatzabotyp.adminProzente),
+        column.anzahlAbonnenten -> parameter(zusatzabotyp.anzahlAbonnenten),
+        column.anzahlAbonnentenAktiv -> parameter(zusatzabotyp.anzahlAbonnentenAktiv),
+        column.letzteLieferung -> parameter(zusatzabotyp.letzteLieferung)
       )
     }
   }

@@ -149,5 +149,6 @@ object V2Scripts {
   }
 
   def scripts(system: ActorSystem) = Seq(oo656(system), oo688) ++
-    OO686_Add_Rechnungspositionen.scripts
+    OO686_Add_Rechnungspositionen.scripts ++
+    OO697_Zusatzabos_add_modify_delete.scripts
 }

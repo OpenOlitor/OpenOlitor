@@ -22,11 +22,8 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import ch.openolitor.stammdaten._
 import org.joda.time.DateTime
 import ch.openolitor.core.models._
-import scalikejdbc._
-import java.util.UUID
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple25
 import ch.openolitor.core.scalax.Tuple26
@@ -302,4 +299,4 @@ case class ZusatzAbotypModify(
   adminProzente: BigDecimal,
   wirdGeplant: Boolean,
   waehrung: Waehrung
-)
+) extends AktivRange with JSONSerializable
