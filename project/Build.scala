@@ -48,7 +48,7 @@ object BuildSettings {
 	    //use scala logging to log outside of the actor system
 	    "com.typesafe.scala-logging"   %%  "scala-logging"				                % "3.1.0",
 	    //akka persistence journal driver
-	    "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.4.+",
+	    // "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.4.+",
 	    // use currently own fork, until PR was merged and a new release is available
 	    "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.8.+",
 	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.+",
@@ -78,10 +78,13 @@ object BuildSettings {
 
 object OpenOlitorBuild extends Build {
   import BuildSettings._
+  
+  lazy val akkaPersistenceSqlAsyncForkUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async.git#fix/scalikejdbc_version")
+  lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncForkUri, "core")
 
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro) 
+  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro, akkaPersistenceSqlAsync) 
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }
