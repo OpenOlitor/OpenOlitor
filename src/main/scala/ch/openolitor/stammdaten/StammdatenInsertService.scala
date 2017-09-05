@@ -445,7 +445,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               }
 
               // create required Koerbe for abo
-              maybeAbo map (abo => modifyKoerbeForAbo(abo, None))
+              maybeAbo map (abo => modifyKoerbeForAboDatumChange(abo, None))
           }
       }
     }
@@ -649,22 +649,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     stammdatenWriteRepository.publish(DataEvent(personId, LieferplanungCreated(lieferplanungId)))
   }
 
-  def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+  def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
     logger.debug(s"Create Koerbe:${lieferung.id}")
     stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
-      val abos = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
-      val statusL = (abos map { abo =>
+      val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
+      abos map { abo =>
         upsertKorb(lieferung, abo, abotyp)
-      }).map(_._1).flatten map (_.status)
-      val counts = statusL.groupBy { _.getClass }.mapValues(_.size)
-
-      logger.debug(s"Update lieferung:$lieferung")
-      val copy = lieferung.copy(
-        anzahlKoerbeZuLiefern = counts.get(WirdGeliefert.getClass).getOrElse(0),
-        anzahlAbwesenheiten = counts.get(FaelltAusAbwesend.getClass).getOrElse(0),
-        anzahlSaldoZuTief = counts.get(FaelltAusSaldoZuTief.getClass).getOrElse(0)
-      )
-      copy
+      }
+      recalculateNumbersLieferung(lieferung)
     } getOrElse (lieferung)
   }
 
