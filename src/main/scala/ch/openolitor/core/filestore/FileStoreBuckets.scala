@@ -29,7 +29,8 @@ case object VorlagenBucket extends FileStoreBucket
 case object GeneriertBucket extends FileStoreBucket
 case object StammdatenBucket extends FileStoreBucket
 case object ZahlungsImportBucket extends FileStoreBucket
+case object TemporaryDataBucket extends FileStoreBucket
 
 object FileStoreBucket {
-  val AllFileStoreBuckets = List(VorlagenBucket, GeneriertBucket, StammdatenBucket, ZahlungsImportBucket)
+  val AllFileStoreBuckets = List(VorlagenBucket, GeneriertBucket, StammdatenBucket, ZahlungsImportBucket, TemporaryDataBucket)
 }

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xsi:schemaLocation="urn:iso:std:iso:20022:tech:xsd:camt.054.001.04 camt.054.001.04.xsd" xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.04" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<BkToCstmrDbtCdtNtfctn>
+		<GrpHdr>
+			<MsgId>MSGID-C053.01.00.10-110725163809-01</MsgId>
+			<CreDtTm>2015-01-15T09:30:47Z</CreDtTm>
+			<MsgPgntn>
+				<PgNb>1</PgNb>
+				<LastPgInd>true</LastPgInd>
+			</MsgPgntn>
+		</GrpHdr>
+		<Ntfctn>
+			<Id>C054.01.00.10-110725163809-01</Id>
+			<CreDtTm>2015-01-15T09:30:47Z</CreDtTm>
+			<Acct>
+				<Id>
+					<IBAN>CH160077401231234567</IBAN>
+				</Id>
+			</Acct>
+			<Ntry>
+				<NtryRef>010391391</NtryRef>
+				<Amt Ccy="CHF">3949.75</Amt>
+				<CdtDbtInd>CRDT</CdtDbtInd>
+				<Sts>BOOK</Sts>
+				<BookgDt>
+					<Dt>2015-01-07</Dt>
+				</BookgDt>
+				<ValDt>
+					<Dt>2015-01-07</Dt>
+				</ValDt>
+				<BkTxCd>
+					<Domn>
+						<Cd>PMNT</Cd>
+						<Fmly>
+							<Cd>RCDT</Cd>
+							<SubFmlyCd>VCOM</SubFmlyCd>
+						</Fmly>
+					</Domn>
+				</BkTxCd>
+				<NtryDtls>
+					<Btch>
+						<NbOfTxs>1</NbOfTxs>
+					</Btch>
+					<TxDtls>
+						<Refs>
+							<EndToEndId>ENDTOENDID-001</EndToEndId>
+						</Refs>
+						<Amt Ccy="CHF">3949.75</Amt>
+						<CdtDbtInd>CRDT</CdtDbtInd>
+						<AmtDtls>
+							<TxAmt>
+								<Amt Ccy="CHF">3949.75</Amt>
+							</TxAmt></AmtDtls>
+						<RltdPties>
+							<Dbtr>
+								<Nm>Pia Rutschmann</Nm>
+									<PstlAdr>
+										<StrtNm>Marktgasse</StrtNm>
+										<BldgNb>28</BldgNb>
+										<PstCd>9400</PstCd>
+										<TwnNm>Rorschach</TwnNm>
+									</PstlAdr>
+							</Dbtr>
+						</RltdPties>
+						<RmtInf>
+							<Strd>
+								<CdtrRefInf>
+									<Ref>210000000003139471430009017</Ref>
+								</CdtrRefInf>
+							</Strd>
+						</RmtInf>
+					</TxDtls>
+				</NtryDtls>
+			</Ntry>
+		</Ntfctn>
+	</BkToCstmrDbtCdtNtfctn>
+</Document>

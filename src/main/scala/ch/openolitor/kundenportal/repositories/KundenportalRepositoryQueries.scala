@@ -274,12 +274,14 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
       .map({ (rechnung, kunden, rechnungsPositionen, pl, hl, dl) =>
         val kunde = kunden.head
         val abos = pl ++ hl ++ dl
-        val rechnungsPositionenDetail = for {
-          rechnungsPosition <- rechnungsPositionen
-          abo <- abos.find(_.id == rechnungsPosition.aboId.orNull)
-        } yield {
-          copyTo[RechnungsPosition, RechnungsPositionDetail](rechnungsPosition, "abo" -> abo)
-        }
+        val rechnungsPositionenDetail = {
+          for {
+            rechnungsPosition <- rechnungsPositionen
+            abo <- abos.find(_.id == rechnungsPosition.aboId.orNull)
+          } yield {
+            copyTo[RechnungsPosition, RechnungsPositionDetail](rechnungsPosition, "abo" -> abo)
+          }
+        }.sortBy(_.sort.getOrElse(0))
 
         copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "rechnungsPositionen" -> rechnungsPositionenDetail)
       }).single

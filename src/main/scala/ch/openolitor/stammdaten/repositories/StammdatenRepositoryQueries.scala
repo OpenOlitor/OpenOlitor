@@ -31,8 +31,8 @@ import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
-import ch.openolitor.util.DateTimeUtil._
 import org.joda.time.DateTime
+import com.github.nscala_time.time.Imports._
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.util.parsing.FilterExpr
@@ -690,7 +690,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(depotlieferungAboMapping as depotlieferungAbo)
         .where.eq(depotlieferungAbo.vertriebId, vertriebId)
         .and.le(depotlieferungAbo.start, lieferdatum)
-        .and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.ge(depotlieferungAbo.ende, lieferdatum) }
+        .and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.ge(depotlieferungAbo.ende, lieferdatum.toLocalDate) }
     }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
@@ -700,7 +700,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(heimlieferungAboMapping as heimlieferungAbo)
         .where.eq(heimlieferungAbo.vertriebId, vertriebId)
         .and.le(heimlieferungAbo.start, lieferdatum)
-        .and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.ge(heimlieferungAbo.ende, lieferdatum) }
+        .and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.ge(heimlieferungAbo.ende, lieferdatum.toLocalDate) }
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
@@ -720,7 +720,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(postlieferungAboMapping as postlieferungAbo)
         .where.eq(postlieferungAbo.vertriebId, vertriebId)
         .and.le(postlieferungAbo.start, lieferdatum)
-        .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, lieferdatum) }
+        .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, lieferdatum.toLocalDate) }
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 

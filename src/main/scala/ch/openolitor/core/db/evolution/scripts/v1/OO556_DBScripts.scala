@@ -20,16 +20,28 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.db.evolution.scripts.v1
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
-import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO350_DBScripts
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.db.evolution.Script
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import com.typesafe.scalalogging.LazyLogging
+import scalikejdbc._
+import scala.util.{ Success, Try }
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
+import scala.collection.Seq
 
-object Scripts {
-  def current(system: ActorSystem) =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts(system)
+object OO556_DBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      alterTableAddColumnIfNotExists(projektMapping, "welcome_message1", "VARCHAR(2000)", "sprache")
+      alterTableAddColumnIfNotExists(projektMapping, "welcome_message2", "VARCHAR(2000)", "welcome_message1")
+      alterTableAddColumnIfNotExists(projektMapping, "maintenance_mode", "VARCHAR(1)", "welcome_message2")
+      sql"""UPDATE Projekt SET maintenance_mode='0' where id='1'""".execute.apply()
+
+      Success(true)
+
+    }
+  }
+  val scripts = Seq(StammdatenScripts)
 }
