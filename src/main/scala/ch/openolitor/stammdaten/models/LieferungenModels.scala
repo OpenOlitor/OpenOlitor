@@ -131,7 +131,7 @@ case class LieferungDetail(
   zielpreis: Option[BigDecimal],
   preisTotal: BigDecimal,
   lieferplanungId: Option[LieferplanungId],
-  abotyp: Option[Abotyp],
+  abotyp: Option[IAbotyp],
   lieferpositionen: Seq[Lieferposition],
   lieferplanungBemerkungen: Option[String],
   //value for actual geschaeftsjahr
