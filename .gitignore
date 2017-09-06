@@ -12,7 +12,6 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
-.sbtopts
 
 # Scala-IDE specific
 .scala_dependencies
