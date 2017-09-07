@@ -63,5 +63,6 @@ object V1SRScripts {
       OO291_OO396_DBScripts.scripts ++
       OO281_DBScripts.scripts ++
       OO618_DBScripts.scripts ++
-      OO556_DBScripts.scripts
+      OO556_DBScripts.scripts ++
+      OO350_DBScripts.scripts
 }

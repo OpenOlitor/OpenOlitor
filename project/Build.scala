@@ -49,7 +49,7 @@ object BuildSettings {
 	    "com.typesafe.scala-logging"   %%  "scala-logging"				                % "3.1.0",
 	    //akka persistence journal driver
 	    "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.3.+",
-	    "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.5.+",
+	    // "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.5.+",
 	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.16",
 	    //                             
 	    "org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
@@ -75,12 +75,25 @@ object BuildSettings {
   )
 }
 
+object ScalaxbSettings {
+  import sbtscalaxb.ScalaxbKeys._
+  
+  lazy val scalaxbSettings = Seq(
+      scalaxbXsdSource in (Compile, scalaxb) := baseDirectory.value / "src" / "main" / "resources" / "xsd",
+      scalaxbPackageName in (Compile, scalaxb) := "ch.openolitor.generated.xsd"
+    )
+}
+
 object OpenOlitorBuild extends Build {
   import BuildSettings._
+  import ScalaxbSettings._
+
+  lazy val scalikejdbcAsyncForkUri =  uri("git://github.com/OpenOlitor/scalikejdbc-async.git#dev/support_up_to_9_joins")
+  lazy val scalikejdbcAsync = ProjectRef(scalikejdbcAsyncForkUri, "core")
 
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file("."), settings = buildSettings) dependsOn (macroSub, sprayJsonMacro)
+  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings) dependsOn (macroSub, sprayJsonMacro, scalikejdbcAsync)
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }
