@@ -955,20 +955,26 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(lieferplanungMapping as lieferplanung)
         .join(lieferungMapping as lieferung).on(lieferung.lieferplanungId, lieferplanung.id)
-        .join(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(lieferung.abotypId, zusatzAboTyp.id)
         .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
         .where.eq(lieferplanung.id, parameter(id))
     }.one(lieferplanungMapping(lieferplanung))
       .toManies(
         rs => lieferungMapping.opt(lieferung)(rs),
         rs => abotypMapping.opt(aboTyp)(rs),
+        rs => zusatzAbotypMapping.opt(zusatzAboTyp)(rs),
         rs => lieferpositionMapping.opt(lieferposition)(rs)
       )
-      .map { (lieferplanung, lieferungen, abotypen, positionen) =>
+      .map { (lieferplanung, lieferungen, abotypen, zusatzabotypen, positionen) =>
         val lieferungenDetails = lieferungen map { l =>
           val p = positionen.filter(_.lieferungId == l.id)
-          val abotyp = abotypen find (_.id == l.abotypId)
-          copyTo[Lieferung, LieferungDetail](l, "abotyp" -> abotyp, "lieferpositionen" -> p, "lieferplanungBemerkungen" -> lieferplanung.bemerkungen)
+          //val abotyp = abotypen find (_.id == l.abotypId) match {
+          //  case Some(i) => i
+          //  case None => zusatzabotypen find (_.id == l.abotypId)
+          //}
+          val iabotyp = (abotypen find (_.id == l.abotypId)) orElse (zusatzabotypen find (_.id == l.abotypId))
+          copyTo[Lieferung, LieferungDetail](l, "abotyp" -> iabotyp, "lieferpositionen" -> p, "lieferplanungBemerkungen" -> lieferplanung.bemerkungen)
         }
 
         copyTo[Lieferplanung, LieferplanungReport](lieferplanung, "lieferungen" -> lieferungenDetails, "projekt" -> projekt)
