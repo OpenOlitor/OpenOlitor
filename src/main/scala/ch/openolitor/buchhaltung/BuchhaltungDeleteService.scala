@@ -23,6 +23,7 @@
 package ch.openolitor.buchhaltung
 
 import akka.actor._
+import ch.openolitor.buchhaltung.models.RechnungsPositionId
 import ch.openolitor.core._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
@@ -57,12 +58,19 @@ class BuchhaltungDeleteService(override val sysConfig: SystemConfig) extends Eve
 
   val handle: Handle = {
     case EntityDeletedEvent(meta, id: RechnungId) => deleteRechnung(meta, id)
+    case EntityDeletedEvent(meta, id: RechnungsPositionId) => deleteRechnungsPosition(meta, id)
     case e =>
   }
 
   def deleteRechnung(meta: EventMetadata, id: RechnungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.deleteEntity[Rechnung, RechnungId](id, { rechnung: Rechnung => rechnung.status == Erstellt })
+    }
+  }
+
+  def deleteRechnungsPosition(meta: EventMetadata, id: RechnungsPositionId)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      buchhaltungWriteRepository.deleteEntity[RechnungsPosition, RechnungsPositionId](id)
     }
   }
 }

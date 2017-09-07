@@ -89,6 +89,9 @@ case class Projekt(
     geschaeftsjahrTag: Int,
     twoFactorAuthentication: Map[Rolle, Boolean],
     sprache: Locale,
+    welcomeMessage1: Option[String],
+    welcomeMessage2: Option[String],
+    maintenanceMode: Boolean,
     //modification flags
     erstelldat: DateTime,
     ersteller: PersonId,
@@ -109,7 +112,9 @@ case class ProjektPublik(
   preiseSichtbar: Boolean,
   waehrung: Waehrung,
   geschaeftsjahrMonat: Int,
-  geschaeftsjahrTag: Int
+  geschaeftsjahrTag: Int,
+  welcomeMessage1: Option[String],
+  maintenanceMode: Boolean
 ) extends JSONSerializable
 
 case class ProjektReport(
@@ -160,7 +165,10 @@ case class ProjektModify(
   geschaeftsjahrMonat: Int,
   geschaeftsjahrTag: Int,
   twoFactorAuthentication: Map[Rolle, Boolean],
-  sprache: Locale
+  sprache: Locale,
+  welcomeMessage1: Option[String],
+  welcomeMessage2: Option[String],
+  maintenanceMode: Boolean
 ) extends JSONSerializable
 
 case class KundentypId(id: String) extends BaseStringId

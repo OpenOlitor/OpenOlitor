@@ -48,10 +48,10 @@ CREATE TABLE `RechnungsPosition` (
   `betrag` decimal(8,2) NOT NULL,
   `waehrung` varchar(10) COLLATE utf8_unicode_ci NOT NULL,
   `anzahl_lieferungen` int(11),
-  `titel` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `beschrieb` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
   `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
   `typ` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
-  `sorting` int(11),
+  `sort` int(11),
   `erstelldat` datetime NOT NULL,
   `ersteller` bigint(20) NOT NULL,
   `modifidat` datetime NOT NULL,
@@ -70,11 +70,11 @@ CREATE TABLE `RechnungsPosition` (
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"""
 INSERT INTO RechnungsPosition 
-  (id, rechnung_id, abo_id, kunde_id, betrag, waehrung, anzahl_lieferungen, titel, 
-   status, typ, erstelldat, ersteller, modifidat, modifikator)
+  (id, rechnung_id, abo_id, kunde_id, betrag, waehrung, anzahl_lieferungen, beschrieb, 
+   status, typ, sort, erstelldat, ersteller, modifidat, modifikator)
 SELECT 
    id, id, abo_id, kunde_id, betrag, waehrung, anzahl_lieferungen, titel, 
-   CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Offen' END AS status, 'Abo', erstelldat, ersteller, modifidat, modifikator FROM Rechnung
+   CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Offen' END AS status, 'Abo', 1, erstelldat, ersteller, modifidat, modifikator FROM Rechnung
 """.execute.apply()
       Success(true)
     }

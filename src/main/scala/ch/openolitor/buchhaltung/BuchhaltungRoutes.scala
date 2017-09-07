@@ -93,7 +93,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
   def rechnungenRoute(implicit subect: Subject, filter: Option[FilterExpr]) =
     path("rechnungen" ~ exportFormatPath.?) { exportFormat =>
       get(list(buchhaltungReadRepository.getRechnungen, exportFormat)) ~
-        post(create[RechnungCreate, RechnungId](RechnungId.apply _))
+        post(create[RechnungCreateFromRechnungsPositionen, RechnungId](RechnungId.apply _))
     } ~
       path("rechnungen" / "aktionen" / "downloadrechnungen") {
         post {
@@ -138,7 +138,7 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
-          delete(remove(id)) ~
+          deleteRechnung(id) ~
           (put | post)(update[RechnungModify, RechnungId](id))
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
@@ -185,7 +185,15 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungsPositionen, exportFormat))
     } ~
       path("rechnungspositionen" / rechnungsPositionIdPath) { id =>
-        (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
+        deleteRechnungsPosition(id) ~
+          (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
+      } ~
+      path("rechnungspositionen" / "aktionen" / "createrechnungen") {
+        post {
+          entity(as[RechnungsPositionenCreateRechnungen]) { rechnungenCreate =>
+            createRechnungen(rechnungenCreate)
+          }
+        }
       }
 
   def zahlungsImportsRoute(implicit subect: Subject) =
@@ -303,6 +311,34 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     implicit val personId = subject.personId
     generateReport[RechnungId](None, generateMahnungReports _)(RechnungId.apply)
   }
+
+  def createRechnungen(rechnungenCreate: RechnungsPositionenCreateRechnungen)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.CreateRechnungenCommand(subject.personId, rechnungenCreate))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Es konnten nicht alle Rechnungen für die gegebenen RechnungsPositionen erstellt werden.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def deleteRechnung(rechnungId: RechnungId)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungCommand(subject.personId, rechnungId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnung kann nur gelöscht werden wenn sie im Status Erstellt ist.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def deleteRechnungsPosition(rechnungsPositionId: RechnungsPositionId)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungsPositionenCommand(subject.personId, rechnungsPositionId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnungsposition kann nur gelöscht werden wenn sie im Status Offen ist.")
+      case _ =>
+        complete("")
+    }
+  }
+
 }
 
 class DefaultBuchhaltungRoutes(

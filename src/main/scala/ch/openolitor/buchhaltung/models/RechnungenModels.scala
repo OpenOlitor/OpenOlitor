@@ -72,10 +72,12 @@ object RechnungStatus {
 object RechnungsPositionStatus {
   sealed trait RechnungsPositionStatus
   case object Offen extends RechnungsPositionStatus
+  case object Zugewiesen extends RechnungsPositionStatus
   case object Bezahlt extends RechnungsPositionStatus
+  case object Storniert extends RechnungsPositionStatus
 
   def apply(value: String): RechnungsPositionStatus = {
-    Vector(Offen, Bezahlt).find(_.toString == value).getOrElse(Offen)
+    Vector(Offen, Zugewiesen, Bezahlt, Storniert).find(_.toString == value).getOrElse(Offen)
   }
 }
 
@@ -100,10 +102,10 @@ case class RechnungsPosition(
   betrag: BigDecimal,
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
-  titel: String,
+  beschrieb: String,
   status: RechnungsPositionStatus.RechnungsPositionStatus,
   typ: RechnungsPositionTyp.RechnungsPositionTyp,
-  sorting: Option[Int],
+  sort: Option[Int],
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -178,9 +180,10 @@ case class RechnungsPositionDetail(
   betrag: BigDecimal,
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
-  titel: String,
+  beschrieb: String,
   status: RechnungsPositionStatus.RechnungsPositionStatus,
   typ: RechnungsPositionTyp.RechnungsPositionTyp,
+  sort: Option[Int],
   // modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -251,14 +254,11 @@ case class RechnungDetailReport(
   lazy val betragRappen = (betrag - betrag.toLong) * 100
 }
 
-case class RechnungCreate(
+case class RechnungCreateFromRechnungsPositionen(
   kundeId: KundeId,
-  aboId: AboId,
   titel: String,
-  anzahlLieferungen: Int,
   waehrung: Waehrung,
   betrag: BigDecimal,
-  einbezahlterBetrag: Option[BigDecimal],
   rechnungsDatum: DateTime,
   faelligkeitsDatum: DateTime,
   eingangsDatum: Option[DateTime],
@@ -285,7 +285,7 @@ case class RechnungModify(
 case class RechnungsPositionCreate(
   kundeId: KundeId,
   aboId: Option[AboId],
-  titel: String,
+  beschrieb: String,
   anzahlLieferungen: Option[Int],
   betrag: BigDecimal,
   waehrung: Waehrung,
@@ -294,7 +294,7 @@ case class RechnungsPositionCreate(
 ) extends JSONSerializable
 
 case class RechnungsPositionModify(
-  titel: String,
+  beschrieb: String,
   anzahlLieferungen: Option[Int],
   betrag: BigDecimal,
   status: RechnungsPositionStatus.RechnungsPositionStatus
@@ -306,3 +306,14 @@ case class RechnungModifyBezahlt(
 ) extends JSONSerializable
 
 case class RechnungenContainer(ids: Seq[RechnungId]) extends JSONSerializable
+
+case class RechnungsPositionenCreateRechnungen(
+  ids: Seq[RechnungsPositionId],
+  titel: String,
+  rechnungsDatum: DateTime,
+  faelligkeitsDatum: DateTime
+) extends JSONSerializable
+
+case class RechnungsPositionAssignToRechnung(
+  rechnungId: RechnungId
+) extends JSONSerializable

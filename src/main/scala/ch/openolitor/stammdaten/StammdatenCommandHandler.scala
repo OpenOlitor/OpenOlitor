@@ -34,7 +34,7 @@ import akka.actor.ActorSystem
 import ch.openolitor.core._
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.Macros._
-import ch.openolitor.buchhaltung.models.RechnungCreate
+import ch.openolitor.buchhaltung.models.RechnungCreateFromRechnungsPositionen
 import ch.openolitor.buchhaltung.models.RechnungId
 import ch.openolitor.buchhaltung.models.RechnungsPositionCreate
 import ch.openolitor.buchhaltung.models.RechnungsPositionId
