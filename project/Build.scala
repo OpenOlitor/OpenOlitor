@@ -53,10 +53,10 @@ object BuildSettings {
 	    // "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.8.+",
 	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.+",
 	    //                             
-	    "org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
-	    "org.scalikejdbc"              %%  "scalikejdbc-test"                     % scalalikeV   % "test",
+	    //"org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
+	    //"org.scalikejdbc"              %%  "scalikejdbc-test"                     % scalalikeV   % "test",
 	    "com.h2database"               %   "h2"                                   % "1.4.191"    % "test",
-	    "org.scalikejdbc" 	           %%  "scalikejdbc-syntax-support-macro"     % scalalikeV,
+	    //"org.scalikejdbc" 	           %%  "scalikejdbc-syntax-support-macro"     % scalalikeV,
 	    "ch.qos.logback"  	           %   "logback-classic"    		  		        % "1.1.3",
 	    "org.mariadb.jdbc"	           %   "mariadb-java-client"                  % "1.3.2",
 	    // Libreoffice document API
@@ -88,15 +88,26 @@ object ScalaxbSettings {
 object OpenOlitorBuild extends Build {
   import BuildSettings._
  
-  lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/parameter_bindings")
-  lazy val scalikejdbcAsync = ProjectRef(scalikejdbcAsyncForkUri, "core")
-  lazy val akkaPersistenceSqlAsyncForkUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async.git#fix/scalikejdbc_version")
-  lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncForkUri, "core")
+  // lazy val scalikejdbcForkUri = file("../scalikejdbc/")
+  lazy val scalikejdbcForkUri = uri("git://github.com/OpenOlitor/scalikejdbc.git#fix/int_binder_nullpointer")
+  lazy val scalikejdbcCore = ProjectRef(scalikejdbcForkUri, "core")
+  lazy val scalikejdbcMacro = ProjectRef(scalikejdbcForkUri, "syntax-support-macro")
+  lazy val scalikejdbcConfig = ProjectRef(scalikejdbcForkUri, "config")
+  lazy val scalikejdbcInterpolation  = ProjectRef(scalikejdbcForkUri, "interpolation")
+  // lazy val scalikejdbcAsyncForkUri = file("../scalikejdbc-async/")
+  lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/parameter_bindings")  
+  lazy val scalikejdbcAsync = ProjectRef(scalikejdbcAsyncForkUri, "core") 
+  // lazy val akkaPersistenceSqlAsyncUri = file("../akka-persistence-sql-async/")
+  lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")  
+  lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncUri, "core")
+  
+  //lazy val akkaPersistenceSqlAsyncForkUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async.git#fix/scalikejdbc_version")
+  //lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncForkUri, "core")
   import ScalaxbSettings._
 
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings) dependsOn (macroSub, sprayJsonMacro, scalikejdbcAsync, akkaPersistenceSqlAsync) 
+  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings) dependsOn (macroSub, sprayJsonMacro, scalikejdbcAsync, akkaPersistenceSqlAsync, scalikejdbcCore, scalikejdbcConfig, scalikejdbcMacro, scalikejdbcInterpolation) 
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }

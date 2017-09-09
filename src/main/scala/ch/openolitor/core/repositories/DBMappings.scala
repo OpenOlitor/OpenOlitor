@@ -48,33 +48,51 @@ trait DBMappings extends BaseParameter
   def baseIdBinders[T <: BaseId](f: Long => T): Binders[T] = Binders.long.xmap(l => f(l), _.id)
   def optionBaseIdBinders[T <: BaseId](f: Long => T): Binders[Option[T]] = Binders.optionLong.xmap(_.map(l => f(l)), _.map(_.id))
   def toStringBinder[V](f: String => V): Binders[V] = Binders.string.xmap(f(_), _.toString)
-  def seqSqlBinder[V](f: String => V, g: V => String): Binders[Seq[V]] = Binders.string.xmap({ x => x.split(",") map (f) }, { values => values map (g) mkString (",") })
-  def setSqlBinder[V](f: String => V, g: V => String): Binders[Set[V]] = Binders.string.xmap({ x => x.split(",") map (f) toSet }, { values => values map (g) mkString (",") })
+  def seqSqlBinder[V](f: String => V, g: V => String): Binders[Seq[V]] = Binders.string.xmap({
+    Option(_) match {
+      case None => Seq()
+      case Some(x) => x.split(",") map (f)
+    }
+  }, { values => values map (g) mkString (",") })
+  def setSqlBinder[V](f: String => V, g: V => String): Binders[Set[V]] = Binders.string.xmap({
+    Option(_) match {
+      case None => Set()
+      case Some(x) => x.split(",") map (f) toSet
+    }
+  }, { values => values map (g) mkString (",") })
   def seqBaseIdBinders[T <: BaseId](f: Long => T): Binders[Seq[T]] = seqSqlBinder[T](l => f(l.toLong), _.id.toString)
   def setBaseIdBinders[T <: BaseId](f: Long => T): Binders[Set[T]] = setSqlBinder[T](l => f(l.toLong), _.id.toString)
   def setBaseStringIdBinders[T <: BaseStringId](f: String => T): Binders[Set[T]] = setSqlBinder[T](l => f(l), _.id)
   def treeMapBinders[K: Ordering, V](kf: String => K, vf: String => V, kg: K => String, vg: V => String): Binders[TreeMap[K, V]] =
-    Binders.string.xmap({ s =>
-      (TreeMap.empty[K, V] /: s.split(",")) { (tree, str) =>
-        str.split("=") match {
-          case Array(left, right) =>
-            tree + (kf(left) -> vf(right))
-          case _ =>
-            tree
-        }
+    Binders.string.xmap({
+      Option(_) match {
+        case None => TreeMap.empty[K, V]
+        case Some(s) =>
+          (TreeMap.empty[K, V] /: s.split(",")) { (tree, str) =>
+            str.split("=") match {
+              case Array(left, right) =>
+                tree + (kf(left) -> vf(right))
+              case _ =>
+                tree
+            }
+          }
       }
     }, { map =>
       map.toIterable.map { case (k, v) => kg(k) + "=" + vg(v) }.mkString(",")
     })
   def mapBinders[K, V](kf: String => K, vf: String => V, kg: K => String, vg: V => String): Binders[Map[K, V]] =
-    Binders.string.xmap({ s =>
-      (Map.empty[K, V] /: s.split(",")) { (tree, str) =>
-        str.split("=") match {
-          case Array(left, right) =>
-            tree + (kf(left) -> vf(right))
-          case _ =>
-            tree
-        }
+    Binders.string.xmap({
+      Option(_) match {
+        case None => Map.empty[K, V]
+        case Some(s) =>
+          (Map.empty[K, V] /: s.split(",")) { (tree, str) =>
+            str.split("=") match {
+              case Array(left, right) =>
+                tree + (kf(left) -> vf(right))
+              case _ =>
+                tree
+            }
+          }
       }
     }, { map =>
       map.toIterable.map { case (k, v) => kg(k) + "=" + vg(v) }.mkString(",")

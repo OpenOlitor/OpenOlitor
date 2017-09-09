@@ -994,7 +994,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   protected def getLieferungenDetailsQuery(id: LieferplanungId) = {
     withSQL {
       select
-        .from(lieferungMapping as lieferung)
+        .from(lieferplanungMapping as lieferplanung)
+        .join(lieferungMapping as lieferung).on(lieferplanung.id, lieferung.lieferplanungId)
         .join(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
         .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
         .where.eq(lieferung.lieferplanungId, id)
@@ -1358,12 +1359,11 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.one(korbMapping(korb))
       .toManies(
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => vertriebMapping.opt(vertrieb)(rs),
-        rs => depotlieferungMapping.opt(depotlieferung)(rs),
-        rs => heimlieferungMapping.opt(heimlieferung)(rs),
-        rs => postlieferungMapping.opt(postlieferung)(rs)
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs)
       )
-      .map { (korb, _, _, _, _, _) => korb }
+      .map { (korb, _, _, _, _) => korb }
       .list
   }
 
@@ -1382,12 +1382,11 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.one(korbMapping(korb))
       .toManies(
         rs => lieferungMapping.opt(lieferung)(rs),
-        rs => vertriebMapping.opt(vertrieb)(rs),
-        rs => depotlieferungMapping.opt(depotlieferung)(rs),
-        rs => heimlieferungMapping.opt(heimlieferung)(rs),
-        rs => postlieferungMapping.opt(postlieferung)(rs)
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs)
       )
-      .map { (korb, _, _, _, _, _) => korb }
+      .map { (korb, _, _, _, _) => korb }
       .list
   }
 
