@@ -108,6 +108,22 @@ object OpenOlitorBuild extends Build {
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings) dependsOn (macroSub, sprayJsonMacro, scalikejdbcAsync, akkaPersistenceSqlAsync, scalikejdbcCore, scalikejdbcConfig, scalikejdbcMacro, scalikejdbcInterpolation) 
+  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings ++ Seq(
+      (sourceGenerators in Compile) += task[Seq[File]]{
+        val dir = (sourceManaged in Compile).value
+        val maxParams = 30
+        val mappings = (1 to maxParams).map{ n =>
+          val file = dir / s"Parameters${n}.scala"
+          IO.write(file, GenerateParametersMapping(n))
+          file
+        }
+        val paramsTrait = {
+          val file = dir / s"Parameters.scala"
+          IO.write(file, GenerateParametersTrait(maxParams))
+          file
+        }
+        mappings :+ paramsTrait
+      }
+      )) dependsOn (macroSub, sprayJsonMacro, scalikejdbcAsync, akkaPersistenceSqlAsync, scalikejdbcCore, scalikejdbcConfig, scalikejdbcMacro, scalikejdbcInterpolation) 
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }
