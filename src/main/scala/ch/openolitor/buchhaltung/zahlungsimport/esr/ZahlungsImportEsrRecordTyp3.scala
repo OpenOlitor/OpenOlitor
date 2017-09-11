@@ -23,7 +23,7 @@
 package ch.openolitor.buchhaltung.zahlungsimport.esr
 
 import org.joda.time.DateTime
-import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
+import ch.openolitor.buchhaltung.zahlungsimport._
 import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
 import ch.openolitor.stammdaten.models.Waehrung
 import ch.openolitor.stammdaten.models.CHF
@@ -86,7 +86,9 @@ object EsrRecordTyp3RejectCode {
 
 case class EsrRecordTyp3(
     transaktionsartCode: EsrRecordTyp3Transaktionsartcode,
-    teilnehmerNummer: String,
+    teilnehmerNummer: Option[String],
+    iban: Option[String],
+    debitor: Option[String],
     referenzNummer: String,
     betrag: BigDecimal,
     aufgabereferenzen: String,
@@ -113,7 +115,9 @@ object EsrRecordTyp3 {
 
       Some(EsrRecordTyp3(
         code,
-        teilnehmernummer,
+        Some(teilnehmernummer),
+        None,
+        None,
         referenznummer,
         BigDecimal(betrag.toInt, Scale),
         aufgabereferenzen,

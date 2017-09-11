@@ -30,11 +30,6 @@ sealed trait EsrTyp
 case object Esr extends EsrTyp
 case object EsrPlus extends EsrTyp
 
-sealed trait Transaktionsart
-case object Gutschrift extends Transaktionsart
-case object Storno extends Transaktionsart
-case object Korrektur extends Transaktionsart
-
 object ZahlungsImportEsrRecord {
   val Scale = 2
   val Format = DateTimeFormat.forPattern("yyMMdd")

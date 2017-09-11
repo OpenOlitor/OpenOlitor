@@ -23,9 +23,8 @@
 package ch.openolitor.buchhaltung.zahlungsimport.esr
 
 import org.joda.time.DateTime
-import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
+import ch.openolitor.buchhaltung.zahlungsimport._
 import ch.openolitor.buchhaltung.zahlungsimport.esr.ZahlungsImportEsrRecord._
-import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportTotalRecord
 
 object EsrTotalRecordTyp3Transaktionsartcode {
   def apply(c: String): Transaktionsart = c match {

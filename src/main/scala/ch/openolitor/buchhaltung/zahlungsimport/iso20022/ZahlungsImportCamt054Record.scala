@@ -20,16 +20,26 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
-import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO350_DBScripts
+import ch.openolitor.buchhaltung.zahlungsimport.{ Transaktionsart, ZahlungsImportRecord }
+import ch.openolitor.stammdaten.models.{ CHF, Waehrung }
 
-object Scripts {
-  def current(system: ActorSystem) =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts(system)
+import org.joda.time.DateTime
+
+case class Camt054Record(
+    teilnehmerNummer: Option[String],
+    iban: Option[String],
+    debitor: Option[String],
+    referenzNummer: String,
+    betrag: BigDecimal,
+    waehrung: Waehrung = CHF,
+    transaktionsart: Transaktionsart,
+    aufgabereferenzen: String,
+    aufgabeDatum: DateTime,
+    verarbeitungsDatum: DateTime,
+    gutschriftsDatum: DateTime,
+    reserve: String,
+    preiseFuerEinzahlungen: BigDecimal
+) extends ZahlungsImportRecord {
 }

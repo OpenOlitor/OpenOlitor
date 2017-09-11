@@ -65,6 +65,7 @@ import ch.openolitor.util.parsing.FilterExpr
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositoryAsyncComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositoryAsyncComponent
 import ch.openolitor.buchhaltung.reporting.MahnungReportService
+import java.io.ByteArrayInputStream
 
 trait BuchhaltungRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -138,8 +139,8 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       } ~
       path("rechnungen" / rechnungIdPath) { id =>
         get(detail(buchhaltungReadRepository.getRechnungDetail(id))) ~
-          delete(remove(id)) ~
-          (put | post)(update[RechnungModify, RechnungId](id))
+          delete(deleteRechnung(id)) ~
+          (put | post)(entity(as[RechnungModify]) { entity => safeRechnung(id, entity) })
       } ~
       path("rechnungen" / rechnungIdPath / "aktionen" / "downloadrechnung") { id =>
         (get)(
@@ -185,8 +186,8 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
       get(list(buchhaltungReadRepository.getRechnungsPositionen, exportFormat))
     } ~
       path("rechnungspositionen" / rechnungsPositionIdPath) { id =>
-        deleteRechnungsPosition(id) ~
-          (put | post)(update[RechnungsPositionModify, RechnungsPositionId](id))
+        delete(deleteRechnungsPosition(id)) ~
+          (put | post)(entity(as[RechnungsPositionModify]) { entity => safeRechnungsPosition(id, entity) })
       } ~
       path("rechnungspositionen" / "aktionen" / "createrechnungen") {
         post {
@@ -200,10 +201,12 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     path("zahlungsimports") {
       get(list(buchhaltungReadRepository.getZahlungsImports)) ~
         (put | post)(upload { (form, content, fileName) =>
-          // parse
-          ZahlungsImportParser.parse(Source.fromInputStream(content).getLines) match {
+          // read the file once and pass the same content along
+          val uploadData = Iterator continually content.read takeWhile (-1 !=) map (_.toByte) toArray
+
+          ZahlungsImportParser.parse(uploadData) match {
             case Success(importResult) =>
-              storeToFileStore(ZahlungsImportDaten, None, content, fileName) { (fileId, meta) =>
+              storeToFileStore(ZahlungsImportDaten, None, new ByteArrayInputStream(uploadData), fileName) { (fileId, meta) =>
                 createZahlungsImport(fileId, importResult.records)
               }
             case Failure(e) => complete(StatusCodes.BadRequest, s"Die Datei konnte nicht gelesen werden: $e")
@@ -321,10 +324,37 @@ trait BuchhaltungRoutes extends HttpService with ActorReferences
     }
   }
 
+  def deleteRechnung(rechnungId: RechnungId)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungCommand(subject.personId, rechnungId))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnung kann nur gelöscht werden wenn sie im Status Erstellt ist.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def safeRechnung(rechnungId: RechnungId, rechnungModify: RechnungModify)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.SafeRechnungCommand(subject.personId, rechnungId, rechnungModify))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnung kann nur gespeichert werden wenn sie im Status Erstellt ist und keine Rechnungspositionen hat.")
+      case _ =>
+        complete("")
+    }
+  }
+
   def deleteRechnungsPosition(rechnungsPositionId: RechnungsPositionId)(implicit subject: Subject) = {
-    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungsPositionenCommand(subject.personId, rechnungsPositionId))) {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.DeleteRechnungsPositionCommand(subject.personId, rechnungsPositionId))) {
       case UserCommandFailed =>
         complete(StatusCodes.BadRequest, s"Die Rechnungsposition kann nur gelöscht werden wenn sie im Status Offen ist.")
+      case _ =>
+        complete("")
+    }
+  }
+
+  def safeRechnungsPosition(rechnungsPositionId: RechnungsPositionId, rechnungsPositionModify: RechnungsPositionModify)(implicit subject: Subject) = {
+    onSuccess((entityStore ? BuchhaltungCommandHandler.SafeRechnungsPositionCommand(subject.personId, rechnungsPositionId, rechnungsPositionModify))) {
+      case UserCommandFailed =>
+        complete(StatusCodes.BadRequest, s"Die Rechnungsposition kann nur gespeichert werden wenn sie im Status Offen ist.")
       case _ =>
         complete("")
     }
