@@ -448,8 +448,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenReadRepository.getByIds(postlieferungAboMapping, aboRechnungCreate.ids) :::
         stammdatenReadRepository.getByIds(heimlieferungAboMapping, aboRechnungCreate.ids)
 
-      val (events, failures) = abos.map { abo =>
-        stammdatenReadRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+      val aboTypen: List[Abotyp] = stammdatenReadRepository.getByIds(abotypMapping, abos.map(_.abotypId))
+
+      val abosWithAboTypen: List[(Abo, Abotyp)] = abos.map { abo =>
+        aboTypen.find(_.id == abo.abotypId).map { abotyp => (abo, abotyp) }
+      }.flatten
+
+      val (events, failures) = abosWithAboTypen.map {
+        case (abo, abotyp) =>
 
           // TODO check preisEinheit
           if (abotyp.preiseinheit != ProLieferung) {
@@ -476,7 +482,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               Failure(new InvalidStateException(s"Für das Abo mit der Id ${abo.id} wurde keine RechnungsPositionen erstellt. Anzahl Lieferungen 0"))
             }
           }
-        } getOrElse (Failure(new InvalidStateException(s"Für das Abo mit der Id ${abo.id} konnte keine RechnunsPositioneng erstellt werden.")))
       } partition (_.isSuccess)
 
       if (events.isEmpty) {
@@ -493,8 +498,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenReadRepository.getByIds(postlieferungAboMapping, aboRechnungCreate.ids) :::
         stammdatenReadRepository.getByIds(heimlieferungAboMapping, aboRechnungCreate.ids)
 
-      val (events, failures) = abos.map { abo =>
-        stammdatenReadRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+      val aboTypen: List[Abotyp] = stammdatenReadRepository.getByIds(abotypMapping, abos.map(_.abotypId))
+
+      val abosWithAboTypen: List[(Abo, Abotyp)] = abos.map { abo =>
+        aboTypen.find(_.id == abo.abotypId).map { abotyp => (abo, abotyp) }
+      }.flatten
+
+      val (events, failures) = abosWithAboTypen.map {
+        case (abo, abotyp) =>
 
           // TODO check preisEinheit
           if (abotyp.preiseinheit != ProLieferung) {
@@ -522,7 +533,6 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               Failure(new InvalidStateException(s"Für das Abo mit der Id ${abo.id} wurde keine Rechnungsposition erstellt. Anzahl Lieferungen 0"))
             }
           }
-        } getOrElse (Failure(new InvalidStateException(s"Für das Abo mit der Id ${abo.id} konnte keine Rechnungsposition erstellt werden.")))
       } partition (_.isSuccess)
 
       if (events.isEmpty) {
