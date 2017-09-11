@@ -317,7 +317,7 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
         val result = FileStoreBucket.AllFileStoreBuckets map { bucket =>
           client.createBucket(new CreateBucketRequest(bucketName(bucket)))
 
-          configureLifeCycle(bucket)
+          // FIXME This doesn't work with our current provider's s3 instance configureLifeCycle(bucket)
         }
         Right(FileStoreSuccess())
       } catch {
