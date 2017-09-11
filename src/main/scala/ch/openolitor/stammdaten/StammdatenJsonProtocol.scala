@@ -345,6 +345,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val postlieferungAboFormat = autoProductFormat[PostlieferungAbo]
   implicit val postlieferungAboDetailFormat = autoProductFormat[PostlieferungAboDetail]
   implicit val postlieferungAboModifyFormat = autoProductFormat[PostlieferungAboModify]
+
+  implicit val zusatzAboFormat = autoProductFormat[ZusatzAbo]
+
   implicit val iAbotypFormat = new RootJsonFormat[IAbotyp] {
     def write(obj: IAbotyp): JsValue =
       JsObject((obj match {

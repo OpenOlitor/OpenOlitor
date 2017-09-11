@@ -268,7 +268,7 @@ case class TourDetail(
   id: TourId,
   name: String,
   beschreibung: Option[String],
-  tourlieferungen: Seq[Tourlieferung],
+  tourlieferungen: Seq[TourlieferungDetail],
   anzahlAbonnenten: Int,
   anzahlAbonnentenAktiv: Int,
   //modification flags

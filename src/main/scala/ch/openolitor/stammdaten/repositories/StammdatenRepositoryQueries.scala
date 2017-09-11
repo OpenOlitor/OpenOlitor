@@ -813,14 +813,22 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(tourMapping as tour)
         .leftJoin(tourlieferungMapping as tourlieferung).on(tour.id, tourlieferung.tourId)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(tourlieferung.id, zusatzAbo.hauptAboId)
         .where.eq(tour.id, parameter(id))
         .orderBy(tourlieferung.sort)
     }.one(tourMapping(tour))
-      .toMany(
-        rs => tourlieferungMapping.opt(tourlieferung)(rs)
+      .toManies(
+        rs => tourlieferungMapping.opt(tourlieferung)(rs),
+        rs => zusatzAboMapping.opt(zusatzAbo)(rs)
       )
-      .map({ (tour, tourlieferungen) =>
-        copyTo[Tour, TourDetail](tour, "tourlieferungen" -> tourlieferungen)
+      .map({ (tour, tourlieferungen, zusatzAbos) =>
+        val tourlieferungenDetails = tourlieferungen map { t =>
+          val z = zusatzAbos filter (_.hauptAboId == t.id)
+
+          copyTo[Tourlieferung, TourlieferungDetail](t, "zusatzAbos" -> z)
+        }
+
+        copyTo[Tour, TourDetail](tour, "tourlieferungen" -> tourlieferungenDetails)
       }).single
   }
 
