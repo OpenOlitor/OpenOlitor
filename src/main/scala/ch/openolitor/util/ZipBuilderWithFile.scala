@@ -20,16 +20,22 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.util
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
-import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO350_DBScripts
+import java.util.zip._
+import java.io.ByteArrayOutputStream
+import scala.util.Try
+import java.io.InputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileInputStream
+import java.io.OutputStream
 
-object Scripts {
-  def current(system: ActorSystem) =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts(system)
+class ZipBuilderWithFile(file: File = File.createTempFile("report", ".zip")) extends ZipBuilder(new FileOutputStream(file)) {
+  file.deleteOnExit()
+
+  override def close(): Option[File] = {
+    super.close()
+    Try(file).toOption
+  }
 }

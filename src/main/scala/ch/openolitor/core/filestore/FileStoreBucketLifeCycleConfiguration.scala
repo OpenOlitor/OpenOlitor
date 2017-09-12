@@ -20,16 +20,40 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.core.filestore
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
-import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO350_DBScripts
+import scala.concurrent.Future
+import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model.BucketLifecycleConfiguration
+import com.amazonaws.AmazonClientException
+import scala.collection.JavaConversions._
 
-object Scripts {
-  def current(system: ActorSystem) =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts(system)
+trait FileStoreBucketLifeCycleConfiguration {
+  def client: AmazonS3Client
+
+  def bucketName(bucket: FileStoreBucket): String
+
+  def configureLifeCycle(bucket: FileStoreBucket): Future[Either[FileStoreError, FileStoreSuccess]] = {
+    Future.successful {
+      try {
+        bucket match {
+          case TemporaryDataBucket =>
+            updateLifeCycle(bucket, new BucketLifecycleConfiguration.Rule().withExpirationInDays(7))
+
+          case _ =>
+          // nothing to configure
+        }
+
+        Right(FileStoreSuccess())
+      } catch {
+        case e: AmazonClientException =>
+          Left(FileStoreError(s"Could not update the lifecycle of this bucket. $e"))
+      }
+    }
+  }
+
+  private def updateLifeCycle(bucket: FileStoreBucket, rules: BucketLifecycleConfiguration.Rule*) = {
+    val configuration = new BucketLifecycleConfiguration().withRules(rules)
+    client.setBucketLifecycleConfiguration(bucketName(bucket), configuration)
+  }
 }

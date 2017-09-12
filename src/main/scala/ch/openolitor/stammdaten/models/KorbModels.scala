@@ -100,6 +100,7 @@ case class KorbReport(
   sort: Option[Int],
   kunde: KundeReport,
   abotyp: Abotyp,
+  zusatzAbosString: String,
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

@@ -24,6 +24,7 @@ package ch.openolitor.buchhaltung.zahlungsimport.esr
 
 import org.specs2.mutable._
 import org.joda.time.DateTime
+import ch.openolitor.buchhaltung.zahlungsimport.Gutschrift
 
 class ZahlungsImportEsrRecordTyp3Spec extends Specification {
   "ZahlungsImportEsrRecordTyp3" should {
@@ -33,7 +34,9 @@ class ZahlungsImportEsrRecordTyp3Spec extends Specification {
 
       result === EsrRecordTyp3(
         EsrRecordTyp3Transaktionsartcode(Esr, Beleglos, Gutschrift),
-        "000000000",
+        Some("000000000"),
+        None,
+        None,
         "000000307843100070003199500",
         BigDecimal("384.00"),
         "1125286270",
@@ -52,7 +55,9 @@ class ZahlungsImportEsrRecordTyp3Spec extends Specification {
 
       result === EsrRecordTyp3(
         EsrRecordTyp3Transaktionsartcode(Esr, Beleglos, Gutschrift),
-        "000000000",
+        Some("000000000"),
+        None,
+        None,
         "000000307843100070003199500",
         BigDecimal("384.00"),
         "1125  6270",

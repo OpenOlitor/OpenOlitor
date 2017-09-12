@@ -657,45 +657,15 @@ class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with Sta
   }
 
   def getDepotAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    val result = for {
-      auslieferungReport <- optionT(getDepotAuslieferungReportQuery(auslieferungId, projekt).future)
-      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
-    } yield {
-      auslieferungReport.copy(koerbe =
-        auslieferungReport.koerbe map { korbReport =>
-          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
-        })
-    }
-
-    result.run
+    getDepotAuslieferungReportQuery(auslieferungId, projekt).future
   }
 
   def getTourAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    val result = for {
-      auslieferungReport <- optionT(getTourAuslieferungReportQuery(auslieferungId, projekt).future)
-      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
-    } yield {
-      auslieferungReport.copy(koerbe =
-        auslieferungReport.koerbe map { korbReport =>
-          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
-        })
-    }
-
-    result.run
+    getTourAuslieferungReportQuery(auslieferungId, projekt).future
   }
 
   def getPostAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    val result = for {
-      auslieferungReport <- optionT(getPostAuslieferungReportQuery(auslieferungId, projekt).future)
-      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
-    } yield {
-      auslieferungReport.copy(koerbe =
-        auslieferungReport.koerbe map { korbReport =>
-          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
-        })
-    }
-
-    result.run
+    getPostAuslieferungReportQuery(auslieferungId, projekt).future
   }
 
   def getDepotAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[DepotAuslieferungReport]]] = {

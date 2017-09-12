@@ -20,16 +20,40 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts
+package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
-import ch.openolitor.core.db.evolution.scripts.v1._
-import ch.openolitor.core.db.evolution.scripts.v2._
-import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO350_DBScripts
+import org.specs2.mutable._
+import org.joda.time.DateTime
+import java.nio.file.{ Files, Paths }
+import scala.io.Source
+import ch.openolitor.stammdaten.models.CHF
+import ch.openolitor.buchhaltung.zahlungsimport.Gutschrift
+import org.joda.time.format.ISODateTimeFormat
 
-object Scripts {
-  def current(system: ActorSystem) =
-    V1Scripts.scripts ++
-      V1SRScripts.scripts ++
-      V2Scripts.scripts(system)
+class Camt054ParserSpec extends Specification {
+  "Camt054Parser" should {
+    "parse camt.054 XML file" in {
+      val is = getClass.getResourceAsStream("/camt_054_Beispiel_ZA1_ESR_ZE.xml")
+
+      val result = Camt054Parser.parse(is)
+
+      beSuccessfulTry(result)
+
+      result.get.records.head === Camt054Record(
+        Some("010391391"),
+        Some("CH160077401231234567"),
+        Some("Pia Rutschmann"),
+        "210000000003139471430009017",
+        3949.75,
+        CHF,
+        Gutschrift,
+        "",
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-15T09:30:47Z"),
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-07"),
+        ISODateTimeFormat.dateOptionalTimeParser.parseDateTime("2015-01-07"),
+        "",
+        0.0
+      )
+    }
+  }
 }
