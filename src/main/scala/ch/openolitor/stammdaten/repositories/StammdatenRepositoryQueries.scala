@@ -1478,20 +1478,6 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(postAuslieferungMapping(postAuslieferung)).list
   }
 
-  /*
-   * TODO: This is a temporary solution. Join Personen within Auslieferung queries.
-   * The current ScalikeJdbc version supports only 5 resultset extractors.
-   */
-  protected def getAlleAnsprechpersonenForReportsQuery[T](kundeIds: Seq[KundeId]) = {
-    withSQL {
-      select
-        .from(personMapping as person)
-        .where.in(person.kundeId, kundeIds map (_.id))
-    }.map { rs =>
-      copyTo[Person, PersonDetail](personMapping(person)(rs))
-    }.list
-  }
-
   protected def getDepotAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
     getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden, personen) =>
       val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden)
