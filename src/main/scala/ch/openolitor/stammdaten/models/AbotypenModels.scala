@@ -22,11 +22,8 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import ch.openolitor.stammdaten._
 import org.joda.time.DateTime
 import ch.openolitor.core.models._
-import scalikejdbc._
-import java.util.UUID
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple25
 import ch.openolitor.core.scalax.Tuple26
@@ -107,7 +104,7 @@ case object Monatsfrist extends Fristeinheit
 
 case class Frist(wert: Int, einheit: Fristeinheit) extends Product with JSONSerializable
 
-trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product with JSONSerializable {
+sealed trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product with JSONSerializable {
   val id: AbotypId
   val name: String
   val beschreibung: Option[String]
@@ -302,4 +299,4 @@ case class ZusatzAbotypModify(
   adminProzente: BigDecimal,
   wirdGeplant: Boolean,
   waehrung: Waehrung
-)
+) extends AktivRange with JSONSerializable

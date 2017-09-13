@@ -287,6 +287,7 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   }
 
   implicit val abotypFormat = enhanceWithBooleanFlag[Abotyp]("aktiv")
+  implicit val zusatzabotypFormat = enhanceWithBooleanFlag[ZusatzAbotyp]("aktiv")
 
   implicit val treeMapIntFormat = new JsonFormat[TreeMap[String, Int]] {
     def write(obj: TreeMap[String, Int]): JsValue = {
@@ -344,6 +345,23 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val postlieferungAboFormat = autoProductFormat[PostlieferungAbo]
   implicit val postlieferungAboDetailFormat = autoProductFormat[PostlieferungAboDetail]
   implicit val postlieferungAboModifyFormat = autoProductFormat[PostlieferungAboModify]
+
+  implicit val zusatzAboFormat = autoProductFormat[ZusatzAbo]
+
+  implicit val iAbotypFormat = new RootJsonFormat[IAbotyp] {
+    def write(obj: IAbotyp): JsValue =
+      JsObject((obj match {
+        case a: Abotyp => a.toJson
+        case z: ZusatzAbotyp => z.toJson
+      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
+
+    def read(json: JsValue): IAbotyp = {
+      json.asJsObject.getFields("typ") match {
+        case Seq(JsString("Abotyp")) => json.convertTo[Abotyp]
+        case Seq(JsString("ZusatzAbotyp")) => json.convertTo[ZusatzAbotyp]
+      }
+    }
+  }
 
   implicit val aboDetailFormat = new RootJsonFormat[AboDetail] {
     def write(obj: AboDetail): JsValue =

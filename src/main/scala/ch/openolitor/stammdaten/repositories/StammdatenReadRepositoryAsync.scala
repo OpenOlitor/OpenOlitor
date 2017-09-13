@@ -45,8 +45,12 @@ import Scalaz._
 import scalaz.OptionT.optionT
 
 trait StammdatenReadRepositoryAsync extends ReportReadRepository {
+
   def getAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Abotyp]]
   def getAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Abotyp]]
+
+  def getZusatzAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[ZusatzAbotyp]]
+  def getZusatzAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZusatzAbotyp]]
 
   def getUngeplanteLieferungen(abotypId: AbotypId, vertriebId: VertriebId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
   def getUngeplanteLieferungen(abotypId: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Lieferung]]
@@ -161,6 +165,10 @@ class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with Sta
     getAbotypenQuery(filter).future
   }
 
+  def getZusatzAbotypen(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[ZusatzAbotyp]] = {
+    getZusatzAbotypenQuery(filter).future
+  }
+
   def getKunden(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Kunde]] = {
     getKundenQuery.future
   }
@@ -233,6 +241,9 @@ class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with Sta
     getAbotypDetailQuery(id).future
   }
 
+  override def getZusatzAbotypDetail(id: AbotypId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ZusatzAbotyp]] = {
+    getZusatzAbotypDetailQuery(id).future
+  }
   def getVertrieb(vertriebId: VertriebId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Vertrieb]] = {
     getVertriebQuery(vertriebId).future
   }
@@ -646,48 +657,15 @@ class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with Sta
   }
 
   def getDepotAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    val result = for {
-      auslieferungReport <- optionT(getDepotAuslieferungReportQuery(auslieferungId, projekt).future)
-      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
-    } yield {
-      auslieferungReport.copy(koerbe =
-        auslieferungReport.koerbe map { korbReport =>
-          korbReport.copy(
-            kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)),
-            zusatzKoerbeConcatenation = korbReport.zusatzKoerbe.map { _.abotyp.name }.mkString(", ")
-          )
-        })
-    }
-
-    result.run
+    getDepotAuslieferungReportQuery(auslieferungId, projekt).future
   }
 
   def getTourAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    val result = for {
-      auslieferungReport <- optionT(getTourAuslieferungReportQuery(auslieferungId, projekt).future)
-      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
-    } yield {
-      auslieferungReport.copy(koerbe =
-        auslieferungReport.koerbe map { korbReport =>
-          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
-        })
-    }
-
-    result.run
+    getTourAuslieferungReportQuery(auslieferungId, projekt).future
   }
 
   def getPostAuslieferungReport(auslieferungId: AuslieferungId, projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[AuslieferungReport]] = {
-    val result = for {
-      auslieferungReport <- optionT(getPostAuslieferungReportQuery(auslieferungId, projekt).future)
-      ansprechpersonen <- optionT((getAlleAnsprechpersonenForReportsQuery(auslieferungReport.koerbe map (_.kunde.id)).future) map (_.right.toOption))
-    } yield {
-      auslieferungReport.copy(koerbe =
-        auslieferungReport.koerbe map { korbReport =>
-          korbReport.copy(kunde = korbReport.kunde.copy(personen = ansprechpersonen filter (_.kundeId == korbReport.kunde.id)))
-        })
-    }
-
-    result.run
+    getPostAuslieferungReportQuery(auslieferungId, projekt).future
   }
 
   def getDepotAuslieferungReports(auslieferungIds: Seq[AuslieferungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Seq[Option[DepotAuslieferungReport]]] = {

@@ -50,11 +50,13 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
   lazy val depotlieferungAbo = depotlieferungAboMapping.syntax("depotlieferungAbo")
   lazy val heimlieferungAbo = heimlieferungAboMapping.syntax("heimlieferungAbo")
   lazy val postlieferungAbo = postlieferungAboMapping.syntax("postlieferungAbo")
+  lazy val zusatzAbo = zusatzAboMapping.syntax("zusatzAbo")
   lazy val abwesenheit = abwesenheitMapping.syntax("abwesenheit")
   lazy val korb = korbMapping.syntax("korb")
   lazy val lieferung = lieferungMapping.syntax("lieferung")
   lazy val lieferplanung = lieferplanungMapping.syntax("lieferplanung")
   lazy val aboTyp = abotypMapping.syntax("atyp")
+  lazy val zusatzAboTyp = zusatzAbotypMapping.syntax("zatyp")
   lazy val vertrieb = vertriebMapping.syntax("vertrieb")
   lazy val lieferposition = lieferpositionMapping.syntax("lieferposition")
 
@@ -157,6 +159,36 @@ trait KundenportalRepositoryQueries extends LazyLogging with StammdatenDBMapping
         val sortedLieferungen = lieferungen.sortBy(_.datum)
         copyTo[PostlieferungAbo, PostlieferungAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> sortedLieferungen,
           "abotyp" -> aboTyp.headOption, "vertrieb" -> vertriebe.headOption)
+      }).list
+  }
+
+  protected def getZusatzabosQuery(aboId: AboId, filter: Option[FilterExpr])(implicit owner: Subject) = {
+    withSQL {
+      select
+        .from(zusatzAboMapping as zusatzAbo)
+        .leftJoin(abwesenheitMapping as abwesenheit).on(zusatzAbo.id, abwesenheit.aboId)
+        .leftJoin(lieferungMapping as lieferung).on(zusatzAbo.abotypId, lieferung.abotypId)
+        .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
+        .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(zusatzAbo.abotypId, zusatzAboTyp.id)
+        .leftJoin(vertriebMapping as vertrieb).on(zusatzAbo.vertriebId, vertrieb.id)
+        .where.eq(zusatzAbo.kundeId, parameter(owner.kundeId)).and.eq(zusatzAbo.hauptAboId, parameter(aboId))
+        .and(UriQueryParamToSQLSyntaxBuilder.build(filter, zusatzAbo))
+        .and.withRoundBracket(_.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, parameter(Ungeplant)).or.eq(lieferplanung.status, parameter(Offen)))
+    }
+      .one(zusatzAboMapping(zusatzAbo))
+      .toManies(
+        rs => abwesenheitMapping.opt(abwesenheit)(rs),
+        rs => lieferungMapping.opt(lieferung)(rs),
+        rs => zusatzAbotypMapping.opt(zusatzAboTyp)(rs),
+        rs => vertriebMapping.opt(vertrieb)(rs)
+      )
+      .map((abo, abw, lieferungen, aboTyp, vertriebe) => {
+        val sortedAbw = abw.filter(_.aboId == abo.id).sortBy(_.datum)
+        val sortedLieferungen = lieferungen.filter(_.abotypId == abo.abotypId).sortBy(_.datum)
+        val filteredZusatzAboTypen = aboTyp.filter(_.id == abo.abotypId)
+        val filteredVertriebe = vertriebe.filter(_.id == abo.vertriebId)
+        copyTo[ZusatzAbo, ZusatzAboDetail](abo, "abwesenheiten" -> sortedAbw, "lieferdaten" -> sortedLieferungen,
+          "abotyp" -> filteredZusatzAboTypen.headOption, "vertrieb" -> filteredVertriebe.headOption)
       }).list
   }
 

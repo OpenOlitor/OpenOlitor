@@ -20,39 +20,25 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.system
+package ch.openolitor.core.db.evolution.scripts.v2
 
-import spray.routing._
-import spray.http.MediaTypes._
-import spray.httpx.marshalling.ToResponseMarshallable._
-import spray.httpx.SprayJsonSupport._
-import spray.routing.Directive.pimpApply
-import ch.openolitor.core._
-import scala.util.Properties
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.db.evolution.Script
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import com.typesafe.scalalogging.LazyLogging
+import scalikejdbc._
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-case class Status(version: String, buildNr: String)
+import scala.util.{ Success, Try }
 
-trait StatusRoutes extends HttpService with DefaultRouteService with StatusJsonProtocol {
+object OO697_Zusatzabos_add_modify_delete extends DefaultDBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"add column anzahl_abo_aktiv to zusatzabotyp")
+      alterTableAddColumnIfNotExists(zusatzAbotypMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
 
-  lazy val version =
-    Option(getClass.getPackage.getImplementationVersion)
-
-  lazy val statusRoute =
-    pathPrefix("status") {
-      statusRoutes()
+      Success(true)
     }
-
-  /**
-   * Project Status routes
-   */
-  def statusRoutes(): Route =
-    path("staticInfo") {
-      get {
-        respondWithMediaType(`application/json`) {
-          complete {
-            Status(version getOrElse "dev", Properties.envOrElse("application_buildnr", "dev"))
-          }
-        }
-      }
-    }
+  }
+  val scripts = Seq(StammdatenScripts)
 }

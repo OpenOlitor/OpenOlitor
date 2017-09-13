@@ -22,16 +22,11 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
-import java.util.UUID
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
-import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.kundenportal.models.BelongsToKunde
 import ch.openolitor.core.scalax.Tuple23
 
 case class AboId(id: Long) extends BaseId
@@ -493,6 +488,29 @@ object Tourlieferung {
   }
 }
 
+case class TourlieferungDetail(
+  id: AboId,
+  tourId: TourId,
+  abotypId: AbotypId,
+  kundeId: KundeId,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  kundeBezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  abotypName: String,
+  sort: Option[Int],
+  zusatzAbos: Seq[ZusatzAbo],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
 case class ZusatzAbo(
   id: AboId,
   hauptAboId: AboId,
@@ -550,3 +568,35 @@ object ZusatzAbo {
     ))
   }
 }
+
+case class ZusatzAboDetail(
+  id: AboId,
+  hauptAboId: AboId,
+  hauptAbotypId: AbotypId,
+  kundeId: KundeId,
+  kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
+  abotypId: AbotypId,
+  abotypName: String,
+  start: LocalDate,
+  ende: Option[LocalDate],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId,
+  abwesenheiten: Seq[Abwesenheit],
+  lieferdaten: Seq[Lieferung],
+  abotyp: Option[ZusatzAbotyp],
+  vertrieb: Option[Vertrieb]
+) extends AboDetail

@@ -75,6 +75,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: VertriebId, entity: VertriebModify) => updateVertrieb(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: AbotypId, entity: ZusatzAbotypModify) => updateZusatzAbotyp(meta, id, entity)
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: DepotlieferungAbotypModify) => updateDepotlieferungVertriebsart(meta, id, entity)
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: HeimlieferungAbotypModify) => updateHeimlieferungVertriebsart(meta, id, entity)
     case EntityUpdatedEvent(meta, id: VertriebsartId, entity: PostlieferungAbotypModify) => updatePostlieferungVertriebsart(meta, id, entity)
@@ -142,6 +143,20 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //map all updatable fields
         val copy = copyFrom(abotyp, update)
         stammdatenWriteRepository.updateEntityFully[Abotyp, AbotypId](copy)
+      }
+
+      stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(lieferungMapping.column.zielpreis -> update.zielpreis)
+      }
+    }
+  }
+
+  def updateZusatzAbotyp(meta: EventMetadata, id: AbotypId, update: ZusatzAbotypModify)(implicit personId: PersonId = meta.originator) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.getById(zusatzAbotypMapping, id) map { zusatzabotyp =>
+        //map all updatable fields
+        val copy = copyFrom(zusatzabotyp, update)
+        stammdatenWriteRepository.updateEntityFully[ZusatzAbotyp, AbotypId](copy)
       }
 
       stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
