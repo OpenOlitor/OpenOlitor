@@ -1636,7 +1636,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
       } yield {
         val ansprechpersonen = personen.filter(_.kundeId == kunde.id)
-        val zusatzAbosString = (zusatzAbos filter (_.hauptAboId == korbAbo.id) map (_.abotypName)).mkString(",")
+        val zusatzAbosString = (zusatzAbos filter (_.hauptAboId == korbAbo.id) map (_.abotypName)).mkString(", ")
         val kundeReport = copyTo[Kunde, KundeReport](kunde, "personen" -> ansprechpersonen)
         copyTo[Korb, KorbReport](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kundeReport, "zusatzAbosString" -> zusatzAbosString)
       }
