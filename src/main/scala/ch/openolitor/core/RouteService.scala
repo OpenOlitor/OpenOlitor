@@ -371,11 +371,6 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     onSuccess(f) { result =>
       result.map(complete(_)).getOrElse(complete(StatusCodes.NotFound))
     }
-
-    onFailure(f) { failure =>
-      failure.printStackTrace()
-      failWith(failure)
-    }
   }
 
   /**

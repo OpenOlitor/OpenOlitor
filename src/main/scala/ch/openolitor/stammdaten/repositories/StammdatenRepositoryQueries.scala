@@ -1487,8 +1487,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   }
 
   protected def getDepotAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
-    getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden, _, _) =>
-      val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden)
+    getDepotAuslieferungQuery(auslieferungId) { (auslieferung, depot, koerbe, abos, abotypen, kunden, _, zusatzAbos) =>
+      val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden, zusatzAbos)
 
       copyTo[DepotAuslieferung, DepotAuslieferungDetail](auslieferung, "depot" -> depot, "koerbe" -> korbDetails)
     }
@@ -1533,8 +1533,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   }
 
   protected def getTourAuslieferungDetailQuery(auslieferungId: AuslieferungId) = {
-    getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, kunden, _, _) =>
-      val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden)
+    getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, kunden, _, zusatzAbos) =>
+      val korbDetails = getKorbDetails(koerbe, abos, abotypen, kunden, zusatzAbos)
 
       copyTo[TourAuslieferung, TourAuslieferungDetail](auslieferung, "tour" -> tour, "koerbe" -> korbDetails)
     }
@@ -1626,9 +1626,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         korbAbo <- abos.filter(_.id == korb.aboId).headOption
         abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
         kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
-        //TODO remove dummy data
-        zusatzKoerbe = List(ZusatzKorbDetail(KorbId(10), LieferungId(11), korbAbo, WirdGeliefert, 1, None, None, kunde, abotyp, DateTime.now(), PersonId(1), DateTime.now(), PersonId(1)), ZusatzKorbDetail(KorbId(10), LieferungId(11), korbAbo, WirdGeliefert, 1, None, None, kunde, abotyp, DateTime.now(), PersonId(1), DateTime.now(), PersonId(1)))
-        //        zusatzKoerbe: Seq[ZusatzKorbDetail] <- zusatzKorbDetails.filter(_.id == korbAbo.kundeId)
+        zs = (zusatzAbos filter (_.hauptAboId == korbAbo.id))
+        zusatzKoerbe = koerbe filter (k => zs.contains(k.aboId)) map (zk => copyTo[Korb, ZusatzKorbDetail](zk, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde, "zusatzKoerbe" -> Nil))
       } yield copyTo[Korb, KorbDetail](korb, "abo" -> korbAbo, "abotyp" -> abotyp, "kunde" -> kunde, "zusatzKoerbe" -> zusatzKoerbe)
     }.flatten
   }
@@ -1639,8 +1638,6 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         korbAbo <- abos.filter(_.id == korb.aboId).headOption
         abotyp <- abotypen.filter(_.id == korbAbo.abotypId).headOption
         kunde <- kunden.filter(_.id == korbAbo.kundeId).headOption
-        //TODO remove dummy data
-        val zusatzKoerbe = List(ZusatzKorbDetail(KorbId(10), LieferungId(11), korbAbo, WirdGeliefert, 1, None, None, kunde, abotyp, DateTime.now(), PersonId(1), DateTime.now(), PersonId(1)), ZusatzKorbDetail(KorbId(10), LieferungId(11), korbAbo, WirdGeliefert, 1, None, None, kunde, abotyp, DateTime.now(), PersonId(1), DateTime.now(), PersonId(1)))
       } yield {
         val ansprechpersonen = personen.filter(_.kundeId == kunde.id)
         val zusatzAbosString = (zusatzAbos filter (_.hauptAboId == korbAbo.id) map (_.abotypName)).mkString(", ")
