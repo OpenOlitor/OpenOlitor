@@ -88,17 +88,18 @@ object ScalaxbSettings {
 object OpenOlitorBuild extends Build {
   import BuildSettings._
  
-  lazy val scalikejdbcForkUri = file("../scalikejdbc/")
+  // lazy val scalikejdbcForkUri = file("../scalikejdbc/")
   // lazy val scalikejdbcForkUri = uri("git://github.com/scalikejdbc/scalikejdbc")
+  lazy val scalikejdbcForkUri = uri("git://github.com/OpenOlitor/scalikejdbc.git#fix/int_binder_nullpointer")
   lazy val scalikejdbcCore = ProjectRef(scalikejdbcForkUri, "core")
   lazy val scalikejdbcMacro = ProjectRef(scalikejdbcForkUri, "syntax-support-macro")
   lazy val scalikejdbcConfig = ProjectRef(scalikejdbcForkUri, "config")
   lazy val scalikejdbcInterpolation  = ProjectRef(scalikejdbcForkUri, "interpolation")
-  lazy val scalikejdbcAsyncForkUri = file("../scalikejdbc-async/")
-  // lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/parameter_bindings")  
+  //lazy val scalikejdbcAsyncForkUri = file("../scalikejdbc-async/")
+  lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/parameter_bindings")  
   lazy val scalikejdbcAsync = ProjectRef(scalikejdbcAsyncForkUri, "core") 
-  lazy val akkaPersistenceSqlAsyncUri = file("../akka-persistence-sql-async/")
-  // lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")  
+  //lazy val akkaPersistenceSqlAsyncUri = file("../akka-persistence-sql-async/")
+  lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")  
   lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncUri, "core")
   
   //lazy val akkaPersistenceSqlAsyncForkUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async.git#fix/scalikejdbc_version")
