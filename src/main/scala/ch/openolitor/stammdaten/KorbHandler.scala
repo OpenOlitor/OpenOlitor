@@ -84,43 +84,67 @@ trait KorbHandler extends KorbStatusHandler
     }
   }
 
-  def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+  def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Option[Korb] = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) flatMap { korb =>
       stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
     }
   }
 
-  private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    stammdatenWriteRepository.modifyEntity[Lieferung, LieferungId](korb.lieferungId)(lieferung =>
-      Map(
-        lieferungMapping.column.anzahlKoerbeZuLiefern -> (if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern),
-        lieferungMapping.column.anzahlAbwesenheiten -> (if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten),
-        lieferungMapping.column.anzahlSaldoZuTief -> (if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief)
-      ))
-  }
-
-  def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
-    // koerbe erstellen, modifizieren, loeschen falls noetig
-    val isExistingAbo = orig.isDefined
-
-    // only modify koerbe if the start or end of this abo has changed or we're creating them for a new abo
-    if (!isExistingAbo || abo.start != orig.get.start || abo.ende != orig.get.ende) {
-      stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
-        stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
-          if (isExistingAbo && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
-            deleteKorb(lieferung, abo)
-          } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
-            upsertKorb(lieferung, abo, abotyp) match {
-              case (Some(created), None) =>
-                // nur im created Fall muss eins dazu gezählt werden
-                // bei Statuswechsel des Korbs wird handleKorbStatusChanged die Counts justieren
-                updateLieferungWithCount(created, 1)
-              case _ =>
-              // counts werden andersweitig angepasst
-            }
-          }
+  def modifyKoerbeForAboDatumVertrieb(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+    for {
+      originalAbo <- orig
+      if (abo.vertriebId != originalAbo.vertriebId)
+      abotyp <- stammdatenWriteRepository.getById(abotypMapping, abo.abotypId)
+    } yield {
+      stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+        if (lieferung.vertriebId == originalAbo.vertriebId) {
+          deleteKorb(lieferung, originalAbo)
         }
+        if (lieferung.vertriebId == abo.vertriebId) {
+          upsertKorb(lieferung, abo, abotyp)
+        }
+        recalculateNumbersLieferung(lieferung)
       }
     }
+  }
+
+  def modifyKoerbeForAboDatumChange(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+    for {
+      originalAbo <- orig
+      // only modify koerbe if the start or end of this abo has changed or we're creating them for a new abo
+      if (abo.start != originalAbo.start || abo.ende != originalAbo.ende)
+      abotyp <- stammdatenWriteRepository.getById(abotypMapping, abo.abotypId)
+    } yield {
+      stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId).map { lieferung =>
+        if ((abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
+          deleteKorb(lieferung, abo)
+        } else if ((abo.start <= lieferung.datum.toLocalDate) &&
+          (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
+
+          if (abo.vertriebId != lieferung.vertriebId) {
+            deleteKorb(lieferung, originalAbo)
+          } else {
+            upsertKorb(lieferung, abo, abotyp)
+          }
+        }
+        recalculateNumbersLieferung(lieferung)
+      }
+    }
+  }
+
+  def recalculateNumbersLieferung(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
+    val stati: List[KorbStatus] = stammdatenWriteRepository.getNichtGelieferteKoerbe(lieferung.id).map(_.status)
+    val counts: Map[KorbStatus, Int] = stati.groupBy {
+      s => s
+    }.mapValues(_.size)
+
+    val zuLiefern: Int = counts.getOrElse(WirdGeliefert, 0)
+    val abwesenheiten: Int = counts.getOrElse(FaelltAusAbwesend, 0)
+    val saldoZuTief: Int = counts.getOrElse(FaelltAusSaldoZuTief, 0)
+    stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(
+      lieferungMapping.column.anzahlKoerbeZuLiefern -> zuLiefern,
+      lieferungMapping.column.anzahlAbwesenheiten -> abwesenheiten,
+      lieferungMapping.column.anzahlSaldoZuTief -> saldoZuTief
+    ).getOrElse(lieferung)
   }
 }

@@ -430,6 +430,7 @@ case class AboGuthabenModify(
 ) extends JSONSerializable
 
 case class AboVertriebsartModify(
+  vertriebIdNeu: VertriebId,
   vertriebsartIdNeu: VertriebsartId,
   bemerkung: String
 ) extends JSONSerializable
