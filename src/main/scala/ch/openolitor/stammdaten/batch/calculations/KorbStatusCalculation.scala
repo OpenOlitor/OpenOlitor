@@ -20,20 +20,35 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.calculations
+package ch.openolitor.stammdaten.batch.calculations
 
-import akka.actor.Props
-import akka.actor.Actor
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.calculations.StammdatenCalculations
-import akka.actor.ActorSystem
 import ch.openolitor.core.SystemConfig
-import akka.actor.ActorRef
+import akka.actor.ActorSystem
+import akka.actor.Props
+import ch.openolitor.core.batch.BaseBatchJob
+import scala.concurrent.duration._
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import scalikejdbc._
+import ch.openolitor.stammdaten.repositories.DefaultStammdatenWriteRepositoryComponent
+import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 
-object OpenOlitorCalculations {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorCalculations], sysConfig, system, entityStore)
+object KorbStatusCalculation {
+  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[KorbStatusCalculation], sysConfig, system)
 }
 
-class OpenOlitorCalculations(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseCalculationsSupervisor {
-  override lazy val calculators = Set(context.actorOf(StammdatenCalculations.props(sysConfig, system, entityStore)))
+class KorbStatusCalculation(override val sysConfig: SystemConfig, override val system: ActorSystem) extends BaseBatchJob
+    with AsyncConnectionPoolContextAware
+    with DefaultStammdatenWriteRepositoryComponent
+    with StammdatenDBMappings {
+
+  override def process(): Unit = {
+    DB autoCommit { implicit session =>
+      sql"""update ${korbMapping.table} k inner join ${abwesenheitMapping.table} a on k.abo_id=a.abo_id and k.lieferung_id=a.lieferung_id 
+      	set Status='FaelltAusAbwesend'""".execute.apply()
+    }
+  }
+
+  protected def handleInitialization(): Unit = {
+    // disable scheduled calculation for now
+  }
 }

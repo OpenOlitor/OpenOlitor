@@ -20,41 +20,34 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.calculations
+package ch.openolitor.stammdaten.batch.calculations
 
 import ch.openolitor.core.SystemConfig
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import ch.openolitor.core.calculations.BaseCalculation
+import ch.openolitor.core.batch.BaseBatchJob
 import scala.concurrent.duration._
-import ch.openolitor.core.calculations.Calculations._
+import ch.openolitor.core.batch.BatchJobs._
+import ch.openolitor.stammdaten.StammdatenCommandHandler
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
-import scala.util.Success
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
 import ch.openolitor.stammdaten.repositories.DefaultStammdatenWriteRepositoryComponent
-import ch.openolitor.stammdaten.StammdatenDBMappings
 import scalikejdbc._
-import sqls.{ distinct, count }
-import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import ch.openolitor.stammdaten.repositories.StammdatenRepositoryQueries
-import ch.openolitor.stammdaten.StammdatenCommandHandler
 import akka.actor.ActorRef
-import ch.openolitor.stammdaten.models.AboId
+import akka.actor.actorRef2Scala
 
 object AktiveAbosCalculation {
   def props(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef): Props = Props(classOf[AktiveAbosCalculation], sysConfig, system, entityStore)
 }
 
-class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val system: ActorSystem, val entityStore: ActorRef) extends BaseCalculation
+class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val system: ActorSystem, val entityStore: ActorRef) extends BaseBatchJob
     with AsyncConnectionPoolContextAware
     with DefaultStammdatenWriteRepositoryComponent
     with StammdatenRepositoryQueries {
 
-  override def calculate(): Unit = {
+  override def process(): Unit = {
     DB autoCommit { implicit session =>
       val yesterday = LocalDate.now.minusDays(1).toDateTimeAtStartOfDay
       val today = LocalDate.now.toDateTimeAtStartOfDay
@@ -78,6 +71,6 @@ class AktiveAbosCalculation(override val sysConfig: SystemConfig, override val s
   }
 
   protected def handleInitialization(): Unit = {
-    scheduledCalculation = Some(context.system.scheduler.schedule(untilNextMidnight, 24 hours)(self ! StartCalculation))
+    batchJob = Some(context.system.scheduler.schedule(untilNextMidnight, 24 hours)(self ! StartBatchJob))
   }
 }

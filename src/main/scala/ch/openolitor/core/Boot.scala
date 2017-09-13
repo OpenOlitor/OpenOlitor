@@ -65,8 +65,8 @@ import ch.openolitor.core.reporting._
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import ch.openolitor.core.mailservice.MailService
 import ch.openolitor.buchhaltung.BuchhaltungReportEventListener
-import ch.openolitor.core.calculations.OpenOlitorCalculations
-import ch.openolitor.core.calculations.Calculations.InitializeCalculation
+import ch.openolitor.core.batch.OpenOlitorBatchJobs
+import ch.openolitor.core.batch.BatchJobs.InitializeBatchJob
 import ch.openolitor.util.AirbrakeNotifier
 import ch.openolitor.core.jobs.JobQueueService
 
@@ -206,7 +206,7 @@ object Boot extends App with LazyLogging {
       //start actor mapping dbevents to client messages
       val dbEventClientMessageMapper = Await.result(system ? SystemActor.Child(DBEvent2UserMapping.props, "db-event-mapper"), duration).asInstanceOf[ActorRef]
 
-      val calculations = Await.result(system ? SystemActor.Child(OpenOlitorCalculations.props(entityStore), "calculations"), duration).asInstanceOf[ActorRef]
+      val batchJobs = Await.result(system ? SystemActor.Child(OpenOlitorBatchJobs.props(entityStore), "batch-jobs"), duration).asInstanceOf[ActorRef]
 
       //initialize global persistentviews
       logger.debug(s"oo-system: send Startup to entityStoreview")
@@ -226,7 +226,7 @@ object Boot extends App with LazyLogging {
       IO(UHttp) ? Http.Bind(clientMessages, interface = cfg.interface, port = cfg.wsPort)
       logger.debug(s"oo-system: configured ws listener on port ${cfg.wsPort}")
 
-      calculations ! InitializeCalculation
+      batchJobs ! InitializeBatchJob
 
       MandantSystem(cfg, app)
     }
