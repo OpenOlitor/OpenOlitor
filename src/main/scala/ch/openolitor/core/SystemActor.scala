@@ -28,6 +28,8 @@ import akka.actor.SupervisorStrategy.Restart
 import scalikejdbc._
 import scalikejdbc.config._
 import ch.openolitor.core.db._
+import akka.pattern.BackoffSupervisor
+import akka.pattern.Backoff
 
 object SystemActor {
   case class Child(props: Props, name: String)
@@ -43,18 +45,45 @@ class SystemActor(sysConfig: SystemConfig, airbrakeNotifier: ActorRef) extends A
 
   log.debug(s"oo-system:SystemActor initialization:$sysConfig")
 
-  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+  override val supervisorStrategy = OneForOneStrategy() {
     case e =>
       log.warning(s"Child actor failed:$e")
       airbrakeNotifier ! e
       Restart
   }
 
+  private def onFailureBackoff(childProps: Props, childName: String) = BackoffSupervisor.props(
+    Backoff.onFailure(
+      childProps,
+      childName,
+      minBackoff = 1.seconds,
+      maxBackoff = 1.day,
+      randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
+    ).withAutoReset(60.seconds) // reset if the child does not throw any errors within 10 seconds
+      .withSupervisorStrategy(supervisorStrategy)
+  )
+
+  private def onStopBackoff(childProps: Props, childName: String) = BackoffSupervisor.props(
+    Backoff.onStop(
+      childProps,
+      childName,
+      minBackoff = 1.seconds,
+      maxBackoff = 1.day,
+      randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
+    ).withAutoReset(60.seconds) // reset if the child does not throw any errors within 10 seconds
+      .withSupervisorStrategy(supervisorStrategy)
+  )
+
+  private def supervise(childProps: Props, childName: String) = {
+    val svProps = onStopBackoff(onFailureBackoff(childProps, childName), s"sv2-$childName")
+    context.actorOf(svProps, s"sv-$childName")
+  }
+
   def receive: Receive = {
     case Child(props, name) =>
       log.debug(s"oo-system:Request child actor $name")
-      val actorRef = context.actorOf(props, name)
 
+      val actorRef = supervise(props, name)
       context.watch(actorRef)
 
       //return created actor
