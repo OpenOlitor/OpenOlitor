@@ -88,17 +88,17 @@ object ScalaxbSettings {
 object OpenOlitorBuild extends Build {
   import BuildSettings._
  
-  // lazy val scalikejdbcForkUri = file("../scalikejdbc/")
-  lazy val scalikejdbcForkUri = uri("git://github.com/OpenOlitor/scalikejdbc.git#fix/int_binder_nullpointer")
+  lazy val scalikejdbcForkUri = file("../scalikejdbc/")
+  // lazy val scalikejdbcForkUri = uri("git://github.com/scalikejdbc/scalikejdbc")
   lazy val scalikejdbcCore = ProjectRef(scalikejdbcForkUri, "core")
   lazy val scalikejdbcMacro = ProjectRef(scalikejdbcForkUri, "syntax-support-macro")
   lazy val scalikejdbcConfig = ProjectRef(scalikejdbcForkUri, "config")
   lazy val scalikejdbcInterpolation  = ProjectRef(scalikejdbcForkUri, "interpolation")
-  // lazy val scalikejdbcAsyncForkUri = file("../scalikejdbc-async/")
-  lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/parameter_bindings")  
+  lazy val scalikejdbcAsyncForkUri = file("../scalikejdbc-async/")
+  // lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#fix/parameter_bindings")  
   lazy val scalikejdbcAsync = ProjectRef(scalikejdbcAsyncForkUri, "core") 
-  // lazy val akkaPersistenceSqlAsyncUri = file("../akka-persistence-sql-async/")
-  lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")  
+  lazy val akkaPersistenceSqlAsyncUri = file("../akka-persistence-sql-async/")
+  // lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")  
   lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncUri, "core")
   
   //lazy val akkaPersistenceSqlAsyncForkUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async.git#fix/scalikejdbc_version")
@@ -113,16 +113,25 @@ object OpenOlitorBuild extends Build {
         val dir = (sourceManaged in Compile).value
         val maxParams = 30
         val mappings = (1 to maxParams).map{ n =>
-          val file = dir / s"Parameters${n}.scala"
+          val file = dir / "openolitor" / "ch" / "openolitor" / "core" / "repositories" / s"Parameters${n}.scala"
           IO.write(file, GenerateParametersMapping(n))
           file
         }
         val paramsTrait = {
-          val file = dir / s"Parameters.scala"
+          val file = dir / "openolitor" / "ch" / "openolitor" / "core" / "repositories" / s"Parameters.scala"
           IO.write(file, GenerateParametersTrait(maxParams))
           file
         }
-        mappings :+ paramsTrait
+        val tuples = (23 to maxParams).map{ n =>
+          val file = dir / "openolitor" / "ch" / "openolitor" / "core" / "scalax" / s"Tuple${n}.scala"
+          IO.write(file, GenerateTuples(n))
+          file
+        }
+        mappings ++ tuples :+ paramsTrait
+      },
+      mappings in (Compile, packageSrc) ++= (managedSources in Compile).value.map{ f =>
+        // to merge generated sources into sources.jar as well
+        (f, f.relativeTo((sourceManaged in Compile).value).get.getPath)
       }
       )) dependsOn (macroSub, sprayJsonMacro, scalikejdbcAsync, akkaPersistenceSqlAsync, scalikejdbcCore, scalikejdbcConfig, scalikejdbcMacro, scalikejdbcInterpolation) 
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)

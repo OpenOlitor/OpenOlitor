@@ -7,7 +7,7 @@ import ch.openolitor.core.scalax._
 import scalikejdbc._
 
 trait Parameters$n extends BaseParameter {
-  def parameters[${(1 to n) map (i => s"T$i") mkString (",")}])(params: Tuple$n[${(1 to n) map (i => s"T$i") mkString (",")}])(
+  def parameters[${(1 to n) map (i => s"T$i") mkString (",")}](params: Tuple$n[${(1 to n) map (i => s"T$i") mkString (",")}])(
     implicit
     ${(1 to n) map{ i => 
       s"binder$i: Binders[T$i]"
