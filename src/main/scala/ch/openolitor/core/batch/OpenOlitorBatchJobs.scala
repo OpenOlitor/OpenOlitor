@@ -29,11 +29,16 @@ import ch.openolitor.stammdaten.batch.StammdatenBatchJobs
 import akka.actor.ActorSystem
 import ch.openolitor.core.SystemConfig
 import akka.actor.ActorRef
+import ch.openolitor.core.filestore.FileStore
+import ch.openolitor.core.filestore.batch.FileStoreBatchJobs
 
 object OpenOlitorBatchJobs {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorBatchJobs], sysConfig, system, entityStore)
+  def props(entityStore: ActorRef, fileStore: FileStore)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorBatchJobs], sysConfig, system, entityStore, fileStore)
 }
 
-class OpenOlitorBatchJobs(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseBatchJobsSupervisor {
-  override lazy val batchJobs = Set(context.actorOf(StammdatenBatchJobs.props(sysConfig, system, entityStore)))
+class OpenOlitorBatchJobs(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef, fileStore: FileStore) extends BaseBatchJobsSupervisor {
+  override lazy val batchJobs = Set(
+    context.actorOf(StammdatenBatchJobs.props(sysConfig, system, entityStore)),
+    context.actorOf(FileStoreBatchJobs.props(sysConfig, system, fileStore))
+  )
 }

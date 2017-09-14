@@ -20,29 +20,27 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.util
+package ch.openolitor.core.filestore.batch
 
-import com.typesafe.config.Config
-import scala.collection.JavaConversions._
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import ch.openolitor.core.SystemConfig
+import akka.actor.ActorSystem
+import akka.actor.Props
+import ch.openolitor.core.batch.BatchJobs._
+import ch.openolitor.core.batch.BaseBatchJobsSupervisor
+import ch.openolitor.core.filestore.batch.housekeeping.TemporaryDataBucketCleanupBatchJob
+import akka.actor.ActorRef
+import ch.openolitor.core.filestore.FileStore
 
-object ConfigUtil {
-  /**
-   * Enhanced typesafe config adding support to read config keys as option
-   */
-  implicit class MyConfig(self: Config) {
-
-    private def getOption[T](path: String)(get: String => T): Option[T] = {
-      if (self != null && path != null && self.hasPath(path)) {
-        Some(get(path))
-      } else {
-        None
-      }
-    }
-
-    def getStringOption(path: String): Option[String] = getOption(path)(path => self.getString(path))
-    def getStringListOption(path: String): Option[List[String]] = getOption(path)(path => self.getStringList(path).toList)
-    def getIntOption(path: String): Option[Int] = getOption(path)(path => self.getInt(path))
-    def getBooleanOption(path: String): Option[Boolean] = getOption(path)(path => self.getBoolean(path))
-    def getLongOption(path: String): Option[Long] = getOption(path)(path => self.getLong(path))
-  }
+object FileStoreBatchJobs {
+  def props(sysConfig: SystemConfig, system: ActorSystem, fileStore: FileStore): Props = Props(classOf[DefaultFileStoreBatchJobs], sysConfig, system, fileStore)
 }
+
+class FileStoreBatchJobs(val sysConfig: SystemConfig, val system: ActorSystem, val fileStore: FileStore) extends BaseBatchJobsSupervisor {
+  override lazy val batchJobs = Set(
+    context.actorOf(TemporaryDataBucketCleanupBatchJob.props(sysConfig, system, fileStore))
+  )
+}
+
+class DefaultFileStoreBatchJobs(override val sysConfig: SystemConfig, override val system: ActorSystem, override val fileStore: FileStore) extends FileStoreBatchJobs(sysConfig, system, fileStore)
