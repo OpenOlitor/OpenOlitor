@@ -25,25 +25,16 @@ package ch.openolitor.stammdaten
 import ch.openolitor.core._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
-import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
-import java.util.UUID
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
-import ch.openolitor.core.Macros._
-import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
-import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import ch.openolitor.core.Macros._
 import scala.collection.immutable.TreeMap
-import scalaz._
-import Scalaz._
-import ch.openolitor.util.IdUtil
-import ch.openolitor.stammdaten.models.LieferpositionenModify
 import scalikejdbc.DBSession
 import org.joda.time.format.DateTimeFormat
 import ch.openolitor.core.repositories.EventPublishingImplicits._
@@ -88,6 +79,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createDepot(meta, id, depot)
     case EntityInsertedEvent(meta, id: AboId, abo: AboModify) =>
       createAbo(meta, id, abo)
+    case EntityInsertedEvent(meta, id: AboId, zusatzabo: ZusatzAboModify) =>
+      createZusatzAbo(meta, id, zusatzabo)
     case EntityInsertedEvent(meta, id: LieferungId, lieferung: LieferungAbotypCreate) =>
       createLieferung(meta, id, lieferung)
     case EntityInsertedEvent(meta, id: VertriebId, vertrieb: VertriebModify) =>
@@ -361,6 +354,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(postlieferungMapping, vertriebsartId)
   }
 
+  private def aboById(aboId: AboId)(implicit session: DBSession): Option[Abo] = {
+    stammdatenWriteRepository.getById(depotlieferungAboMapping, aboId) orElse
+      stammdatenWriteRepository.getById(heimlieferungAboMapping, aboId) orElse
+      stammdatenWriteRepository.getById(postlieferungAboMapping, aboId)
+  }
+
   private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     stammdatenWriteRepository.getById(abotypMapping, abotypId)
   }
@@ -469,6 +468,46 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               // create required Koerbe for abo
               maybeAbo map (abo => modifyKoerbeForAboDatumChange(abo, None))
           }
+      }
+    }
+  }
+
+  def createZusatzAbo(meta: EventMetadata, newId: AboId, create: ZusatzAboModify)(implicit personId: PersonId = meta.originator) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      val hauptAbo = aboById(create.hauptAboId)
+      hauptAbo match {
+        case Some(i) => {
+          val zusatzAbo = copyTo[ZusatzAboModify, ZusatzAbo](
+            create,
+            "id" -> newId,
+            "hauptAboId" -> create.hauptAboId,
+            "hauptAbotypId" -> create.hauptAbotypId,
+            "kundeId" -> i.kundeId,
+            "kunde" -> i.kunde,
+            "vertriebsartId" -> i.vertriebsartId,
+            "vertriebId" -> i.vertriebId,
+            "vertriebBeschrieb" -> i.vertriebBeschrieb,
+            "abotypId" -> create.abotypId,
+            "abotypName" -> create.abotypName,
+            "start" -> create.start,
+            "ende" -> create.ende,
+            "guthabenVertraglich" -> i.guthabenVertraglich,
+            "guthaben" -> i.guthaben,
+            "guthabenInRechnung" -> i.guthabenInRechnung,
+            "letzteLieferung" -> i.letzteLieferung,
+            "anzahlAbwesenheiten" -> i.anzahlAbwesenheiten,
+            "anzahlLieferungen" -> i.anzahlLieferungen,
+            "aktiv" -> i.aktiv,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator
+          )
+          DB autoCommitSinglePublish { implicit session => implicit publisher =>
+            stammdatenWriteRepository.insertEntity[ZusatzAbo, AboId](zusatzAbo)
+          }
+        }
+        case None => throw new RuntimeException("The id provided does not corresponde to any abo");
       }
     }
   }

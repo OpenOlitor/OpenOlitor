@@ -735,24 +735,26 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(ZusatzAbo.unapply(entity).get)
     }
 
-    override def updateParameters(abo: ZusatzAbo) = {
-      super.updateParameters(abo) ++ Seq(
-        column.kundeId -> parameter(abo.kundeId),
-        column.kunde -> parameter(abo.kunde),
-        column.vertriebId -> parameter(abo.vertriebId),
-        column.vertriebsartId -> parameter(abo.vertriebsartId),
-        column.hauptAbotypId -> parameter(abo.hauptAbotypId),
-        column.abotypId -> parameter(abo.abotypId),
-        column.abotypName -> parameter(abo.abotypName),
-        column.start -> parameter(abo.start),
-        column.ende -> parameter(abo.ende),
-        column.guthabenVertraglich -> parameter(abo.guthabenVertraglich),
-        column.guthaben -> parameter(abo.guthaben),
-        column.guthabenInRechnung -> parameter(abo.guthabenInRechnung),
-        column.letzteLieferung -> parameter(abo.letzteLieferung),
-        column.anzahlAbwesenheiten -> parameter(abo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen),
-        column.aktiv -> parameter(abo.aktiv)
+    override def updateParameters(zusatzabo: ZusatzAbo) = {
+      super.updateParameters(zusatzabo) ++ Seq(
+        column.hauptAboId -> parameter(zusatzabo.hauptAboId),
+        column.hauptAbotypId -> parameter(zusatzabo.hauptAbotypId),
+        column.kundeId -> parameter(zusatzabo.kundeId),
+        column.kunde -> parameter(zusatzabo.kunde),
+        column.vertriebsartId -> parameter(zusatzabo.vertriebsartId),
+        column.vertriebId -> parameter(zusatzabo.vertriebId),
+        column.vertriebBeschrieb -> parameter(zusatzabo.vertriebBeschrieb),
+        column.abotypId -> parameter(zusatzabo.abotypId),
+        column.abotypName -> parameter(zusatzabo.abotypName),
+        column.start -> parameter(zusatzabo.start),
+        column.ende -> parameter(zusatzabo.ende),
+        column.guthabenVertraglich -> parameter(zusatzabo.guthabenVertraglich),
+        column.guthaben -> parameter(zusatzabo.guthaben),
+        column.guthabenInRechnung -> parameter(zusatzabo.guthabenInRechnung),
+        column.letzteLieferung -> parameter(zusatzabo.letzteLieferung),
+        column.anzahlAbwesenheiten -> parameter(zusatzabo.anzahlAbwesenheiten),
+        column.anzahlLieferungen -> parameter(zusatzabo.anzahlLieferungen),
+        column.aktiv -> parameter(zusatzabo.aktiv)
       )
     }
   }

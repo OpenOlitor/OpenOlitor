@@ -79,7 +79,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       implicit val filter = f flatMap { filterString =>
         UriQueryParamFilterParser.parse(filterString)
       }
-      kontoDatenRoute ~ aboTypenRoute ~ zusatzAboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ personenRoute ~
+      kontoDatenRoute ~ aboTypenRoute ~ zusatzAboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ zusatzAboRoute ~ personenRoute ~
         kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
         produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ lieferantenRoute ~ vorlagenRoute
     }
@@ -157,6 +157,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (_, aboId, abwesenheitId) =>
         deleteAbwesenheit(abwesenheitId)
+      } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "zusatzabos") { (kundeId, aboId) =>
+        get(list(stammdatenReadRepository.getZusatzaboPerAbo(aboId)))
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(stammdatenReadRepository.getPendenzen(kundeId))) ~
@@ -296,15 +299,19 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getZusatzAbotypen)) ~
         post(create[ZusatzAbotypModify, AbotypId](AbotypId.apply))
     } ~
-      path("zusatzabotypen" / "personen" / "alle") {
-        get(list(stammdatenReadRepository.getPersonenByAbotypen))
-      } ~
-      path("zusatzabotypen" / "personen" / "aktiv") {
-        get(list(stammdatenReadRepository.getPersonenAboAktivByAbotypen))
-      } ~
       path("zusatzabotypen" / zusatzAbotypIdPath) { id =>
         get(detail(stammdatenReadRepository.getZusatzAbotypDetail(id))) ~
           (put | post)(update[ZusatzAbotypModify, AbotypId](id)) ~
+          delete(remove(id))
+      }
+
+  def zusatzAboRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+    path("zusatzabo") {
+      post(create[ZusatzAboModify, AboId](AboId.apply))
+    } ~
+      path("zusatzabo" / aboIdPath) { id =>
+        get(detail(stammdatenReadRepository.getZusatzAboDetail(id))) ~
+          (put | post)(update[ZusatzAboModify, AboId](id)) ~
           delete(remove(id))
       }
 
