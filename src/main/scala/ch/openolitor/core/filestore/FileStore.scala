@@ -57,6 +57,9 @@ import java.io.File
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest
+import com.amazonaws.services.s3.model.S3ObjectSummary
+import org.joda.time.DateTime
+import com.amazonaws.services.s3.model.DeleteObjectsRequest
 
 case class FileStoreError(message: String)
 case class FileStoreSuccess()
@@ -67,9 +70,18 @@ case class FileStoreFileId(id: String) extends BaseStringId
 case class FileStoreFileReference(fileType: FileType, id: FileStoreFileId) extends JSONSerializable
 case class FileStoreChunkedUploadMetaData(key: String, uploadId: String, bucket: FileStoreBucket, metadata: FileStoreFileMetadata)
 case class FileStoreChunkedUploadPartEtag(partNumber: Int, etag: String)
+case class FileStoreFileSummary(key: String, etag: String, size: Long, lastModified: DateTime)
 
 trait FileStore {
   val mandant: String
+
+  /**
+   * Get a list of file summaries of a given bucket.
+   *
+   * @param bucket the bucket to get the list of summaries from
+   * @return either a list of `FileStoreFileSummary`s of the given bucket or `FileStoreError`
+   */
+  def getFileSummaries(bucket: FileStoreBucket): Future[Either[FileStoreError, List[FileStoreFileSummary]]]
 
   /**
    * List the files of a given bucket.
@@ -103,10 +115,19 @@ trait FileStore {
    * Delete the file in the given bucket by id.
    *
    * @param bucket the bucket where the file should be deleted.
-   * @param id the id of the file.
+   * @param id the id of the file to delete.
    * @return either `FileStoreSuccess` or `FileStoreError`.
    */
   def deleteFile(bucket: FileStoreBucket, id: String): Future[Either[FileStoreError, FileStoreSuccess]]
+
+  /**
+   * Delete the files in the given bucket having the given ids.
+   *
+   * @param bucket the bucket where the file should be deleted.
+   * @param ids the ids of the files to delete.
+   * @return either `FileStoreSuccess` or `FileStoreError`.
+   */
+  def deleteFiles(bucket: FileStoreBucket, ids: List[String]): Future[Either[FileStoreError, FileStoreSuccess]]
 
   /**
    * Create the buckets listed in `FileStoreBucket.AllFileStoreBuckets` if they do not exist already.
@@ -175,28 +196,21 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
     c
   }
 
-  def generateId = UUID.randomUUID.toString
-
-  def transform(metadata: Map[String, String]): FileStoreFileMetadata = {
-    if (metadata.isEmpty) logger.warn("There was no metadata stored with this file.")
-    val fileType = FileType(metadata.get("fileType").getOrElse("").toLowerCase)
-    FileStoreFileMetadata(metadata.get("name").getOrElse(""), fileType)
-  }
-
-  def transform(metadata: FileStoreFileMetadata): ObjectMetadata = {
-    val result = new ObjectMetadata()
-    result.addUserMetadata("name", metadata.name)
-    result.addUserMetadata("fileType", metadata.fileType.getClass.getSimpleName)
-    result
+  def getFileSummaries(bucket: FileStoreBucket): Future[Either[FileStoreError, List[FileStoreFileSummary]]] = {
+    Future.successful {
+      try {
+        Right(listObjects(bucket))
+      } catch {
+        case e: AmazonClientException =>
+          Left(FileStoreError("Could not get file summaries."))
+      }
+    }
   }
 
   def getFileIds(bucket: FileStoreBucket): Future[Either[FileStoreError, List[FileStoreFileId]]] = {
-    val listRequest = new ListObjectsRequest()
-    listRequest.setBucketName(bucketName(bucket))
-
     Future.successful {
       try {
-        Right(client.listObjects(listRequest).getObjectSummaries.toList.map(s => FileStoreFileId(s.getKey)))
+        Right(listObjects(bucket).map(s => FileStoreFileId(s.key)))
       } catch {
         case e: AmazonClientException =>
           Left(FileStoreError("Could not get file ids."))
@@ -219,7 +233,7 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
   def putFile(bucket: FileStoreBucket, id: Option[String], metadata: FileStoreFileMetadata, file: InputStream): Future[Either[FileStoreError, FileStoreFileMetadata]] = {
     Future.successful {
       try {
-        val result = client.putObject(new PutObjectRequest(bucketName(bucket), id.getOrElse(generateId), file, transform(metadata)))
+        client.putObject(new PutObjectRequest(bucketName(bucket), id.getOrElse(generateId), file, transform(metadata)))
         Right(metadata)
       } catch {
         case e: AmazonClientException =>
@@ -231,11 +245,23 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
   def deleteFile(bucket: FileStoreBucket, id: String): Future[Either[FileStoreError, FileStoreSuccess]] = {
     Future.successful {
       try {
-        val result = new DeleteObjectRequest(bucketName(bucket), id)
+        client.deleteObject(new DeleteObjectRequest(bucketName(bucket), id))
         Right(FileStoreSuccess())
       } catch {
         case e: AmazonClientException =>
-          Left(FileStoreError("Could not delete file."))
+          Left(FileStoreError(s"Could not delete file with key $id."))
+      }
+    }
+  }
+
+  def deleteFiles(bucket: FileStoreBucket, ids: List[String]): Future[Either[FileStoreError, FileStoreSuccess]] = {
+    Future.successful {
+      try {
+        client.deleteObjects(new DeleteObjectsRequest(bucketName(bucket)).withKeys(ids: _*))
+        Right(FileStoreSuccess())
+      } catch {
+        case e: AmazonClientException =>
+          Left(FileStoreError(s"Could not delete files with keys ${ids.mkString}."))
       }
     }
   }
@@ -317,7 +343,7 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
         val result = FileStoreBucket.AllFileStoreBuckets map { bucket =>
           client.createBucket(new CreateBucketRequest(bucketName(bucket)))
 
-          configureLifeCycle(bucket)
+          // FIXME This doesn't work with our current provider's s3 instance configureLifeCycle(bucket)
         }
         Right(FileStoreSuccess())
       } catch {
@@ -325,5 +351,33 @@ class S3FileStore(override val mandant: String, mandantConfiguration: MandantCon
           Left(FileStoreError(s"Could not create buckets. $e"))
       }
     }
+  }
+
+  protected def generateId = UUID.randomUUID.toString
+
+  protected def transform(metadata: Map[String, String]): FileStoreFileMetadata = {
+    if (metadata.isEmpty) logger.warn("There was no metadata stored with this file.")
+    val fileType = FileType(metadata.get("fileType").getOrElse("").toLowerCase)
+    FileStoreFileMetadata(metadata.get("name").getOrElse(""), fileType)
+  }
+
+  protected def transform(metadata: FileStoreFileMetadata): ObjectMetadata = {
+    val result = new ObjectMetadata()
+    result.addUserMetadata("name", metadata.name)
+    result.addUserMetadata("fileType", metadata.fileType.getClass.getSimpleName)
+    result
+  }
+
+  protected def transform(s3ObjectSummary: S3ObjectSummary): FileStoreFileSummary = {
+    FileStoreFileSummary(
+      s3ObjectSummary.getKey,
+      s3ObjectSummary.getETag,
+      s3ObjectSummary.getSize,
+      new DateTime(s3ObjectSummary.getLastModified)
+    )
+  }
+
+  protected def listObjects(bucket: FileStoreBucket): List[FileStoreFileSummary] = {
+    client.listObjects(new ListObjectsRequest().withBucketName(bucketName(bucket))).getObjectSummaries.toList map (transform)
   }
 }

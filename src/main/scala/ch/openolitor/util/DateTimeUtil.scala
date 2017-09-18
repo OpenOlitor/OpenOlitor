@@ -24,9 +24,26 @@ package ch.openolitor.util
 
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
+import com.github.nscala_time.time.DurationBuilder
+import scala.concurrent.duration.{ Duration, FiniteDuration }
 
 object DateTimeUtil {
   implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
 
   implicit def localDateOrdering: Ordering[LocalDate] = Ordering.fromLessThan(_ isBefore _)
+
+  /**
+   * Convert a `java.time.Duration` to Scala's `Duration`
+   */
+  implicit def javaDurationToDuration(d: java.time.Duration): Duration =
+    Duration.fromNanos(d.toNanos)
+
+  /**
+   * Convert a `java.time.Duration` to `org.joda.time.Duration`
+   */
+  implicit def javaDurationToJodaDuration(d: java.time.Duration): org.joda.time.Duration =
+    org.joda.time.Duration.millis(d.toMillis)
+
+  implicit def nscalaDurationBuilderToFiniteDuration(x: DurationBuilder): FiniteDuration =
+    scala.concurrent.duration.Duration.fromNanos(x.standardDuration.getMillis * 1000000)
 }
