@@ -739,7 +739,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
     logger.debug(s"Create Koerbe:${lieferung.id}")
     stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
-      val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
+      val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.vertriebId, lieferung.datum, lieferung.lieferplanungId)
       abos map { abo =>
         upsertKorb(lieferung, abo, abotyp)
       }
@@ -747,6 +747,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     } getOrElse (lieferung)
   }
 
+  // TODO zusammenführen mit createLieferplanung!!!
   def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, data: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       val project = stammdatenWriteRepository.getProjekt
@@ -778,6 +779,13 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
           //create koerbe
           val adjustedLieferung = createKoerbe(updatedLieferung)
+
+          // hole alle zusatzabotypen (koerbe -> abos -> zusatzabos -> zusatzabotypen)
+          // checke ob Lieferung für Lieferdatum und Zusatzabotyp schon existiertd.
+          // falls nicht existiert dann:
+          // Erstelle Lieferung für selbes Lieferdatum pro zusatzabotyp
+          // addLieferungToPlanung für neu erstellte Lieferung
+          //
 
           //update Lieferung
           stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
