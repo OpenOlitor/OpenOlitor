@@ -85,6 +85,7 @@ trait KorbHandler extends KorbStatusHandler
           (Some(korb), Some(korb))
         }
     }
+
   }
 
   def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Option[Korb] = {

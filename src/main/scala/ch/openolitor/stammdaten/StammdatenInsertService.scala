@@ -704,6 +704,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
           )
 
           //create koerbe
+          //TODO where are the Koerbe for Zusatzabos created?
           val adjustedLieferung = createKoerbe(updatedLieferung)
 
           //update Lieferung
@@ -738,6 +739,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
     logger.debug(s"Create Koerbe:${lieferung.id}")
+    // TODO abwesenheiten schon erledigt?!?
     stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
       val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.vertriebId, lieferung.datum, lieferung.lieferplanungId)
       abos map { abo =>
