@@ -79,8 +79,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createDepot(meta, id, depot)
     case EntityInsertedEvent(meta, id: AboId, abo: AboModify) =>
       createAbo(meta, id, abo)
-    case EntityInsertedEvent(meta, id: AboId, zusatzabo: ZusatzAboModify) =>
-      createZusatzAbo(meta, id, zusatzabo)
+    case EntityInsertedEvent(meta, id: AboId, zusatzAbo: ZusatzAboCreate) =>
+      createZusatzAbo(meta, id, zusatzAbo)
     case EntityInsertedEvent(meta, id: LieferungId, lieferung: LieferungAbotypCreate) =>
       createLieferung(meta, id, lieferung)
     case EntityInsertedEvent(meta, id: VertriebId, vertrieb: VertriebModify) =>
@@ -472,25 +472,25 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createZusatzAbo(meta: EventMetadata, newId: AboId, create: ZusatzAboModify)(implicit personId: PersonId = meta.originator) = {
+  def createZusatzAbo(meta: EventMetadata, newId: AboId, create: ZusatzAboCreate)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       val hauptAbo = aboById(create.hauptAboId)
       hauptAbo match {
         case Some(i) => {
-          val zusatzAbo = copyTo[ZusatzAboModify, ZusatzAbo](
+          val zusatzAbo = copyTo[ZusatzAboCreate, ZusatzAbo](
             create,
             "id" -> newId,
             "hauptAboId" -> create.hauptAboId,
-            "hauptAbotypId" -> create.hauptAbotypId,
+            "hauptAbotypId" -> i.abotypId,
             "kundeId" -> i.kundeId,
             "kunde" -> i.kunde,
             "vertriebsartId" -> i.vertriebsartId,
             "vertriebId" -> i.vertriebId,
             "vertriebBeschrieb" -> i.vertriebBeschrieb,
             "abotypId" -> create.abotypId,
-            "abotypName" -> create.abotypName,
-            "start" -> create.start,
-            "ende" -> create.ende,
+            "abotypName" -> i.abotypName,
+            "start" -> i.start,
+            "ende" -> i.ende,
             "guthabenVertraglich" -> i.guthabenVertraglich,
             "guthaben" -> i.guthaben,
             "guthabenInRechnung" -> i.guthabenInRechnung,
@@ -507,7 +507,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             stammdatenWriteRepository.insertEntity[ZusatzAbo, AboId](zusatzAbo)
           }
         }
-        case None => throw new RuntimeException("The id provided does not corresponde to any abo");
+        case None => throw new RuntimeException("The id provided does not corresponde to any zusatzabo");
       }
     }
   }

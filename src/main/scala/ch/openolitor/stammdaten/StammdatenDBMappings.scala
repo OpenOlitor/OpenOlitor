@@ -735,26 +735,26 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
       parameters(ZusatzAbo.unapply(entity).get)
     }
 
-    override def updateParameters(zusatzabo: ZusatzAbo) = {
-      super.updateParameters(zusatzabo) ++ Seq(
-        column.hauptAboId -> parameter(zusatzabo.hauptAboId),
-        column.hauptAbotypId -> parameter(zusatzabo.hauptAbotypId),
-        column.kundeId -> parameter(zusatzabo.kundeId),
-        column.kunde -> parameter(zusatzabo.kunde),
-        column.vertriebsartId -> parameter(zusatzabo.vertriebsartId),
-        column.vertriebId -> parameter(zusatzabo.vertriebId),
-        column.vertriebBeschrieb -> parameter(zusatzabo.vertriebBeschrieb),
-        column.abotypId -> parameter(zusatzabo.abotypId),
-        column.abotypName -> parameter(zusatzabo.abotypName),
-        column.start -> parameter(zusatzabo.start),
-        column.ende -> parameter(zusatzabo.ende),
-        column.guthabenVertraglich -> parameter(zusatzabo.guthabenVertraglich),
-        column.guthaben -> parameter(zusatzabo.guthaben),
-        column.guthabenInRechnung -> parameter(zusatzabo.guthabenInRechnung),
-        column.letzteLieferung -> parameter(zusatzabo.letzteLieferung),
-        column.anzahlAbwesenheiten -> parameter(zusatzabo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(zusatzabo.anzahlLieferungen),
-        column.aktiv -> parameter(zusatzabo.aktiv)
+    override def updateParameters(zusatzAbo: ZusatzAbo) = {
+      super.updateParameters(zusatzAbo) ++ Seq(
+        column.hauptAboId -> parameter(zusatzAbo.hauptAboId),
+        column.hauptAbotypId -> parameter(zusatzAbo.hauptAbotypId),
+        column.kundeId -> parameter(zusatzAbo.kundeId),
+        column.kunde -> parameter(zusatzAbo.kunde),
+        column.vertriebsartId -> parameter(zusatzAbo.vertriebsartId),
+        column.vertriebId -> parameter(zusatzAbo.vertriebId),
+        column.vertriebBeschrieb -> parameter(zusatzAbo.vertriebBeschrieb),
+        column.abotypId -> parameter(zusatzAbo.abotypId),
+        column.abotypName -> parameter(zusatzAbo.abotypName),
+        column.start -> parameter(zusatzAbo.start),
+        column.ende -> parameter(zusatzAbo.ende),
+        column.guthabenVertraglich -> parameter(zusatzAbo.guthabenVertraglich),
+        column.guthaben -> parameter(zusatzAbo.guthaben),
+        column.guthabenInRechnung -> parameter(zusatzAbo.guthabenInRechnung),
+        column.letzteLieferung -> parameter(zusatzAbo.letzteLieferung),
+        column.anzahlAbwesenheiten -> parameter(zusatzAbo.anzahlAbwesenheiten),
+        column.anzahlLieferungen -> parameter(zusatzAbo.anzahlLieferungen),
+        column.aktiv -> parameter(zusatzAbo.aktiv)
       )
     }
   }
