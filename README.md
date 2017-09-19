@@ -3,11 +3,11 @@
 Server Backend der OpenOlitor Administrationsplattform
 
 ## Entwicklungs-Setup
-Die Dokumentation steht im Wiki zur Verfügung:
-https://github.com/OpenOlitor/openolitor-server/wiki/Entwicklungs-Setup
+https://github.com/OpenOlitor/OpenOlitor/wiki/Doku-Technisch_Server_Ent-Setup
 
-## REST Schnittstellen
-https://github.com/OpenOlitor/openolitor-server/wiki/REST-Schnittstellen
+## Dokumentation
+Die gesamte Dokumentation befindet sich auf dem OpenOlitor-Projekt-Wiki
+https://github.com/OpenOlitor/OpenOlitor/wiki/
 
 ## bumpversion.sh
 Mittels `./bumpversion.sh` (`./bumpversion.sh -v 1.0.x`) wird die Version in `project/Build.scala` erhöht.
