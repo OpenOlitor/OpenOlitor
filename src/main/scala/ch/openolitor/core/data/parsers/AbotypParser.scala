@@ -25,9 +25,8 @@ package ch.openolitor.core.data.parsers
 import ch.openolitor.core.data.EntityParser
 import ch.openolitor.core.models._
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.data.ParseException
 import ch.openolitor.util.DateTimeUtil
-import java.util.Locale
+import org.joda.time.LocalDate
 import org.joda.time.DateTime
 import akka.event.LoggingAdapter
 
@@ -53,8 +52,8 @@ object AbotypParser extends EntityParser {
         name = row.value[String](indexName),
         beschreibung = row.value[Option[String]](indexBeschreibung),
         lieferrhythmus = Rhythmus(row.value[String](indexlieferrhytmus)),
-        aktivVon = row.value[Option[DateTime]](indexAktivVon),
-        aktivBis = row.value[Option[DateTime]](indexAktivBis),
+        aktivVon = row.value[Option[LocalDate]](indexAktivVon),
+        aktivBis = row.value[Option[LocalDate]](indexAktivBis),
         preis = row.value[BigDecimal](indexPreis),
         preiseinheit = Preiseinheit(row.value[String](indexPreiseinheit)),
         laufzeit = row.value[Option[Int]](indexLaufzeit),
