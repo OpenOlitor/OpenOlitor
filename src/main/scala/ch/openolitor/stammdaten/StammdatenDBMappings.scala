@@ -245,12 +245,16 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
         column.laufzeiteinheit -> parameter(zusatzabotyp.laufzeiteinheit),
         column.vertragslaufzeit -> parameter(zusatzabotyp.vertragslaufzeit),
         column.kuendigungsfrist -> parameter(zusatzabotyp.kuendigungsfrist),
+        column.anzahlAbwesenheiten -> parameter(zusatzabotyp.anzahlAbwesenheiten),
         column.farbCode -> parameter(zusatzabotyp.farbCode),
         column.zielpreis -> parameter(zusatzabotyp.zielpreis),
+        column.guthabenMindestbestand -> parameter(zusatzabotyp.guthabenMindestbestand),
         column.adminProzente -> parameter(zusatzabotyp.adminProzente),
+        column.wirdGeplant -> parameter(zusatzabotyp.wirdGeplant),
         column.anzahlAbonnenten -> parameter(zusatzabotyp.anzahlAbonnenten),
         column.anzahlAbonnentenAktiv -> parameter(zusatzabotyp.anzahlAbonnentenAktiv),
-        column.letzteLieferung -> parameter(zusatzabotyp.letzteLieferung)
+        column.letzteLieferung -> parameter(zusatzabotyp.letzteLieferung),
+        column.waehrung -> parameter(zusatzabotyp.waehrung)
       )
     }
   }
