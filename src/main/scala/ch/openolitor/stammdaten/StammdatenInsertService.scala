@@ -360,6 +360,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(postlieferungAboMapping, aboId)
   }
 
+  private def zusatzAboTypById(zusatzAbotypId: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp] = {
+    stammdatenWriteRepository.getById(zusatzAbotypMapping, zusatzAbotypId)
+  }
+
   private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     stammdatenWriteRepository.getById(abotypMapping, abotypId)
   }
@@ -475,40 +479,53 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createZusatzAbo(meta: EventMetadata, newId: AboId, create: ZusatzAboCreate)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       val hauptAbo = aboById(create.hauptAboId)
+      val zusatzAbotyp = zusatzAboTypById(create.abotypId)
       hauptAbo match {
-        case Some(i) => {
-          val zusatzAbo = copyTo[ZusatzAboCreate, ZusatzAbo](
-            create,
-            "id" -> newId,
-            "hauptAboId" -> create.hauptAboId,
-            "hauptAbotypId" -> i.abotypId,
-            "kundeId" -> i.kundeId,
-            "kunde" -> i.kunde,
-            "vertriebsartId" -> i.vertriebsartId,
-            "vertriebId" -> i.vertriebId,
-            "vertriebBeschrieb" -> i.vertriebBeschrieb,
-            "abotypId" -> create.abotypId,
-            "abotypName" -> i.abotypName,
-            "start" -> i.start,
-            "ende" -> i.ende,
-            "guthabenVertraglich" -> i.guthabenVertraglich,
-            "guthaben" -> i.guthaben,
-            "guthabenInRechnung" -> i.guthabenInRechnung,
-            "letzteLieferung" -> i.letzteLieferung,
-            "anzahlAbwesenheiten" -> i.anzahlAbwesenheiten,
-            "anzahlLieferungen" -> i.anzahlLieferungen,
-            "aktiv" -> i.aktiv,
-            "erstelldat" -> meta.timestamp,
-            "ersteller" -> meta.originator,
-            "modifidat" -> meta.timestamp,
-            "modifikator" -> meta.originator
-          )
-          DB autoCommitSinglePublish { implicit session => implicit publisher =>
-            stammdatenWriteRepository.insertEntity[ZusatzAbo, AboId](zusatzAbo)
+        case Some(h) => {
+          zusatzAbotyp match {
+            case Some(z) => {
+              val minStartDate = minDate(h.start, z.aktivVon)
+              val zusatzAbo = copyTo[ZusatzAboCreate, ZusatzAbo](
+                create,
+                "id" -> newId,
+                "hauptAbotypId" -> h.abotypId,
+                "kunde" -> h.kunde,
+                "vertriebsartId" -> h.vertriebsartId,
+                "vertriebId" -> h.vertriebId,
+                "vertriebBeschrieb" -> h.vertriebBeschrieb,
+                "abotypName" -> z.name,
+                "start" -> minStartDate,
+                "ende" -> h.ende,
+                "guthabenVertraglich" -> h.guthabenVertraglich,
+                "guthaben" -> h.guthaben,
+                "guthabenInRechnung" -> h.guthabenInRechnung,
+                "letzteLieferung" -> h.letzteLieferung,
+                "anzahlAbwesenheiten" -> h.anzahlAbwesenheiten,
+                "anzahlLieferungen" -> h.anzahlLieferungen,
+                "aktiv" -> h.aktiv,
+                "erstelldat" -> meta.timestamp,
+                "ersteller" -> meta.originator,
+                "modifidat" -> meta.timestamp,
+                "modifikator" -> meta.originator
+              )
+              DB autoCommitSinglePublish { implicit session => implicit publisher =>
+                stammdatenWriteRepository.insertEntity[ZusatzAbo, AboId](zusatzAbo)
+              }
+            }
+            case None => throw new RuntimeException("The id provided does not corresponde to any zusatzabotyp");
           }
         }
         case None => throw new RuntimeException("The id provided does not corresponde to any zusatzabo");
       }
+    }
+  }
+
+  def minDate(date1: LocalDate, date2: Option[LocalDate]) = {
+    date2 match {
+      case Some(d2) => {
+        if ((date1 compareTo d2) > 0) date1 else d2
+      }
+      case None => date1
     }
   }
 
