@@ -27,6 +27,7 @@ import ch.openolitor.core.models._
 import org.joda.time.LocalDate
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple26
+import ch.openolitor.core.scalax.Tuple25
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -108,8 +109,8 @@ sealed trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product w
   val id: AbotypId
   val name: String
   val beschreibung: Option[String]
-  val aktivVon: Option[DateTime]
-  val aktivBis: Option[DateTime]
+  val aktivVon: Option[LocalDate]
+  val aktivBis: Option[LocalDate]
   val preis: BigDecimal
   val preiseinheit: Preiseinheit
   val laufzeit: Option[Int]
@@ -223,8 +224,8 @@ case class ZusatzAbotyp(
   id: AbotypId,
   name: String,
   beschreibung: Option[String],
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
+  aktivVon: Option[LocalDate],
+  aktivBis: Option[LocalDate],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],
@@ -284,8 +285,8 @@ object ZusatzAbotyp {
 case class ZusatzAbotypModify(
   name: String,
   beschreibung: Option[String],
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
+  aktivVon: Option[LocalDate],
+  aktivBis: Option[LocalDate],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],
