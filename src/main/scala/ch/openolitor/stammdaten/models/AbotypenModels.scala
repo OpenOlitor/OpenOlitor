@@ -82,7 +82,6 @@ case object Unbeschraenkt extends Laufzeiteinheit
 
 object Laufzeiteinheit {
   def apply(value: String): Laufzeiteinheit = {
-    Vector(Unbeschraenkt, Lieferungen, Monate) find (_.toString == value) getOrElse (Lieferungen)
   }
 }
 
