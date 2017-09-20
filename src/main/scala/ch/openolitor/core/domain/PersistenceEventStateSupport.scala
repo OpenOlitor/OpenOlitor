@@ -65,12 +65,10 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
         lastTransactionNr = tnr
         lastSequenceNr = snr
         dbState = state
-        // log.trace(s"Initialize PersistenceEventStateSupport ${persistenceStateStoreId} to lastSequenceNr: $lastTransactionNr.$lastSequenceNr")
         dbInitialized()
         super.preStart()
       case Failure(e) =>
         log.warning(s"Failed initializing DB, stopping PersistenceEventStateSupport ${persistenceStateStoreId}")
-      //self ! PoisonPill
       case x =>
         log.warning(s"Received unexpected result:$x")
     }
