@@ -52,6 +52,9 @@ class SystemActor(sysConfig: SystemConfig, airbrakeNotifier: ActorRef) extends A
       Restart
   }
 
+  /**
+   * Use onFailureBackoff to restart after Exceptions delayed by an exponential backoff function
+   */
   private def onFailureBackoff(childProps: Props, childName: String) = BackoffSupervisor.props(
     Backoff.onFailure(
       childProps,
@@ -63,6 +66,9 @@ class SystemActor(sysConfig: SystemConfig, airbrakeNotifier: ActorRef) extends A
       .withSupervisorStrategy(supervisorStrategy)
   )
 
+  /**
+   * Use onStopBackoff Strategy for Actors which indicate stopping as an error (i.e. PersistentActor)
+   */
   private def onStopBackoff(childProps: Props, childName: String) = BackoffSupervisor.props(
     Backoff.onStop(
       childProps,
