@@ -438,6 +438,16 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           stammdatenWriteRepository.updateEntity[Kunde, KundeId](copy)
         }
       }
+      // Recalculate sort field on Persons
+      personen.zipWithIndex.map {
+        case (person, index) =>
+          val sortValue = (index + 1)
+          if (sortValue != person.sort) {
+            logger.debug(s"Update sort for Person {person.id} {person.vorname} {person.name} to {sortValue}")
+            val copy = person.copy(sort = sortValue)
+            stammdatenWriteRepository.updateEntity[Person, PersonId](copy)
+          }
+      }
     }
   }
 
