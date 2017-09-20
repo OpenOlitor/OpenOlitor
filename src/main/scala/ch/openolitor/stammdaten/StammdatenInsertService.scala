@@ -484,7 +484,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         case Some(h) => {
           zusatzAbotyp match {
             case Some(z) => {
-              val minStartDate = minDate(h.start, z.aktivVon)
+              val startDate = defaultDateStart(h.start, z.aktivVon)
+              val endDate = defaultDateEnd(h.ende, z.aktivBis)
               val zusatzAbo = copyTo[ZusatzAboCreate, ZusatzAbo](
                 create,
                 "id" -> newId,
@@ -494,8 +495,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                 "vertriebId" -> h.vertriebId,
                 "vertriebBeschrieb" -> h.vertriebBeschrieb,
                 "abotypName" -> z.name,
-                "start" -> minStartDate,
-                "ende" -> h.ende,
+                "start" -> startDate,
+                "ende" -> endDate,
                 "guthabenVertraglich" -> h.guthabenVertraglich,
                 "guthaben" -> h.guthaben,
                 "guthabenInRechnung" -> h.guthabenInRechnung,
@@ -520,12 +521,26 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def minDate(date1: LocalDate, date2: Option[LocalDate]) = {
+  def defaultDateStart(date1: LocalDate, date2: Option[LocalDate]): LocalDate = {
     date2 match {
       case Some(d2) => {
         if ((date1 compareTo d2) > 0) date1 else d2
       }
       case None => date1
+    }
+  }
+
+  def defaultDateEnd(date1: Option[LocalDate], date2: Option[LocalDate]): Option[LocalDate] = {
+    date1 match {
+      case Some(d1) => {
+        date2 match {
+          case Some(d2) => {
+            if ((d1 compareTo d2) < 0) date1 else date2
+          }
+          case None => date1
+        }
+      }
+      case None => date2
     }
   }
 
