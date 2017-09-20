@@ -380,7 +380,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       val newPersons = partitions._2.zipWithIndex.map {
         case (newPerson, index) =>
           //generate persistent id for new person
-          val sort = partitions._1.length + index
+          val sort = partitions._1.length + index + 1
           val personCreate = copyTo[PersonModify, PersonCreate](newPerson, "kundeId" -> id, "sort" -> sort)
           val event = EntityInsertedEvent(meta, PersonId(idFactory(classOf[PersonId])), personCreate)
           (event, newPerson.copy(id = Some(event.id)))
