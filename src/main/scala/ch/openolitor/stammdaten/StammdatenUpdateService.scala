@@ -162,8 +162,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       }
     }
   }
-
-  private def updateDepotlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit personId: PersonId = meta.originator): Unit = {
+      
+  def updateDepotlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit personId: PersonId = meta.originator): Unit = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(depotlieferungMapping, id) map { depotlieferung =>
         //map all updatable fields
