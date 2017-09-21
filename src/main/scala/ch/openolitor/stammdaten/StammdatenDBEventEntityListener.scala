@@ -517,7 +517,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         }
       }
 
-      // TODO get Koerbe for Zusatzabos, mark them as abwesend?
       stammdatenUpdateRepository.getKorb(abw.lieferungId, abw.aboId) match {
         case Some(korb) => {
           log.debug(s"Modify Korb-Status as Abwesenheit was created : ${korb.id}: ${FaelltAusAbwesend}.")
@@ -526,15 +525,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
       }
 
+      // TODO get Koerbe for Zusatzabos, mark them as abwesend?
       // hole alle zusatzaboids
-      stammdatenUpdateRepository.getKorb(abw.lieferungId, zusatzaboids) match {
-        case Some(korb) => {
-          log.debug(s"Modify Korb-Status as Abwesenheit was created : ${korb.id}: ${FaelltAusAbwesend}.")
-          stammdatenUpdateRepository.updateEntity[Korb, KorbId](korb.id)(korbMapping.column.status -> FaelltAusAbwesend)
-        }
-        case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
+      stammdatenUpdateRepository.getZusatzAboKorb(abw.lieferungId, abw.aboId).map { zusatzKorb =>
+        stammdatenUpdateRepository.updateEntity[Korb, KorbId](zusatzKorb.id)(korbMapping.column.status -> FaelltAusAbwesend)
       }
-
     }
   }
 
