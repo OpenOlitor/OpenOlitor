@@ -32,8 +32,9 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import ch.openolitor.core.models._
-import org.joda.time.LocalDate
+import org.joda.time.{ DateTime, LocalDate }
 import ch.openolitor.core.Macros._
+
 import scala.collection.immutable.TreeMap
 import scalikejdbc.DBSession
 import org.joda.time.format.DateTimeFormat
@@ -769,18 +770,19 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   private def updateLieferungUndZusatzLieferung(meta: EventMetadata, lieferplanungId: LieferplanungId, project: Option[Projekt], lieferung: Lieferung)(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Lieferung = {
+
+    println(s"XXXXXXXXXXXX updateLieferungUndZusatzLieferung XXXXXXXXXXXXXXXXXXXXXX")
+
     val adjustedLieferung = updateLieferung(meta, lieferplanungId, project, lieferung)
 
-    // hole alle zusatzabotypen (koerbe -> abos -> zusatzabos -> zusatzabotypen)
-    val existingZusatzAbotypen: List[ZusatzAbotyp] = stammdatenWriteRepository.getExistingZusatzAbotypen(adjustedLieferung.id)
-
-    existingZusatzAbotypen.map { zTyp =>
+    stammdatenWriteRepository.getExistingZusatzAbotypen(adjustedLieferung.id).map { zTyp =>
 
       // checke ob Lieferung für Lieferplanung und Zusatzabotyp schon existiertd.
       // falls nicht existiert dann:
       // Erstelle Lieferung für selbes Lieferdatum pro zusatzabotyp
       // addLieferungToPlanung für neu erstellte Lieferung
       //
+      println(s"XXXXXXXXXXXX existingZusatzAbotypen: $zTyp XXXXXXXXXXXXXXXXXXXXXX")
 
       val asdf = stammdatenWriteRepository.getExistingZusatzaboLieferung(zTyp.id, lieferplanungId)
       asdf match {

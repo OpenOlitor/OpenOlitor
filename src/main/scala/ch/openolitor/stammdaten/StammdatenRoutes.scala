@@ -301,7 +301,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   private def zusatzAboTypenRoute(implicit subject: Subject, filter: Option[FilterExpr]): Route =
-    path("zusatzabotypen") {
+    path("zusatzAbotypen") {
       get(list(stammdatenReadRepository.getZusatzAbotypen)) ~
         post(create[ZusatzAbotypModify, AbotypId](AbotypId.apply))
     } ~
