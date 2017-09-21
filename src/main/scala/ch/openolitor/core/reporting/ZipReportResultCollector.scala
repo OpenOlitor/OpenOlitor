@@ -31,18 +31,22 @@ import ch.openolitor.core.jobs.JobQueueService
 import spray.http.MediaTypes
 import ch.openolitor.core.DateFormats
 import ch.openolitor.core.jobs.JobQueueService.FileResultPayload
+import java.io.File
+import java.io.FileOutputStream
+import ch.openolitor.util.ZipBuilderWithFile
 
 object ZipReportResultCollector {
   def props(reportSystem: ActorRef, jobQueueService: ActorRef): Props = Props(classOf[ZipReportResultCollector], reportSystem, jobQueueService)
 }
 
 /**
- * Collect all results into a zip file. Send back the zip result when all reports got generated
+ * Collect all results into a zip file. Send back the zip result when all reports got generated.
+ * This ResultCollector stores the generated documents in a local zip which will eventually cause out of disk space errors.
  */
 class ZipReportResultCollector(reportSystem: ActorRef, override val jobQueueService: ActorRef) extends ResultCollector with DateFormats {
 
   var origSender: Option[ActorRef] = None
-  val zipBuilder: ZipBuilder = new ZipBuilder
+  val zipBuilder: ZipBuilder = new ZipBuilderWithFile()
   var errors: Seq[ReportError] = Seq()
 
   val receive: Receive = {

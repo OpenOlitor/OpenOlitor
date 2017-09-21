@@ -45,5 +45,4 @@ object ConfigUtil {
     def getBooleanOption(path: String): Option[Boolean] = getOption(path)(path => self.getBoolean(path))
     def getLongOption(path: String): Option[Long] = getOption(path)(path => self.getLong(path))
   }
-
 }

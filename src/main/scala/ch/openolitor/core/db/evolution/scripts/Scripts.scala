@@ -25,12 +25,7 @@ package ch.openolitor.core.db.evolution.scripts
 import ch.openolitor.core.db.evolution.scripts.v1._
 import ch.openolitor.core.db.evolution.scripts.v2._
 import akka.actor.ActorSystem
-import ch.openolitor.core.db.evolution.scripts.v1.OO618_DBScripts
-import ch.openolitor.core.db.evolution.scripts.v1.OO597_Index_DBScripts
-import ch.openolitor.core.db.evolution.scripts.v1.OO597_DBScripts
-import ch.openolitor.core.db.evolution.scripts.v1.OO554_DBScripts
-import ch.openolitor.core.db.evolution.scripts.v1.OO291_OO396_DBScripts
-import ch.openolitor.core.db.evolution.scripts.v1.OO281_DBScripts
+import ch.openolitor.core.db.evolution.scripts.v1.OO350_DBScripts
 
 object Scripts {
   def current(system: ActorSystem) =

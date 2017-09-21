@@ -25,7 +25,11 @@ package ch.openolitor.buchhaltung.zahlungsimport
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import ch.openolitor.stammdaten.models.Waehrung
-import ch.openolitor.buchhaltung.zahlungsimport.esr.Transaktionsart
+
+sealed trait Transaktionsart
+case object Gutschrift extends Transaktionsart
+case object Storno extends Transaktionsart
+case object Korrektur extends Transaktionsart
 
 trait ZahlungsImportRecordResult {
   val betrag: BigDecimal
@@ -33,7 +37,9 @@ trait ZahlungsImportRecordResult {
 }
 
 trait ZahlungsImportRecord extends ZahlungsImportRecordResult {
-  val teilnehmerNummer: String
+  val teilnehmerNummer: Option[String]
+  val iban: Option[String]
+  val debitor: Option[String]
   val referenzNummer: String
   val waehrung: Waehrung
   val aufgabeDatum: DateTime

@@ -74,7 +74,7 @@ INSERT INTO RechnungsPosition
    status, typ, sort, erstelldat, ersteller, modifidat, modifikator)
 SELECT 
    id, id, abo_id, kunde_id, betrag, waehrung, anzahl_lieferungen, titel, 
-   CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Offen' END AS status, 'Abo', 1, erstelldat, ersteller, modifidat, modifikator FROM Rechnung
+   CASE WHEN status = 'Bezahlt' then 'Bezahlt' else 'Zugewiesen' END AS status, 'Abo', 1, erstelldat, ersteller, modifidat, modifikator FROM Rechnung
 """.execute.apply()
       Success(true)
     }

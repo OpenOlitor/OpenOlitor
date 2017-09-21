@@ -143,9 +143,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     case e @ EntityModified(userId, entity: Depot, orig: Depot) => handleDepotModified(entity, orig)(userId)
     case e @ EntityModified(userId, entity: Korb, orig: Korb) if entity.status != orig.status => handleKorbStatusChanged(entity, orig.status)(userId)
 
-    case e @ EntityCreated(personId, entity: Korb) => handleKorbCreated(entity)(personId)
-    case e @ EntityDeleted(personId, entity: Korb) => handleKorbDeleted(entity)(personId)
-
     case x => //log.debug(s"receive unused event $x")
   }
 
@@ -401,25 +398,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleKorbDeleted(korb: Korb)(implicit personId: PersonId) = {
-    updateLieferungWithCount(korb, -1)
-  }
-
-  def handleKorbCreated(korb: Korb)(implicit personId: PersonId) = {
-    // Lieferung Counts bereits gesetzt im InsertService
-  }
-
-  private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId) = {
-    DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenUpdateRepository.modifyEntity[Lieferung, LieferungId](korb.lieferungId)(lieferung =>
-        Map(
-          lieferungMapping.column.anzahlKoerbeZuLiefern -> (if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern),
-          lieferungMapping.column.anzahlAbwesenheiten -> (if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten),
-          lieferungMapping.column.anzahlSaldoZuTief -> (if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief)
-        ))
-    }
-  }
-
   def handleKundeModified(kunde: Kunde, orig: Kunde)(implicit personId: PersonId) = {
     //compare typen
     //find removed typen
@@ -460,7 +438,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit personId: PersonId) = {
+  private def handleAbwesenheitDeleted(abw: Abwesenheit)(implicit personId: PersonId): Unit = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenUpdateRepository.getProjekt map { projekt =>
         val geschaeftsjahrKey = projekt.geschaftsjahr.key(abw.datum)
@@ -539,7 +517,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleKorbStatusChanged(korb: Korb, statusAlt: KorbStatus)(implicit personId: PersonId) = {
+  private def handleKorbStatusChanged(korb: Korb, statusAlt: KorbStatus)(implicit personId: PersonId): Unit = {
     DB localTxPostPublish { implicit session => implicit publisher =>
 
       stammdatenUpdateRepository.modifyEntity[Lieferung, LieferungId](korb.lieferungId) { lieferung =>
@@ -552,6 +530,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           lieferungMapping.column.anzahlAbwesenheiten -> result.anzahlAbwesenheiten,
           lieferungMapping.column.anzahlSaldoZuTief -> result.anzahlSaldoZuTief
         )
+        // TODO who is changing KorbStatus?
+        // kann the handle KorbStatusChanged be removed and the recaculate be done?
       }
     }
   }

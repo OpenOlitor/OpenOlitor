@@ -70,6 +70,15 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
     }.map(rechnungsPositionMapping(rechnungsPosition)).list
   }
 
+  protected def getRechnungsPositionenByRechnungsIdQuery(rechnungId: RechnungId) = {
+    withSQL {
+      select
+        .from(rechnungsPositionMapping as rechnungsPosition)
+        .where.eq(rechnungsPosition.rechnungId, parameter(rechnungId))
+        .orderBy(rechnungsPosition.id)
+    }.map(rechnungsPositionMapping(rechnungsPosition)).list
+  }
+
   protected def getKundenRechnungenQuery(kundeId: KundeId) = {
     withSQL {
       select
@@ -101,12 +110,14 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
       .map({ (rechnung, kunden, rechnungsPositionen, pl, hl, dl) =>
         val kunde = kunden.head
         val abos = pl ++ hl ++ dl
-        val rechnungsPositionenDetail = for {
-          rechnungsPosition <- rechnungsPositionen
-          abo <- abos.find(_.id == rechnungsPosition.aboId.orNull)
-        } yield {
-          copyTo[RechnungsPosition, RechnungsPositionDetail](rechnungsPosition, "abo" -> abo)
-        }
+        val rechnungsPositionenDetail = {
+          for {
+            rechnungsPosition <- rechnungsPositionen
+            abo <- abos.find(_.id == rechnungsPosition.aboId.orNull)
+          } yield {
+            copyTo[RechnungsPosition, RechnungsPositionDetail](rechnungsPosition, "abo" -> abo)
+          }
+        }.sortBy(_.sort.getOrElse(0))
 
         copyTo[Rechnung, RechnungDetail](rechnung, "kunde" -> kunde, "rechnungsPositionen" -> rechnungsPositionenDetail)
       }).single

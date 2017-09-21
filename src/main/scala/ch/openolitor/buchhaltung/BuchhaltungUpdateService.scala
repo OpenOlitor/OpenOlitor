@@ -67,7 +67,8 @@ class BuchhaltungUpdateService(override val sysConfig: SystemConfig) extends Eve
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       buchhaltungWriteRepository.updateEntity(id)(
         rechnungsPositionMapping.column.rechnungId -> Some(update.rechnungId),
-        rechnungsPositionMapping.column.status -> RechnungsPositionStatus.Zugewiesen
+        rechnungsPositionMapping.column.status -> RechnungsPositionStatus.Zugewiesen,
+        rechnungsPositionMapping.column.sort -> Some(update.sort)
       )
     }
   }

@@ -20,20 +20,26 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.calculations
+package ch.openolitor.buchhaltung.zahlungsimport.iso20022
 
-import akka.actor.Props
-import akka.actor.Actor
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.calculations.StammdatenCalculations
-import akka.actor.ActorSystem
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorRef
+import ch.openolitor.buchhaltung.zahlungsimport.{ Transaktionsart, ZahlungsImportRecord }
+import ch.openolitor.stammdaten.models.{ CHF, Waehrung }
 
-object OpenOlitorCalculations {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorCalculations], sysConfig, system, entityStore)
-}
+import org.joda.time.DateTime
 
-class OpenOlitorCalculations(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseCalculationsSupervisor {
-  override lazy val calculators = Set(context.actorOf(StammdatenCalculations.props(sysConfig, system, entityStore)))
+case class Camt054Record(
+    teilnehmerNummer: Option[String],
+    iban: Option[String],
+    debitor: Option[String],
+    referenzNummer: String,
+    betrag: BigDecimal,
+    waehrung: Waehrung = CHF,
+    transaktionsart: Transaktionsart,
+    aufgabereferenzen: String,
+    aufgabeDatum: DateTime,
+    verarbeitungsDatum: DateTime,
+    gutschriftsDatum: DateTime,
+    reserve: String,
+    preiseFuerEinzahlungen: BigDecimal
+) extends ZahlungsImportRecord {
 }
