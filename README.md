@@ -1,9 +1,5 @@
 [![AUR](https://img.shields.io/aur/license/yaourt.svg?maxAge=2592000)](https://raw.githubusercontent.com/OpenOlitor/OpenOlitor/master/LICENSE)
 
-Falls du Fragen hast oder dich mit uns über OpenOlitor austauschen möchtest: Komm in den Gitter-Chat!
-
-[![Gitter](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/OpenOlitor/Discussion)
-
 # OpenOlitor - Willkommen | Bienvenue | Welcome
 
 [Deutsch](#willkommen-bei-openolitor) | [Français](#bienvenue-chez-openolitor) | [English](#welcome-at-openolitor)
