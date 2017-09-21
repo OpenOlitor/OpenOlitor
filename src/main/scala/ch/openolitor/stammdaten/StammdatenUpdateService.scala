@@ -25,10 +25,7 @@ package ch.openolitor.stammdaten
 import ch.openolitor.core._
 import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
-import ch.openolitor.core.models._
 import ch.openolitor.core.domain._
-import scala.concurrent.duration._
-import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import scalikejdbc.DB
@@ -36,13 +33,8 @@ import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import ch.openolitor.stammdaten.models.AbotypModify
-import shapeless.LabelledGeneric
-import scala.concurrent.ExecutionContext.Implicits.global
-import java.util.UUID
 import ch.openolitor.core.models.PersonId
-import scala.concurrent.Future
 import scalikejdbc.DBSession
-import ch.openolitor.util.IdUtil
 import ch.openolitor.util.ConfigUtil._
 import org.joda.time.DateTime
 import ch.openolitor.core.repositories.EventPublishingImplicits._
@@ -82,6 +74,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     case EntityUpdatedEvent(meta, id: AboId, entity: HeimlieferungAboModify) => updateHeimlieferungAbo(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AboId, entity: PostlieferungAboModify) => updatePostlieferungAbo(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AboId, entity: DepotlieferungAboModify) => updateDepotlieferungAbo(meta, id, entity)
+    case EntityUpdatedEvent(meta, id: AboId, entity: ZusatzAboModify) => updateZusatzAboModify(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AboId, entity: AboGuthabenModify) => updateAboGuthaben(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AboId, entity: AboVertriebsartModify) => updateAboVertriebsart(meta, id, entity)
     case EntityUpdatedEvent(meta, id: DepotId, entity: DepotModify) => updateDepot(meta, id, entity)
@@ -156,13 +149,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         val copy = copyFrom(zusatzabotyp, update)
         stammdatenWriteRepository.updateEntityFully[ZusatzAbotyp, AbotypId](copy)
       }
-
-      stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(lieferungMapping.column.zielpreis -> update.zielpreis)
-      }
     }
   }
-      
+
   def updateDepotlieferungVertriebsart(meta: EventMetadata, id: VertriebsartId, vertriebsart: DepotlieferungAbotypModify)(implicit personId: PersonId = meta.originator): Unit = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(depotlieferungMapping, id) map { depotlieferung =>
@@ -427,7 +416,20 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  private def updatePostlieferungAbo(meta: EventMetadata, id: AboId, update: PostlieferungAboModify)(implicit personId: PersonId = meta.originator): Unit = {
+  def updateZusatzAboModify(meta: EventMetadata, id: AboId, update: ZusatzAboModify)(implicit personId: PersonId = meta.originator) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.getById(zusatzAboMapping, id) map { abo =>
+        //map all updatable fields
+        val aktiv = IAbo.calculateAktiv(update.start, update.ende)
+        val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
+        stammdatenWriteRepository.updateEntityFully[ZusatzAbo, AboId](copy)
+
+        modifyKoerbeForAboDatumChange(copy, Some(abo))
+      }
+    }
+  }
+
+  def updatePostlieferungAbo(meta: EventMetadata, id: AboId, update: PostlieferungAboModify)(implicit personId: PersonId = meta.originator): Unit = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
         //map all updatable fields

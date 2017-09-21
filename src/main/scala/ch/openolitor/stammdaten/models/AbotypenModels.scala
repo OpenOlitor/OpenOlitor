@@ -24,9 +24,10 @@ package ch.openolitor.stammdaten.models
 
 import org.joda.time.DateTime
 import ch.openolitor.core.models._
+import org.joda.time.LocalDate
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.scalax.Tuple25
 import ch.openolitor.core.scalax.Tuple26
+import ch.openolitor.core.scalax.Tuple25
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -86,11 +87,11 @@ object Laufzeiteinheit {
 }
 
 trait AktivRange {
-  val aktivVon: Option[DateTime]
-  val aktivBis: Option[DateTime]
+  val aktivVon: Option[LocalDate]
+  val aktivBis: Option[LocalDate]
 
   def aktiv = {
-    val now = DateTime.now();
+    val now = LocalDate.now();
     (aktivVon map (_.isBefore(now)) getOrElse (true)) &&
       (aktivBis map (_.isAfter(now)) getOrElse (true))
   }
@@ -108,8 +109,8 @@ sealed trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product w
   val id: AbotypId
   val name: String
   val beschreibung: Option[String]
-  val aktivVon: Option[DateTime]
-  val aktivBis: Option[DateTime]
+  val aktivVon: Option[LocalDate]
+  val aktivBis: Option[LocalDate]
   val preis: BigDecimal
   val preiseinheit: Preiseinheit
   val laufzeit: Option[Int]
@@ -138,8 +139,8 @@ case class Abotyp(
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
+  aktivVon: Option[LocalDate],
+  aktivBis: Option[LocalDate],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],
@@ -203,8 +204,8 @@ case class AbotypModify(
   name: String,
   beschreibung: Option[String],
   lieferrhythmus: Rhythmus,
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
+  aktivVon: Option[LocalDate],
+  aktivBis: Option[LocalDate],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],
@@ -223,8 +224,8 @@ case class ZusatzAbotyp(
   id: AbotypId,
   name: String,
   beschreibung: Option[String],
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
+  aktivVon: Option[LocalDate],
+  aktivBis: Option[LocalDate],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],
@@ -284,8 +285,8 @@ object ZusatzAbotyp {
 case class ZusatzAbotypModify(
   name: String,
   beschreibung: Option[String],
-  aktivVon: Option[DateTime],
-  aktivBis: Option[DateTime],
+  aktivVon: Option[LocalDate],
+  aktivBis: Option[LocalDate],
   preis: BigDecimal,
   preiseinheit: Preiseinheit,
   laufzeit: Option[Int],

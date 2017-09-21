@@ -27,6 +27,7 @@ import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
+import ch.openolitor.kundenportal.models.BelongsToKunde
 import ch.openolitor.core.scalax.Tuple23
 
 case class AboId(id: Long) extends BaseId
@@ -601,3 +602,18 @@ case class ZusatzAboDetail(
   abotyp: Option[ZusatzAbotyp],
   vertrieb: Option[Vertrieb]
 ) extends AboDetail
+
+case class ZusatzAboModify(
+  id: AboId,
+  abotypId: AbotypId,
+  hauptAboId: AboId,
+  kundeId: KundeId,
+  start: LocalDate,
+  ende: Option[LocalDate]
+) extends JSONSerializable
+
+case class ZusatzAboCreate(
+  abotypId: AbotypId,
+  hauptAboId: AboId,
+  kundeId: KundeId
+) extends JSONSerializable

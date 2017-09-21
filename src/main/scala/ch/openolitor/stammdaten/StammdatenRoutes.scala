@@ -158,6 +158,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (_, aboId, abwesenheitId) =>
         deleteAbwesenheit(abwesenheitId)
       } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "zusatzAbos") { (kundeId, aboId) =>
+        get(list(stammdatenReadRepository.getZusatzaboPerAbo(aboId))) ~
+          post(create[ZusatzAboCreate, AboId](AboId.apply _))
+      } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "zusatzAbos" / aboIdPath) { (kundeId, hauptAboId, id) =>
+        get(detail(stammdatenReadRepository.getZusatzAboDetail(id))) ~
+          (put | post)(update[ZusatzAboModify, AboId](id)) ~
+          delete(remove(id))
+      } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(stammdatenReadRepository.getPendenzen(kundeId))) ~
           post {
@@ -292,17 +301,11 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       }
 
   def zusatzAboTypenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
-    path("zusatzabotypen") {
+    path("zusatzAbotypen") {
       get(list(stammdatenReadRepository.getZusatzAbotypen)) ~
         post(create[ZusatzAbotypModify, AbotypId](AbotypId.apply))
     } ~
-      path("zusatzabotypen" / "personen" / "alle") {
-        get(list(stammdatenReadRepository.getPersonenByAbotypen))
-      } ~
-      path("zusatzabotypen" / "personen" / "aktiv") {
-        get(list(stammdatenReadRepository.getPersonenAboAktivByAbotypen))
-      } ~
-      path("zusatzabotypen" / zusatzAbotypIdPath) { id =>
+      path("zusatzAbotypen" / zusatzAbotypIdPath) { id =>
         get(detail(stammdatenReadRepository.getZusatzAbotypDetail(id))) ~
           (put | post)(update[ZusatzAbotypModify, AbotypId](id)) ~
           delete(remove(id))

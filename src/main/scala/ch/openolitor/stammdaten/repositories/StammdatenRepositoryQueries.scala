@@ -670,6 +670,22 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
+  protected def getZusatzAboDetailQuery(id: AboId) = {
+    withSQL {
+      select
+        .from(zusatzAboMapping as zusatzAbo)
+        .where.eq(zusatzAbo.id, parameter(id))
+    }.map(zusatzAboMapping(zusatzAbo)).single
+  }
+
+  protected def getZusatzAboPerAboQuery(id: AboId) = {
+    withSQL {
+      select
+        .from(zusatzAboMapping as zusatzAbo)
+        .where.eq(zusatzAbo.hauptAboId, parameter(id))
+    }.map(zusatzAboMapping(zusatzAbo)).list
+  }
+
   protected def countKoerbeQuery(auslieferungId: AuslieferungId) = {
     withSQL {
       select(count(distinct(korb.id)))
