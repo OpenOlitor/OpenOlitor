@@ -424,7 +424,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         val copy = copyFrom(abo, update, "modifidat" -> meta.timestamp, "modifikator" -> personId, "aktiv" -> aktiv)
         stammdatenWriteRepository.updateEntityFully[ZusatzAbo, AboId](copy)
 
-        modifyKoerbeForAbo(copy, Some(abo))
+        modifyKoerbeForAboDatumChange(copy, Some(abo))
       }
     }
   }
