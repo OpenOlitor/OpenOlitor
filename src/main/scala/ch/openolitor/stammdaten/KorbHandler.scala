@@ -40,9 +40,6 @@ trait KorbHandler extends KorbStatusHandler
    * @return (created/updated, existing)
    */
   def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: IAbotyp)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (Option[Korb], Option[Korb]) = {
-    // check if zusatzabo and if so has the main abo the same lieferplanung as this lieferung
-    // getHauptLieferung
-    //
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
       case None if (lieferung.lieferplanungId.isDefined) =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
@@ -85,7 +82,6 @@ trait KorbHandler extends KorbStatusHandler
           (Some(korb), Some(korb))
         }
     }
-
   }
 
   def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Option[Korb] = {
@@ -94,8 +90,7 @@ trait KorbHandler extends KorbStatusHandler
     }
   }
 
-  // TODO change to AboVertreibChange
-  def modifyKoerbeForAboDatumVertrieb(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+  def modifyKoerbeForAboVertriebChange(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
     for {
       originalAbo <- orig
       if (abo.vertriebId != originalAbo.vertriebId)
