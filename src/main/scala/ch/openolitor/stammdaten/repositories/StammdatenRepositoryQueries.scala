@@ -188,6 +188,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }.single
   }
 
+  protected def getPersonenQuery = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .orderBy(person.kundeId, person.sort)
+    }.map(personMapping(person)).list
+  }
+
   protected def getPersonenQuery(kundeId: KundeId) = {
     withSQL {
       select
