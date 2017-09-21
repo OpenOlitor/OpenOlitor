@@ -35,6 +35,7 @@ import ch.openolitor.core.EventStream
 
 trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
+  def getZusatztAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp]
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
@@ -124,6 +125,10 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
     getAbotypDetailQuery(id).apply()
+  }
+
+  def getZusatztAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp] = {
+    getZusatzAbotypDetailQuery(id).apply()
   }
 
   def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo] = {
