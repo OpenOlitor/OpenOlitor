@@ -969,10 +969,6 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       .map { (lieferplanung, lieferungen, abotypen, zusatzabotypen, positionen) =>
         val lieferungenDetails = lieferungen map { l =>
           val p = positionen.filter(_.lieferungId == l.id)
-          //val abotyp = abotypen find (_.id == l.abotypId) match {
-          //  case Some(i) => i
-          //  case None => zusatzabotypen find (_.id == l.abotypId)
-          //}
           val iabotyp = (abotypen find (_.id == l.abotypId)) orElse (zusatzabotypen find (_.id == l.abotypId))
           copyTo[Lieferung, LieferungDetail](l, "abotyp" -> iabotyp, "lieferpositionen" -> p, "lieferplanungBemerkungen" -> lieferplanung.bemerkungen)
         }
