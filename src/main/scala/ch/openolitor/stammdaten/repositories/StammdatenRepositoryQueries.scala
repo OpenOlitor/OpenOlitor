@@ -1034,21 +1034,24 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(lieferungMapping as lieferung)
-        .join(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(lieferung.abotypId, zusatzAboTyp.id)
         .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
         .where.eq(lieferung.lieferplanungId, parameter(id))
     }.one(lieferungMapping(lieferung))
       .toManies(
         rs => abotypMapping.opt(aboTyp)(rs),
+        rs => zusatzAbotypMapping.opt(zusatzAboTyp)(rs),
         rs => lieferpositionMapping.opt(lieferposition)(rs),
         rs => lieferplanungMapping.opt(lieferplanung)(rs)
       )
-      .map { (lieferung, abotyp, positionen, lieferplanung) =>
+      .map { (lieferung, abotyp, zusatzAbotyp, positionen, lieferplanung) =>
         val bemerkung = lieferplanung match {
           case Nil => None
           case x => x.head.bemerkungen
         }
-        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> abotyp.headOption, "lieferpositionen" -> positionen, "lieferplanungBemerkungen" -> bemerkung)
+        val iabotyp = abotyp.headOption orElse zusatzAbotyp.headOption
+        copyTo[Lieferung, LieferungDetail](lieferung, "abotyp" -> iabotyp, "lieferpositionen" -> positionen, "lieferplanungBemerkungen" -> bemerkung)
       }.list
   }
 
