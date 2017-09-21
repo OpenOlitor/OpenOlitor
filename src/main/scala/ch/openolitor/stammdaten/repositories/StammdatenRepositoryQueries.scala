@@ -88,7 +88,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(abotypMapping(aboTyp)).list
   }
 
-  protected def getExistingZusatzAbotypenQuery(lieferungId: LieferungId): SQLToList[ZusatzAbotyp, HasExtractor] = {
+  protected def getExistingZusatzAbotypenQuery(lieferungId: LieferungId) = {
     withSQL {
       select
         .from(zusatzAbotypMapping as zusatzAboTyp)
@@ -98,7 +98,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(zusatzAbotypMapping(zusatzAboTyp)).list
   }
 
-  protected def getZusatzAbotypenQuery(filter: Option[FilterExpr]): SQLToList[ZusatzAbotyp, HasExtractor] = {
+  protected def getZusatzAbotypenQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(zusatzAbotypMapping as zusatzAboTyp)
@@ -1405,7 +1405,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferpositionMapping(lieferposition)).list
   }
 
-  protected def getLieferpositionenByLieferungQuery(id: LieferungId): SQLToList[Lieferposition, HasExtractor] = {
+  protected def getLieferpositionenByLieferungQuery(id: LieferungId) = {
     withSQL {
       select
         .from(lieferpositionMapping as lieferposition)
@@ -1413,7 +1413,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferpositionMapping(lieferposition)).list
   }
 
-  protected def getKorbQuery(lieferungId: LieferungId, aboId: AboId): SQLToOption[Korb, HasExtractor] = {
+  protected def getKorbQuery(lieferungId: LieferungId, aboId: AboId) = {
     withSQL {
       select
         .from(korbMapping as korb)
@@ -1422,7 +1422,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(korbMapping(korb)).single
   }
 
-  protected def getZusatzuAboKorbQuery(hauptlieferungId: LieferungId, zusatzAboId: AboId): SQLToOption[Korb, HasExtractor] = {
+  protected def getZusatzuAboKorbQuery(hauptlieferungId: LieferungId, zusatzAboId: AboId) = {
     withSQL {
       select
         .from(korbMapping as korb)
@@ -1843,7 +1843,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(postlieferungAboMapping(postlieferungAbo)).single
   }
 
-  protected def getSingleZusatzAboQuery(id: AboId): SQLToOption[ZusatzAbo, HasExtractor] = {
+  protected def getSingleZusatzAboQuery(id: AboId) = {
     withSQL {
       select
         .from(zusatzAboMapping as zusatzAbo)
@@ -1851,7 +1851,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(zusatzAboMapping(zusatzAbo)).single
   }
 
-  protected def getZusatzAbosQuery(hauptaboId: AboId): SQLToList[ZusatzAbo, HasExtractor] = {
+  protected def getZusatzAbosQuery(hauptaboId: AboId) = {
     withSQL {
       select
         .from(zusatzAboMapping as zusatzAbo)

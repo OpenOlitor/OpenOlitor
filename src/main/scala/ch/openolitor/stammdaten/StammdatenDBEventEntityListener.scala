@@ -525,8 +525,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         case None => log.debug(s"No Korb yet for Lieferung : ${abw.lieferungId} and Abotyp : ${abw.aboId}")
       }
 
-      // TODO get Koerbe for Zusatzabos, mark them as abwesend?
-      // hole alle zusatzaboids
       stammdatenUpdateRepository.getZusatzAboKorb(abw.lieferungId, abw.aboId).map { zusatzKorb =>
         stammdatenUpdateRepository.updateEntity[Korb, KorbId](zusatzKorb.id)(korbMapping.column.status -> FaelltAusAbwesend)
       }

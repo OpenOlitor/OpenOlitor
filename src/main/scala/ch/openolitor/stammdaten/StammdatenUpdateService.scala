@@ -396,17 +396,17 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
         val updatedAbo: Abo = abo.copy(vertriebId = update.vertriebIdNeu, vertriebsartId = update.vertriebsartIdNeu)
-        modifyKoerbeForAboDatumVertrieb(updatedAbo, Some(abo))
+        modifyKoerbeForAboVertriebChange(updatedAbo, Some(abo))
         swapOrUpdateAboVertriebsart(meta, abo, update)
       }
       stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
         val updatedAbo: Abo = abo.copy(vertriebId = update.vertriebIdNeu, vertriebsartId = update.vertriebsartIdNeu)
-        modifyKoerbeForAboDatumVertrieb(updatedAbo, Some(abo))
+        modifyKoerbeForAboVertriebChange(updatedAbo, Some(abo))
         swapOrUpdateAboVertriebsart(meta, abo, update)
       }
       stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
         val updatedAbo: Abo = abo.copy(vertriebId = update.vertriebIdNeu, vertriebsartId = update.vertriebsartIdNeu)
-        modifyKoerbeForAboDatumVertrieb(updatedAbo, Some(abo))
+        modifyKoerbeForAboVertriebChange(updatedAbo, Some(abo))
         swapOrUpdateAboVertriebsart(meta, abo, update)
       }
     }
