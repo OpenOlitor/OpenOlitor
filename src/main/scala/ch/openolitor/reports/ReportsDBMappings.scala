@@ -20,31 +20,47 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import java.util.UUID
+import ch.openolitor.core.models._
+import ch.openolitor.core.repositories.ParameterBinderMapping
+import ch.openolitor.reports.models._
+import scalikejdbc._
+import scalikejdbc.TypeBinder._
+import ch.openolitor.core.repositories.DBMappings
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.repositories.SqlBinder
+import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
+import ch.openolitor.core.scalax._
 
-import akka.actor.ActorSystem
+//DB Model bindig
+trait ReportsDBMappings extends DBMappings {
+  import TypeBinder._
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+  // DB type binders for read operations
+  implicit val reportsIdBinder: TypeBinder[ReportId] = baseIdTypeBinder(ReportId.apply _)
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+  //DB parameter binders for write and query operations
+  implicit val reportsIdSqlBinder = baseIdSqlBinder[ReportId]
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  implicit val reportMapping = new BaseEntitySQLSyntaxSupport[Report] {
+    override val tableName = "Report"
+
+    override lazy val columns = autoColumns[Report]()
+
+    def apply(rn: ResultName[Report])(rs: WrappedResultSet): Report =
+      autoConstruct(rs, rn)
+
+    def parameterMappings(entity: Report): Seq[Any] =
+      parameters(Report.unapply(entity).get)
+
+    override def updateParameters(entity: Report) = {
+      super.updateParameters(entity) ++ Seq(
+        column.name -> parameter(entity.name),
+        column.beschreibung -> parameter(entity.beschreibung),
+        column.query -> parameter(entity.query)
+      )
+    }
+  }
 }

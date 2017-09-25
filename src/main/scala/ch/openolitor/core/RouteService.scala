@@ -74,6 +74,7 @@ import ch.openolitor.core.system.DefaultNonAuthRessourcesRouteService
 import ch.openolitor.util.ZipBuilder
 import ch.openolitor.kundenportal.KundenportalRoutes
 import ch.openolitor.kundenportal.DefaultKundenportalRoutes
+import ch.openolitor.reports._
 import ch.openolitor.stammdaten.models.ProjektVorlageId
 import spray.can.server.Response
 import ch.openolitor.core.ws.ExportFormat
@@ -115,6 +116,7 @@ trait RouteServiceComponent extends ActorReferences {
   val stammdatenRouteService: StammdatenRoutes
   val stammdatenRouteOpenService: StammdatenOpenRoutes
   val buchhaltungRouteService: BuchhaltungRoutes
+  val reportsRouteService: ReportsRoutes
   val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
   val loginRouteService: LoginRouteService
@@ -125,6 +127,7 @@ trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val stammdatenRouteOpenService = new DefaultStammdatenOpenRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val reportsRouteService = new DefaultReportsRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val systemRouteService = new DefaultSystemRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val loginRouteService = new DefaultLoginRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService, loginTokenCache)
@@ -180,6 +183,7 @@ trait RouteServiceActor
           authorize(hasRole(AdministratorZugang)) {
             stammdatenRouteService.stammdatenRoute ~
               buchhaltungRouteService.buchhaltungRoute ~
+              reportsRouteService.reportsRoute ~
               fileStoreRoute
           } ~
           authorize(hasRole(KundenZugang) || hasRole(AdministratorZugang)) {
@@ -268,7 +272,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
           }
         }
       case x =>
-        complete(StatusCodes.BadRequest, s"No id generated:$x")
+        complete(StatusCodes.BadRequest, s"No id generated or CommandHandler not triggered:$x")
     }
   }
 

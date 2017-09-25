@@ -32,6 +32,8 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsync
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
+import ch.openolitor.reports.ReportsJsonProtocol
+import ch.openolitor.reports.models._
 
 object DBEvent2UserMapping extends DefaultJsonProtocol {
   def props(): Props = Props(classOf[DBEvent2UserMapping])
@@ -53,6 +55,7 @@ class DBEvent2UserMapping extends Actor
     with ClientReceiver
     with StammdatenJsonProtocol
     with BuchhaltungJsonProtocol
+    with ReportsJsonProtocol
     with AkkaEventStream {
   import DBEvent2UserMapping._
 
@@ -176,6 +179,12 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityModified(userId, entity: DepotAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[DepotAuslieferung]])
     case e @ EntityModified(userId, entity: TourAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[TourAuslieferung]])
     case e @ EntityModified(userId, entity: PostAuslieferung, _) => send(userId, e.asInstanceOf[DBEvent[PostAuslieferung]])
+
+    // Reports Modul
+
+    case e @ EntityCreated(userId, entity: Report) => send(userId, e.asInstanceOf[DBEvent[Report]])
+    case e @ EntityModified(userId, entity: Report, _) => send(userId, e.asInstanceOf[DBEvent[Report]])
+    case e @ EntityDeleted(userId, entity: Report) => send(userId, e.asInstanceOf[DBEvent[Report]])
 
     case x => // send nothing
   }

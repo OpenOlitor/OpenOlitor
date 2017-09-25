@@ -20,31 +20,42 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports.repositories
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import ch.openolitor.core.models._
+import scalikejdbc._
+import scalikejdbc.async._
+import scalikejdbc.async.FutureImplicits._
+import ch.openolitor.core.db._
+import ch.openolitor.core.db.OOAsyncDB._
+import ch.openolitor.core.repositories._
+import ch.openolitor.core.repositories.BaseWriteRepository
+import scala.concurrent._
+import ch.openolitor.stammdaten.models._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.EventStream
+import ch.openolitor.reports.models._
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import ch.openolitor.reports.ReportsDBMappings
 
-import akka.actor.ActorSystem
-
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
+/**
+ * Asynchronous Repository
+ */
+trait ReportsReadRepositoryAsync extends BaseReadRepositoryAsync {
+  def getReports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Report]]
+  def getReport(id: ReportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Report]]
 }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+class ReportsReadRepositoryAsyncImpl extends ReportsReadRepositoryAsync with LazyLogging with ReportsRepositoryQueries {
+  def getReports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Report]] = {
+    getReportsQuery(filter).future
+  }
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  def getReport(id: ReportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Report]] = {
+    getReportQuery(id).future
+  }
+
 }

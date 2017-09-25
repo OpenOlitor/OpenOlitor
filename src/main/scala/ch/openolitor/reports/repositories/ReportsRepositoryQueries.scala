@@ -20,31 +20,44 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports.repositories
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import ch.openolitor.core.models._
+import scalikejdbc._
+import scalikejdbc.async._
+import scalikejdbc.async.FutureImplicits._
+import ch.openolitor.core.db._
+import ch.openolitor.core.db.OOAsyncDB._
+import ch.openolitor.core.repositories._
+import ch.openolitor.core.repositories.BaseWriteRepository
+import scala.concurrent._
+import ch.openolitor.stammdaten.models._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.EventStream
+import ch.openolitor.reports.models._
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.util.parsing.FilterExpr
+import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
+import ch.openolitor.reports.ReportsDBMappings
 
-import akka.actor.ActorSystem
+trait ReportsRepositoryQueries extends LazyLogging with ReportsDBMappings with StammdatenDBMappings {
+  lazy val report = reportMapping.syntax("report")
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+  protected def getReportsQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(reportMapping as report)
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, report))
+    }.map(reportMapping(report)).list
+  }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+  protected def getReportQuery(id: ReportId) = {
+    withSQL {
+      select
+        .from(reportMapping as report)
+        .where.eq(report.id, parameter(id))
+    }.map(reportMapping(report)).single
+  }
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
 }
