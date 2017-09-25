@@ -335,22 +335,22 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getAktiveAbos(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime, lieferplanungId: LieferplanungId)(implicit session: DBSession): List[Abo] = {
     //
-    getAktiveDepotlieferungAbos(vertriebId, lieferdatum) :::
-      getAktiveHeimlieferungAbos(vertriebId, lieferdatum) :::
-      getAktivePostlieferungAbos(vertriebId, lieferdatum) :::
+    getAktiveDepotlieferungAbos(abotypId, vertriebId, lieferdatum) :::
+      getAktiveHeimlieferungAbos(abotypId, vertriebId, lieferdatum) :::
+      getAktivePostlieferungAbos(abotypId, vertriebId, lieferdatum) :::
       getAktiveZusatzAbos(abotypId, lieferdatum, lieferplanungId)
   }
 
-  def getAktiveDepotlieferungAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[DepotlieferungAbo] = {
-    getAktiveDepotlieferungAbosQuery(vertriebId, lieferdatum).apply
+  def getAktiveDepotlieferungAbos(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[DepotlieferungAbo] = {
+    getAktiveDepotlieferungAbosQuery(abotypId, vertriebId, lieferdatum).apply
   }
 
-  def getAktiveHeimlieferungAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[HeimlieferungAbo] = {
-    getAktiveHeimlieferungAbosQuery(vertriebId, lieferdatum).apply
+  def getAktiveHeimlieferungAbos(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[HeimlieferungAbo] = {
+    getAktiveHeimlieferungAbosQuery(abotypId, vertriebId, lieferdatum).apply
   }
 
-  def getAktivePostlieferungAbos(vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[PostlieferungAbo] = {
-    getAktivePostlieferungAbosQuery(vertriebId, lieferdatum).apply
+  def getAktivePostlieferungAbos(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime)(implicit session: DBSession): List[PostlieferungAbo] = {
+    getAktivePostlieferungAbosQuery(abotypId, vertriebId, lieferdatum).apply
   }
 
   def getAktiveZusatzAbos(abotypId: AbotypId, lieferdatum: DateTime, lieferplanungId: LieferplanungId)(implicit session: DBSession): List[ZusatzAbo] = {

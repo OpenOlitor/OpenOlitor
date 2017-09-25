@@ -732,23 +732,25 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(_.int(1)).single
   }
 
-  protected def getAktiveDepotlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
+  protected def getAktiveDepotlieferungAbosQuery(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(depotlieferungAboMapping as depotlieferungAbo)
-        .where.eq(depotlieferungAbo.vertriebId, vertriebId)
-        .and.le(depotlieferungAbo.start, lieferdatum)
-        .and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.ge(depotlieferungAbo.ende, lieferdatum.toLocalDate) }
+        .where.eq(depotlieferungAbo.vertriebId, parameter(vertriebId))
+        .and.eq(depotlieferungAbo.abotypId, parameter(abotypId))
+        .and.le(depotlieferungAbo.start, parameter(lieferdatum))
+        .and.withRoundBracket { _.isNull(depotlieferungAbo.ende).or.ge(depotlieferungAbo.ende, parameter(lieferdatum.toLocalDate)) }
     }.map(depotlieferungAboMapping(depotlieferungAbo)).list
   }
 
-  protected def getAktiveHeimlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
+  protected def getAktiveHeimlieferungAbosQuery(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
-        .where.eq(heimlieferungAbo.vertriebId, vertriebId)
-        .and.le(heimlieferungAbo.start, lieferdatum)
-        .and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.ge(heimlieferungAbo.ende, lieferdatum.toLocalDate) }
+        .where.eq(heimlieferungAbo.vertriebId, parameter(vertriebId))
+        .and.eq(heimlieferungAbo.abotypId, parameter(abotypId))
+        .and.le(heimlieferungAbo.start, parameter(lieferdatum))
+        .and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.ge(heimlieferungAbo.ende, parameter(lieferdatum.toLocalDate)) }
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
   }
 
@@ -767,13 +769,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(zusatzAboMapping(zusatzAbo)).list
   }
 
-  protected def getAktivePostlieferungAbosQuery(vertriebId: VertriebId, lieferdatum: DateTime) = {
+  protected def getAktivePostlieferungAbosQuery(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime) = {
     withSQL {
       select
         .from(postlieferungAboMapping as postlieferungAbo)
-        .where.eq(postlieferungAbo.vertriebId, vertriebId)
-        .and.le(postlieferungAbo.start, lieferdatum)
-        .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, lieferdatum.toLocalDate) }
+        .where.eq(postlieferungAbo.vertriebId, parameter(vertriebId))
+        .and.eq(postlieferungAbo.abotypId, parameter(abotypId))
+        .and.le(postlieferungAbo.start, parameter(lieferdatum))
+        .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, parameter(lieferdatum.toLocalDate)) }
     }.map(postlieferungAboMapping(postlieferungAbo)).list
   }
 
