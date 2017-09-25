@@ -86,7 +86,13 @@ trait ReportsRoutes extends HttpService with ActorReferences
             delete(remove(id))
         } ~
         path("reports" / reportIdPath / "execute") { id =>
-          ???
+          post {
+            requestInstance { request =>
+              entity(as[ReportExecute]) { reportExecute =>
+                list(reportsReadRepository.executeReport(reportExecute))
+              }
+            }
+          }
         }
     }
 

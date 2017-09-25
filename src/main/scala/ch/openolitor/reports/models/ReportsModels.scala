@@ -31,7 +31,7 @@ case class ReportId(id: Long) extends BaseId
 case class Report(
   id: ReportId,
   name: String,
-  beschreibung: String,
+  beschreibung: Option[String],
   query: String,
   //modification flags
   erstelldat: DateTime,
@@ -42,12 +42,17 @@ case class Report(
 
 case class ReportCreate(
   name: String,
-  beschreibung: String,
+  beschreibung: Option[String],
   query: String
 ) extends JSONSerializable
 
 case class ReportModify(
   name: String,
-  beschreibung: String,
+  beschreibung: Option[String],
+  query: String
+) extends JSONSerializable
+
+case class ReportExecute(
+  id: ReportId,
   query: String
 ) extends JSONSerializable

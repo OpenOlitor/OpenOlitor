@@ -45,11 +45,13 @@ trait ReportsRepositoryQueries extends LazyLogging with ReportsDBMappings with S
   lazy val report = reportMapping.syntax("report")
 
   protected def getReportsQuery(filter: Option[FilterExpr]) = {
-    withSQL {
+    val query = withSQL {
       select
         .from(reportMapping as report)
         .where(UriQueryParamToSQLSyntaxBuilder.build(filter, report))
-    }.map(reportMapping(report)).list
+    }
+    logger.debug(s"***************** QUERY getReportsQuery: ${query.statement}")
+    query.map(reportMapping(report)).list
   }
 
   protected def getReportQuery(id: ReportId) = {
@@ -58,6 +60,12 @@ trait ReportsRepositoryQueries extends LazyLogging with ReportsDBMappings with S
         .from(reportMapping as report)
         .where.eq(report.id, parameter(id))
     }.map(reportMapping(report)).single
+  }
+
+  protected def executeReportQuery(reportExecute: ReportExecute) = {
+    val query = sql"""${reportExecute.query}"""
+    logger.debug(s"***************** QUERY executeReportQuery: ${reportExecute.query}:${query.statement}")
+    query.map(reportMapping(report)).list
   }
 
 }

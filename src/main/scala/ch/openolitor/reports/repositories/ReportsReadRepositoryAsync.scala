@@ -47,6 +47,8 @@ import ch.openolitor.reports.ReportsDBMappings
 trait ReportsReadRepositoryAsync extends BaseReadRepositoryAsync {
   def getReports(implicit asyncCpContext: MultipleAsyncConnectionPoolContext, filter: Option[FilterExpr]): Future[List[Report]]
   def getReport(id: ReportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Report]]
+
+  def executeReport(reportExecute: ReportExecute)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Report]]
 }
 
 class ReportsReadRepositoryAsyncImpl extends ReportsReadRepositoryAsync with LazyLogging with ReportsRepositoryQueries {
@@ -56,6 +58,10 @@ class ReportsReadRepositoryAsyncImpl extends ReportsReadRepositoryAsync with Laz
 
   def getReport(id: ReportId)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Report]] = {
     getReportQuery(id).future
+  }
+
+  def executeReport(reportExecute: ReportExecute)(implicit asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Report]] = {
+    executeReportQuery(reportExecute).future
   }
 
 }
