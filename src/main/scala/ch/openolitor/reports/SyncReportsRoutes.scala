@@ -82,7 +82,7 @@ trait SyncReportsRoutes extends HttpService with ActorReferences
       implicit val filter = f flatMap { filterString =>
         UriQueryParamFilterParser.parse(filterString)
       }
-      path("reports" / reportIdPath / "execute") { id =>
+      path("reports" / reportIdPath / "execute" ~ exportFormatPath.?) { (id, exportFormat) =>
         post {
           requestInstance { request =>
             entity(as[ReportExecute]) { reportExecute =>
@@ -90,7 +90,7 @@ trait SyncReportsRoutes extends HttpService with ActorReferences
                 DB readOnly {
                   implicit session => reportsReadRepository.executeReport(reportExecute)
                 }
-              })
+              }, exportFormat)
             }
           }
         }

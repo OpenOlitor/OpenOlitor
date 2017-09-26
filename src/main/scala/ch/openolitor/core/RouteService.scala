@@ -321,45 +321,71 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
           val sheet = dataDocument.getSheetByIndex(0)
           sheet.setCellStyleInheritance(false)
 
+          def writeToRow(row: Row, element: Any, cellIndex: Int): Unit = {
+            element match {
+              case some: Some[Any] => writeToRow(row, some.x, cellIndex)
+              case None =>
+              case ite: Iterable[Any] => ite map { item => writeToRow(row, item, cellIndex) }
+              case id: BaseId => row.getCellByIndex(cellIndex).setDoubleValue(id.id)
+              case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id).trim)
+              case str: String => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + str).trim)
+              case dat: org.joda.time.DateTime => row.getCellByIndex(cellIndex).setDateTimeValue(dat.toCalendar(Locale.GERMAN))
+              case nbr: Number => row.getCellByIndex(cellIndex).setDoubleValue(nbr.doubleValue())
+              case x => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + x.toString).trim)
+            }
+          }
+
           result match {
-            case list: List[Product @unchecked] =>
-              if (list.nonEmpty) {
+            case genericList: List[Any] =>
+              if (genericList.nonEmpty) {
+                genericList.head match {
+                  case firstMapEntry: Map[String, Any] =>
+                    val listOfMaps = genericList.asInstanceOf[List[Map[String, Any]]]
+                    val row = sheet.getRowByIndex(0);
 
-                val row = sheet.getRowByIndex(0);
+                    listOfMaps.head.zipWithIndex foreach {
+                      case ((fieldName, value), index) =>
+                        row.getCellByIndex(index).setStringValue(fieldName)
+                        val font = row.getCellByIndex(index).getFont
+                        font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
+                        font.setSize(10)
+                        row.getCellByIndex(index).setFont(font)
+                    }
 
-                def getCCParams(cc: Product) = cc.getClass.getDeclaredFields.map(_.getName) // all field names
-                  .zip(cc.productIterator.to).toMap // zipped with all values
+                    listOfMaps.zipWithIndex foreach {
+                      case (entry, index) =>
+                        val row = sheet.getRowByIndex(index + 1);
 
-                getCCParams(list.head).zipWithIndex foreach {
-                  case ((fieldName, value), index) =>
-                    row.getCellByIndex(index).setStringValue(fieldName)
-                    val font = row.getCellByIndex(index).getFont
-                    font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
-                    font.setSize(10)
-                    row.getCellByIndex(index).setFont(font)
-                }
+                        entry.zipWithIndex foreach {
+                          case ((fieldName, value), colIndex) =>
+                            writeToRow(row, value, colIndex)
+                        }
+                    }
 
-                def writeToRow(row: Row, element: Any, cellIndex: Int): Unit = {
-                  element match {
-                    case some: Some[Any] => writeToRow(row, some.x, cellIndex)
-                    case None =>
-                    case ite: Iterable[Any] => ite map { item => writeToRow(row, item, cellIndex) }
-                    case id: BaseId => row.getCellByIndex(cellIndex).setDoubleValue(id.id)
-                    case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id).trim)
-                    case str: String => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + str).trim)
-                    case dat: org.joda.time.DateTime => row.getCellByIndex(cellIndex).setDateTimeValue(dat.toCalendar(Locale.GERMAN))
-                    case nbr: Number => row.getCellByIndex(cellIndex).setDoubleValue(nbr.doubleValue())
-                    case x => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + x.toString).trim)
-                  }
-                }
+                  case firstProductEntry: Product =>
+                    val listOfProducts = genericList.asInstanceOf[List[Product]]
+                    val row = sheet.getRowByIndex(0);
 
-                list.zipWithIndex foreach {
-                  case (entry, index) =>
-                    val row = sheet.getRowByIndex(index + 1);
+                    def getCCParams(cc: Product) = cc.getClass.getDeclaredFields.map(_.getName) // all field names
+                      .zip(cc.productIterator.to).toMap // zipped with all values
 
-                    getCCParams(entry).zipWithIndex foreach {
-                      case ((fieldName, value), colIndex) =>
-                        writeToRow(row, value, colIndex)
+                    getCCParams(listOfProducts.head).zipWithIndex foreach {
+                      case ((fieldName, value), index) =>
+                        row.getCellByIndex(index).setStringValue(fieldName)
+                        val font = row.getCellByIndex(index).getFont
+                        font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
+                        font.setSize(10)
+                        row.getCellByIndex(index).setFont(font)
+                    }
+
+                    listOfProducts.zipWithIndex foreach {
+                      case (entry, index) =>
+                        val row = sheet.getRowByIndex(index + 1);
+
+                        getCCParams(entry).zipWithIndex foreach {
+                          case ((fieldName, value), colIndex) =>
+                            writeToRow(row, value, colIndex)
+                        }
                     }
                 }
               }
