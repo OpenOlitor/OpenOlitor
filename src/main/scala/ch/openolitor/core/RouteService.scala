@@ -117,6 +117,7 @@ trait RouteServiceComponent extends ActorReferences {
   val stammdatenRouteOpenService: StammdatenOpenRoutes
   val buchhaltungRouteService: BuchhaltungRoutes
   val reportsRouteService: ReportsRoutes
+  val syncReportsRouteService: SyncReportsRoutes
   val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
   val loginRouteService: LoginRouteService
@@ -128,6 +129,7 @@ trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache
   override lazy val stammdatenRouteOpenService = new DefaultStammdatenOpenRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val reportsRouteService = new DefaultReportsRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val syncReportsRouteService = new DefaultSyncReportsRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val systemRouteService = new DefaultSystemRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val loginRouteService = new DefaultLoginRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService, loginTokenCache)
@@ -184,6 +186,7 @@ trait RouteServiceActor
             stammdatenRouteService.stammdatenRoute ~
               buchhaltungRouteService.buchhaltungRoute ~
               reportsRouteService.reportsRoute ~
+              syncReportsRouteService.syncReportsRoute ~
               fileStoreRoute
           } ~
           authorize(hasRole(KundenZugang) || hasRole(AdministratorZugang)) {
@@ -299,6 +302,13 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     //fetch list of something
     onSuccess(f) { result =>
       complete(result)
+    }
+
+    onFailure(f) {
+      case e: Exception =>
+        logger.debug(s"***************** FAILURE ${e.getMessage()}")
+        e.printStackTrace()
+        failWith(e)
     }
   }
 

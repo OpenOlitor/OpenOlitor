@@ -41,4 +41,24 @@ trait ReportsJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoPro
   //id formats
   implicit val reportId = baseIdFormat(ReportId)
 
+  implicit def dbResultMapFormat = new RootJsonFormat[Map[String, Any]] {
+    def write(m: Map[String, Any]) = JsObject {
+      m.map { field =>
+        field._1 -> {
+          field._2 match {
+            case null => JsNull
+            case _ => {
+              field._1 match {
+                case "passwort" => JsString("Not available")
+                case _ => JsString(field._2.toString)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    def read(value: JsValue) = ???
+  }
+
 }

@@ -43,11 +43,16 @@ import ch.openolitor.reports.ReportsDBMappings
 
 trait ReportsReadRepositorySync extends BaseReadRepositorySync {
   def getReport(id: ReportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Report]
+  def executeReport(reportExecute: ReportExecute)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Map[String, Any]]
 }
 
 trait ReportsReadRepositorySyncImpl extends ReportsReadRepositorySync with LazyLogging with ReportsRepositoryQueries {
 
   def getReport(id: ReportId)(implicit session: DBSession, cpContext: ConnectionPoolContext): Option[Report] = {
     getReportQuery(id).apply()
+  }
+
+  def executeReport(reportExecute: ReportExecute)(implicit session: DBSession, cpContext: ConnectionPoolContext): List[Map[String, Any]] = {
+    executeReportQuery(reportExecute).apply()
   }
 }

@@ -56,40 +56,50 @@ import scala.io.Source
 import ch.openolitor.core.security.Subject
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.reports.repositories.DefaultReportsReadRepositoryAsyncComponent
-import ch.openolitor.reports.repositories.ReportsReadRepositoryAsyncComponent
+import ch.openolitor.reports.repositories.DefaultReportsReadRepositorySyncComponent
+import ch.openolitor.reports.repositories.ReportsReadRepositorySyncComponent
 import java.io.ByteArrayInputStream
+import scalikejdbc.DB
 
-trait ReportsRoutes extends HttpService with ActorReferences
-    with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
+/**
+ * This is using a Sync-Repository as there is no way to fetch the MetaData on the
+ * scalikejdbc-async - RowDataResultSet
+ * TODO Revert as soon as possible
+ */
+trait SyncReportsRoutes extends HttpService with ActorReferences
+    with ConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
     with ReportsJsonProtocol
     with ReportsEventStoreSerializer
     with ReportsDBMappings {
-  self: ReportsReadRepositoryAsyncComponent with FileStoreComponent =>
+  self: ReportsReadRepositorySyncComponent with FileStoreComponent =>
 
   implicit val reportIdPath = long2BaseIdPathMatcher(ReportId.apply)
 
   import EntityStore._
 
-  def reportsRoute(implicit subect: Subject) =
+  def syncReportsRoute(implicit subect: Subject) =
     parameters('f.?) { (f) =>
       implicit val filter = f flatMap { filterString =>
         UriQueryParamFilterParser.parse(filterString)
       }
-      path("reports" ~ exportFormatPath.?) { exportFormat =>
-        get(list(reportsReadRepository.getReports, exportFormat)) ~
-          post(create[ReportCreate, ReportId](ReportId.apply _))
-      } ~
-        path("reports" / reportIdPath) { id =>
-          get(detail(reportsReadRepository.getReport(id))) ~
-            (put | post)(update[ReportModify, ReportId](id)) ~
-            delete(remove(id))
+      path("reports" / reportIdPath / "execute") { id =>
+        post {
+          requestInstance { request =>
+            entity(as[ReportExecute]) { reportExecute =>
+              list(Future.successful {
+                DB readOnly {
+                  implicit session => reportsReadRepository.executeReport(reportExecute)
+                }
+              })
+            }
+          }
         }
+      }
     }
 
 }
 
-class DefaultReportsRoutes(
+class DefaultSyncReportsRoutes(
   override val dbEvolutionActor: ActorRef,
   override val entityStore: ActorRef,
   override val eventStore: ActorRef,
@@ -102,5 +112,5 @@ class DefaultReportsRoutes(
   override val airbrakeNotifier: ActorRef,
   override val jobQueueService: ActorRef
 )
-    extends ReportsRoutes
-    with DefaultReportsReadRepositoryAsyncComponent
+    extends SyncReportsRoutes
+    with DefaultReportsReadRepositorySyncComponent
