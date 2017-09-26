@@ -99,6 +99,11 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleAboModified(orig, entity)(personId)
     case e @ EntityModified(personId, entity: PostlieferungAbo, orig: PostlieferungAbo) if entity.vertriebId != orig.vertriebId =>
       handleAboModified(orig, entity)(personId)
+
+    case e @ EntityCreated(personId, entity: ZusatzAbo) => handleZusatzAboCreated(entity)(personId)
+    case e @ EntityModified(personId, entity: ZusatzAbo, orig: ZusatzAbo) => handleZusatzAboModified(orig, entity)(personId)
+    case e @ EntityDeleted(personId, entity: ZusatzAbo) => handleZusatzAboDeleted(entity)(personId)
+
     case e @ EntityCreated(personId, entity: Abo) => handleAboCreated(entity)(personId)
     case e @ EntityDeleted(personId, entity: Abo) => handleAboDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: Abo, orig: Abo) => handleAboModified(orig, entity)(personId)
@@ -393,6 +398,43 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         Map(
           postlieferungMapping.column.anzahlAbos -> (vertriebsart.anzahlAbos - 1),
           postlieferungMapping.column.anzahlAbosAktiv -> (vertriebsart.anzahlAbosAktiv - modAboCount)
+        )
+      }
+    }
+  }
+
+  def handleZusatzAboCreated(zusatzAbo: ZusatzAbo)(implicit personId: PersonId) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      val modZusatzAboCount = calculateAboAktivCreate(zusatzAbo)
+      stammdatenUpdateRepository.modifyEntity[ZusatzAbotyp, AbotypId](zusatzAbo.abotypId) { zusatzAbotyp =>
+        log.debug(s"Add abonnent to zusatzabotyp:${zusatzAbotyp.id}")
+        Map(
+          zusatzAbotypMapping.column.anzahlAbonnenten -> (zusatzAbotyp.anzahlAbonnenten + 1),
+          zusatzAbotypMapping.column.anzahlAbonnentenAktiv -> (zusatzAbotyp.anzahlAbonnentenAktiv + modZusatzAboCount)
+        )
+      }
+    }
+  }
+
+  def handleZusatzAboModified(from: ZusatzAbo, to: ZusatzAbo)(implicit personId: PersonId) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      if (from.aktiv != to.aktiv) {
+        val change = if (to.aktiv) 1 else -1
+        stammdatenUpdateRepository.modifyEntity[ZusatzAbotyp, AbotypId](to.abotypId) { zusatzAbotyp =>
+          Map(zusatzAbotypMapping.column.anzahlAbonnentenAktiv -> (zusatzAbotyp.anzahlAbonnentenAktiv + change))
+        }
+      }
+    }
+  }
+
+  def handleZusatzAboDeleted(zusatzAbo: ZusatzAbo)(implicit personId: PersonId) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      val modZusatzAboCount = calculateAboAktivCreate(zusatzAbo)
+      stammdatenUpdateRepository.modifyEntity[ZusatzAbotyp, AbotypId](zusatzAbo.abotypId) { zusatzAbotyp =>
+        log.debug(s"Remove abonnent from zusatzabotyp:${zusatzAbotyp.id}")
+        Map(
+          zusatzAbotypMapping.column.anzahlAbonnenten -> (zusatzAbotyp.anzahlAbonnenten - 1),
+          zusatzAbotypMapping.column.anzahlAbonnentenAktiv -> (zusatzAbotyp.anzahlAbonnentenAktiv - modZusatzAboCount)
         )
       }
     }
