@@ -230,7 +230,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   private def createLieferungInner(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
-    println(s"\nXXXXXXXXXXXXX createLieferung XXXXXXXXXXXXXXXXXXXXXXXX")
 
     stammdatenWriteRepository.getAbotypById(lieferung.abotypId) flatMap { abotyp =>
       stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) flatMap {
@@ -337,7 +336,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[LocalDate], Boolean) = {
+  def aboParameters(create: AboModify)(abotyp: IAbotyp): (Option[Int], Option[LocalDate], Boolean) = {
     abotyp.laufzeiteinheit match {
       case Unbeschraenkt =>
         (None, None, IAbo.calculateAktiv(create.start, None))
@@ -363,19 +362,19 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(postlieferungAboMapping, aboId)
   }
 
-  private def zusatzAboTypById(zusatzAbotypId: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp] = {
-    stammdatenWriteRepository.getById(zusatzAbotypMapping, zusatzAbotypId)
+  private def zusatzAboTypById(zusatzAbotypId: AbotypId)(implicit session: DBSession): Option[IAbotyp] = {
+    stammdatenWriteRepository.getAbotypById(zusatzAbotypId)
   }
 
-  private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
-    stammdatenWriteRepository.getById(abotypMapping, abotypId)
+  private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[IAbotyp] = {
+    stammdatenWriteRepository.getAbotypById(abotypId)
   }
 
   private def vertriebById(vertriebId: VertriebId)(implicit session: DBSession): Option[Vertrieb] = {
     stammdatenWriteRepository.getById(vertriebMapping, vertriebId)
   }
 
-  private def abotypByVertriebartId(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[(Vertriebsart, Vertrieb, Abotyp)] = {
+  private def abotypByVertriebartId(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[(Vertriebsart, Vertrieb, IAbotyp)] = {
     vertriebsartById(vertriebsartId) flatMap (va => vertriebById(va.vertriebId) flatMap (v => abotypById(v.abotypId).map(at => (va, v, at))))
   }
 
@@ -683,7 +682,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map { lieferung =>
           logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
           val adjustedLieferung: Lieferung = updateLieferungUndZusatzLieferung(meta, lieferplanungId, project, lieferung)
-          println(s"\n ----------------- post " + adjustedLieferung + " -----------------")
 
           (dateFormat.print(adjustedLieferung.datum), adjustedLieferung.abotypBeschrieb)
         }
@@ -712,7 +710,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         val koerbe: List[(Option[Korb], Option[Korb])] = abos map { abo =>
           upsertKorb(lieferung, abo, abotyp)
         }
-        logger.debug(s"@@@@@@@    Abos=${abos.size} and koerbe=${koerbe.size}")
         recalculateNumbersLieferung(lieferung)
       }
     }
@@ -773,9 +770,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
     //create koerbe
 
-    logger.debug(s"------------------- korbe creation for the zusatzabos. updatedLieferung: ${updatedLieferung} -------------------")
     val adjustedLieferung = createKoerbe(updatedLieferung)
-    logger.debug(s"------------------- korbe creation for the zusatzabos. adjustedLieferung: ${adjustedLieferung} -------------------")
 
     stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
       lieferungMapping.column.status -> adjustedLieferung.status,

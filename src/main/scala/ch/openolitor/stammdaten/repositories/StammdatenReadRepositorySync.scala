@@ -119,8 +119,7 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
 trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with LazyLogging with StammdatenRepositoryQueries {
 
   def getAbotypById(id: AbotypId)(implicit session: DBSession): Option[IAbotyp] = {
-    getById(abotypMapping, id) orElse
-      getById(zusatzAbotypMapping, id)
+    getById(abotypMapping, id) orElse getById(zusatzAbotypMapping, id)
   }
 
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp] = {

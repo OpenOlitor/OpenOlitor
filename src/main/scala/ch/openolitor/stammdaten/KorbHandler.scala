@@ -94,7 +94,7 @@ trait KorbHandler extends KorbStatusHandler
     for {
       originalAbo <- orig
       if (abo.vertriebId != originalAbo.vertriebId)
-      abotyp <- stammdatenWriteRepository.getById(abotypMapping, abo.abotypId)
+      abotyp <- stammdatenWriteRepository.getAbotypById(abo.abotypId)
     } yield {
       stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
         if (lieferung.vertriebId == originalAbo.vertriebId) {
@@ -113,7 +113,7 @@ trait KorbHandler extends KorbStatusHandler
       originalAbo <- orig
       // only modify koerbe if the start or end of this abo has changed or we're creating them for a new abo
       if (abo.start != originalAbo.start || abo.ende != originalAbo.ende)
-      abotyp <- stammdatenWriteRepository.getById(abotypMapping, abo.abotypId)
+      abotyp <- stammdatenWriteRepository.getAbotypById(abo.abotypId)
     } yield {
       stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId).map { lieferung =>
         if ((abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {

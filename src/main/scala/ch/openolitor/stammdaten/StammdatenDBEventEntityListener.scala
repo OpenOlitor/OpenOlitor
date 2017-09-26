@@ -518,7 +518,7 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         case Some(abo) => {
           stammdatenUpdateRepository.getKorb(abw.lieferungId, abw.aboId) match {
             case Some(korb) => {
-              stammdatenUpdateRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+              stammdatenUpdateRepository.getAbotypById(abo.abotypId) map { abotyp =>
                 //re count because the might be another abwesenheit for the same date
                 val newAbwesenheitCount = stammdatenUpdateRepository.countAbwesend(abw.aboId, abw.datum)
                 val status = calculateKorbStatus(newAbwesenheitCount, abo.guthaben, abotyp.guthabenMindestbestand)

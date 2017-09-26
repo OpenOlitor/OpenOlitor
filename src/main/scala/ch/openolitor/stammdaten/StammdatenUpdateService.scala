@@ -136,27 +136,36 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   private def updateAbotyp(meta: EventMetadata, id: AbotypId, update: AbotypModify)(implicit personId: PersonId = meta.originator): Unit = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(abotypMapping, id) map { abotyp =>
-        //map all updatable fields
-        val copy = copyFrom(abotyp, update)
-        stammdatenWriteRepository.updateEntityFully[Abotyp, AbotypId](copy)
-      }
+      val iabotyp = stammdatenWriteRepository.getAbotypById(id)
+      iabotyp match {
+        case iabotyp: Option[Abotyp] => iabotyp map { abotyp =>
+          //map all updatable fields
+          val copy = copyFrom(abotyp, update)
+          stammdatenWriteRepository.updateEntityFully[Abotyp, AbotypId](copy)
+        }
+        case None => throw new IllegalArgumentException("The type of subscription is empty")
+        case _ =>
+          throw new IllegalArgumentException("The type of subscription is not known")
 
-      stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(
-          lieferungMapping.column.zielpreis -> update.zielpreis,
-          lieferungMapping.column.abotypBeschrieb -> update.name
-        )
+          stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(lieferungMapping.column.zielpreis -> update.zielpreis)
+          }
       }
     }
   }
 
   def updateZusatzAbotyp(meta: EventMetadata, id: AbotypId, update: ZusatzAbotypModify)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getById(zusatzAbotypMapping, id) map { zusatzabotyp =>
-        //map all updatable fields
-        val copy = copyFrom(zusatzabotyp, update)
-        stammdatenWriteRepository.updateEntityFully[ZusatzAbotyp, AbotypId](copy)
+      val iabotyp = stammdatenWriteRepository.getAbotypById(id)
+      iabotyp match {
+        case iabotyp: Option[ZusatzAbotyp] =>
+          iabotyp map { zusatzabotyp =>
+            //map all updatable fields
+            val copy = copyFrom(zusatzabotyp, update)
+            stammdatenWriteRepository.updateEntityFully[ZusatzAbotyp, AbotypId](copy)
+          }
+        case None => throw new IllegalArgumentException("The type of subscription is empty")
+        case _ => throw new IllegalArgumentException("The type of subscription is not known")
       }
     }
   }
