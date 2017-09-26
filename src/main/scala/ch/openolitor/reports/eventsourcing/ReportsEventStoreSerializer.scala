@@ -20,31 +20,30 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports.eventsourcing
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import spray.json.DefaultJsonProtocol
+import stamina._
+import stamina.json._
+import ch.openolitor.reports._
+import ch.openolitor.reports.models._
+import ch.openolitor.core.domain.EntityStore._
+import ch.openolitor.core.domain.EntityStoreJsonProtocol
+import zangelo.spray.json.AutoProductFormats
+import ch.openolitor.core.JSONSerializable
 
-import akka.actor.ActorSystem
+trait ReportsEventStoreSerializer extends ReportsJsonProtocol with EntityStoreJsonProtocol with AutoProductFormats[JSONSerializable] {
+  import ch.openolitor.core.eventsourcing.events._
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+  // V1 persisters
+  implicit val reportCreatePersister = persister[ReportCreate]("report-create")
+  implicit val reportModifyPersister = persister[ReportModify]("report-modify")
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+  implicit val reportIdPersister = persister[ReportId]("report-id")
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  val reportsPersisters = List(
+    reportCreatePersister,
+    reportModifyPersister,
+    reportIdPersister
+  )
 }

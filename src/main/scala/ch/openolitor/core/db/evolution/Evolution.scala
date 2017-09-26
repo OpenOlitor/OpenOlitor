@@ -39,6 +39,8 @@ import ch.openolitor.core.repositories.SqlBinder
 import scala.reflect._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
+import ch.openolitor.reports.models._
+import ch.openolitor.reports.ReportsDBMappings
 import ch.openolitor.core.db.evolution.scripts.Scripts
 import akka.actor.ActorSystem
 import ch.openolitor.core.ActorSystemReference
@@ -54,7 +56,7 @@ case class EvolutionException(msg: String) extends Exception
  * Base evolution class to evolve database from a specific revision to another
  */
 class Evolution(sysConfig: SystemConfig, scripts: Seq[Script]) extends CoreDBMappings with LazyLogging with StammdatenDBMappings
-    with BuchhaltungDBMappings {
+    with BuchhaltungDBMappings with ReportsDBMappings {
   import IteratorUtil._
 
   logger.debug(s"Evolution manager consists of:$scripts")
@@ -99,7 +101,8 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script]) extends CoreDBMap
           adjustSeed[ZahlungsImport, ZahlungsImportId](seeds, zahlungsImportMapping),
           adjustSeed[ZahlungsEingang, ZahlungsEingangId](seeds, zahlungsEingangMapping),
           adjustSeed[Einladung, EinladungId](seeds, einladungMapping),
-          adjustSeed[Sammelbestellung, SammelbestellungId](seeds, sammelbestellungMapping)
+          adjustSeed[Sammelbestellung, SammelbestellungId](seeds, sammelbestellungMapping),
+          adjustSeed[Report, ReportId](seeds, reportMapping)
         ).flatten
 
         Success(seeds ++ dbIds.toMap)

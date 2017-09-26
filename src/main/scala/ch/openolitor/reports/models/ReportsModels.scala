@@ -20,31 +20,39 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports.models
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import ch.openolitor.core.models._
+import org.joda.time.DateTime
+import ch.openolitor.core.JSONSerializable
 
-import akka.actor.ActorSystem
+case class ReportId(id: Long) extends BaseId
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+case class Report(
+  id: ReportId,
+  name: String,
+  beschreibung: Option[String],
+  query: String,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends BaseEntity[ReportId]
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+case class ReportCreate(
+  name: String,
+  beschreibung: Option[String],
+  query: String
+) extends JSONSerializable
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
-}
+case class ReportModify(
+  name: String,
+  beschreibung: Option[String],
+  query: String
+) extends JSONSerializable
+
+case class ReportExecute(
+  id: ReportId,
+  query: String
+) extends JSONSerializable

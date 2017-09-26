@@ -20,31 +20,39 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.db.evolution.scripts.v2
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.reports.ReportsDBMappings
 
-import akka.actor.ActorSystem
+object OO731_Reports {
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+  val CreateReportsTable = new Script with LazyLogging with ReportsDBMappings {
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      sql"""
+CREATE TABLE `Report` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(200) NOT NULL,
+  `beschreibung` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `query` varchar(5000) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `erstelldat` datetime NOT NULL,
+  `ersteller` bigint(20) NOT NULL,
+  `modifidat` datetime NOT NULL,
+  `modifikator` bigint(20) NOT NULL,
+  KEY `id_index` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
+""".execute.apply()
+      Success(true)
+    }
+  }
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  val scripts = Seq(CreateReportsTable)
 }

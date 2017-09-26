@@ -20,31 +20,50 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
-
+import ch.openolitor.core._
+import ch.openolitor.core.db._
+import ch.openolitor.core.domain._
+import ch.openolitor.core.models._
+import ch.openolitor.reports._
+import ch.openolitor.reports.models._
+import java.util.UUID
+import scalikejdbc._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
+import ch.openolitor.core.Macros._
+import scala.concurrent.ExecutionContext.Implicits.global
+import org.joda.time.DateTime
+import ch.openolitor.core.Macros._
+import scala.concurrent.Future
+import ch.openolitor.reports.repositories.DefaultReportsWriteRepositoryComponent
+import ch.openolitor.reports.repositories.ReportsWriteRepositoryComponent
+import ch.openolitor.core.repositories.EventPublishingImplicits._
+import ch.openolitor.core.repositories.EventPublisher
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
+object ReportsAktionenService {
+  def apply(implicit sysConfig: SystemConfig, system: ActorSystem): ReportsAktionenService = new DefaultReportsAktionenService(sysConfig, system)
 }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+class DefaultReportsAktionenService(sysConfig: SystemConfig, override val system: ActorSystem)
+    extends ReportsAktionenService(sysConfig) with DefaultReportsWriteRepositoryComponent {
+}
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+/**
+ * Actor zum Verarbeiten der Aktionen für das Reports Modul
+ */
+class ReportsAktionenService(override val sysConfig: SystemConfig) extends EventService[PersistentEvent] with LazyLogging with AsyncConnectionPoolContextAware
+    with ReportsDBMappings {
+  self: ReportsWriteRepositoryComponent =>
+
+  val False = false
+  val Zero = 0
+
+  val handle: Handle = {
+
+    case e =>
+      logger.warn(s"Unknown event:$e")
+  }
 }
