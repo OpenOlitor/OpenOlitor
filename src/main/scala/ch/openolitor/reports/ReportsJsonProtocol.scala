@@ -58,7 +58,7 @@ trait ReportsJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoPro
       }
     }
 
-    def read(value: JsValue) = ???
+    def read(value: JsValue) = throw new UnsupportedOperationException("Map[String, Any] can not be created out of JSON-Object at the moment")
   }
 
 }
