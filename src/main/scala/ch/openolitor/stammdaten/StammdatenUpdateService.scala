@@ -109,6 +109,14 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         stammdatenWriteRepository.updateEntity[Vertrieb, VertriebId](copy)
       }
 
+      stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
+        if (Ungeplant == lieferung.status || Offen == lieferung.status) {
+          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](
+            lieferung.copy(vertriebBeschrieb = update.beschrieb), lieferungMapping.column.vertriebBeschrieb
+          )
+        }
+      }
+
       stammdatenWriteRepository.getAbosByVertrieb(id) map { abo =>
         abo match {
           case dlAbo: DepotlieferungAbo =>
@@ -149,6 +157,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         //update einiger Felder auf den Lieferungen
         val updatedLieferung = copyTo[Lieferung, Lieferung](
           lieferung,
+          "abotypBeschrieb" -> update.name,
           "zielpreis" -> update.zielpreis,
           "modifidat" -> meta.timestamp,
           "modifikator" -> personId
