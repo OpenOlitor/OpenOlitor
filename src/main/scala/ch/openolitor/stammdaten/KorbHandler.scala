@@ -42,8 +42,18 @@ trait KorbHandler extends KorbStatusHandler
   def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: IAbotyp)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (Option[Korb], Option[Korb]) = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
       case None if (lieferung.lieferplanungId.isDefined) =>
-        val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
-        val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+        val status = abo match {
+          case zusatzAbo: ZusatzAbo =>
+            val mainAbo = stammdatenWriteRepository.getById(depotlieferungAboMapping, zusatzAbo.hauptAboId) orElse
+              stammdatenWriteRepository.getById(postlieferungAboMapping, zusatzAbo.hauptAboId) orElse
+              stammdatenWriteRepository.getById(heimlieferungAboMapping, zusatzAbo.hauptAboId)
+            val abwCount = stammdatenWriteRepository.countAbwesend(mainAbo.get.id, lieferung.datum.toLocalDate)
+            calculateKorbStatus(abwCount, mainAbo.get.guthaben, abotyp.guthabenMindestbestand)
+          case abo: Abo =>
+            val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
+            calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+        }
+        //val status = calculateKorbStatus(abwCount, stammdatenWriteRepository.getById(mainAbo).guthaben, abotyp.guthabenMindestbestand)
         val korbId = KorbId(IdUtil.positiveRandomId)
         val korb = Korb(
           korbId,
