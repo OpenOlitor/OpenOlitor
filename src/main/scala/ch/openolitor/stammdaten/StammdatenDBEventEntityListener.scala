@@ -439,6 +439,15 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       if (personen.size == 1) {
         stammdatenUpdateRepository.updateEntity[Kunde, KundeId](person.kundeId)(kundeMapping.column.bezeichnung -> personen.head.fullName)
       }
+      // Recalculate sort field on Persons
+      personen.zipWithIndex.map {
+        case (person, index) =>
+          val sortValue = (index + 1)
+          if (sortValue != person.sort) {
+            logger.debug(s"Update sort for Person {person.id} {person.vorname} {person.name} to {sortValue}")
+            stammdatenUpdateRepository.updateEntity[Person, PersonId](person.id)(personMapping.column.sort -> sortValue)
+          }
+      }
     }
   }
 

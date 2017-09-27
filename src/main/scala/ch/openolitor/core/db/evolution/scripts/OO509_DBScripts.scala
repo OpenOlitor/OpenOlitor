@@ -20,52 +20,50 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts.v1
+package ch.openolitor.core.db.evolution.scripts
 
-import ch.openolitor.core.db.evolution.scripts.OO509_DBScripts
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import ch.openolitor.core.SystemConfig
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
+import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.stammdaten.models.Abwesenheit
+import scala.collection.immutable.TreeMap
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.Boot
+import ch.openolitor.core.models.PersonId
 
-object V1SRScripts {
-  val scripts =
-    OO205_DBScripts.scripts ++
-      OO215_DBScripts.scripts ++
-      OO219_DBScripts.scripts ++
-      OO228_DBScripts.scripts ++
-      OO219_DBScripts_FilestoreReference.scripts ++
-      OO220_DBScripts.scripts ++
-      OO297_DBScripts.scripts ++
-      OO311_DBScripts.scripts ++
-      OO314_DBScripts.scripts ++
-      OO325_DBScripts.scripts ++
-      OO326_DBScripts.scripts ++
-      OO328_DBScripts.scripts ++
-      OO327_DBScripts.scripts ++
-      OO254_DBScripts.scripts ++
-      OO152_DBScripts.scripts ++
-      OO330_DBScripts.scripts ++
-      OO337_DBScripts.scripts ++
-      OO382_DBScripts.scripts ++
-      OO106_DBScripts_Mahnungen.scripts ++
-      OO374_DBScripts.scripts ++
-      OO374_DBScripts_aktiv_to_abo.scripts ++
-      OO461_DBScripts.scripts ++
-      OO468_DBScripts.scripts ++
-      OO433_DBScripts.scripts ++
-      OO476_DBScripts.scripts ++
-      OO499_DBScripts.scripts ++
-      OO506_DBScripts.scripts ++
-      OO501_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO564_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO597_DBScripts.scripts ++
-      OO597_Index_DBScripts.scripts ++
-      OO544_DBScripts.scripts ++
-      OO554_DBScripts.scripts ++
-      OO291_OO396_DBScripts.scripts ++
-      OO281_DBScripts.scripts ++
-      OO618_DBScripts.scripts ++
-      OO556_DBScripts.scripts ++
-      OO350_DBScripts.scripts ++
-      OO509_DBScripts.scripts
+/**
+ * Recalculate sort field on Person
+ */
+object OO509_DBScripts extends DefaultDBScripts {
+  val script = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Recalculate sort field on Person")
+      implicit val personId = Boot.systemPersonId
+
+      val persons = getPersonen
+      val sortedPersons = persons.groupBy(_.kundeId)
+      sortedPersons map {
+        case (kundeId, persons) =>
+          persons.zipWithIndex.map {
+            case (person, index) =>
+              val sortValue = (index + 1)
+              if (sortValue != person.sort) {
+                logger.debug(s"Update sort for Person {person.id} {person.vorname} {person.name} to {sortValue}")
+                updateEntity[Person, PersonId](person.id)(personMapping.column.sort -> sortValue)
+              }
+          }
+      }
+
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(script)
 }
