@@ -20,31 +20,12 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports.repositories
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
-
-import akka.actor.ActorSystem
-
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
+trait ReportsReadRepositoryAsyncComponent {
+  val reportsReadRepository: ReportsReadRepositoryAsync
 }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
-
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+trait DefaultReportsReadRepositoryAsyncComponent extends ReportsReadRepositoryAsyncComponent {
+  override val reportsReadRepository: ReportsReadRepositoryAsync = new ReportsReadRepositoryAsyncImpl
 }

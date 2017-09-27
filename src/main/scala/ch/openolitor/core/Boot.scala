@@ -57,6 +57,8 @@ import ch.openolitor.core.db.evolution.Evolution
 import scala.util._
 import ch.openolitor.buchhaltung.BuchhaltungEntityStoreView
 import ch.openolitor.buchhaltung.BuchhaltungDBEventEntityListener
+import ch.openolitor.reports.ReportsEntityStoreView
+import ch.openolitor.reports.ReportsDBEventEntityListener
 import ch.openolitor.core.models.BaseId
 import spray.caching.LruCache
 import ch.openolitor.core.security.Subject
@@ -206,6 +208,9 @@ object Boot extends App with LazyLogging {
       val buchhaltungDBEventListener = Await.result(system ? SystemActor.Child(BuchhaltungDBEventEntityListener.props, "buchhaltung-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
       val buchhaltungReportEventListener = Await.result(system ? SystemActor.Child(BuchhaltungReportEventListener.props(entityStore), "buchhaltung-report-event-listener"), duration).asInstanceOf[ActorRef]
 
+      val reportsEntityStoreView = Await.result(system ? SystemActor.Child(ReportsEntityStoreView.props(dbEvolutionActor), "reports-entity-store-view"), duration).asInstanceOf[ActorRef]
+      val reportsDBEventListener = Await.result(system ? SystemActor.Child(ReportsDBEventEntityListener.props, "reports-dbevent-entity-listener"), duration).asInstanceOf[ActorRef]
+
       //start websocket service
       val clientMessages = Await.result(system ? SystemActor.Child(ClientMessagesServer.props(loginTokenCache), "ws-client-messages"), duration).asInstanceOf[ActorRef]
 
@@ -219,6 +224,7 @@ object Boot extends App with LazyLogging {
       eventStore ? DefaultMessages.Startup
       stammdatenEntityStoreView ? DefaultMessages.Startup
       buchhaltungEntityStoreView ? DefaultMessages.Startup
+      reportsEntityStoreView ? DefaultMessages.Startup
 
       // create and start our service actor
       val service = Await.result(system ? SystemActor.Child(RouteServiceActor.props(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, fileStoreComponent.fileStore, airbrakeNotifier, jobQueueService, loginTokenCache), "route-service"), duration).asInstanceOf[ActorRef]

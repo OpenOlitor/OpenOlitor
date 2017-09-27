@@ -74,6 +74,7 @@ import ch.openolitor.core.system.DefaultNonAuthRessourcesRouteService
 import ch.openolitor.util.ZipBuilder
 import ch.openolitor.kundenportal.KundenportalRoutes
 import ch.openolitor.kundenportal.DefaultKundenportalRoutes
+import ch.openolitor.reports._
 import ch.openolitor.stammdaten.models.ProjektVorlageId
 import spray.can.server.Response
 import ch.openolitor.core.ws.ExportFormat
@@ -115,6 +116,8 @@ trait RouteServiceComponent extends ActorReferences {
   val stammdatenRouteService: StammdatenRoutes
   val stammdatenRouteOpenService: StammdatenOpenRoutes
   val buchhaltungRouteService: BuchhaltungRoutes
+  val reportsRouteService: ReportsRoutes
+  val syncReportsRouteService: SyncReportsRoutes
   val kundenportalRouteService: KundenportalRoutes
   val systemRouteService: SystemRouteService
   val loginRouteService: LoginRouteService
@@ -125,6 +128,8 @@ trait DefaultRouteServiceComponent extends RouteServiceComponent with TokenCache
   override lazy val stammdatenRouteService = new DefaultStammdatenRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val stammdatenRouteOpenService = new DefaultStammdatenOpenRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val buchhaltungRouteService = new DefaultBuchhaltungRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val reportsRouteService = new DefaultReportsRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
+  override lazy val syncReportsRouteService = new DefaultSyncReportsRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val kundenportalRouteService = new DefaultKundenportalRoutes(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val systemRouteService = new DefaultSystemRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService)
   override lazy val loginRouteService = new DefaultLoginRouteService(dbEvolutionActor, entityStore, eventStore, mailService, reportSystem, sysConfig, system, fileStore, actorRefFactory, airbrakeNotifier, jobQueueService, loginTokenCache)
@@ -180,6 +185,8 @@ trait RouteServiceActor
           authorize(hasRole(AdministratorZugang)) {
             stammdatenRouteService.stammdatenRoute ~
               buchhaltungRouteService.buchhaltungRoute ~
+              reportsRouteService.reportsRoute ~
+              syncReportsRouteService.syncReportsRoute ~
               fileStoreRoute
           } ~
           authorize(hasRole(KundenZugang) || hasRole(AdministratorZugang)) {
@@ -268,7 +275,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
           }
         }
       case x =>
-        complete(StatusCodes.BadRequest, s"No id generated:$x")
+        complete(StatusCodes.BadRequest, s"No id generated or CommandHandler not triggered:$x")
     }
   }
 
@@ -307,45 +314,71 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
           val sheet = dataDocument.getSheetByIndex(0)
           sheet.setCellStyleInheritance(false)
 
+          def writeToRow(row: Row, element: Any, cellIndex: Int): Unit = {
+            element match {
+              case some: Some[Any] => writeToRow(row, some.x, cellIndex)
+              case None =>
+              case ite: Iterable[Any] => ite map { item => writeToRow(row, item, cellIndex) }
+              case id: BaseId => row.getCellByIndex(cellIndex).setDoubleValue(id.id)
+              case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id).trim)
+              case str: String => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + str).trim)
+              case dat: org.joda.time.DateTime => row.getCellByIndex(cellIndex).setDateTimeValue(dat.toCalendar(Locale.GERMAN))
+              case nbr: Number => row.getCellByIndex(cellIndex).setDoubleValue(nbr.doubleValue())
+              case x => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + x.toString).trim)
+            }
+          }
+
           result match {
-            case list: List[Product @unchecked] =>
-              if (list.nonEmpty) {
+            case genericList: List[Any] =>
+              if (genericList.nonEmpty) {
+                genericList.head match {
+                  case firstMapEntry: Map[_, _] =>
+                    val listOfMaps = genericList.asInstanceOf[List[Map[String, Any]]]
+                    val row = sheet.getRowByIndex(0);
 
-                val row = sheet.getRowByIndex(0);
+                    listOfMaps.head.zipWithIndex foreach {
+                      case ((fieldName, value), index) =>
+                        row.getCellByIndex(index).setStringValue(fieldName)
+                        val font = row.getCellByIndex(index).getFont
+                        font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
+                        font.setSize(10)
+                        row.getCellByIndex(index).setFont(font)
+                    }
 
-                def getCCParams(cc: Product) = cc.getClass.getDeclaredFields.map(_.getName) // all field names
-                  .zip(cc.productIterator.to).toMap // zipped with all values
+                    listOfMaps.zipWithIndex foreach {
+                      case (entry, index) =>
+                        val row = sheet.getRowByIndex(index + 1);
 
-                getCCParams(list.head).zipWithIndex foreach {
-                  case ((fieldName, value), index) =>
-                    row.getCellByIndex(index).setStringValue(fieldName)
-                    val font = row.getCellByIndex(index).getFont
-                    font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
-                    font.setSize(10)
-                    row.getCellByIndex(index).setFont(font)
-                }
+                        entry.zipWithIndex foreach {
+                          case ((fieldName, value), colIndex) =>
+                            writeToRow(row, value, colIndex)
+                        }
+                    }
 
-                def writeToRow(row: Row, element: Any, cellIndex: Int): Unit = {
-                  element match {
-                    case some: Some[Any] => writeToRow(row, some.x, cellIndex)
-                    case None =>
-                    case ite: Iterable[Any] => ite map { item => writeToRow(row, item, cellIndex) }
-                    case id: BaseId => row.getCellByIndex(cellIndex).setDoubleValue(id.id)
-                    case stringId: BaseStringId => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + stringId.id).trim)
-                    case str: String => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + str).trim)
-                    case dat: org.joda.time.DateTime => row.getCellByIndex(cellIndex).setDateTimeValue(dat.toCalendar(Locale.GERMAN))
-                    case nbr: Number => row.getCellByIndex(cellIndex).setDoubleValue(nbr.doubleValue())
-                    case x => row.getCellByIndex(cellIndex).setStringValue((row.getCellByIndex(cellIndex).getStringValue + " " + x.toString).trim)
-                  }
-                }
+                  case firstProductEntry: Product =>
+                    val listOfProducts = genericList.asInstanceOf[List[Product]]
+                    val row = sheet.getRowByIndex(0);
 
-                list.zipWithIndex foreach {
-                  case (entry, index) =>
-                    val row = sheet.getRowByIndex(index + 1);
+                    def getCCParams(cc: Product) = cc.getClass.getDeclaredFields.map(_.getName) // all field names
+                      .zip(cc.productIterator.to).toMap // zipped with all values
 
-                    getCCParams(entry).zipWithIndex foreach {
-                      case ((fieldName, value), colIndex) =>
-                        writeToRow(row, value, colIndex)
+                    getCCParams(listOfProducts.head).zipWithIndex foreach {
+                      case ((fieldName, value), index) =>
+                        row.getCellByIndex(index).setStringValue(fieldName)
+                        val font = row.getCellByIndex(index).getFont
+                        font.setFontStyle(StyleTypeDefinitions.FontStyle.BOLD)
+                        font.setSize(10)
+                        row.getCellByIndex(index).setFont(font)
+                    }
+
+                    listOfProducts.zipWithIndex foreach {
+                      case (entry, index) =>
+                        val row = sheet.getRowByIndex(index + 1);
+
+                        getCCParams(entry).zipWithIndex foreach {
+                          case ((fieldName, value), colIndex) =>
+                            writeToRow(row, value, colIndex)
+                        }
                     }
                 }
               }
