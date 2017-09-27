@@ -303,13 +303,6 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
     onSuccess(f) { result =>
       complete(result)
     }
-
-    onFailure(f) {
-      case e: Exception =>
-        logger.debug(s"***************** FAILURE ${e.getMessage()}")
-        e.printStackTrace()
-        failWith(e)
-    }
   }
 
   protected def list[R](f: => Future[R], exportFormat: Option[ExportFormat])(implicit tr: ToResponseMarshaller[R]) = {
@@ -339,7 +332,7 @@ trait DefaultRouteService extends HttpService with ActorReferences with BaseJson
             case genericList: List[Any] =>
               if (genericList.nonEmpty) {
                 genericList.head match {
-                  case firstMapEntry: Map[String, Any] =>
+                  case firstMapEntry: Map[_, _] =>
                     val listOfMaps = genericList.asInstanceOf[List[Map[String, Any]]]
                     val row = sheet.getRowByIndex(0);
 
