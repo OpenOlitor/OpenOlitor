@@ -178,24 +178,28 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
     def parameterMappings(entity: ZusatzAbotyp): Seq[ParameterBinder] =
       parameters(ZusatzAbotyp.unapply(entity).get)
 
-    override def updateParameters(abotyp: ZusatzAbotyp) = {
-      super.updateParameters(abotyp) ++ Seq(
-        column.name -> abotyp.name,
-        column.beschreibung -> abotyp.beschreibung,
-        column.aktivVon -> abotyp.aktivVon,
-        column.aktivBis -> abotyp.aktivBis,
-        column.preis -> abotyp.preis,
-        column.preiseinheit -> abotyp.preiseinheit,
-        column.laufzeit -> abotyp.laufzeit,
-        column.laufzeiteinheit -> abotyp.laufzeiteinheit,
-        column.vertragslaufzeit -> abotyp.vertragslaufzeit,
-        column.kuendigungsfrist -> abotyp.kuendigungsfrist,
-        column.farbCode -> abotyp.farbCode,
-        column.zielpreis -> abotyp.zielpreis,
-        column.adminProzente -> abotyp.adminProzente,
-        column.anzahlAbonnenten -> abotyp.anzahlAbonnenten,
-        column.anzahlAbonnentenAktiv -> abotyp.anzahlAbonnentenAktiv,
-        column.letzteLieferung -> abotyp.letzteLieferung
+    override def updateParameters(zusatzabotyp: ZusatzAbotyp) = {
+      super.updateParameters(zusatzabotyp) ++ Seq(
+        column.name -> zusatzabotyp.name,
+        column.beschreibung -> zusatzabotyp.beschreibung,
+        column.aktivVon -> zusatzabotyp.aktivVon,
+        column.aktivBis -> zusatzabotyp.aktivBis,
+        column.preis -> zusatzabotyp.preis,
+        column.preiseinheit -> zusatzabotyp.preiseinheit,
+        column.laufzeit -> zusatzabotyp.laufzeit,
+        column.laufzeiteinheit -> zusatzabotyp.laufzeiteinheit,
+        column.vertragslaufzeit -> zusatzabotyp.vertragslaufzeit,
+        column.kuendigungsfrist -> zusatzabotyp.kuendigungsfrist,
+        column.anzahlAbwesenheiten -> zusatzabotyp.anzahlAbwesenheiten,
+        column.farbCode -> zusatzabotyp.farbCode,
+        column.zielpreis -> zusatzabotyp.zielpreis,
+        column.guthabenMindestbestand -> zusatzabotyp.guthabenMindestbestand,
+        column.adminProzente -> zusatzabotyp.adminProzente,
+        column.wirdGeplant -> zusatzabotyp.wirdGeplant,
+        column.anzahlAbonnenten -> zusatzabotyp.anzahlAbonnenten,
+        column.anzahlAbonnentenAktiv -> zusatzabotyp.anzahlAbonnentenAktiv,
+        column.letzteLieferung -> zusatzabotyp.letzteLieferung,
+        column.waehrung -> zusatzabotyp.waehrung
       )
     }
   }
@@ -680,24 +684,26 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
       parameters(ZusatzAbo.unapply(entity).get)
     }
 
-    override def updateParameters(abo: ZusatzAbo) = {
-      super.updateParameters(abo) ++ Seq(
-        column.kundeId -> abo.kundeId,
-        column.kunde -> abo.kunde,
-        column.vertriebId -> abo.vertriebId,
-        column.vertriebsartId -> abo.vertriebsartId,
-        column.hauptAbotypId -> abo.hauptAbotypId,
-        column.abotypId -> abo.abotypId,
-        column.abotypName -> abo.abotypName,
-        column.start -> abo.start,
-        column.ende -> abo.ende,
-        column.guthabenVertraglich -> abo.guthabenVertraglich,
-        column.guthaben -> abo.guthaben,
-        column.guthabenInRechnung -> abo.guthabenInRechnung,
-        column.letzteLieferung -> abo.letzteLieferung,
-        column.anzahlAbwesenheiten -> abo.anzahlAbwesenheiten,
-        column.anzahlLieferungen -> abo.anzahlLieferungen,
-        column.aktiv -> abo.aktiv
+    override def updateParameters(zusatzAbo: ZusatzAbo) = {
+      super.updateParameters(zusatzAbo) ++ Seq(
+        column.hauptAboId -> zusatzAbo.hauptAboId,
+        column.hauptAbotypId -> zusatzAbo.hauptAbotypId,
+        column.kundeId -> zusatzAbo.kundeId,
+        column.kunde -> zusatzAbo.kunde,
+        column.vertriebsartId -> zusatzAbo.vertriebsartId,
+        column.vertriebId -> zusatzAbo.vertriebId,
+        column.vertriebBeschrieb -> zusatzAbo.vertriebBeschrieb,
+        column.abotypId -> zusatzAbo.abotypId,
+        column.abotypName -> zusatzAbo.abotypName,
+        column.start -> zusatzAbo.start,
+        column.ende -> zusatzAbo.ende,
+        column.guthabenVertraglich -> zusatzAbo.guthabenVertraglich,
+        column.guthaben -> zusatzAbo.guthaben,
+        column.guthabenInRechnung -> zusatzAbo.guthabenInRechnung,
+        column.letzteLieferung -> zusatzAbo.letzteLieferung,
+        column.anzahlAbwesenheiten -> zusatzAbo.anzahlAbwesenheiten,
+        column.anzahlLieferungen -> zusatzAbo.anzahlLieferungen,
+        column.aktiv -> zusatzAbo.aktiv
       )
     }
   }

@@ -27,7 +27,6 @@ import stamina.json._
 import spray.json.lenses.JsonLenses._
 import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.domain.EntityStoreJsonProtocol
 import ch.openolitor.stammdaten.models.LieferungPlanungAdd
 import ch.openolitor.stammdaten.models.LieferungPlanungRemove
@@ -48,6 +47,11 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
 
   implicit val abotypModifyPersister = persister[AbotypModify]("abotyp-modify")
   implicit val abotypIdPersister = persister[AbotypId]("abotyp-id")
+
+  implicit val zusatzAbotypModifyPersister = persister[ZusatzAbotypModify]("zusatzabotyp-modify")
+
+  implicit val zusatzAboModifyPersister = persister[ZusatzAboModify]("zusatzabo-modify")
+  implicit val zusatzAboCreatePersister = persister[ZusatzAboCreate]("zusatzabo-create")
 
   implicit val kundeModifyPersister = persister[KundeModify]("kunde-modify")
   implicit val kundeIdPersister = persister[KundeId]("kunde-id")
@@ -75,7 +79,11 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
   val aboGuthabenModifyPersister = persister[AboGuthabenModify]("abo-guthaben-modify")
   implicit val aboGuthabenModifyV2Persister = persister[AboGuthabenModify, V2]("abo-guthaben-modify", from[V1]
     .to[V2](in => in.update('guthabenAlt ! set[Int](in.extract[Int]('guthabenNeu)))))
-  implicit val aboVertriebsartModifyPersister = persister[AboVertriebsartModify]("abo-vertriebsart-modify")
+
+  // TODO how to set vertriebId?!
+  implicit val aboVertriebsartModifyPersister = persister[AboVertriebsartModify, V2]("abo-vertriebsart-modify", from[V1]
+    .to[V2](in => in.update('vertriebIdNeu ! set[Int](0))))
+
   implicit val aboDLV2Persister = persister[DepotlieferungAboModify, V2]("depotlieferungabo-modify", from[V1]
     .to[V2](in => fixToOptionLocalDate(fixToLocalDate(in, 'start), 'ende)))
   implicit val aboPLV2Persister = persister[PostlieferungAboModify, V2]("postlieferungabo-modify", from[V1]
@@ -181,6 +189,9 @@ trait StammdatenEventStoreSerializer extends StammdatenJsonProtocol with EntityS
     aboIdPersister,
     abotypModifyPersister,
     abotypIdPersister,
+    zusatzAbotypModifyPersister,
+    zusatzAboModifyPersister,
+    zusatzAboCreatePersister,
     kundeModifyPersister,
     kundeIdPersister,
     personCreatePersister,

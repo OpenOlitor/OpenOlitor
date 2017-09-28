@@ -20,29 +20,25 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.util
+package ch.openolitor.core.db.evolution.scripts.v2
 
-import com.typesafe.config.Config
-import scala.collection.JavaConversions._
+import ch.openolitor.core.SystemConfig
+import ch.openolitor.core.db.evolution.Script
+import ch.openolitor.stammdaten.StammdatenDBMappings
+import com.typesafe.scalalogging.LazyLogging
+import scalikejdbc._
+import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object ConfigUtil {
-  /**
-   * Enhanced typesafe config adding support to read config keys as option
-   */
-  implicit class MyConfig(self: Config) {
+import scala.util.{ Success, Try }
 
-    private def getOption[T](path: String)(get: String => T): Option[T] = {
-      if (self != null && path != null && self.hasPath(path)) {
-        Some(get(path))
-      } else {
-        None
-      }
+object OO697_Zusatzabos_add_modify_delete extends DefaultDBScripts {
+  val StammdatenScripts = new Script with LazyLogging with StammdatenDBMappings {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"add column anzahl_abo_aktiv to zusatzabotyp")
+      alterTableAddColumnIfNotExists(zusatzAbotypMapping, "anzahl_abonnenten_aktiv", "int not null default 0", "anzahl_abonnenten")
+
+      Success(true)
     }
-
-    def getStringOption(path: String): Option[String] = getOption(path)(path => self.getString(path))
-    def getStringListOption(path: String): Option[List[String]] = getOption(path)(path => self.getStringList(path).toList)
-    def getIntOption(path: String): Option[Int] = getOption(path)(path => self.getInt(path))
-    def getBooleanOption(path: String): Option[Boolean] = getOption(path)(path => self.getBoolean(path))
-    def getLongOption(path: String): Option[Long] = getOption(path)(path => self.getLong(path))
   }
+  val scripts = Seq(StammdatenScripts)
 }

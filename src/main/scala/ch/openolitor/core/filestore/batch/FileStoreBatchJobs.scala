@@ -20,20 +20,27 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.calculations
+package ch.openolitor.core.filestore.batch
 
-import akka.actor.Props
 import akka.actor.Actor
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.calculations.StammdatenCalculations
-import akka.actor.ActorSystem
+import akka.actor.ActorLogging
 import ch.openolitor.core.SystemConfig
+import akka.actor.ActorSystem
+import akka.actor.Props
+import ch.openolitor.core.batch.BatchJobs._
+import ch.openolitor.core.batch.BaseBatchJobsSupervisor
+import ch.openolitor.core.filestore.batch.housekeeping.TemporaryDataBucketCleanupBatchJob
 import akka.actor.ActorRef
+import ch.openolitor.core.filestore.FileStore
 
-object OpenOlitorCalculations {
-  def props(entityStore: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorCalculations], sysConfig, system, entityStore)
+object FileStoreBatchJobs {
+  def props(sysConfig: SystemConfig, system: ActorSystem, fileStore: FileStore): Props = Props(classOf[DefaultFileStoreBatchJobs], sysConfig, system, fileStore)
 }
 
-class OpenOlitorCalculations(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef) extends BaseCalculationsSupervisor {
-  override lazy val calculators = Set(context.actorOf(StammdatenCalculations.props(sysConfig, system, entityStore)))
+class FileStoreBatchJobs(val sysConfig: SystemConfig, val system: ActorSystem, val fileStore: FileStore) extends BaseBatchJobsSupervisor {
+  override lazy val batchJobs = Set(
+    context.actorOf(TemporaryDataBucketCleanupBatchJob.props(sysConfig, system, fileStore))
+  )
 }
+
+class DefaultFileStoreBatchJobs(override val sysConfig: SystemConfig, override val system: ActorSystem, override val fileStore: FileStore) extends FileStoreBatchJobs(sysConfig, system, fileStore)

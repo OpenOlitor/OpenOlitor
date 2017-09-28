@@ -20,42 +20,25 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.stammdaten.calculations
+package ch.openolitor.core.batch
 
-import ch.openolitor.core.SystemConfig
-import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.Actor
-import akka.actor.ActorLogging
-import ch.openolitor.core.calculations.BaseCalculation
-import scala.concurrent.duration._
-import ch.openolitor.core.calculations.Calculations.StartCalculation
-import scala.concurrent.ExecutionContext.Implicits.global
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import scalikejdbc._
-import ch.openolitor.stammdaten.repositories.DefaultStammdatenWriteRepositoryComponent
-import ch.openolitor.core.db.AsyncConnectionPoolContextAware
-import scala.util.Failure
-import ch.openolitor.core.calculations.Calculations.CalculationResult
-import org.joda.time.DateTime
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.batch.StammdatenBatchJobs
+import akka.actor.ActorSystem
+import ch.openolitor.core.SystemConfig
+import akka.actor.ActorRef
+import ch.openolitor.core.filestore.FileStore
+import ch.openolitor.core.filestore.batch.FileStoreBatchJobs
 
-object KorbStatusCalculation {
-  def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[KorbStatusCalculation], sysConfig, system)
+object OpenOlitorBatchJobs {
+  def props(entityStore: ActorRef, fileStore: FileStore)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[OpenOlitorBatchJobs], sysConfig, system, entityStore, fileStore)
 }
 
-class KorbStatusCalculation(override val sysConfig: SystemConfig, override val system: ActorSystem) extends BaseCalculation
-    with AsyncConnectionPoolContextAware
-    with DefaultStammdatenWriteRepositoryComponent
-    with StammdatenDBMappings {
-
-  override def calculate(): Unit = {
-    DB autoCommit { implicit session =>
-      sql"""update ${korbMapping.table} k inner join ${abwesenheitMapping.table} a on k.abo_id=a.abo_id and k.lieferung_id=a.lieferung_id 
-      	set Status='FaelltAusAbwesend'""".execute.apply()
-    }
-  }
-
-  protected def handleInitialization(): Unit = {
-    // disable scheduled calculation for now
-  }
+class OpenOlitorBatchJobs(sysConfig: SystemConfig, system: ActorSystem, entityStore: ActorRef, fileStore: FileStore) extends BaseBatchJobsSupervisor {
+  override lazy val batchJobs = Set(
+    context.actorOf(StammdatenBatchJobs.props(sysConfig, system, entityStore)),
+    context.actorOf(FileStoreBatchJobs.props(sysConfig, system, fileStore))
+  )
 }

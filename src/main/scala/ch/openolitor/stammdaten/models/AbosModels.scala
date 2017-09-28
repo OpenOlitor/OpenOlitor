@@ -22,14 +22,10 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
-import java.util.UUID
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
-import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
-import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.kundenportal.models.BelongsToKunde
 import ch.openolitor.core.scalax.Tuple23
@@ -427,6 +423,7 @@ case class AboGuthabenModify(
 ) extends JSONSerializable
 
 case class AboVertriebsartModify(
+  vertriebIdNeu: VertriebId,
   vertriebsartIdNeu: VertriebsartId,
   bemerkung: String
 ) extends JSONSerializable
@@ -492,6 +489,29 @@ object Tourlieferung {
     )
   }
 }
+
+case class TourlieferungDetail(
+  id: AboId,
+  tourId: TourId,
+  abotypId: AbotypId,
+  kundeId: KundeId,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  kundeBezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  abotypName: String,
+  sort: Option[Int],
+  zusatzAbos: Seq[ZusatzAbo],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
 
 case class ZusatzAbo(
   id: AboId,
@@ -582,3 +602,18 @@ case class ZusatzAboDetail(
   abotyp: Option[ZusatzAbotyp],
   vertrieb: Option[Vertrieb]
 ) extends AboDetail
+
+case class ZusatzAboModify(
+  id: AboId,
+  abotypId: AbotypId,
+  hauptAboId: AboId,
+  kundeId: KundeId,
+  start: LocalDate,
+  ende: Option[LocalDate]
+) extends JSONSerializable
+
+case class ZusatzAboCreate(
+  abotypId: AbotypId,
+  hauptAboId: AboId,
+  kundeId: KundeId
+) extends JSONSerializable

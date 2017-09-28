@@ -67,7 +67,7 @@ trait AuslieferungKorbUebersichtReportService extends AsyncConnectionPoolContext
         val projektReport = copyTo[Projekt, ProjektReport](projekt)
         stammdatenReadRepository.getMultiAuslieferungReport(auslieferungIds, projektReport) map { auslieferungReport =>
 
-          val proAbotyp = (auslieferungReport.entries groupBy (_.korb.abotyp.name) map {
+          val proAbotyp = (auslieferungReport.entries groupBy (groupIdentifier) map {
             case (abotypName, auslieferungen) =>
               (abotypName, auslieferungen groupBy (auslieferung => auslieferung.depot.map(_.name) orElse (auslieferung.tour map (_.name)) getOrElse "Post") mapValues (_.size))
           }) map {
@@ -88,5 +88,13 @@ trait AuslieferungKorbUebersichtReportService extends AsyncConnectionPoolContext
         }
       } getOrElse Future { (Seq(ValidationError[AuslieferungId](null, s"Projekt konnte nicht geladen werden")), Seq()) }
     }
+  }
+
+  /**
+   * This will result in titles containing Abotyp +Z1, Z2
+   */
+  private def groupIdentifier(reportEntry: AuslieferungReportEntry) = {
+    val zusatzAbos = if (!reportEntry.korb.zusatzAbosString.isEmpty()) s" +${reportEntry.korb.zusatzAbosString}" else ""
+    s"${reportEntry.korb.abotyp.name}${zusatzAbos}"
   }
 }

@@ -29,7 +29,6 @@ import ch.openolitor.core.ws._
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.repositories.StammdatenReadRepositoryAsync
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.buchhaltung.BuchhaltungJsonProtocol
 
@@ -79,9 +78,17 @@ class DBEvent2UserMapping extends Actor
     case e @ EntityCreated(personId, entity: Abotyp) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
     case e @ EntityDeleted(personId, entity: Abotyp) => send(personId, e.asInstanceOf[DBEvent[Abotyp]])
 
+    case e @ EntityModified(personId, entity: ZusatzAbotyp, _) => send(personId, e.asInstanceOf[DBEvent[ZusatzAbotyp]])
+    case e @ EntityCreated(personId, entity: ZusatzAbotyp) => send(personId, e.asInstanceOf[DBEvent[ZusatzAbotyp]])
+    case e @ EntityDeleted(personId, entity: ZusatzAbotyp) => send(personId, e.asInstanceOf[DBEvent[ZusatzAbotyp]])
+
     case e @ EntityModified(personId, entity: Abo, _) => send(personId, e.asInstanceOf[DBEvent[Abo]])
     case e @ EntityCreated(personId, entity: Abo) => send(personId, e.asInstanceOf[DBEvent[Abo]])
     case e @ EntityDeleted(personId, entity: Abo) => send(personId, e.asInstanceOf[DBEvent[Abo]])
+
+    case e @ EntityModified(personId, entity: ZusatzAbo, _) => send(personId, e.asInstanceOf[DBEvent[ZusatzAbo]])
+    case e @ EntityCreated(personId, entity: ZusatzAbo) => send(personId, e.asInstanceOf[DBEvent[ZusatzAbo]])
+    case e @ EntityDeleted(personId, entity: ZusatzAbo) => send(personId, e.asInstanceOf[DBEvent[ZusatzAbo]])
 
     case e @ EntityModified(personId, entity: Abwesenheit, _) => send(personId, e.asInstanceOf[DBEvent[Abwesenheit]])
     case e @ EntityCreated(personId, entity: Abwesenheit) => send(personId, e.asInstanceOf[DBEvent[Abwesenheit]])

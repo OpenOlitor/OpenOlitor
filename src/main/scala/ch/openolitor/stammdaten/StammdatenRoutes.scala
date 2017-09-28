@@ -25,31 +25,22 @@ package ch.openolitor.stammdaten
 import org.joda.time.DateTime
 import spray.routing._
 import spray.http._
-import spray.http.MediaTypes._
 import spray.httpx.marshalling.ToResponseMarshallable._
 import spray.httpx.SprayJsonSupport._
 import spray.routing.Directive._
-import spray.json._
-import spray.json.DefaultJsonProtocol._
 import ch.openolitor.core._
 import ch.openolitor.core.domain._
 import ch.openolitor.core.db._
-import spray.httpx.unmarshalling.Unmarshaller
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util._
-import java.util.UUID
 import akka.pattern.ask
 import scala.concurrent.duration._
 import akka.util.Timeout
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.models._
-import spray.httpx.marshalling._
-import spray.httpx.unmarshalling._
-import scala.concurrent.Future
 import ch.openolitor.core.Macros._
 import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import stamina.Persister
-import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.stammdaten.reporting._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.filestore._
@@ -62,7 +53,6 @@ import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.stammdaten.models.AboGuthabenModify
 import ch.openolitor.util.parsing.UriQueryParamFilterParser
 import ch.openolitor.util.parsing.FilterExpr
-import ch.openolitor.core.security.RequestFailed
 
 trait StammdatenRoutes extends HttpService with ActorReferences
     with AsyncConnectionPoolContextAware with SprayDeserializers with DefaultRouteService with LazyLogging
@@ -89,7 +79,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       implicit val filter = f flatMap { filterString =>
         UriQueryParamFilterParser.parse(filterString)
       }
-      kontoDatenRoute ~ aboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ personenRoute ~
+      kontoDatenRoute ~ aboTypenRoute ~ zusatzAboTypenRoute ~ kundenRoute ~ depotsRoute ~ aboRoute ~ personenRoute ~
         kundentypenRoute ~ pendenzenRoute ~ produkteRoute ~ produktekategorienRoute ~
         produzentenRoute ~ tourenRoute ~ projektRoute ~ lieferplanungRoute ~ auslieferungenRoute ~ lieferantenRoute ~ vorlagenRoute
     }
@@ -167,6 +157,15 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten" / abwesenheitIdPath) { (_, aboId, abwesenheitId) =>
         deleteAbwesenheit(abwesenheitId)
+      } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "zusatzAbos") { (kundeId, aboId) =>
+        get(list(stammdatenReadRepository.getZusatzaboPerAbo(aboId))) ~
+          post(create[ZusatzAboCreate, AboId](AboId.apply _))
+      } ~
+      path("kunden" / kundeIdPath / "abos" / aboIdPath / "zusatzAbos" / aboIdPath) { (kundeId, hauptAboId, id) =>
+        get(detail(stammdatenReadRepository.getZusatzAboDetail(id))) ~
+          (put | post)(update[ZusatzAboModify, AboId](id)) ~
+          delete(remove(id))
       } ~
       path("kunden" / kundeIdPath / "pendenzen") { kundeId =>
         get(list(stammdatenReadRepository.getPendenzen(kundeId))) ~
@@ -299,6 +298,17 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("abotypen" / abotypIdPath / "vertriebe" / vertriebIdPath / "lieferungen" / lieferungIdPath) { (abotypId, vertriebId, lieferungId) =>
         delete(remove(lieferungId))
+      }
+
+  def zusatzAboTypenRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
+    path("zusatzAbotypen") {
+      get(list(stammdatenReadRepository.getZusatzAbotypen)) ~
+        post(create[ZusatzAbotypModify, AbotypId](AbotypId.apply))
+    } ~
+      path("zusatzAbotypen" / zusatzAbotypIdPath) { id =>
+        get(detail(stammdatenReadRepository.getZusatzAbotypDetail(id))) ~
+          (put | post)(update[ZusatzAbotypModify, AbotypId](id)) ~
+          delete(remove(id))
       }
 
   def depotsRoute(implicit subject: Subject, filter: Option[FilterExpr]) =
@@ -460,6 +470,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "aboIds") { (lieferplanungId, lieferungId, korbStatus) =>
         get(list(stammdatenReadRepository.getAboIds(lieferungId, korbStatus)))
+      } ~
+      path("lieferplanungen" / lieferplanungIdPath / "lieferungen" / lieferungIdPath / korbStatusPath / "hauptaboIds") { (lieferplanungId, lieferungId, korbStatus) =>
+        get(list(stammdatenReadRepository.getZusatzaboIds(lieferungId, korbStatus)))
       } ~
       path("lieferplanungen" / lieferplanungIdPath / "aktionen" / "abschliessen") { id =>
         (post)(lieferplanungAbschliessen(id))

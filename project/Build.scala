@@ -93,6 +93,9 @@ object OpenOlitorBuild extends Build {
 
   import ScalaxbSettings._
 
+  lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#dev/support_up_to_9_joins")
+  lazy val scalikejdbcAsync = ProjectRef(scalikejdbcAsyncForkUri, "core")
+
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
@@ -121,6 +124,6 @@ object OpenOlitorBuild extends Build {
         // to merge generated sources into sources.jar as well
         (f, f.relativeTo((sourceManaged in Compile).value).get.getPath)
       }
-      )) dependsOn (macroSub, sprayJsonMacro, akkaPersistenceSqlAsync) 
+      )) dependsOn (macroSub, sprayJsonMacro, akkaPersistenceSqlAsync)
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }
