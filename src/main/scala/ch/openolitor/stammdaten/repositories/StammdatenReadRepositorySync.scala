@@ -22,16 +22,12 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.repositories
 
-import ch.openolitor.core.models._
 import scalikejdbc._
 import ch.openolitor.core.repositories._
 import ch.openolitor.stammdaten.models._
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
-import akka.actor.ActorSystem
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.AkkaEventStream
-import ch.openolitor.core.EventStream
 
 trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
@@ -333,7 +329,6 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
   }
 
   def getAktiveAbos(abotypId: AbotypId, vertriebId: VertriebId, lieferdatum: DateTime, lieferplanungId: LieferplanungId)(implicit session: DBSession): List[Abo] = {
-    //
     getAktiveDepotlieferungAbos(abotypId, vertriebId, lieferdatum) :::
       getAktiveHeimlieferungAbos(abotypId, vertriebId, lieferdatum) :::
       getAktivePostlieferungAbos(abotypId, vertriebId, lieferdatum) :::

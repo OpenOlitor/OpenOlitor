@@ -761,7 +761,6 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .from(zusatzAboMapping as zusatzAbo)
         .join(lieferungMapping as lieferung).on(zusatzAbo.vertriebId, lieferung.vertriebId)
         .where.eq(zusatzAbo.abotypId, parameter(abotypId))
-        //.and.eq(zusatzAbo.vertriebId, parameter(vertriebId))
         .and.eq(zusatzAbo.abotypId, parameter(abotypId))
         .and.eq(lieferung.lieferplanungId, parameter(lieferplanungId))
         .and.le(zusatzAbo.start, parameter(lieferdatum))

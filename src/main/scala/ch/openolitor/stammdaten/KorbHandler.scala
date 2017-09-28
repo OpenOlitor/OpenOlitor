@@ -53,7 +53,6 @@ trait KorbHandler extends KorbStatusHandler
             val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
             calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
         }
-        //val status = calculateKorbStatus(abwCount, stammdatenWriteRepository.getById(mainAbo).guthaben, abotyp.guthabenMindestbestand)
         val korbId = KorbId(IdUtil.positiveRandomId)
         val korb = Korb(
           korbId,

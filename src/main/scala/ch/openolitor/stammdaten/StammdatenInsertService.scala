@@ -34,7 +34,6 @@ import akka.actor.ActorSystem
 import ch.openolitor.core.models._
 import org.joda.time.LocalDate
 import ch.openolitor.core.Macros._
-
 import scala.collection.immutable.TreeMap
 import scalikejdbc.DBSession
 import org.joda.time.format.DateTimeFormat
@@ -728,7 +727,6 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   private def updateLieferungUndZusatzLieferung(meta: EventMetadata, lieferplanungId: LieferplanungId, project: Option[Projekt], lieferung: Lieferung)(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Lieferung = {
-
     val adjustedLieferung = offenLieferung(meta, lieferplanungId, project, lieferung)
     stammdatenWriteRepository.getExistingZusatzAbotypen(adjustedLieferung.id).map { zusatzAbotyp =>
       stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzAbotyp.id, lieferplanungId) match {
@@ -765,11 +763,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       durchschnittspreis = newDurchschnittspreis,
       anzahlLieferungen = newAnzahlLieferungen,
       modifidat = meta.timestamp,
-      modifikator = personId
-    )
+      modifikator = personId)
 
     //create koerbe
-
     val adjustedLieferung = createKoerbe(updatedLieferung)
 
     stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
@@ -779,9 +775,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
       lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
       lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief,
-      lieferungMapping.column.lieferplanungId -> Some(lieferplanungId)
-    )
-
+      lieferungMapping.column.lieferplanungId -> Some(lieferplanungId))
     adjustedLieferung
   }
 
