@@ -1425,15 +1425,18 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(korbMapping(korb)).single
   }
 
-  protected def getZusatzuAboKorbQuery(hauptlieferungId: LieferungId, zusatzAboId: AboId) = {
+  protected def getZusatzAboKorbQuery(hauptlieferungId: LieferungId, hauptAboId: AboId) = {
     withSQL {
       select
         .from(korbMapping as korb)
-        .join(lieferungMapping as lieferung).on(korb.lieferungId, lieferung.id)
-        .join(lieferungMapping as hauptLieferung).on(lieferung.lieferplanungId, hauptLieferung.lieferplanungId)
-        .where.eq(hauptLieferung.id, parameter(hauptlieferungId))
-        .and.eq(korb.aboId, parameter(zusatzAboId)).and.not.eq(korb.status, parameter(Geliefert))
-    }.map(korbMapping(korb)).single
+        .innerJoin(zusatzAboMapping as zusatzAbo)
+        .innerJoin(lieferungMapping as lieferung)
+        .innerJoin(lieferungMapping as lieferungJoin).on(lieferungJoin.datum, lieferung.datum)
+        .where.eq(korb.aboId, zusatzAbo.id)
+        .and.eq(korb.lieferungId, lieferungJoin.id)
+        .and.eq(zusatzAbo.hauptAboId, parameter(hauptAboId))
+        .and.eq(lieferung.id, parameter(hauptlieferungId))
+    }.map(korbMapping(korb)).list
   }
 
   protected def getNichtGelieferteKoerbeQuery(lieferungId: LieferungId) = {

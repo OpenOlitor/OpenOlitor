@@ -69,7 +69,6 @@ trait KorbHandler extends KorbStatusHandler
           personId
         )
         (stammdatenWriteRepository.insertEntity[Korb, KorbId](korb), None)
-
       case None =>
         // do nothing (lieferung hast not been planned yet)
         (None, None)

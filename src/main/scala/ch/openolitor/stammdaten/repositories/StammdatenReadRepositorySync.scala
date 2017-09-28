@@ -68,7 +68,7 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getProduktekategorieByBezeichnung(bezeichnung: String)(implicit session: DBSession): Option[Produktekategorie]
   def getProdukteByProduktekategorieBezeichnung(bezeichnung: String)(implicit session: DBSession): List[Produkt]
   def getKorb(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Korb]
-  def getZusatzAboKorb(hauptlieferungId: LieferungId, zusatzAboId: AboId)(implicit session: DBSession): Option[Korb]
+  def getZusatzAboKorb(hauptlieferungId: LieferungId, zusatzAboId: AboId)(implicit session: DBSession): List[Korb]
   def getNichtGelieferteKoerbe(lieferungId: LieferungId)(implicit session: DBSession): List[Korb]
   def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb]
   def getKoerbe(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus)(implicit session: DBSession): List[Korb]
@@ -308,8 +308,8 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
     getKorbQuery(lieferungId, aboId).apply()
   }
 
-  def getZusatzAboKorb(hauptlieferungId: LieferungId, zusatzAboId: AboId)(implicit session: DBSession): Option[Korb] = {
-    getZusatzuAboKorbQuery(hauptlieferungId, zusatzAboId).apply()
+  def getZusatzAboKorb(hauptlieferungId: LieferungId, hauptAboId: AboId)(implicit session: DBSession): List[Korb] = {
+    getZusatzAboKorbQuery(hauptlieferungId, hauptAboId).apply()
   }
 
   def getNichtGelieferteKoerbe(lieferungId: LieferungId)(implicit session: DBSession): List[Korb] = {
