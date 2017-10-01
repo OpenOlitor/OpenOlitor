@@ -888,7 +888,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
   def updateLieferplanungAbotypenListing(lieferplanungId: LieferplanungId)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId) = {
     stammdatenUpdateRepository.getById(lieferplanungMapping, lieferplanungId) map { lp =>
-      val lieferungen = stammdatenUpdateRepository.getLieferungen(lieferplanungId)
+      val lieferungen = selectedZusatzAbo(stammdatenUpdateRepository.getLieferungen(lieferplanungId))
+      //delete the zusatzabos that don't even have a korb
       val abotypDates = (lieferungen.map(l => (dateFormat.print(l.datum), l.abotypBeschrieb))
         .groupBy(_._1).mapValues(_ map { _._2 }) map {
           case (datum, abotypBeschriebe) =>
@@ -898,6 +899,18 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         stammdatenUpdateRepository.updateEntity[Lieferplanung, LieferplanungId](lp.id)(
           lieferplanungMapping.column.abotypDepotTour -> abotypDates
         )
+      }
+    }
+  }
+
+  def selectedZusatzAbo(lieferungen: List[Lieferung])(implicit session: DBSession): List[Lieferung] = {
+    lieferungen flatMap { lieferung =>
+      stammdatenUpdateRepository.getAbotypById(lieferung.abotypId).get match {
+        case z: ZusatzAbotyp => (lieferung.anzahlKoerbeZuLiefern, lieferung.anzahlAbwesenheiten, lieferung.anzahlSaldoZuTief) match {
+          case (0, 0, 0) => None
+          case (_, _, _) => Some(lieferung)
+        }
+        case a: Abotyp => Some(lieferung)
       }
     }
   }
