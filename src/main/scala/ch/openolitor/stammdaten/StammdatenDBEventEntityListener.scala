@@ -376,24 +376,24 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
   }
 
   def handleKorbDeleted(korb: Korb)(implicit personId: PersonId) = {
-    updateLieferungWithCount(korb, -1)
+    DB autoCommit { implicit session =>
+      updateLieferungWithCount(korb, -1)
+    }
   }
 
   def handleKorbCreated(korb: Korb)(implicit personId: PersonId) = {
     // Lieferung Counts bereits gesetzt im InsertService
   }
 
-  private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId) = {
-    DB autoCommit { implicit session =>
-      stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
-        val copy = lieferung.copy(
-          anzahlKoerbeZuLiefern = if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern,
-          anzahlAbwesenheiten = if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten,
-          anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
-        )
+  private def updateLieferungWithCount(korb: Korb, add: Int)(implicit personId: PersonId, session: DBSession) = {
+    stammdatenWriteRepository.getById(lieferungMapping, korb.lieferungId) map { lieferung =>
+      val copy = lieferung.copy(
+        anzahlKoerbeZuLiefern = if (WirdGeliefert == korb.status) lieferung.anzahlKoerbeZuLiefern + add else lieferung.anzahlKoerbeZuLiefern,
+        anzahlAbwesenheiten = if (FaelltAusAbwesend == korb.status) lieferung.anzahlAbwesenheiten + add else lieferung.anzahlAbwesenheiten,
+        anzahlSaldoZuTief = if (FaelltAusSaldoZuTief == korb.status) lieferung.anzahlSaldoZuTief + add else lieferung.anzahlSaldoZuTief
+      )
 
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy, lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
-      }
+      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](copy, lieferungMapping.column.anzahlKoerbeZuLiefern, lieferungMapping.column.anzahlAbwesenheiten, lieferungMapping.column.anzahlSaldoZuTief)
     }
   }
 
