@@ -38,7 +38,7 @@ object IAbo {
   }
 }
 
-sealed trait Abo extends BaseEntity[AboId] {
+sealed trait Abo extends BaseEntity[AboId] with JSONSerializable {
   val id: AboId
   val abotypId: AbotypId
   val vertriebsartId: VertriebsartId
