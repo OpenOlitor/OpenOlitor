@@ -24,9 +24,7 @@ package ch.openolitor.core.db
 
 import scalikejdbc.config._
 import scalikejdbc._
-import com.typesafe.config.Config
 import ch.openolitor.core.MandantConfiguration
-import com.typesafe.scalalogging.LazyLogging
 
 /**
  * Mandant specific dbs

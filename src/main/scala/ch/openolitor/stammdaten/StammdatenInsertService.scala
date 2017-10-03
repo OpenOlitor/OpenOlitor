@@ -224,11 +224,11 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator): Option[Lieferung] = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      createLieferungInner(meta, id, lieferung)
+      createLieferungInner(meta, id, lieferung, None)
     }
   }
 
-  private def createLieferungInner(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
+  private def createLieferungInner(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate, lieferplanungId: Option[LieferplanungId])(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
 
     stammdatenWriteRepository.getAbotypById(lieferung.abotypId) flatMap { abotyp =>
       stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) flatMap {
@@ -247,7 +247,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             "zielpreis" -> abotyp.zielpreis,
             "preisTotal" -> ZERO,
             "status" -> Ungeplant,
-            "lieferplanungId" -> None,
+            "lieferplanungId" -> lieferplanungId,
             "erstelldat" -> meta.timestamp,
             "ersteller" -> meta.originator,
             "modifidat" -> meta.timestamp,
@@ -732,7 +732,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzAbotyp.id, lieferplanungId, lieferung.datum) match {
         case None => {
           // Using positiveRandomId because the lieferung cannot be created in commandHandler.
-          createLieferungInner(meta, LieferungId(positiveRandomId), LieferungAbotypCreate(zusatzAbotyp.id, adjustedLieferung.vertriebId, adjustedLieferung.datum)).map { zusatzLieferung =>
+          createLieferungInner(meta, LieferungId(positiveRandomId), LieferungAbotypCreate(zusatzAbotyp.id, adjustedLieferung.vertriebId, adjustedLieferung.datum), Some(lieferplanungId)).map { zusatzLieferung =>
             offenLieferung(meta, lieferplanungId, project, zusatzLieferung)
           }
         }
