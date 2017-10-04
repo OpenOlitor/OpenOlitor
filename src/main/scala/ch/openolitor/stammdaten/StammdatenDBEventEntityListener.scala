@@ -35,6 +35,7 @@ import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
 import BigDecimal.RoundingMode._
 import ch.openolitor.core.repositories.EventPublishingImplicits._
@@ -330,6 +331,25 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         handleAboAktivChange(to, if (to.aktiv) 1 else -1)
       }
 
+      if (from.start != to.start) {
+        stammdatenUpdateRepository.getZusatzAbos(from.id) map { zusatzabo =>
+          if ((zusatzabo.start compareTo to.start) < 0) {
+            stammdatenUpdateRepository.modifyEntity[ZusatzAbo, AboId](zusatzabo.id) { z =>
+              log.debug(s"modify the start date of the zusatzabo :${z.id}")
+              Map(
+                zusatzAboMapping.column.start -> to.start
+              )
+            }
+          }
+        }
+      }
+
+      (from.ende, to.ende) match {
+        case (None, Some(toEnde)) => handleZusatzAboEndDateModification(toEnde, from)
+        case (Some(fromEnde), Some(toEnde)) => if (fromEnde != toEnde) handleZusatzAboEndDateModification(toEnde, from)
+        case (_, _) =>
+      }
+
       if (from.vertriebId != to.vertriebId) {
         val modAboCount = calculateAboAktivCreate(to)
         stammdatenUpdateRepository.modifyEntity[Vertrieb, VertriebId](from.vertriebId) { vertrieb =>
@@ -345,6 +365,29 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           Map(
             vertriebMapping.column.anzahlAbos -> (vertrieb.anzahlAbos + 1),
             vertriebMapping.column.anzahlAbosAktiv -> (vertrieb.anzahlAbosAktiv + modAboCount)
+          )
+        }
+      }
+    }
+  }
+
+  def handleZusatzAboEndDateModification(toEnde: LocalDate, from: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+    stammdatenUpdateRepository.getZusatzAbos(from.id) map { zusatzabo =>
+      zusatzabo.ende match {
+        case Some(zusatzaboEnde) => {
+          if ((zusatzaboEnde compareTo toEnde) > 0) {
+            stammdatenUpdateRepository.modifyEntity[ZusatzAbo, AboId](zusatzabo.id) { z =>
+              log.debug(s"modify the end date of the zusatzabo :${z.id}")
+              Map(
+                zusatzAboMapping.column.ende -> toEnde
+              )
+            }
+          }
+        }
+        case _ => stammdatenUpdateRepository.modifyEntity[ZusatzAbo, AboId](zusatzabo.id) { z =>
+          log.debug(s"modify the end date of the zusatzabo :${z.id}")
+          Map(
+            zusatzAboMapping.column.ende -> toEnde
           )
         }
       }
