@@ -114,9 +114,8 @@ class Evolution(sysConfig: SystemConfig, scripts: Seq[Script] = Scripts.current)
     val entity: Class[I] = classTag[I].runtimeClass.asInstanceOf[Class[I]]
     val q = queries.flatten
     val overallMaxId = if (q.length > 0) q.max else 0
-    seeds.get(entity).map(_ < overallMaxId).getOrElse(true) match {
-      case true => Some(entity -> overallMaxId)
-      case _ => None
+    seeds.get(entity).flatMap { s =>
+      if (s < overallMaxId) Some(entity -> overallMaxId) else None
     }
   }
 
