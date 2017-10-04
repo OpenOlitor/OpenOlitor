@@ -1904,10 +1904,13 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
           .and.withRoundBracket { _.isNull(heimlieferungAbo.ende).or.ge(heimlieferungAbo.ende, today) }
           .and.eq(heimlieferungAbo.aktiv, false)).union(
           select(postlieferungAbo.id).from(postlieferungAboMapping as postlieferungAbo)
-            .where.le(postlieferungAbo.start, today)
-            .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, today) }
-            .and.eq(postlieferungAbo.aktiv, false)
-        )
+            .where.le(postlieferungAbo.start, parameter(today))
+            .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, parameter(today)) }
+            .and.eq(postlieferungAbo.aktiv, parameter(false))
+        ).union(select(zusatzAbo.id).from(zusatzAboMapping as zusatzAbo)
+            .where.le(zusatzAbo.start, parameter(today))
+            .and.withRoundBracket { _.isNull(zusatzAbo.ende).or.ge(zusatzAbo.ende, parameter(today)) }
+            .and.eq(zusatzAbo.aktiv, parameter(false)))
     }.map(res => AboId(res.long(1))).list
   }
 
@@ -1925,10 +1928,15 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
           .and.withRoundBracket { _.isNotNull(heimlieferungAbo.ende).and.le(heimlieferungAbo.ende, yesterday) }
           .and.eq(heimlieferungAbo.aktiv, true)).union(
           select(postlieferungAbo.id).from(postlieferungAboMapping as postlieferungAbo)
-            .where.le(postlieferungAbo.start, yesterday)
-            .and.withRoundBracket { _.isNotNull(postlieferungAbo.ende).and.le(postlieferungAbo.ende, yesterday) }
-            .and.eq(postlieferungAbo.aktiv, true)
-        )
+            .where.le(postlieferungAbo.start, parameter(yesterday))
+            .and.withRoundBracket { _.isNotNull(postlieferungAbo.ende).and.le(postlieferungAbo.ende, parameter(yesterday)) }
+            .and.eq(postlieferungAbo.aktiv, parameter(true))
+        ).union(
+            select(zusatzAbo.id).from(zusatzAboMapping as zusatzAbo)
+              .where.le(zusatzAbo.start, parameter(yesterday))
+              .and.withRoundBracket { _.isNotNull(zusatzAbo.ende).and.le(zusatzAbo.ende, parameter(yesterday)) }
+              .and.eq(zusatzAbo.aktiv, parameter(true))
+          )
     }.map(res => AboId(res.long(1))).list
   }
 
