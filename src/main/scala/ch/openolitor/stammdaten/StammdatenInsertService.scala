@@ -115,6 +115,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createSammelbestellungen(meta, id, entity)
     case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
       createProjektVorlage(meta, id, vorlage)
+    case EntityInsertedEvent(meta, id: AuslieferungId, tourAuslieferung: TourAuslieferung) =>
+      createTourAuslieferung(meta, id, tourAuslieferung)
+    case EntityInsertedEvent(meta, id: AuslieferungId, depotAuslieferung: DepotAuslieferung) =>
+      createDepotAuslieferung(meta, id, depotAuslieferung)
+    case EntityInsertedEvent(meta, id: AuslieferungId, postAuslieferung: PostAuslieferung) =>
+      createPostAuslieferung(meta, id, postAuslieferung)
     case e =>
   }
 
@@ -799,4 +805,23 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.insertEntity[ProjektVorlage, ProjektVorlageId](vorlage)
     }
   }
+
+  def createTourAuslieferung(meta: EventMetadata, id: AuslieferungId, tourAuslieferung: TourAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](tourAuslieferung)
+    }
+  }
+
+  def createDepotAuslieferung(meta: EventMetadata, id: AuslieferungId, depotAuslieferung: DepotAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](depotAuslieferung)
+    }
+  }
+
+  def createPostAuslieferung(meta: EventMetadata, id: AuslieferungId, postAuslieferung: PostAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](postAuslieferung)
+    }
+  }
+
 }
