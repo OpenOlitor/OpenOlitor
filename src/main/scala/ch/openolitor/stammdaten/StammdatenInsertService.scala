@@ -529,8 +529,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def defaultDateStart(date1: LocalDate, date2: Option[LocalDate]): LocalDate = {
+    val today = LocalDate.now.toDateTimeAtStartOfDay.toLocalDate
     (date1, date2) match {
-      case (d1, None) => d1
+      case (d1, None) if (d1 compareTo today) > 0 => d1
+      case (d1, None) if (d1 compareTo today) <= 0 => today
       case (d1, Some(d2)) if (d1 compareTo d2) > 0 => d1
       case (_, date2) => date2.get
     }
