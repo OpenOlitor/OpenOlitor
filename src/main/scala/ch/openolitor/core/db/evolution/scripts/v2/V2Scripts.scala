@@ -90,5 +90,6 @@ object V2Scripts {
 
   def scripts(system: ActorSystem) = Seq(oo656(system)) ++
     OO686_Add_Rechnungspositionen.scripts ++
-    OO731_Reports.scripts
+    OO731_Reports.scripts ++
+    OO760_add_missing_keys.scripts
 }
