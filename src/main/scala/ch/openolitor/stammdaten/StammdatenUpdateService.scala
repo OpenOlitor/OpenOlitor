@@ -138,12 +138,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB localTxPostPublish { implicit session => implicit publisher =>
       val iabotyp = stammdatenWriteRepository.getAbotypById(id)
       iabotyp match {
-        case iabotyp: Option[Abotyp] => iabotyp map { abotyp =>
+        case Some(abotyp: Abotyp) => {
           //map all updatable fields
           val copy = copyFrom(abotyp, update)
           stammdatenWriteRepository.updateEntityFully[Abotyp, AbotypId](copy)
         }
-        case None => throw new IllegalArgumentException("The type of subscription is empty")
         case _ =>
           throw new IllegalArgumentException("The type of subscription is not known")
 
@@ -158,13 +157,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     DB localTxPostPublish { implicit session => implicit publisher =>
       val iabotyp = stammdatenWriteRepository.getAbotypById(id)
       iabotyp match {
-        case iabotyp: Option[ZusatzAbotyp] =>
-          iabotyp map { zusatzabotyp =>
-            //map all updatable fields
-            val copy = copyFrom(zusatzabotyp, update)
-            stammdatenWriteRepository.updateEntityFully[ZusatzAbotyp, AbotypId](copy)
-          }
-        case None => throw new IllegalArgumentException("The type of subscription is empty")
+        case Some(zusatzabotyp: ZusatzAbotyp) => {
+          //map all updatable fields
+          val copy = copyFrom(zusatzabotyp, update)
+          stammdatenWriteRepository.updateEntityFully[ZusatzAbotyp, AbotypId](copy)
+        }
         case _ => throw new IllegalArgumentException("The type of subscription is not known")
       }
     }
