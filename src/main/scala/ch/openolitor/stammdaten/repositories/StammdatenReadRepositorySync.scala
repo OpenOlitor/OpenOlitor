@@ -31,12 +31,13 @@ import com.typesafe.scalalogging.LazyLogging
 
 trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[Abotyp]
-  def getZusatztAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp]
+  def getZusatzAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp]
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAboDetailAusstehend(id: AboId)(implicit session: DBSession): Option[AboDetail]
   def getAbosByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Abo]
   def getAbosByVertrieb(vertriebId: VertriebId)(implicit session: DBSession): List[Abo]
   def getZusatzAbos(hauptAboId: AboId)(implicit session: DBSession): List[ZusatzAbo]
+  def getHauptAbo(id: AboId)(implicit session: DBSession): Option[Abo]
   def getExistingZusatzAbotypen(lieferungId: LieferungId)(implicit session: DBSession): List[ZusatzAbotyp]
   def getAbotypById(id: AbotypId)(implicit session: DBSession): Option[IAbotyp]
 
@@ -75,7 +76,7 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def countAbwesend(lieferungId: LieferungId, aboId: AboId)(implicit session: DBSession): Option[Int]
   def countAbwesend(aboId: AboId, datum: LocalDate)(implicit session: DBSession): Option[Int]
   def getLieferung(id: AbwesenheitId)(implicit session: DBSession): Option[Lieferung]
-  def getExistingZusatzaboLieferung(zusatzAbotypId: AbotypId, lieferplanungId: LieferplanungId)(implicit session: DBSession): Option[Lieferung]
+  def getExistingZusatzaboLieferung(zusatzAbotypId: AbotypId, lieferplanungId: LieferplanungId, datum: DateTime)(implicit session: DBSession): Option[Lieferung]
   def getLieferungen(id: LieferplanungId)(implicit session: DBSession): List[Lieferung]
   def getLieferungen(id: VertriebId)(implicit session: DBSession): List[Lieferung]
   def getLieferungenDetails(id: LieferplanungId)(implicit session: DBSession): List[LieferungDetail]
@@ -122,7 +123,7 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
     getAbotypDetailQuery(id).apply()
   }
 
-  def getZusatztAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp] = {
+  def getZusatzAbotypDetail(id: AbotypId)(implicit session: DBSession): Option[ZusatzAbotyp] = {
     getZusatzAbotypDetailQuery(id).apply()
   }
 
@@ -169,6 +170,11 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
     getZusatzAbosQuery(hauptAboId).apply()
   }
 
+  def getHauptAbo(id: AboId)(implicit session: DBSession): Option[Abo] = {
+    val hauptAboId = getZusatzAboDetail(id).get.hauptAboId
+    getById(depotlieferungAboMapping, hauptAboId) orElse getById(heimlieferungAboMapping, hauptAboId) orElse getById(postlieferungAboMapping, hauptAboId)
+  }
+
   def getExistingZusatzAbotypen(lieferungId: LieferungId)(implicit session: DBSession): List[ZusatzAbotyp] = {
     getExistingZusatzAbotypenQuery(lieferungId).apply()
   }
@@ -183,6 +189,10 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getAboDetail(id: AboId)(implicit session: DBSession): Option[AboDetail] = {
     getDepotlieferungAbo(id) orElse getHeimlieferungAbo(id) orElse getPostlieferungAbo(id)
+  }
+
+  def getZusatzAboDetail(id: AboId)(implicit session: DBSession): Option[ZusatzAbo] = {
+    getZusatzAboDetailQuery(id).apply()
   }
 
   def getDepotlieferungAbo(id: AboId)(implicit session: DBSession): Option[DepotlieferungAboDetail] = {
@@ -244,8 +254,8 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
     getLieferungQuery(id).apply()
   }
 
-  def getExistingZusatzaboLieferung(zusatzAbotypId: AbotypId, lieferplanungId: LieferplanungId)(implicit session: DBSession): Option[Lieferung] = {
-    getExistingZusatzaboLieferungQuery(zusatzAbotypId, lieferplanungId).apply()
+  def getExistingZusatzaboLieferung(zusatzAbotypId: AbotypId, lieferplanungId: LieferplanungId, datum: DateTime)(implicit session: DBSession): Option[Lieferung] = {
+    getExistingZusatzaboLieferungQuery(zusatzAbotypId, lieferplanungId, datum).apply()
   }
 
   def getLieferungenNext()(implicit session: DBSession): List[Lieferung] = {

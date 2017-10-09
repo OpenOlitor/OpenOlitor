@@ -44,9 +44,7 @@ trait KorbHandler extends KorbStatusHandler
       case None if (lieferung.lieferplanungId.isDefined) =>
         val status = abo match {
           case zusatzAbo: ZusatzAbo =>
-            val mainAbo = stammdatenWriteRepository.getById(depotlieferungAboMapping, zusatzAbo.hauptAboId) orElse
-              stammdatenWriteRepository.getById(postlieferungAboMapping, zusatzAbo.hauptAboId) orElse
-              stammdatenWriteRepository.getById(heimlieferungAboMapping, zusatzAbo.hauptAboId)
+            val mainAbo = stammdatenWriteRepository.getHauptAbo(zusatzAbo.id)
             val abwCount = stammdatenWriteRepository.countAbwesend(mainAbo.get.id, lieferung.datum.toLocalDate)
             calculateKorbStatus(abwCount, mainAbo.get.guthaben, abotyp.guthabenMindestbestand)
           case abo: Abo =>
