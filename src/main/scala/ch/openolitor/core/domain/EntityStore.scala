@@ -175,7 +175,7 @@ trait EntityStore extends AggregateRoot
 
   def readDBSeeds() = {
     implicit val personId = Boot.systemPersonId
-    evolution.checkDBSeeds(Map()) match {
+    evolution.checkDBSeeds match {
       case Success(newSeeds) =>
         log.debug(s"Read dbseeds:$newSeeds")
         state = state.copy(dbSeeds = newSeeds)
