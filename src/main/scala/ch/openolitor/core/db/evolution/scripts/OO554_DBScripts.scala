@@ -85,7 +85,7 @@ object OO554_DBScripts {
         	WHERE aktiv=1
         	GROUP BY kunde_id
         ) p ON k.id = p.kunde_id
-        SET k.anzahl_abos_aktiv = (IFNULL(d.c, 0) + IFNULL(h.c, 0) + IFNULL(p.c, 0))"""
+        SET k.anzahl_abos_aktiv = (IFNULL(d.c, 0) + IFNULL(h.c, 0) + IFNULL(p.c, 0))""".execute.apply()
 
       //update Vertrieb.anzahl_abos_aktiv
       sql"""UPDATE Vertrieb SET anzahl_abos_aktiv=0""".execute.apply()
