@@ -20,31 +20,44 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.db.evolution.scripts.v2
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import ch.openolitor.core.db.evolution.Script
+import ch.openolitor.reports.ReportsDBMappings
+import com.typesafe.scalalogging.LazyLogging
+import scalikejdbc._
 
-import akka.actor.ActorSystem
+import scala.util.{ Success, Try }
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+object OO760_add_missing_keys {
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+  val addKontoDatenKey = new Script {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      sql"""
+ALTER TABLE KontoDaten ADD KEY id_index (id);
+""".execute.apply()
+      Success(true)
+    }
+  }
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  val addKundeKey = new Script {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      sql"""
+ALTER TABLE Kunde ADD KEY id_index (id);
+""".execute.apply()
+      Success(true)
+    }
+  }
+
+  val addPersitenceEventStateKey = new Script {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      sql"""
+ALTER TABLE PersistenceEventState ADD KEY id_index (id);
+""".execute.apply()
+      Success(true)
+    }
+  }
+
+  val scripts = Seq(addKontoDatenKey, addKundeKey, addPersitenceEventStateKey)
 }

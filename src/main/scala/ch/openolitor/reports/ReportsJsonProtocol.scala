@@ -20,31 +20,45 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import spray.json._
+import ch.openolitor.core.models._
+import java.util.UUID
+import org.joda.time._
+import org.joda.time.format._
+import ch.openolitor.core.BaseJsonProtocol
+import ch.openolitor.reports.models._
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.JSONSerializable
+import zangelo.spray.json.AutoProductFormats
 
-import akka.actor.ActorSystem
+/**
+ * JSON Format deklarationen für das Modul Reports
+ */
+trait ReportsJsonProtocol extends BaseJsonProtocol with LazyLogging with AutoProductFormats[JSONSerializable] {
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+  //id formats
+  implicit val reportId = baseIdFormat(ReportId)
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+  implicit def dbResultMapFormat = new RootJsonFormat[Map[String, Any]] {
+    def write(m: Map[String, Any]) = JsObject {
+      m.map { field =>
+        field._1 -> {
+          field._2 match {
+            case null => JsNull
+            case _ => {
+              field._1 match {
+                case "passwort" => JsString("Not available")
+                case _ => JsString(field._2.toString)
+              }
+            }
+          }
+        }
+      }
+    }
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+    def read(value: JsValue) = throw new UnsupportedOperationException("Map[String, Any] can not be created out of JSON-Object at the moment")
+  }
+
 }

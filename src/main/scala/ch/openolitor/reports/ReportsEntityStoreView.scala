@@ -20,31 +20,48 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
-
+import ch.openolitor.core.domain._
+import ch.openolitor.core._
+import ch.openolitor.core.db.ConnectionPoolContextAware
+import akka.actor.Props
 import akka.actor.ActorSystem
+import ch.openolitor.reports.repositories.DefaultReportsWriteRepositoryComponent
+import ch.openolitor.reports.repositories.ReportsWriteRepositoryComponent
+import akka.actor.ActorRef
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
+object ReportsEntityStoreView {
+  def props(dbEvolutionActor: ActorRef)(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultReportsEntityStoreView], dbEvolutionActor, sysConfig, system)
 }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
+class DefaultReportsEntityStoreView(override val dbEvolutionActor: ActorRef, implicit val sysConfig: SystemConfig, implicit val system: ActorSystem) extends ReportsEntityStoreView
+  with DefaultReportsWriteRepositoryComponent
+
+/**
+ * Zusammenfügen des Componenten (cake pattern) zu der persistentView
+ */
+trait ReportsEntityStoreView extends EntityStoreView
+    with ReportsEntityStoreViewComponent with ConnectionPoolContextAware {
+  self: ReportsWriteRepositoryComponent =>
+
+  override val module = "reports"
+
+  def initializeEntityStoreView = {
+  }
+}
+
+/**
+ * Instanzieren der jeweiligen Insert, Update und Delete Child Actors
+ */
+trait ReportsEntityStoreViewComponent extends EntityStoreViewComponent {
+  import EntityStore._
   val sysConfig: SystemConfig
   val system: ActorSystem
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  override val insertService = ReportsInsertService(sysConfig, system)
+  override val updateService = ReportsUpdateService(sysConfig, system)
+  override val deleteService = ReportsDeleteService(sysConfig, system)
+
+  override val aktionenService = ReportsAktionenService(sysConfig, system)
 }

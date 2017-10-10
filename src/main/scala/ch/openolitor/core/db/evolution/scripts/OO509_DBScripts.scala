@@ -20,31 +20,50 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.core.db.evolution.scripts
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
+import ch.openolitor.core.db.evolution.Script
+import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import scalikejdbc._
+import scala.util.Try
+import scala.util.Success
+import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
+import ch.openolitor.core.NoPublishEventStream
+import ch.openolitor.stammdaten.models.Abwesenheit
+import scala.collection.immutable.TreeMap
+import ch.openolitor.core.Macros._
+import ch.openolitor.stammdaten.models._
+import ch.openolitor.core.Boot
+import ch.openolitor.core.models.PersonId
 
-import akka.actor.ActorSystem
+/**
+ * Recalculate sort field on Person
+ */
+object OO509_DBScripts extends DefaultDBScripts {
+  val script = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
+    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
+      logger.debug(s"Recalculate sort field on Person")
+      implicit val personId = Boot.systemPersonId
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
-}
+      val persons = getPersonen
+      val sortedPersons = persons.groupBy(_.kundeId)
+      sortedPersons map {
+        case (kundeId, persons) =>
+          persons.zipWithIndex.map {
+            case (person, index) =>
+              val sortValue = (index + 1)
+              if (sortValue != person.sort) {
+                logger.debug(s"Update sort for Person {person.id} {person.vorname} {person.name} to {sortValue}")
+                updateEntity[Person, PersonId](person.id)(personMapping.column.sort -> sortValue)
+              }
+          }
+      }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
-  val system: ActorSystem
+      Success(true)
+    }
+  }
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  val scripts = Seq(script)
 }

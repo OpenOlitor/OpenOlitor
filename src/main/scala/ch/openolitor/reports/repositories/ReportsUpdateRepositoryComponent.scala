@@ -20,31 +20,23 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.domain
+package ch.openolitor.reports.repositories
 
-import ch.openolitor.buchhaltung.DefaultBuchhaltungCommandHandler
-import ch.openolitor.core.SystemConfig
-import ch.openolitor.kundenportal.DefaultKundenportalCommandHandler
-import ch.openolitor.stammdaten.DefaultStammdatenCommandHandler
-import ch.openolitor.reports.DefaultReportsCommandHandler
+import ch.openolitor.core.{ AkkaEventStream, DefaultActorSystemReference }
+import ch.openolitor.core.repositories.BaseUpdateRepositoryComponent
 
 import akka.actor.ActorSystem
+import ch.openolitor.core.EventStream
 
-trait CommandHandlerComponent {
-  val stammdatenCommandHandler: CommandHandler
-  val buchhaltungCommandHandler: CommandHandler
-  val reportsCommandHandler: CommandHandler
-  val kundenportalCommandHandler: CommandHandler
-  val baseCommandHandler: CommandHandler
+trait ReportsUpdateRepositoryComponent extends BaseUpdateRepositoryComponent {
+  val reportsUpdateRepository: ReportsUpdateRepository
+
+  // implicitly expose the eventStream
+  implicit def reportsUpdateRepositoryImplicit = reportsUpdateRepository
 }
 
-trait DefaultCommandHandlerComponent extends CommandHandlerComponent {
-  val sysConfig: SystemConfig
+trait DefaultReportsUpdateRepositoryComponent extends ReportsUpdateRepositoryComponent {
   val system: ActorSystem
 
-  override val stammdatenCommandHandler = new DefaultStammdatenCommandHandler(sysConfig, system)
-  override val buchhaltungCommandHandler = new DefaultBuchhaltungCommandHandler(sysConfig, system)
-  override val reportsCommandHandler = new DefaultReportsCommandHandler(sysConfig, system)
-  override val kundenportalCommandHandler = new DefaultKundenportalCommandHandler(sysConfig, system)
-  override val baseCommandHandler = new BaseCommandHandler()
+  override val reportsUpdateRepository: ReportsUpdateRepository = new DefaultActorSystemReference(system) with ReportsUpdateRepositoryImpl with AkkaEventStream
 }

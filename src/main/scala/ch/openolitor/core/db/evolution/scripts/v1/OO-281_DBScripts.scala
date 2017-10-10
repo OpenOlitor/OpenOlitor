@@ -68,7 +68,8 @@ object OO281_DBScripts extends DefaultDBScripts {
       implicit val personId = PersonId(pid)
 
       sql"""insert into ${kontoDatenMapping.table}
-        (id, iban, referenz_nummer_prefix, teilnehmer_nummer, erstelldat, ersteller, modifidat, modifikator) values (1, ${iban}, ${referenznummerPrefix}, ${teilnehmernummer}, ${personId}, ${DateTime.now}, ${personId}, ${DateTime.now})""".execute.apply()
+        (id,   iban,  referenz_nummer_prefix,   teilnehmer_nummer,      erstelldat,   ersteller,       modifidat, modifikator) values
+        (1, ${iban}, ${referenznummerPrefix}, ${teilnehmernummer}, ${DateTime.now}, ${personId}, ${DateTime.now}, ${personId})""".execute.apply()
 
       Success(true)
     }

@@ -108,6 +108,12 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         stammdatenWriteRepository.updateEntityFully[Vertrieb, VertriebId](copy)
       }
 
+      stammdatenWriteRepository.getLieferungen(id) map { lieferung =>
+        stammdatenWriteRepository.updateEntityIf[Lieferung, LieferungId](l => Ungeplant == l.status || Offen == l.status)(lieferung.id)(
+          lieferungMapping.column.vertriebBeschrieb -> update.beschrieb
+        )
+      }
+
       stammdatenWriteRepository.getAbosByVertrieb(id) map { abo =>
         abo match {
           case dlAbo: DepotlieferungAbo =>
@@ -137,7 +143,10 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
       }
 
       stammdatenWriteRepository.getUngeplanteLieferungen(id) map { lieferung =>
-        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(lieferungMapping.column.zielpreis -> update.zielpreis)
+        stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](lieferung.id)(
+          lieferungMapping.column.zielpreis -> update.zielpreis,
+          lieferungMapping.column.abotypBeschrieb -> update.name
+        )
       }
     }
   }

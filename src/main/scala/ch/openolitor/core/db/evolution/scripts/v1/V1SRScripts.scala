@@ -22,6 +22,8 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts.v1
 
+import ch.openolitor.core.db.evolution.scripts.OO509_DBScripts
+
 object V1SRScripts {
   val scripts =
     OO205_DBScripts.scripts ++
@@ -64,5 +66,6 @@ object V1SRScripts {
       OO281_DBScripts.scripts ++
       OO618_DBScripts.scripts ++
       OO556_DBScripts.scripts ++
-      OO350_DBScripts.scripts
+      OO350_DBScripts.scripts ++
+      OO509_DBScripts.scripts
 }

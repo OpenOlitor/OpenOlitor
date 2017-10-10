@@ -195,6 +195,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }.single
   }
 
+  protected def getPersonenQuery = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .orderBy(person.kundeId, person.sort)
+    }.map(personMapping(person)).list
+  }
+
   protected def getPersonenQuery(kundeId: KundeId) = {
     withSQL {
       select
@@ -576,7 +584,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(abwesenheitMapping as abwesenheit).on(depotlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(abotypMapping as aboTyp).on(depotlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(depotlieferungAbo.vertriebId, vertrieb.id)
-        .leftJoin(lieferungMapping as lieferung).on(aboTyp.id, lieferung.abotypId)
+        .leftJoin(lieferungMapping as lieferung).on(vertrieb.id, lieferung.vertriebId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .where.eq(depotlieferungAbo.id, id)
         .and(sqls.toAndConditionOpt(
@@ -613,7 +621,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(abwesenheitMapping as abwesenheit).on(heimlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(heimlieferungAbo.vertriebId, vertrieb.id)
-        .leftJoin(lieferungMapping as lieferung).on(aboTyp.id, lieferung.abotypId)
+        .leftJoin(lieferungMapping as lieferung).on(vertrieb.id, lieferung.vertriebId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .where.eq(heimlieferungAbo.id, id)
         .and(sqls.toAndConditionOpt(
@@ -649,7 +657,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(abwesenheitMapping as abwesenheit).on(postlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(abotypMapping as aboTyp).on(postlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(postlieferungAbo.vertriebId, vertrieb.id)
-        .leftJoin(lieferungMapping as lieferung).on(aboTyp.id, lieferung.abotypId)
+        .leftJoin(lieferungMapping as lieferung).on(vertrieb.id, lieferung.vertriebId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .where.eq(postlieferungAbo.id, id)
         .and(sqls.toAndConditionOpt(
