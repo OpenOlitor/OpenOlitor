@@ -57,7 +57,7 @@ trait ReportsRepositoryQueries extends LazyLogging with ReportsDBMappings with S
     withSQL {
       select
         .from(reportMapping as report)
-        .where.eq(report.id, parameter(id))
+        .where.eq(report.id, id)
     }.map(reportMapping(report)).single
   }
 

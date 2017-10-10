@@ -24,25 +24,23 @@ package ch.openolitor.reports
 
 import java.util.UUID
 import ch.openolitor.core.models._
-import ch.openolitor.core.repositories.ParameterBinderMapping
 import ch.openolitor.reports.models._
 import scalikejdbc._
 import scalikejdbc.TypeBinder._
 import ch.openolitor.core.repositories.DBMappings
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.scalax._
+import ch.openolitor.core.repositories.DBMappings
 
 //DB Model bindig
 trait ReportsDBMappings extends DBMappings {
   import TypeBinder._
 
   // DB type binders for read operations
-  implicit val reportsIdBinder: TypeBinder[ReportId] = baseIdTypeBinder(ReportId.apply _)
-
+  implicit val reportsIdBinder: Binders[ReportId] = baseIdBinders(ReportId.apply _)
   //DB parameter binders for write and query operations
-  implicit val reportsIdSqlBinder = baseIdSqlBinder[ReportId]
+  //implicit val reportsIdSqlBinder: Binders[ReportId] = baseIdBinders(ReportId.apply _)
 
   implicit val reportMapping = new BaseEntitySQLSyntaxSupport[Report] {
     override val tableName = "Report"
@@ -52,14 +50,14 @@ trait ReportsDBMappings extends DBMappings {
     def apply(rn: ResultName[Report])(rs: WrappedResultSet): Report =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Report): Seq[Any] =
+    def parameterMappings(entity: Report): Seq[ParameterBinder] =
       parameters(Report.unapply(entity).get)
 
     override def updateParameters(entity: Report) = {
       super.updateParameters(entity) ++ Seq(
-        column.name -> parameter(entity.name),
-        column.beschreibung -> parameter(entity.beschreibung),
-        column.query -> parameter(entity.query)
+        column.name -> entity.name,
+        column.beschreibung -> entity.beschreibung,
+        column.query -> entity.query
       )
     }
   }
