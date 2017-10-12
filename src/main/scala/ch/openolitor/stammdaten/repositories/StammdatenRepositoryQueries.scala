@@ -759,11 +759,10 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     withSQL {
       select
         .from(zusatzAboMapping as zusatzAbo)
-        .join(lieferungMapping as lieferung).on(zusatzAbo.vertriebId, lieferung.vertriebId)
+        .innerJoin(lieferungMapping as lieferung).on(zusatzAbo.abotypId, lieferung.abotypId)
         .where.eq(zusatzAbo.abotypId, abotypId)
-        .and.eq(zusatzAbo.abotypId, abotypId)
-        .and.eq(lieferung.lieferplanungId, lieferplanungId)
         .and.le(zusatzAbo.start, lieferdatum)
+        .and.eq(lieferung.lieferplanungId, lieferplanungId)
         .and.withRoundBracket { _.isNull(zusatzAbo.ende).or.ge(zusatzAbo.ende, lieferdatum) }
     }.map(zusatzAboMapping(zusatzAbo)).list
   }
@@ -1018,6 +1017,10 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(lieferung.abotypId, zusatzAboTyp.id)
         .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
         .where.eq(lieferplanung.id, id)
+        .and.not.withRoundBracket {
+          _.eq(lieferung.anzahlKoerbeZuLiefern, 0)
+            .and.isNull(aboTyp.id)
+        }
     }.one(lieferplanungMapping(lieferplanung))
       .toManies(
         rs => lieferungMapping.opt(lieferung)(rs),
@@ -1070,10 +1073,16 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       select
         .from(lieferplanungMapping as lieferplanung)
         .join(lieferungMapping as lieferung).on(lieferplanung.id, lieferung.lieferplanungId)
-        .join(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
+        .leftJoin(abotypMapping as aboTyp).on(lieferung.abotypId, aboTyp.id)
         .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(lieferung.abotypId, zusatzAboTyp.id)
         .leftJoin(lieferpositionMapping as lieferposition).on(lieferposition.lieferungId, lieferung.id)
         .where.eq(lieferung.lieferplanungId, id)
+        .and.not.withRoundBracket {
+          _.eq(lieferung.anzahlKoerbeZuLiefern, 0)
+            .and.eq(lieferung.anzahlAbwesenheiten, 0)
+            .and.eq(lieferung.anzahlSaldoZuTief, 0)
+            .and.isNull(aboTyp.id)
+        }
     }.one(lieferungMapping(lieferung))
       .toManies(
         rs => abotypMapping.opt(aboTyp)(rs),
@@ -1902,7 +1911,10 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
             .where.le(postlieferungAbo.start, today)
             .and.withRoundBracket { _.isNull(postlieferungAbo.ende).or.ge(postlieferungAbo.ende, today) }
             .and.eq(postlieferungAbo.aktiv, false)
-        )
+        ).union(select(zusatzAbo.id).from(zusatzAboMapping as zusatzAbo)
+            .where.le(zusatzAbo.start, today)
+            .and.withRoundBracket { _.isNull(zusatzAbo.ende).or.ge(zusatzAbo.ende, today) }
+            .and.eq(zusatzAbo.aktiv, false))
     }.map(res => AboId(res.long(1))).list
   }
 
@@ -1923,7 +1935,12 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
             .where.le(postlieferungAbo.start, yesterday)
             .and.withRoundBracket { _.isNotNull(postlieferungAbo.ende).and.le(postlieferungAbo.ende, yesterday) }
             .and.eq(postlieferungAbo.aktiv, true)
-        )
+        ).union(
+            select(zusatzAbo.id).from(zusatzAboMapping as zusatzAbo)
+              .where.le(zusatzAbo.start, yesterday)
+              .and.withRoundBracket { _.isNotNull(zusatzAbo.ende).and.le(zusatzAbo.ende, yesterday) }
+              .and.eq(zusatzAbo.aktiv, true)
+          )
     }.map(res => AboId(res.long(1))).list
   }
 

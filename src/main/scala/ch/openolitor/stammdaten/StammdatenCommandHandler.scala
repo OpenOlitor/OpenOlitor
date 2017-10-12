@@ -124,8 +124,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
                   val lpAbschliessenEvent = DefaultResultingEvent(factory => LieferplanungAbschliessenEvent(factory.newMetadata(), id))
 
-                  val createAuslieferungHeimEvent = getCreateAuslieferungHeimEvent(lieferplanung)(personId, session)
-                  val createAuslieferungDepotPostEvent = getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung)(personId, session)
+                  val createAuslieferungHeimEvent = getCreateAuslieferungHeimEvent(idFactory, lieferplanung)(personId, session)
+                  val createAuslieferungDepotPostEvent = getCreateDepotAuslieferungAndPostAusliferungEvent(idFactory, lieferplanung)(personId, session)
                   Success(lpAbschliessenEvent +: bestellEvents ++: createAuslieferungHeimEvent ++: createAuslieferungDepotPostEvent)
                 case _ =>
                   Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
@@ -605,7 +605,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }
   }
 
-  private def getCreateAuslieferungHeimEvent(lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): Seq[ResultingEvent] = {
+  private def getCreateAuslieferungHeimEvent(idFactory: IdFactory, lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): Seq[ResultingEvent] = {
     val lieferungen = stammdatenReadRepository.getLieferungen(lieferplanung.id)
 
     //handle Tourenlieferungen: Group all entries with the same TourId on the same Date
@@ -624,7 +624,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         if (!isAuslieferungExistingHeim(lieferdatum, tourId)) {
           val koerbe = stammdatenReadRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
           if (!koerbe.isEmpty) {
-            val tourAuslieferung = createTourAuslieferungHeim(lieferdatum, tourId, tourName, koerbe.size)
+            val tourAuslieferung = createTourAuslieferungHeim(idFactory, lieferdatum, tourId, tourName, koerbe.size)
             val updates = koerbe map { korb =>
               val tourlieferung = stammdatenReadRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
               val copy = korb.copy(auslieferungId = Some(tourAuslieferung.id), sort = tourlieferung flatMap (_.sort))
@@ -637,17 +637,17 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }).toSeq
   }
 
-  private def getCreateDepotAuslieferungAndPostAusliferungEvent(lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): Seq[ResultingEvent] = {
+  private def getCreateDepotAuslieferungAndPostAusliferungEvent(idFactory: IdFactory, lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): Seq[ResultingEvent] = {
 
     val lieferungen = stammdatenReadRepository.getLieferungen(lieferplanung.id)
 
-    val updates1 = handleLieferplanungAbgeschlossen(lieferungen)
+    val updates1 = handleLieferplanungAbgeschlossen(idFactory, lieferungen)
     val updates2 = recalculateValuesForLieferplanungAbgeschlossen(lieferungen)
     val updates3 = updateSammelbestellungStatus(lieferungen, lieferplanung)
     updates1 ::: updates2 ::: updates3
   }
 
-  private def handleLieferplanungAbgeschlossen(lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
+  private def handleLieferplanungAbgeschlossen(idFactory: IdFactory, lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
 
     //handle Depot- and Postlieferungen: Group all entries with the same VertriebId on the same Date
     val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
@@ -661,7 +661,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
               logger.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
               val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
               if (!koerbe.isEmpty) {
-                createAuslieferungDepotPost(lieferungDatum, vertriebsart, koerbe.size) map { newAuslieferung =>
+                createAuslieferungDepotPost(idFactory, lieferungDatum, vertriebsart, koerbe.size) map { newAuslieferung =>
                   val updates = koerbe map {
                     korb =>
                       EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id))
@@ -729,8 +729,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }).filter(_.nonEmpty).flatten
   }
 
-  private def createAuslieferungDepotPost(lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId): Option[Auslieferung] = {
-    val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+  private def createAuslieferungDepotPost(idFactory: IdFactory, lieferungDatum: DateTime, vertriebsart: VertriebsartDetail, anzahlKoerbe: Int)(implicit personId: PersonId): Option[Auslieferung] = {
+    val auslieferungId = idFactory.newId(AuslieferungId.apply)
 
     vertriebsart match {
       case d: DepotlieferungDetail =>
@@ -781,8 +781,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     stammdatenReadRepository.getTourAuslieferung(tourId, datum).isDefined
   }
 
-  private def createTourAuslieferungHeim(lieferungDatum: DateTime, tourId: TourId, tourName: String, anzahlKoerbe: Int)(implicit personId: PersonId): TourAuslieferung = {
-    val auslieferungId = AuslieferungId(IdUtil.positiveRandomId)
+  private def createTourAuslieferungHeim(idFactory: IdFactory, lieferungDatum: DateTime, tourId: TourId, tourName: String, anzahlKoerbe: Int)(implicit personId: PersonId): TourAuslieferung = {
+    val auslieferungId = idFactory.newId(AuslieferungId.apply)
     TourAuslieferung(
       auslieferungId,
       Erfasst,

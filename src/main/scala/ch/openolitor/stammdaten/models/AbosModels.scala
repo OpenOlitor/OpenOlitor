@@ -38,7 +38,7 @@ object IAbo {
   }
 }
 
-sealed trait Abo extends BaseEntity[AboId] {
+sealed trait Abo extends BaseEntity[AboId] with JSONSerializable {
   val id: AboId
   val abotypId: AbotypId
   val vertriebsartId: VertriebsartId
@@ -574,13 +574,13 @@ case class ZusatzAboDetail(
   id: AboId,
   hauptAboId: AboId,
   hauptAbotypId: AbotypId,
+  abotypId: AbotypId,
+  abotypName: String,
   kundeId: KundeId,
   kunde: String,
   vertriebsartId: VertriebsartId,
   vertriebId: VertriebId,
   vertriebBeschrieb: Option[String],
-  abotypId: AbotypId,
-  abotypName: String,
   start: LocalDate,
   ende: Option[LocalDate],
   guthabenVertraglich: Option[Int],
@@ -595,24 +595,20 @@ case class ZusatzAboDetail(
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
-  modifikator: PersonId,
-  abwesenheiten: Seq[Abwesenheit],
-  lieferdaten: Seq[Lieferung],
-  abotyp: Option[ZusatzAbotyp],
-  vertrieb: Option[Vertrieb]
-) extends AboDetail
+  modifikator: PersonId
+) extends JSONSerializable
 
 case class ZusatzAboModify(
   id: AboId,
-  abotypId: AbotypId,
   hauptAboId: AboId,
+  abotypId: AbotypId,
   kundeId: KundeId,
   start: LocalDate,
   ende: Option[LocalDate]
 ) extends JSONSerializable
 
 case class ZusatzAboCreate(
-  abotypId: AbotypId,
   hauptAboId: AboId,
+  abotypId: AbotypId,
   kundeId: KundeId
 ) extends JSONSerializable

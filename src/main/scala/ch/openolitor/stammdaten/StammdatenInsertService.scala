@@ -115,6 +115,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createSammelbestellungen(meta, id, entity)
     case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
       createProjektVorlage(meta, id, vorlage)
+    case EntityInsertedEvent(meta, id: AuslieferungId, tourAuslieferung: TourAuslieferung) =>
+      createTourAuslieferung(meta, id, tourAuslieferung)
+    case EntityInsertedEvent(meta, id: AuslieferungId, depotAuslieferung: DepotAuslieferung) =>
+      createDepotAuslieferung(meta, id, depotAuslieferung)
+    case EntityInsertedEvent(meta, id: AuslieferungId, postAuslieferung: PostAuslieferung) =>
+      createPostAuslieferung(meta, id, postAuslieferung)
     case e =>
   }
 
@@ -224,11 +230,11 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator): Option[Lieferung] = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      createLieferungInner(meta, id, lieferung)
+      createLieferungInner(meta, id, lieferung, None)
     }
   }
 
-  private def createLieferungInner(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
+  private def createLieferungInner(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate, lieferplanungId: Option[LieferplanungId])(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
 
     stammdatenWriteRepository.getAbotypById(lieferung.abotypId) flatMap { abotyp =>
       stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) flatMap {
@@ -247,7 +253,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
             "zielpreis" -> abotyp.zielpreis,
             "preisTotal" -> ZERO,
             "status" -> Ungeplant,
-            "lieferplanungId" -> None,
+            "lieferplanungId" -> lieferplanungId,
             "erstelldat" -> meta.timestamp,
             "ersteller" -> meta.originator,
             "modifidat" -> meta.timestamp,
@@ -523,8 +529,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   }
 
   def defaultDateStart(date1: LocalDate, date2: Option[LocalDate]): LocalDate = {
+    val today = LocalDate.now.toDateTimeAtStartOfDay.toLocalDate
     (date1, date2) match {
-      case (d1, None) => d1
+      case (d1, None) if (d1 compareTo today) > 0 => d1
+      case (d1, None) if (d1 compareTo today) <= 0 => today
       case (d1, Some(d2)) if (d1 compareTo d2) > 0 => d1
       case (_, date2) => date2.get
     }
@@ -534,7 +542,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     (date1, date2) match {
       case (Some(d1), None) => date1
       case (None, Some(d2)) => date2
-      case (Some(d1), Some(d2)) if (d1 compareTo d2) > 0 => date1
+      case (Some(d1), Some(d2)) if (d1 compareTo d2) < 0 => date1
       case (_, d2) => d2
     }
   }
@@ -732,7 +740,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzAbotyp.id, lieferplanungId, lieferung.datum) match {
         case None => {
           // Using positiveRandomId because the lieferung cannot be created in commandHandler.
-          createLieferungInner(meta, LieferungId(positiveRandomId), LieferungAbotypCreate(zusatzAbotyp.id, adjustedLieferung.vertriebId, adjustedLieferung.datum)).map { zusatzLieferung =>
+          createLieferungInner(meta, LieferungId(positiveRandomId), LieferungAbotypCreate(zusatzAbotyp.id, adjustedLieferung.vertriebId, adjustedLieferung.datum), Some(lieferplanungId)).map { zusatzLieferung =>
             offenLieferung(meta, lieferplanungId, project, zusatzLieferung)
           }
         }
@@ -799,4 +807,23 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.insertEntity[ProjektVorlage, ProjektVorlageId](vorlage)
     }
   }
+
+  def createTourAuslieferung(meta: EventMetadata, id: AuslieferungId, tourAuslieferung: TourAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](tourAuslieferung)
+    }
+  }
+
+  def createDepotAuslieferung(meta: EventMetadata, id: AuslieferungId, depotAuslieferung: DepotAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](depotAuslieferung)
+    }
+  }
+
+  def createPostAuslieferung(meta: EventMetadata, id: AuslieferungId, postAuslieferung: PostAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](postAuslieferung)
+    }
+  }
+
 }
