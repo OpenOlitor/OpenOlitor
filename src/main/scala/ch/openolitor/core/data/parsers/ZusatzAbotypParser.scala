@@ -26,32 +26,33 @@ import ch.openolitor.core.data.EntityParser
 import ch.openolitor.core.models._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.util.DateTimeUtil
-import org.joda.time.LocalDate
+
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import akka.event.LoggingAdapter
 
-object AbotypParser extends EntityParser {
+object ZusatzAbotypParser extends EntityParser {
   import EntityParser._
 
   def parse(implicit loggingAdapter: LoggingAdapter) = {
-    parseEntity[Abotyp, AbotypId]("id", Seq("name", "beschreibung", "lieferrhythmus", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
+    parseEntity[ZusatzAbotyp, AbotypId]("id", Seq("name", "beschreibung", "preis", "preiseinheit", "aktiv_von", "aktiv_bis", "laufzeit",
       "laufzeit_einheit", "farb_code", "zielpreis", "anzahl_abwesenheiten", "guthaben_mindestbestand", "admin_prozente", "wird_geplant",
       "kuendigungsfrist", "vertragslaufzeit", "anzahl_abonnenten", "anzahl_abonnenten_aktiv", "letzte_lieferung", "waehrung") ++ modifyColumns) { id => indexes => row =>
       import DateTimeUtil._
 
       //match column indexes
-      val Seq(indexName, indexBeschreibung, indexlieferrhytmus, indexPreis, indexPreiseinheit, indexAktivVon,
+      val Seq(indexName, indexBeschreibung, indexPreis, indexPreiseinheit, indexAktivVon,
         indexAktivBis, indexLaufzeit, indexLaufzeiteinheit, indexFarbCode, indexZielpreis, indexAnzahlAbwesenheiten,
         indexGuthabenMindestbestand, indexAdminProzente, indexWirdGeplant, indexKuendigungsfrist, indexVertrag,
-        indexAnzahlAbonnenten, indexAnzahlAbonnentenAktiv, indexLetzteLieferung, indexWaehrung) = indexes take (21)
+        indexAnzahlAbonnenten, indexAnzahlAbonnentenAktiv, indexLetzteLieferung, indexWaehrung) = indexes take (20)
       val Seq(indexErstelldat, indexErsteller, indexModifidat, indexModifikator) = indexes takeRight (4)
 
       val fristeinheitPattern = """(\d+)(M|W)""".r
-      Abotyp(
+
+      ZusatzAbotyp(
         id = AbotypId(id),
         name = row.value[String](indexName),
         beschreibung = row.value[Option[String]](indexBeschreibung),
-        lieferrhythmus = Rhythmus(row.value[String](indexlieferrhytmus)),
         aktivVon = row.value[Option[LocalDate]](indexAktivVon),
         aktivBis = row.value[Option[LocalDate]](indexAktivBis),
         preis = row.value[BigDecimal](indexPreis),

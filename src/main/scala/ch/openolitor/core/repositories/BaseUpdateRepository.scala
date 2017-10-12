@@ -41,10 +41,10 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
    * Modify the entity with the given id according to the provided field/value list
    * if the predicate p succeeds for the entity fetched by the given id.
    */
-  def updateEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
+  def updateEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFieldsHead: (SQLSyntax, ParameterBinder), updateFieldsTail: (SQLSyntax, ParameterBinder)*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
     modifyEntityIf[E, I](p)(id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
@@ -53,10 +53,10 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
   /**
    * Modify the entity with the given id according to the provided field/value list.
    */
-  def updateEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFieldsHead: (SQLSyntax, SqlValue), updateFieldsTail: (SQLSyntax, SqlValue)*)(implicit
+  def updateEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFieldsHead: (SQLSyntax, ParameterBinder), updateFieldsTail: (SQLSyntax, ParameterBinder)*)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
     modifyEntity[E, I](id)(_ => (updateFieldsHead +: updateFieldsTail).toMap)
@@ -64,13 +64,13 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
 
   /**
    * Modify the entity with the given id according to the given updateFunction.
-   * The updateFunction is a Map of the form SQLSyntax -> SqlValue. E.g.:
+   * The updateFunction is a Map of the form SQLSyntax -> ParameterBinder. E.g.:
    * Map(property.column.status -> value)
    */
-  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
+  def modifyEntity[E <: BaseEntity[I], I <: BaseId](id: I)(updateFunction: (E) => Map[SQLSyntax, ParameterBinder])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
     modifyEntityIf[E, I](_ => true)(id)(updateFunction)
@@ -79,13 +79,13 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
   /**
    * Modify the entity with the given id according to the given updateFunction.
    * The predicate will be evaluated against the entity fetched by the given id.
-   * The updateFunction is a Map of the form SQLSyntax -> SqlValue. E.g.:
+   * The updateFunction is a Map of the form SQLSyntax -> ParameterBinder. E.g.:
    * Map(property.column.status -> value)
    */
-  def modifyEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFunction: (E) => Map[SQLSyntax, SqlValue])(implicit
+  def modifyEntityIf[E <: BaseEntity[I], I <: BaseId](p: (E) => Boolean)(id: I)(updateFunction: (E) => Map[SQLSyntax, ParameterBinder])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
     getById(syntaxSupport, id) map { orig =>
@@ -94,12 +94,12 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
         val idAlias = alias.id
 
         val updateFields = updateFunction(orig) map {
-          case (sql, v) => (sql, v.value)
+          case (sql, v) => (sql, v)
         }
 
         val allowedFields = syntaxSupport.updateParameters(orig) map (_._1)
 
-        val defaultValues = Map(syntaxSupport.column.modifidat -> parameter(DateTime.now), syntaxSupport.column.modifikator -> parameter(user))
+        val defaultValues = Map(syntaxSupport.column.modifidat -> DateTime.now, syntaxSupport.column.modifikator -> user)
 
         // filter with allowed fields
         // if there are no modification fields in the passed updateFields default values are used
@@ -107,7 +107,7 @@ trait BaseUpdateRepository extends BaseReadRepositorySync with UpdateRepository 
 
         logger.debug(s"update entity:${id} with values:$updateParams")
 
-        withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(idAlias, parameter(id))).update.apply()
+        withSQL(update(syntaxSupport as alias).set(updateParams: _*).where.eq(idAlias, id)).update.apply()
 
         //publish event to stream
         val result = getById(syntaxSupport, id).get

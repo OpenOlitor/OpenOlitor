@@ -69,7 +69,7 @@ class StammdatenMailListener(override val sysConfig: SystemConfig) extends Actor
     log.debug(s"handleBestellungMailSent:$id")
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.updateEntity[Sammelbestellung, SammelbestellungId](id)(
-        sammelbestellungMapping.column.datumVersendet -> Some(meta.timestamp)
+        sammelbestellungMapping.column.datumVersendet -> Option(meta.timestamp)
       )
     }
   }
@@ -78,7 +78,7 @@ class StammdatenMailListener(override val sysConfig: SystemConfig) extends Actor
     log.debug(s"handleEinladungMailSent:$id")
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.updateEntity[Einladung, EinladungId](id)(
-        einladungMapping.column.datumVersendet -> Some(meta.timestamp)
+        einladungMapping.column.datumVersendet -> Option(meta.timestamp)
       )
     }
   }

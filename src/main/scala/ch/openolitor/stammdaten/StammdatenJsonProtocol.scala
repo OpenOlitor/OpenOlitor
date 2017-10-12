@@ -121,14 +121,14 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   //id formats
   implicit val vertriebIdFormat = baseIdFormat(VertriebId)
   implicit val vertriebsartIdFormat = baseIdFormat(VertriebsartId)
-  implicit val abotypIdFormat = baseIdFormat(AbotypId)
+  implicit val abotypIdFormat = baseIdFormat(AbotypId.apply _)
   implicit val depotIdFormat = baseIdFormat(DepotId)
   implicit val tourIdFormat = baseIdFormat(TourId)
   implicit val auslieferungIdFormat = baseIdFormat(AuslieferungId)
   implicit val optionAuslieferungIdFormat = new OptionFormat[AuslieferungId]
   implicit val kundeIdFormat = baseIdFormat(KundeId)
   implicit val pendenzIdFormat = baseIdFormat(PendenzId)
-  implicit val aboIdFormat = baseIdFormat(AboId)
+  implicit val aboIdFormat = baseIdFormat(AboId.apply _)
   implicit val lieferungIdFormat = baseIdFormat(LieferungId)
   implicit val lieferungOnLieferplanungIdFormat = baseIdFormat(LieferungOnLieferplanungId)
   implicit val lieferplanungIdFormat = baseIdFormat(LieferplanungId)
@@ -287,6 +287,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   }
 
   implicit val abotypFormat = enhanceWithBooleanFlag[Abotyp]("aktiv")
+  implicit val zusatzabotypFormat = enhanceWithBooleanFlag[ZusatzAbotyp]("aktiv")
+  implicit val zusatzaboCreateFormat = autoProductFormat[ZusatzAboCreate]
+  implicit val zusatzaboModifyFormat = autoProductFormat[ZusatzAboModify]
 
   implicit val treeMapIntFormat = new JsonFormat[TreeMap[String, Int]] {
     def write(obj: TreeMap[String, Int]): JsValue = {
@@ -344,6 +347,23 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val postlieferungAboFormat = autoProductFormat[PostlieferungAbo]
   implicit val postlieferungAboDetailFormat = autoProductFormat[PostlieferungAboDetail]
   implicit val postlieferungAboModifyFormat = autoProductFormat[PostlieferungAboModify]
+
+  implicit val zusatzAboFormat = autoProductFormat[ZusatzAbo]
+
+  implicit val iAbotypFormat = new RootJsonFormat[IAbotyp] {
+    def write(obj: IAbotyp): JsValue =
+      JsObject((obj match {
+        case a: Abotyp => a.toJson
+        case z: ZusatzAbotyp => z.toJson
+      }).asJsObject.fields + ("typ" -> JsString(obj.productPrefix)))
+
+    def read(json: JsValue): IAbotyp = {
+      json.asJsObject.getFields("typ") match {
+        case Seq(JsString("Abotyp")) => json.convertTo[Abotyp]
+        case Seq(JsString("ZusatzAbotyp")) => json.convertTo[ZusatzAbotyp]
+      }
+    }
+  }
 
   implicit val aboDetailFormat = new RootJsonFormat[AboDetail] {
     def write(obj: AboDetail): JsValue =

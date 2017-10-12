@@ -23,19 +23,16 @@
 package ch.openolitor.core.repositories
 
 import scalikejdbc._
-import scalikejdbc.TypeBinder._
 import ch.openolitor.core.models._
 
 trait CoreDBMappings extends DBMappings {
 
-  implicit val dbschemaIdBinder: TypeBinder[DBSchemaId] = baseIdTypeBinder(DBSchemaId.apply _)
-  implicit val evolutionStatusTypeBinder: TypeBinder[EvolutionStatus] = string.map(EvolutionStatus.apply)
+  implicit val dbSchemaIdBinder = baseIdBinders(DBSchemaId.apply _)
+  implicit val evolutionStatusBinder = toStringBinder(EvolutionStatus.apply _)
 
-  implicit val dbSchemaIdSqlBinder = baseIdSqlBinder[DBSchemaId]
-  implicit val evolutionStatusBinder = toStringSqlBinder[EvolutionStatus]
+  implicit def evolutionStatusParameterBinderFactory[A <: EvolutionStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
 
-  implicit val persistenceEventStateIdSqlBinderBinder: TypeBinder[PersistenceEventStateId] = baseIdTypeBinder(PersistenceEventStateId.apply _)
-  implicit val persistenceEventStateIdSqlBinder = baseIdSqlBinder[PersistenceEventStateId]
+  implicit val persistenceEventStateIdBinders: Binders[PersistenceEventStateId] = baseIdBinders(PersistenceEventStateId.apply _)
 
   implicit val dbSchemaMapping = new BaseEntitySQLSyntaxSupport[DBSchema] {
     override val tableName = "DBSchema"
@@ -45,13 +42,13 @@ trait CoreDBMappings extends DBMappings {
     def apply(rn: ResultName[DBSchema])(rs: WrappedResultSet): DBSchema =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: DBSchema): Seq[Any] =
+    def parameterMappings(entity: DBSchema): Seq[ParameterBinder] =
       parameters(DBSchema.unapply(entity).get)
 
     override def updateParameters(schema: DBSchema) = {
       Seq(
-        column.revision -> parameter(schema.revision),
-        column.status -> parameter(schema.status)
+        column.revision -> schema.revision,
+        column.status -> schema.status
       )
     }
   }
@@ -64,13 +61,13 @@ trait CoreDBMappings extends DBMappings {
     def apply(rn: ResultName[PersistenceEventState])(rs: WrappedResultSet): PersistenceEventState =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: PersistenceEventState): Seq[Any] =
+    def parameterMappings(entity: PersistenceEventState): Seq[ParameterBinder] =
       parameters(PersistenceEventState.unapply(entity).get)
 
     override def updateParameters(state: PersistenceEventState) = {
       Seq(
-        column.lastTransactionNr -> parameter(state.lastTransactionNr),
-        column.lastSequenceNr -> parameter(state.lastSequenceNr)
+        column.lastTransactionNr -> state.lastTransactionNr,
+        column.lastSequenceNr -> state.lastSequenceNr
       )
     }
   }

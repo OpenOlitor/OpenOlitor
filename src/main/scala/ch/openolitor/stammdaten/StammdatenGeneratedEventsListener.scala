@@ -36,7 +36,6 @@ import ch.openolitor.stammdaten.StammdatenCommandHandler.AboDeaktiviertEvent
 import ch.openolitor.core.models.BaseEntity
 import ch.openolitor.core.models.BaseId
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.core.repositories.EventPublishingImplicits._
 import ch.openolitor.core.repositories.EventPublisher
 
@@ -100,6 +99,11 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
               stammdatenUpdateRepository.updateEntity[PostlieferungAbo, AboId](p.id) {
                 postlieferungAboMapping.column.aktiv -> aktiv
               }
+            case z: ZusatzAbo =>
+              stammdatenUpdateRepository.updateEntity[ZusatzAbo, AboId](z.id) {
+                zusatzAboMapping.column.aktiv -> aktiv
+              }
+            case _ =>
           }
         }
       }

@@ -7,3 +7,4 @@ addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.6.0")
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.8.0")
 
 addSbtPlugin("org.scalaxb" % "sbt-scalaxb" % "1.5.2")
+addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")

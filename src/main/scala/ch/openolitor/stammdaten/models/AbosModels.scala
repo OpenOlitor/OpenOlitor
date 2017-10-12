@@ -22,16 +22,11 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import ch.openolitor.stammdaten._
 import ch.openolitor.core.models._
-import java.util.UUID
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
-import ch.openolitor.core.JSONSerializable
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.JSONSerializable
-import ch.openolitor.kundenportal.models.BelongsToKunde
 import ch.openolitor.core.scalax.Tuple23
 
 case class AboId(id: Long) extends BaseId
@@ -43,12 +38,12 @@ object IAbo {
   }
 }
 
-trait IAbo extends BaseEntity[AboId] with BelongsToKunde {
+sealed trait Abo extends BaseEntity[AboId] with JSONSerializable {
   val id: AboId
+  val abotypId: AbotypId
   val vertriebsartId: VertriebsartId
   val vertriebId: VertriebId
   val vertriebBeschrieb: Option[String]
-  val abotypId: AbotypId
   val abotypName: String
   val kundeId: KundeId
   val kunde: String
@@ -67,10 +62,7 @@ trait IAbo extends BaseEntity[AboId] with BelongsToKunde {
     IAbo.calculateAktiv(start, ende)
 }
 
-sealed trait Abo extends IAbo {
-}
-
-sealed trait AboReport extends IAbo {
+sealed trait AboReport extends Abo {
   val kundeReport: KundeReport
 }
 
@@ -496,3 +488,127 @@ object Tourlieferung {
     )
   }
 }
+
+case class TourlieferungDetail(
+  id: AboId,
+  tourId: TourId,
+  abotypId: AbotypId,
+  kundeId: KundeId,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  kundeBezeichnung: String,
+  strasse: String,
+  hausNummer: Option[String],
+  adressZusatz: Option[String],
+  plz: String,
+  ort: String,
+  abotypName: String,
+  sort: Option[Int],
+  zusatzAbos: Seq[ZusatzAbo],
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
+case class ZusatzAbo(
+  id: AboId,
+  hauptAboId: AboId,
+  hauptAbotypId: AbotypId,
+  abotypId: AbotypId,
+  abotypName: String,
+  kundeId: KundeId,
+  kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
+  start: LocalDate,
+  ende: Option[LocalDate],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends Abo
+
+object ZusatzAbo {
+  def unapply(o: ZusatzAbo) = {
+    Some(Tuple23(
+      o.id,
+      o.hauptAboId,
+      o.hauptAbotypId,
+      o.abotypId,
+      o.abotypName,
+      o.kundeId,
+      o.kunde,
+      o.vertriebsartId,
+      o.vertriebId,
+      o.vertriebBeschrieb,
+      o.start,
+      o.ende,
+      o.guthabenVertraglich,
+      o.guthaben,
+      o.guthabenInRechnung,
+      o.letzteLieferung,
+      o.anzahlAbwesenheiten,
+      o.anzahlLieferungen,
+      o.aktiv,
+      o.erstelldat,
+      o.ersteller,
+      o.modifidat,
+      o.modifikator
+    ))
+  }
+}
+
+case class ZusatzAboDetail(
+  id: AboId,
+  hauptAboId: AboId,
+  hauptAbotypId: AbotypId,
+  abotypId: AbotypId,
+  abotypName: String,
+  kundeId: KundeId,
+  kunde: String,
+  vertriebsartId: VertriebsartId,
+  vertriebId: VertriebId,
+  vertriebBeschrieb: Option[String],
+  start: LocalDate,
+  ende: Option[LocalDate],
+  guthabenVertraglich: Option[Int],
+  guthaben: Int,
+  guthabenInRechnung: Int,
+  letzteLieferung: Option[DateTime],
+  //calculated fields
+  anzahlAbwesenheiten: TreeMap[String, Int],
+  anzahlLieferungen: TreeMap[String, Int],
+  aktiv: Boolean,
+  //modification flags
+  erstelldat: DateTime,
+  ersteller: PersonId,
+  modifidat: DateTime,
+  modifikator: PersonId
+) extends JSONSerializable
+
+case class ZusatzAboModify(
+  id: AboId,
+  hauptAboId: AboId,
+  abotypId: AbotypId,
+  kundeId: KundeId,
+  start: LocalDate,
+  ende: Option[LocalDate]
+) extends JSONSerializable
+
+case class ZusatzAboCreate(
+  hauptAboId: AboId,
+  abotypId: AbotypId,
+  kundeId: KundeId
+) extends JSONSerializable

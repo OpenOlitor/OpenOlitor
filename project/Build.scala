@@ -9,7 +9,7 @@ object BuildSettings {
   val specs2V = "2.4.17" // based on spray 1.3.x built in support 
   val akkaV = "2.4.+"
   val sprayV = "1.3.+"
-  val scalalikeV = "2.3.+"
+  val scalalikeV = "3.1.+"
  
   val buildSettings = SbtScalariform.scalariformSettings ++ Seq(
     organization := "ch.openolitor.scalamacros",
@@ -48,9 +48,10 @@ object BuildSettings {
 	    //use scala logging to log outside of the actor system
 	    "com.typesafe.scala-logging"   %%  "scala-logging"				                % "3.1.0",
 	    //akka persistence journal driver
-	    "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.3.+",
-	    // "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.5.+",
-	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.16",
+	    // "com.okumin" 		               %%  "akka-persistence-sql-async" 	        % "0.4.+",
+	    // use currently own fork, until PR was merged and a new release is available
+	    "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.9.+",
+	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.+",
 	    //                             
 	    "org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
 	    "org.scalikejdbc"              %%  "scalikejdbc-test"                     % scalalikeV   % "test",
@@ -86,14 +87,43 @@ object ScalaxbSettings {
 
 object OpenOlitorBuild extends Build {
   import BuildSettings._
+ 
+  lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")  
+  lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncUri, "core")
+
   import ScalaxbSettings._
 
-  lazy val scalikejdbcAsyncForkUri =  uri("git://github.com/OpenOlitor/scalikejdbc-async.git#dev/support_up_to_9_joins")
+  lazy val scalikejdbcAsyncForkUri = uri("git://github.com/OpenOlitor/scalikejdbc-async.git#dev/support_up_to_9_joins")
   lazy val scalikejdbcAsync = ProjectRef(scalikejdbcAsyncForkUri, "core")
 
   lazy val sprayJsonMacro = RootProject(uri("git://github.com/zackangelo/spray-json-macros.git"))
   lazy val macroSub = Project("macro", file("macro"), settings = buildSettings ++ Seq(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value))
-  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings) dependsOn (macroSub, sprayJsonMacro, scalikejdbcAsync)
+  lazy val main = Project("main", file(".")).enablePlugins(sbtscalaxb.ScalaxbPlugin).settings(buildSettings ++ scalaxbSettings ++ Seq(
+      (sourceGenerators in Compile) += task[Seq[File]]{
+        val dir = (sourceManaged in Compile).value
+        val maxParams = 30
+        val mappings = (1 to maxParams).map{ n =>
+          val file = dir / "openolitor" / "ch" / "openolitor" / "core" / "repositories" / s"Parameters${n}.scala"
+          IO.write(file, GenerateParametersMapping(n))
+          file
+        }
+        val paramsTrait = {
+          val file = dir / "openolitor" / "ch" / "openolitor" / "core" / "repositories" / s"Parameters.scala"
+          IO.write(file, GenerateParametersTrait(maxParams))
+          file
+        }
+        val tuples = (23 to maxParams).map{ n =>
+          val file = dir / "openolitor" / "ch" / "openolitor" / "core" / "scalax" / s"Tuple${n}.scala"
+          IO.write(file, GenerateTuples(n))
+          file
+        }
+        mappings ++ tuples :+ paramsTrait
+      },
+      mappings in (Compile, packageSrc) ++= (managedSources in Compile).value.map{ f =>
+        // to merge generated sources into sources.jar as well
+        (f, f.relativeTo((sourceManaged in Compile).value).get.getPath)
+      }
+      )) dependsOn (macroSub, sprayJsonMacro, akkaPersistenceSqlAsync)
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
 }

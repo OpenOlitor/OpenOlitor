@@ -51,13 +51,13 @@ trait BaseWriteRepository extends CrudRepository
   def updateEntityFully[E <: BaseEntity[I], I <: BaseId](entity: E)(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I],
+    binder: Binders[I],
     user: PersonId,
     eventPublisher: EventPublisher): Option[E] = {
 
     syntaxSupport.updateParameters(entity) map {
       case (s, v) =>
-        (s, SqlValue(v))
+        (s, v)
     } match {
       case head :: tail =>
         updateEntity[E, I](entity.id)(head, tail: _*)

@@ -25,166 +25,111 @@ package ch.openolitor.stammdaten
 import java.util.UUID
 import ch.openolitor.core.models._
 import ch.openolitor.core.models.VorlageTyp
-import ch.openolitor.core.repositories.ParameterBinderMapping
 import ch.openolitor.stammdaten.models._
 import scalikejdbc._
-import scalikejdbc.TypeBinder._
 import ch.openolitor.core.repositories.DBMappings
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.repositories.SqlBinder
 import ch.openolitor.stammdaten.models.PendenzStatus
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.scalax._
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.filestore.VorlageRechnung
+import scala.math.Ordering.StringOrdering
+import ch.openolitor.core.repositories.BaseParameter
 
 //DB Model bindig
-trait StammdatenDBMappings extends DBMappings with LazyLogging {
-  import TypeBinder._
+trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParameter {
 
   val fristeinheitPattern = """(\d+)(M|W)""".r
 
   // DB type binders for read operations
-  implicit val tourIdBinder: TypeBinder[TourId] = baseIdTypeBinder(TourId.apply _)
-  implicit val depotIdBinder: TypeBinder[DepotId] = baseIdTypeBinder(DepotId.apply _)
-  implicit val aboTypIdBinder: TypeBinder[AbotypId] = baseIdTypeBinder(AbotypId.apply _)
-  implicit val vertriebIdBinder: TypeBinder[VertriebId] = baseIdTypeBinder(VertriebId.apply _)
-  implicit val vertriebsartIdBinder: TypeBinder[VertriebsartId] = baseIdTypeBinder(VertriebsartId.apply _)
-  implicit val vertriebsartIdSetBinder: TypeBinder[Set[VertriebsartId]] = string.map(s => s.split(",").map(_.toLong).map(VertriebsartId.apply _).toSet)
-  implicit val vertriebsartIdSeqBinder: TypeBinder[Seq[VertriebsartId]] = string.map(s => if (s != null) s.split(",").map(_.toLong).map(VertriebsartId.apply _).toSeq else Nil)
-  implicit val kundeIdBinder: TypeBinder[KundeId] = baseIdTypeBinder(KundeId.apply _)
-  implicit val pendenzIdBinder: TypeBinder[PendenzId] = baseIdTypeBinder(PendenzId.apply _)
-  implicit val aboIdBinder: TypeBinder[AboId] = baseIdTypeBinder(AboId.apply _)
-  implicit val lierferungIdBinder: TypeBinder[LieferungId] = baseIdTypeBinder(LieferungId.apply _)
-  implicit val lieferplanungIdBinder: TypeBinder[LieferplanungId] = baseIdTypeBinder(LieferplanungId.apply _)
-  implicit val optionLieferplanungIdBinder: TypeBinder[Option[LieferplanungId]] = optionBaseIdTypeBinder(LieferplanungId.apply _)
-  implicit val lieferpositionIdBinder: TypeBinder[LieferpositionId] = baseIdTypeBinder(LieferpositionId.apply _)
-  implicit val bestellungIdBinder: TypeBinder[BestellungId] = baseIdTypeBinder(BestellungId.apply _)
-  implicit val sammelbestellungIdBinder: TypeBinder[SammelbestellungId] = baseIdTypeBinder(SammelbestellungId.apply _)
-  implicit val bestellpositionIdBinder: TypeBinder[BestellpositionId] = baseIdTypeBinder(BestellpositionId.apply _)
-  implicit val customKundentypIdBinder: TypeBinder[CustomKundentypId] = baseIdTypeBinder(CustomKundentypId.apply _)
-  implicit val kundentypIdBinder: TypeBinder[KundentypId] = string.map(KundentypId)
-  implicit val produktekategorieIdBinder: TypeBinder[ProduktekategorieId] = baseIdTypeBinder(ProduktekategorieId.apply _)
-  implicit val baseProduktekategorieIdBinder: TypeBinder[BaseProduktekategorieId] = string.map(BaseProduktekategorieId)
-  implicit val produktIdBinder: TypeBinder[ProduktId] = baseIdTypeBinder(ProduktId.apply _)
-  implicit val produzentIdBinder: TypeBinder[ProduzentId] = baseIdTypeBinder(ProduzentId.apply _)
-  implicit val baseProduzentIdBinder: TypeBinder[BaseProduzentId] = string.map(BaseProduzentId)
-  implicit val projektIdBinder: TypeBinder[ProjektId] = baseIdTypeBinder(ProjektId.apply _)
-  implicit val produktProduzentIdBinder: TypeBinder[ProduktProduzentId] = baseIdTypeBinder(ProduktProduzentId.apply _)
-  implicit val produktProduktekategorieIdBinder: TypeBinder[ProduktProduktekategorieId] = baseIdTypeBinder(ProduktProduktekategorieId.apply _)
-  implicit val abwesenheitIdBinder: TypeBinder[AbwesenheitId] = baseIdTypeBinder(AbwesenheitId.apply _)
-  implicit val korbIdBinder: TypeBinder[KorbId] = baseIdTypeBinder(KorbId.apply _)
-  implicit val auslieferungIdBinder: TypeBinder[AuslieferungId] = baseIdTypeBinder(AuslieferungId.apply _)
-  implicit val projektVorlageIdBinder: TypeBinder[ProjektVorlageId] = baseIdTypeBinder(ProjektVorlageId.apply _)
-  implicit val optionAuslieferungIdBinder: TypeBinder[Option[AuslieferungId]] = optionBaseIdTypeBinder(AuslieferungId.apply _)
-  implicit val einladungIdBinder: TypeBinder[EinladungId] = baseIdTypeBinder(EinladungId.apply _)
-  implicit val kontoDatenIdBinder: TypeBinder[KontoDatenId] = baseIdTypeBinder(KontoDatenId.apply _)
+  implicit val tourIdBinder: Binders[TourId] = baseIdBinders(TourId.apply _)
+  implicit val depotIdBinder: Binders[DepotId] = baseIdBinders(DepotId.apply _)
+  implicit val aboTypIdBinder: Binders[AbotypId] = baseIdBinders(AbotypId.apply _)
+  implicit val vertriebIdBinder: Binders[VertriebId] = baseIdBinders(VertriebId.apply _)
+  implicit val vertriebsartIdBinder: Binders[VertriebsartId] = baseIdBinders(VertriebsartId.apply _)
+  implicit val vertriebsartIdSetBinder: Binders[Set[VertriebsartId]] = setBaseIdBinders(VertriebsartId.apply _)
+  implicit val vertriebsartIdSeqBinder: Binders[Seq[VertriebsartId]] = seqBaseIdBinders(VertriebsartId.apply _)
+  implicit val kundeIdBinder: Binders[KundeId] = baseIdBinders(KundeId.apply _)
+  implicit val pendenzIdBinder: Binders[PendenzId] = baseIdBinders(PendenzId.apply _)
+  implicit val aboIdBinder: Binders[AboId] = baseIdBinders(AboId.apply _)
+  implicit val lierferungIdBinder: Binders[LieferungId] = baseIdBinders(LieferungId.apply _)
+  implicit val lieferplanungIdBinder: Binders[LieferplanungId] = baseIdBinders(LieferplanungId.apply _)
+  implicit val optionLieferplanungIdBinder: Binders[Option[LieferplanungId]] = optionBaseIdBinders(LieferplanungId.apply _)
+  implicit val lieferpositionIdBinder: Binders[LieferpositionId] = baseIdBinders(LieferpositionId.apply _)
+  implicit val bestellungIdBinder: Binders[BestellungId] = baseIdBinders(BestellungId.apply _)
+  implicit val sammelbestellungIdBinder: Binders[SammelbestellungId] = baseIdBinders(SammelbestellungId.apply _)
+  implicit val bestellpositionIdBinder: Binders[BestellpositionId] = baseIdBinders(BestellpositionId.apply _)
+  implicit val customKundentypIdBinder: Binders[CustomKundentypId] = baseIdBinders(CustomKundentypId.apply _)
+  implicit val kundentypIdBinder: Binders[KundentypId] = Binders.string.xmap(KundentypId.apply _, _.id)
+  implicit val produktekategorieIdBinder: Binders[ProduktekategorieId] = baseIdBinders(ProduktekategorieId.apply _)
+  implicit val baseProduktekategorieIdBinder: Binders[BaseProduktekategorieId] = Binders.string.xmap(BaseProduktekategorieId.apply _, _.id)
+  implicit val produktIdBinder: Binders[ProduktId] = baseIdBinders(ProduktId.apply _)
+  implicit val optionProduktIdBinder: Binders[Option[ProduktId]] = optionBaseIdBinders(ProduktId.apply _)
+  implicit val produzentIdBinder: Binders[ProduzentId] = baseIdBinders(ProduzentId.apply _)
+  implicit val baseProduzentIdBinder: Binders[BaseProduzentId] = Binders.string.xmap(BaseProduzentId.apply _, _.id)
+  implicit val projektIdBinder: Binders[ProjektId] = baseIdBinders(ProjektId.apply _)
+  implicit val produktProduzentIdBinder: Binders[ProduktProduzentId] = baseIdBinders(ProduktProduzentId.apply _)
+  implicit val produktProduktekategorieIdBinder: Binders[ProduktProduktekategorieId] = baseIdBinders(ProduktProduktekategorieId.apply _)
+  implicit val abwesenheitIdBinder: Binders[AbwesenheitId] = baseIdBinders(AbwesenheitId.apply _)
+  implicit val korbIdBinder: Binders[KorbId] = baseIdBinders(KorbId.apply _)
+  implicit val auslieferungIdBinder: Binders[AuslieferungId] = baseIdBinders(AuslieferungId.apply _)
+  implicit val projektVorlageIdBinder: Binders[ProjektVorlageId] = baseIdBinders(ProjektVorlageId.apply _)
+  implicit val optionAuslieferungIdBinder: Binders[Option[AuslieferungId]] = optionBaseIdBinders(AuslieferungId.apply _)
+  implicit val einladungIdBinder: Binders[EinladungId] = baseIdBinders(EinladungId.apply _)
+  implicit val kontoDatenIdBinder: Binders[KontoDatenId] = baseIdBinders(KontoDatenId.apply _)
 
-  implicit val pendenzStatusTypeBinder: TypeBinder[PendenzStatus] = string.map(PendenzStatus.apply)
-  implicit val rhythmusTypeBinder: TypeBinder[Rhythmus] = string.map(Rhythmus.apply)
-  implicit val waehrungTypeBinder: TypeBinder[Waehrung] = string.map(Waehrung.apply)
-  implicit val lieferungStatusTypeBinder: TypeBinder[LieferungStatus] = string.map(LieferungStatus.apply)
-  implicit val korbStatusTypeBinder: TypeBinder[KorbStatus] = string.map(KorbStatus.apply)
-  implicit val auslieferungStatusTypeBinder: TypeBinder[AuslieferungStatus] = string.map(AuslieferungStatus.apply)
-  implicit val preiseinheitTypeBinder: TypeBinder[Preiseinheit] = string.map(Preiseinheit.apply)
-  implicit val lieferzeitpunktTypeBinder: TypeBinder[Lieferzeitpunkt] = string.map(Lieferzeitpunkt.apply)
-  implicit val lieferzeitpunktSetTypeBinder: TypeBinder[Set[Lieferzeitpunkt]] = string.map(s => s.split(",").map(Lieferzeitpunkt.apply).toSet)
-  implicit val kundenTypIdSetBinder: TypeBinder[Set[KundentypId]] = string.map(s => s.split(",").map(KundentypId.apply).toSet)
-  implicit val laufzeiteinheitTypeBinder: TypeBinder[Laufzeiteinheit] = string.map(Laufzeiteinheit.apply)
-  implicit val liefereinheitypeBinder: TypeBinder[Liefereinheit] = string.map(Liefereinheit.apply)
-  implicit val liefersaisonTypeBinder: TypeBinder[Liefersaison] = string.map(Liefersaison.apply)
-  implicit val vorlageTypeTypeBinder: TypeBinder[VorlageTyp] = string.map(VorlageTyp.apply)
-  implicit val anredeTypeBinder: TypeBinder[Option[Anrede]] = string.map(Anrede.apply)
-  implicit val fristOptionTypeBinder: TypeBinder[Option[Frist]] = string.map {
+  implicit val pendenzStatusBinders: Binders[PendenzStatus] = toStringBinder(PendenzStatus.apply)
+  implicit val rhythmusBinders: Binders[Rhythmus] = toStringBinder(Rhythmus.apply)
+  implicit val waehrungBinders: Binders[Waehrung] = toStringBinder(Waehrung.apply)
+  implicit val lieferungStatusBinders: Binders[LieferungStatus] = toStringBinder(LieferungStatus.apply)
+  implicit val korbStatusBinders: Binders[KorbStatus] = toStringBinder(KorbStatus.apply)
+  implicit val auslieferungStatusBinders: Binders[AuslieferungStatus] = toStringBinder(AuslieferungStatus.apply)
+  implicit val preiseinheitBinders: Binders[Preiseinheit] = toStringBinder(Preiseinheit.apply)
+  implicit val lieferzeitpunktBinders: Binders[Lieferzeitpunkt] = toStringBinder(Lieferzeitpunkt.apply)
+  implicit val lieferzeitpunktSetBinders: Binders[Set[Lieferzeitpunkt]] = setSqlBinder(Lieferzeitpunkt.apply, _.toString)
+  implicit val kundenTypIdSetBinder: Binders[Set[KundentypId]] = setSqlBinder(KundentypId.apply, _.toString)
+  implicit val laufzeiteinheitBinders: Binders[Laufzeiteinheit] = toStringBinder(Laufzeiteinheit.apply)
+  implicit val liefereinheiBinders: Binders[Liefereinheit] = toStringBinder(Liefereinheit.apply)
+  implicit val liefersaisonBinders: Binders[Liefersaison] = toStringBinder(Liefersaison.apply)
+  implicit val vorlageTypeBinders: Binders[VorlageTyp] = toStringBinder(VorlageTyp.apply)
+  implicit val anredeBinders: Binders[Option[Anrede]] = toStringBinder(Anrede.apply)
+  implicit val fristBinders: Binders[Option[Frist]] = Binders.string.xmap(_ match {
     case fristeinheitPattern(wert, "W") => Some(Frist(wert.toInt, Wochenfrist))
     case fristeinheitPattern(wert, "M") => Some(Frist(wert.toInt, Monatsfrist))
     case _ => None
-  }
-
-  implicit val baseProduktekategorieIdSetTypeBinder: TypeBinder[Set[BaseProduktekategorieId]] = string.map(s => s.split(",").map(BaseProduktekategorieId.apply).toSet)
-  implicit val baseProduzentIdSetTypeBinder: TypeBinder[Set[BaseProduzentId]] = string.map(s => s.split(",").map(BaseProduzentId.apply).toSet)
-  implicit val stringIntTreeMapTypeBinder: TypeBinder[TreeMap[String, Int]] = treeMapTypeBinder(identity, _.toInt)
-  implicit val stringBigDecimalTreeMapTypeBinder: TypeBinder[TreeMap[String, BigDecimal]] = treeMapTypeBinder(identity, BigDecimal(_))
-  implicit val rolleMapTypeBinder: TypeBinder[Map[Rolle, Boolean]] = mapTypeBinder(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean)
-  implicit val rolleTypeBinder: TypeBinder[Option[Rolle]] = string.map(Rolle.apply)
-
-  implicit val stringSeqTypeBinder: TypeBinder[Seq[String]] = string.map(s => if (s != null) s.split(",").toSeq else Nil)
-  implicit val stringSetTypeBinder: TypeBinder[Set[String]] = string.map(s => if (s != null) s.split(",").toSet else Set())
-
-  //DB parameter binders for write and query operationsit
-  implicit val pendenzStatusBinder = toStringSqlBinder[PendenzStatus]
-  implicit val rhytmusSqlBinder = toStringSqlBinder[Rhythmus]
-  implicit val preiseinheitSqlBinder = toStringSqlBinder[Preiseinheit]
-  implicit val waehrungSqlBinder = toStringSqlBinder[Waehrung]
-  implicit val lieferungStatusSqlBinder = toStringSqlBinder[LieferungStatus]
-  implicit val korbStatusSqlBinder = toStringSqlBinder[KorbStatus]
-  implicit val auslieferungStatusSqlBinder = toStringSqlBinder[AuslieferungStatus]
-  implicit val lieferzeitpunktSqlBinder = toStringSqlBinder[Lieferzeitpunkt]
-  implicit val lieferzeitpunktSetSqlBinder = setSqlBinder[Lieferzeitpunkt]
-  implicit val laufzeiteinheitSqlBinder = toStringSqlBinder[Laufzeiteinheit]
-  implicit val liefereinheitSqlBinder = toStringSqlBinder[Liefereinheit]
-  implicit val liefersaisonSqlBinder = toStringSqlBinder[Liefersaison]
-  implicit val anredeSqlBinder = toStringSqlBinder[Anrede]
-  implicit val optionAnredeSqlBinder = optionSqlBinder[Anrede]
-  implicit val vorlageTypeSqlBinder = toStringSqlBinder[VorlageTyp]
-
-  implicit val abotypIdSqlBinder = baseIdSqlBinder[AbotypId]
-  implicit val depotIdSqlBinder = baseIdSqlBinder[DepotId]
-  implicit val tourIdSqlBinder = baseIdSqlBinder[TourId]
-  implicit val vertriebIdSqlBinder = baseIdSqlBinder[VertriebId]
-  implicit val vertriebsartIdSqlBinder = baseIdSqlBinder[VertriebsartId]
-  implicit val vertriebsartIdSetSqlBinder = setSqlBinder[VertriebsartId]
-  implicit val vertriebsartIdSeqSqlBinder = seqSqlBinder[VertriebsartId]
-  implicit val kundeIdSqlBinder = baseIdSqlBinder[KundeId]
-  implicit val pendenzIdSqlBinder = baseIdSqlBinder[PendenzId]
-  implicit val customKundentypIdSqlBinder = baseIdSqlBinder[CustomKundentypId]
-  implicit val kundentypIdSqlBinder = new SqlBinder[KundentypId] { def apply(value: KundentypId): Any = value.id }
-  implicit val kundentypIdSetSqlBinder = setSqlBinder[KundentypId]
-  implicit val aboIdSqlBinder = baseIdSqlBinder[AboId]
-  implicit val lieferungIdSqlBinder = baseIdSqlBinder[LieferungId]
-  implicit val lieferplanungIdSqlBinder = baseIdSqlBinder[LieferplanungId]
-  implicit val lieferpositionIdSqlBinder = baseIdSqlBinder[LieferpositionId]
-  implicit val bestellungIdSqlBinder = baseIdSqlBinder[BestellungId]
-  implicit val sammelbestellungIdSqlBinder = baseIdSqlBinder[SammelbestellungId]
-  implicit val bestellpositionIdSqlBinder = baseIdSqlBinder[BestellpositionId]
-  implicit val korbIdSqlBinder = baseIdSqlBinder[KorbId]
-  implicit val auslieferungIdSqlBinder = baseIdSqlBinder[AuslieferungId]
-  implicit val projektVorlageIdSqlBinder = baseIdSqlBinder[ProjektVorlageId]
-  implicit val auslieferungIdOptionSqlBinder = optionSqlBinder[AuslieferungId]
-  implicit val produktIdSqlBinder = baseIdSqlBinder[ProduktId]
-  implicit val produktIdOptionBinder = optionSqlBinder[ProduktId]
-  implicit val produktekategorieIdSqlBinder = baseIdSqlBinder[ProduktekategorieId]
-  implicit val baseProduktekategorieIdSqlBinder = new SqlBinder[BaseProduktekategorieId] { def apply(value: BaseProduktekategorieId): Any = value.id }
-  implicit val baseProduktekategorieIdSetSqlBinder = setSqlBinder[BaseProduktekategorieId]
-  implicit val produzentIdSqlBinder = baseIdSqlBinder[ProduzentId]
-  implicit val baseProduzentIdSqlBinder = new SqlBinder[BaseProduzentId] { def apply(value: BaseProduzentId): Any = value.id }
-  implicit val baseProduzentIdSetSqlBinder = setSqlBinder[BaseProduzentId]
-  implicit val projektIdSqlBinder = baseIdSqlBinder[ProjektId]
-  implicit val abwesenheitIdSqlBinder = baseIdSqlBinder[AbwesenheitId]
-  implicit val produktProduzentIdIdSqlBinder = baseIdSqlBinder[ProduktProduzentId]
-  implicit val produktProduktekategorieIdIdSqlBinder = baseIdSqlBinder[ProduktProduktekategorieId]
-  implicit val lieferplanungIdOptionBinder = optionSqlBinder[LieferplanungId]
-  implicit val einladungIdSqlBinder = baseIdSqlBinder[EinladungId]
-  implicit val kontoDatenIdSqlBinder = baseIdSqlBinder[KontoDatenId]
-
-  implicit val stringIntTreeMapSqlBinder = treeMapSqlBinder[String, Int]
-  implicit val stringBigDecimalTreeMapSqlBinder = treeMapSqlBinder[String, BigDecimal]
-  implicit val rolleSqlBinder = toStringSqlBinder[Rolle]
-  implicit val optionRolleSqlBinder = optionSqlBinder[Rolle]
-  implicit val rolleMapSqlBinder = mapSqlBinder[Rolle, Boolean]
-  implicit val fristeSqlBinder = new SqlBinder[Frist] {
-    def apply(frist: Frist): Any = {
-      val einheit = frist.einheit match {
-        case Wochenfrist => "W"
-        case Monatsfrist => "M"
-      }
-      s"${frist.wert}$einheit"
+  }, {
+    _ match {
+      case None => ""
+      case Some(frist) =>
+        val einheit = frist.einheit match {
+          case Wochenfrist => "W"
+          case Monatsfrist => "M"
+        }
+        s"${frist.wert}$einheit"
     }
-  }
-  implicit val fristOptionSqlBinder = optionSqlBinder[Frist]
+  })
 
-  implicit val stringSeqSqlBinder = seqSqlBinder[String]
-  implicit val stringSetSqlBinder = setSqlBinder[String]
+  implicit val baseProduktekategorieIdSetBinders: Binders[Set[BaseProduktekategorieId]] = setBaseStringIdBinders(BaseProduktekategorieId.apply _)
+  implicit val baseProduzentIdSetBinders: Binders[Set[BaseProduzentId]] = setBaseStringIdBinders(BaseProduzentId.apply _)
+  implicit val stringIntTreeMapBinders: Binders[TreeMap[String, Int]] = treeMapBinders[String, Int](identity, _.toInt, identity, _.toString)
+  implicit val stringBigDecimalTreeMapBinders: Binders[TreeMap[String, BigDecimal]] = treeMapBinders(identity, BigDecimal(_), identity, _.toString)
+  implicit val rolleMapBinders: Binders[Map[Rolle, Boolean]] = mapBinders(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean, _.toString, _.toString)
+  implicit val rolleBinders: Binders[Option[Rolle]] = toStringBinder(Rolle.apply)
+
+  // declare parameterbinderfactories for enum type to allow dynamic type convertion of enum subtypes
+  implicit def pendenzStatusParameterBinderFactory[A <: PendenzStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def rhythmusParameterBinderFactory[A <: Rhythmus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def waehrungParameterBinderFactory[A <: Waehrung]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def lieferungStatusParameterBinderFactory[A <: LieferungStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def korbStatusParameterBinderFactory[A <: KorbStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def auslieferungStatusParameterBinderFactory[A <: AuslieferungStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def preiseinheitParameterBinderFactory[A <: Preiseinheit]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def lieferzeitpunktParameterBinderFactory[A <: Lieferzeitpunkt]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def laufzeiteinheitParameterBinderFactory[A <: Laufzeiteinheit]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def liefereinheitParameterBinderFactory[A <: Liefereinheit]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def liefersaisonParameterBinderFactory[A <: Liefersaison]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
+  implicit def vorlageParameterBinderFactory[A <: VorlageTyp]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)
 
   implicit val abotypMapping = new BaseEntitySQLSyntaxSupport[Abotyp] {
     override val tableName = "Abotyp"
@@ -193,32 +138,68 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     def apply(rn: ResultName[Abotyp])(rs: WrappedResultSet): Abotyp = autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Abotyp): Seq[Any] =
+    def parameterMappings(entity: Abotyp): Seq[ParameterBinder] =
       parameters(Abotyp.unapply(entity).get)
 
     override def updateParameters(abotyp: Abotyp) = {
       super.updateParameters(abotyp) ++ Seq(
-        column.name -> parameter(abotyp.name),
-        column.beschreibung -> parameter(abotyp.beschreibung),
-        column.lieferrhythmus -> parameter(abotyp.lieferrhythmus),
-        column.aktivVon -> parameter(abotyp.aktivVon),
-        column.aktivBis -> parameter(abotyp.aktivBis),
-        column.preis -> parameter(abotyp.preis),
-        column.preiseinheit -> parameter(abotyp.preiseinheit),
-        column.laufzeit -> parameter(abotyp.laufzeit),
-        column.laufzeiteinheit -> parameter(abotyp.laufzeiteinheit),
-        column.vertragslaufzeit -> parameter(abotyp.vertragslaufzeit),
-        column.kuendigungsfrist -> parameter(abotyp.kuendigungsfrist),
-        column.anzahlAbwesenheiten -> parameter(abotyp.anzahlAbwesenheiten),
-        column.farbCode -> parameter(abotyp.farbCode),
-        column.zielpreis -> parameter(abotyp.zielpreis),
-        column.guthabenMindestbestand -> parameter(abotyp.guthabenMindestbestand),
-        column.adminProzente -> parameter(abotyp.adminProzente),
-        column.wirdGeplant -> parameter(abotyp.wirdGeplant),
-        column.anzahlAbonnenten -> parameter(abotyp.anzahlAbonnenten),
-        column.anzahlAbonnentenAktiv -> parameter(abotyp.anzahlAbonnentenAktiv),
-        column.letzteLieferung -> parameter(abotyp.letzteLieferung),
-        column.waehrung -> parameter(abotyp.waehrung)
+        column.name -> abotyp.name,
+        column.beschreibung -> abotyp.beschreibung,
+        column.lieferrhythmus -> abotyp.lieferrhythmus,
+        column.aktivVon -> abotyp.aktivVon,
+        column.aktivBis -> abotyp.aktivBis,
+        column.preis -> abotyp.preis,
+        column.preiseinheit -> abotyp.preiseinheit,
+        column.laufzeit -> abotyp.laufzeit,
+        column.laufzeiteinheit -> abotyp.laufzeiteinheit,
+        column.vertragslaufzeit -> abotyp.vertragslaufzeit,
+        column.kuendigungsfrist -> abotyp.kuendigungsfrist,
+        column.anzahlAbwesenheiten -> abotyp.anzahlAbwesenheiten,
+        column.farbCode -> abotyp.farbCode,
+        column.zielpreis -> abotyp.zielpreis,
+        column.guthabenMindestbestand -> abotyp.guthabenMindestbestand,
+        column.adminProzente -> abotyp.adminProzente,
+        column.wirdGeplant -> abotyp.wirdGeplant,
+        column.anzahlAbonnenten -> abotyp.anzahlAbonnenten,
+        column.anzahlAbonnentenAktiv -> abotyp.anzahlAbonnentenAktiv,
+        column.letzteLieferung -> abotyp.letzteLieferung,
+        column.waehrung -> abotyp.waehrung
+      )
+    }
+  }
+
+  implicit val zusatzAbotypMapping = new BaseEntitySQLSyntaxSupport[ZusatzAbotyp] {
+    override val tableName = "ZusatzAbotyp"
+
+    override lazy val columns = autoColumns[ZusatzAbotyp]()
+
+    def apply(rn: ResultName[ZusatzAbotyp])(rs: WrappedResultSet): ZusatzAbotyp = autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ZusatzAbotyp): Seq[ParameterBinder] =
+      parameters(ZusatzAbotyp.unapply(entity).get)
+
+    override def updateParameters(zusatzabotyp: ZusatzAbotyp) = {
+      super.updateParameters(zusatzabotyp) ++ Seq(
+        column.name -> zusatzabotyp.name,
+        column.beschreibung -> zusatzabotyp.beschreibung,
+        column.aktivVon -> zusatzabotyp.aktivVon,
+        column.aktivBis -> zusatzabotyp.aktivBis,
+        column.preis -> zusatzabotyp.preis,
+        column.preiseinheit -> zusatzabotyp.preiseinheit,
+        column.laufzeit -> zusatzabotyp.laufzeit,
+        column.laufzeiteinheit -> zusatzabotyp.laufzeiteinheit,
+        column.vertragslaufzeit -> zusatzabotyp.vertragslaufzeit,
+        column.kuendigungsfrist -> zusatzabotyp.kuendigungsfrist,
+        column.anzahlAbwesenheiten -> zusatzabotyp.anzahlAbwesenheiten,
+        column.farbCode -> zusatzabotyp.farbCode,
+        column.zielpreis -> zusatzabotyp.zielpreis,
+        column.guthabenMindestbestand -> zusatzabotyp.guthabenMindestbestand,
+        column.adminProzente -> zusatzabotyp.adminProzente,
+        column.wirdGeplant -> zusatzabotyp.wirdGeplant,
+        column.anzahlAbonnenten -> zusatzabotyp.anzahlAbonnenten,
+        column.anzahlAbonnentenAktiv -> zusatzabotyp.anzahlAbonnentenAktiv,
+        column.letzteLieferung -> zusatzabotyp.letzteLieferung,
+        column.waehrung -> zusatzabotyp.waehrung
       )
     }
   }
@@ -231,14 +212,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[CustomKundentyp])(rs: WrappedResultSet): CustomKundentyp =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: CustomKundentyp): Seq[Any] =
+    def parameterMappings(entity: CustomKundentyp): Seq[ParameterBinder] =
       parameters(CustomKundentyp.unapply(entity).get)
 
     override def updateParameters(typ: CustomKundentyp) = {
       super.updateParameters(typ) ++ Seq(
-        column.kundentyp -> parameter(typ.kundentyp),
-        column.beschreibung -> parameter(typ.beschreibung),
-        column.anzahlVerknuepfungen -> parameter(typ.anzahlVerknuepfungen)
+        column.kundentyp -> typ.kundentyp,
+        column.beschreibung -> typ.beschreibung,
+        column.anzahlVerknuepfungen -> typ.anzahlVerknuepfungen
       )
     }
   }
@@ -251,31 +232,31 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Kunde])(rs: WrappedResultSet): Kunde =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Kunde): Seq[Any] =
+    def parameterMappings(entity: Kunde): Seq[ParameterBinder] =
       parameters(Kunde.unapply(entity).get)
 
     override def updateParameters(kunde: Kunde) = {
       super.updateParameters(kunde) ++ Seq(
-        column.bezeichnung -> parameter(kunde.bezeichnung),
-        column.strasse -> parameter(kunde.strasse),
-        column.hausNummer -> parameter(kunde.hausNummer),
-        column.adressZusatz -> parameter(kunde.adressZusatz),
-        column.plz -> parameter(kunde.plz),
-        column.ort -> parameter(kunde.ort),
-        column.abweichendeLieferadresse -> parameter(kunde.abweichendeLieferadresse),
-        column.bezeichnungLieferung -> parameter(kunde.bezeichnungLieferung),
-        column.strasseLieferung -> parameter(kunde.strasseLieferung),
-        column.hausNummerLieferung -> parameter(kunde.hausNummerLieferung),
-        column.plzLieferung -> parameter(kunde.plzLieferung),
-        column.ortLieferung -> parameter(kunde.ortLieferung),
-        column.adressZusatzLieferung -> parameter(kunde.adressZusatzLieferung),
-        column.zusatzinfoLieferung -> parameter(kunde.zusatzinfoLieferung),
-        column.typen -> parameter(kunde.typen),
-        column.bemerkungen -> parameter(kunde.bemerkungen),
-        column.anzahlAbos -> parameter(kunde.anzahlAbos),
-        column.anzahlAbosAktiv -> parameter(kunde.anzahlAbosAktiv),
-        column.anzahlPendenzen -> parameter(kunde.anzahlPendenzen),
-        column.anzahlPersonen -> parameter(kunde.anzahlPersonen)
+        column.bezeichnung -> kunde.bezeichnung,
+        column.strasse -> kunde.strasse,
+        column.hausNummer -> kunde.hausNummer,
+        column.adressZusatz -> kunde.adressZusatz,
+        column.plz -> kunde.plz,
+        column.ort -> kunde.ort,
+        column.abweichendeLieferadresse -> kunde.abweichendeLieferadresse,
+        column.bezeichnungLieferung -> kunde.bezeichnungLieferung,
+        column.strasseLieferung -> kunde.strasseLieferung,
+        column.hausNummerLieferung -> kunde.hausNummerLieferung,
+        column.plzLieferung -> kunde.plzLieferung,
+        column.ortLieferung -> kunde.ortLieferung,
+        column.adressZusatzLieferung -> kunde.adressZusatzLieferung,
+        column.zusatzinfoLieferung -> kunde.zusatzinfoLieferung,
+        column.typen -> kunde.typen,
+        column.bemerkungen -> kunde.bemerkungen,
+        column.anzahlAbos -> kunde.anzahlAbos,
+        column.anzahlAbosAktiv -> kunde.anzahlAbosAktiv,
+        column.anzahlPendenzen -> kunde.anzahlPendenzen,
+        column.anzahlPersonen -> kunde.anzahlPersonen
       )
     }
   }
@@ -288,26 +269,26 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Person])(rs: WrappedResultSet): Person =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Person): Seq[Any] =
+    def parameterMappings(entity: Person): Seq[ParameterBinder] =
       parameters(Person.unapply(entity).get)
 
     override def updateParameters(person: Person) = {
       super.updateParameters(person) ++ Seq(
-        column.kundeId -> parameter(person.kundeId),
-        column.anrede -> parameter(person.anrede),
-        column.name -> parameter(person.name),
-        column.vorname -> parameter(person.vorname),
-        column.email -> parameter(person.email),
-        column.emailAlternative -> parameter(person.emailAlternative),
-        column.telefonMobil -> parameter(person.telefonMobil),
-        column.telefonFestnetz -> parameter(person.telefonFestnetz),
-        column.bemerkungen -> parameter(person.bemerkungen),
-        column.sort -> parameter(person.sort),
-        column.loginAktiv -> parameter(person.loginAktiv),
-        column.passwort -> parameter(person.passwort),
-        column.passwortWechselErforderlich -> parameter(person.passwortWechselErforderlich),
-        column.rolle -> parameter(person.rolle),
-        column.letzteAnmeldung -> parameter(person.letzteAnmeldung)
+        column.kundeId -> person.kundeId,
+        column.anrede -> person.anrede,
+        column.name -> person.name,
+        column.vorname -> person.vorname,
+        column.email -> person.email,
+        column.emailAlternative -> person.emailAlternative,
+        column.telefonMobil -> person.telefonMobil,
+        column.telefonFestnetz -> person.telefonFestnetz,
+        column.bemerkungen -> person.bemerkungen,
+        column.sort -> person.sort,
+        column.loginAktiv -> person.loginAktiv,
+        column.passwort -> person.passwort,
+        column.passwortWechselErforderlich -> person.passwortWechselErforderlich,
+        column.rolle -> person.rolle,
+        column.letzteAnmeldung -> person.letzteAnmeldung
       )
     }
   }
@@ -320,17 +301,17 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Pendenz])(rs: WrappedResultSet): Pendenz =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Pendenz): Seq[Any] =
+    def parameterMappings(entity: Pendenz): Seq[ParameterBinder] =
       parameters(Pendenz.unapply(entity).get)
 
     override def updateParameters(pendenz: Pendenz) = {
       super.updateParameters(pendenz) ++ Seq(
-        column.kundeId -> parameter(pendenz.kundeId),
-        column.kundeBezeichnung -> parameter(pendenz.kundeBezeichnung),
-        column.datum -> parameter(pendenz.datum),
-        column.bemerkung -> parameter(pendenz.bemerkung),
-        column.status -> parameter(pendenz.status),
-        column.generiert -> parameter(pendenz.generiert)
+        column.kundeId -> pendenz.kundeId,
+        column.kundeBezeichnung -> pendenz.kundeBezeichnung,
+        column.datum -> pendenz.datum,
+        column.bemerkung -> pendenz.bemerkung,
+        column.status -> pendenz.status,
+        column.generiert -> pendenz.generiert
       )
     }
   }
@@ -343,25 +324,25 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Lieferung])(rs: WrappedResultSet): Lieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Lieferung): Seq[Any] =
+    def parameterMappings(entity: Lieferung): Seq[ParameterBinder] =
       parameters(Lieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Lieferung) = {
       super.updateParameters(lieferung) ++ Seq(
-        column.abotypId -> parameter(lieferung.abotypId),
-        column.abotypBeschrieb -> parameter(lieferung.abotypBeschrieb),
-        column.vertriebId -> parameter(lieferung.vertriebId),
-        column.vertriebBeschrieb -> parameter(lieferung.vertriebBeschrieb),
-        column.status -> parameter(lieferung.status),
-        column.datum -> parameter(lieferung.datum),
-        column.durchschnittspreis -> parameter(lieferung.durchschnittspreis),
-        column.anzahlLieferungen -> parameter(lieferung.anzahlLieferungen),
-        column.anzahlKoerbeZuLiefern -> parameter(lieferung.anzahlKoerbeZuLiefern),
-        column.anzahlAbwesenheiten -> parameter(lieferung.anzahlAbwesenheiten),
-        column.anzahlSaldoZuTief -> parameter(lieferung.anzahlSaldoZuTief),
-        column.zielpreis -> parameter(lieferung.zielpreis),
-        column.preisTotal -> parameter(lieferung.preisTotal),
-        column.lieferplanungId -> parameter(lieferung.lieferplanungId)
+        column.abotypId -> lieferung.abotypId,
+        column.abotypBeschrieb -> lieferung.abotypBeschrieb,
+        column.vertriebId -> lieferung.vertriebId,
+        column.vertriebBeschrieb -> lieferung.vertriebBeschrieb,
+        column.status -> lieferung.status,
+        column.datum -> lieferung.datum,
+        column.durchschnittspreis -> lieferung.durchschnittspreis,
+        column.anzahlLieferungen -> lieferung.anzahlLieferungen,
+        column.anzahlKoerbeZuLiefern -> lieferung.anzahlKoerbeZuLiefern,
+        column.anzahlAbwesenheiten -> lieferung.anzahlAbwesenheiten,
+        column.anzahlSaldoZuTief -> lieferung.anzahlSaldoZuTief,
+        column.zielpreis -> lieferung.zielpreis,
+        column.preisTotal -> lieferung.preisTotal,
+        column.lieferplanungId -> lieferung.lieferplanungId
       )
     }
   }
@@ -374,13 +355,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Lieferplanung])(rs: WrappedResultSet): Lieferplanung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Lieferplanung): Seq[Any] = parameters(Lieferplanung.unapply(entity).get)
+    def parameterMappings(entity: Lieferplanung): Seq[ParameterBinder] = parameters(Lieferplanung.unapply(entity).get)
 
     override def updateParameters(lieferplanung: Lieferplanung) = {
       super.updateParameters(lieferplanung) ++ Seq(
-        column.bemerkungen -> parameter(lieferplanung.bemerkungen),
-        column.abotypDepotTour -> parameter(lieferplanung.abotypDepotTour),
-        column.status -> parameter(lieferplanung.status)
+        column.bemerkungen -> lieferplanung.bemerkungen,
+        column.abotypDepotTour -> lieferplanung.abotypDepotTour,
+        column.status -> lieferplanung.status
       )
     }
   }
@@ -393,19 +374,19 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Lieferposition])(rs: WrappedResultSet): Lieferposition =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Lieferposition): Seq[Any] = parameters(Lieferposition.unapply(entity).get)
+    def parameterMappings(entity: Lieferposition): Seq[ParameterBinder] = parameters(Lieferposition.unapply(entity).get)
 
     override def updateParameters(lieferposition: Lieferposition) = {
       super.updateParameters(lieferposition) ++ Seq(
-        column.produktId -> parameter(lieferposition.produktId),
-        column.produktBeschrieb -> parameter(lieferposition.produktBeschrieb),
-        column.produzentId -> parameter(lieferposition.produzentId),
-        column.produzentKurzzeichen -> parameter(lieferposition.produzentKurzzeichen),
-        column.preisEinheit -> parameter(lieferposition.preisEinheit),
-        column.einheit -> parameter(lieferposition.einheit),
-        column.menge -> parameter(lieferposition.menge),
-        column.preis -> parameter(lieferposition.preis),
-        column.anzahl -> parameter(lieferposition.anzahl)
+        column.produktId -> lieferposition.produktId,
+        column.produktBeschrieb -> lieferposition.produktBeschrieb,
+        column.produzentId -> lieferposition.produzentId,
+        column.produzentKurzzeichen -> lieferposition.produzentKurzzeichen,
+        column.preisEinheit -> lieferposition.preisEinheit,
+        column.einheit -> lieferposition.einheit,
+        column.menge -> lieferposition.menge,
+        column.preis -> lieferposition.preis,
+        column.anzahl -> lieferposition.anzahl
       )
     }
   }
@@ -418,21 +399,21 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Sammelbestellung])(rs: WrappedResultSet): Sammelbestellung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Sammelbestellung): Seq[Any] = parameters(Sammelbestellung.unapply(entity).get)
+    def parameterMappings(entity: Sammelbestellung): Seq[ParameterBinder] = parameters(Sammelbestellung.unapply(entity).get)
 
     override def updateParameters(sammelbestellung: Sammelbestellung) = {
       super.updateParameters(sammelbestellung) ++ Seq(
-        column.produzentId -> parameter(sammelbestellung.produzentId),
-        column.produzentKurzzeichen -> parameter(sammelbestellung.produzentKurzzeichen),
-        column.lieferplanungId -> parameter(sammelbestellung.lieferplanungId),
-        column.status -> parameter(sammelbestellung.status),
-        column.datum -> parameter(sammelbestellung.datum),
-        column.datumAbrechnung -> parameter(sammelbestellung.datumAbrechnung),
-        column.preisTotal -> parameter(sammelbestellung.preisTotal),
-        column.steuerSatz -> parameter(sammelbestellung.steuerSatz),
-        column.steuer -> parameter(sammelbestellung.steuer),
-        column.totalSteuer -> parameter(sammelbestellung.totalSteuer),
-        column.datumVersendet -> parameter(sammelbestellung.datumVersendet)
+        column.produzentId -> sammelbestellung.produzentId,
+        column.produzentKurzzeichen -> sammelbestellung.produzentKurzzeichen,
+        column.lieferplanungId -> sammelbestellung.lieferplanungId,
+        column.status -> sammelbestellung.status,
+        column.datum -> sammelbestellung.datum,
+        column.datumAbrechnung -> sammelbestellung.datumAbrechnung,
+        column.preisTotal -> sammelbestellung.preisTotal,
+        column.steuerSatz -> sammelbestellung.steuerSatz,
+        column.steuer -> sammelbestellung.steuer,
+        column.totalSteuer -> sammelbestellung.totalSteuer,
+        column.datumVersendet -> sammelbestellung.datumVersendet
       )
     }
   }
@@ -445,18 +426,18 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Bestellung])(rs: WrappedResultSet): Bestellung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Bestellung): Seq[Any] = parameters(Bestellung.unapply(entity).get)
+    def parameterMappings(entity: Bestellung): Seq[ParameterBinder] = parameters(Bestellung.unapply(entity).get)
 
     override def updateParameters(bestellung: Bestellung) = {
       super.updateParameters(bestellung) ++ Seq(
-        column.sammelbestellungId -> parameter(bestellung.sammelbestellungId),
-        column.preisTotal -> parameter(bestellung.preisTotal),
-        column.steuerSatz -> parameter(bestellung.steuerSatz),
-        column.steuer -> parameter(bestellung.steuer),
-        column.totalSteuer -> parameter(bestellung.totalSteuer),
-        column.adminProzente -> parameter(bestellung.adminProzente),
-        column.adminProzenteAbzug -> parameter(bestellung.adminProzenteAbzug),
-        column.totalNachAbzugAdminProzente -> parameter(bestellung.totalNachAbzugAdminProzente)
+        column.sammelbestellungId -> bestellung.sammelbestellungId,
+        column.preisTotal -> bestellung.preisTotal,
+        column.steuerSatz -> bestellung.steuerSatz,
+        column.steuer -> bestellung.steuer,
+        column.totalSteuer -> bestellung.totalSteuer,
+        column.adminProzente -> bestellung.adminProzente,
+        column.adminProzenteAbzug -> bestellung.adminProzenteAbzug,
+        column.totalNachAbzugAdminProzente -> bestellung.totalNachAbzugAdminProzente
       )
     }
   }
@@ -469,17 +450,17 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Bestellposition])(rs: WrappedResultSet): Bestellposition =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Bestellposition): Seq[Any] = parameters(Bestellposition.unapply(entity).get)
+    def parameterMappings(entity: Bestellposition): Seq[ParameterBinder] = parameters(Bestellposition.unapply(entity).get)
 
     override def updateParameters(bestellposition: Bestellposition) = {
       super.updateParameters(bestellposition) ++ Seq(
-        column.produktId -> parameter(bestellposition.produktId),
-        column.produktBeschrieb -> parameter(bestellposition.produktBeschrieb),
-        column.preisEinheit -> parameter(bestellposition.preisEinheit),
-        column.einheit -> parameter(bestellposition.einheit),
-        column.menge -> parameter(bestellposition.menge),
-        column.preis -> parameter(bestellposition.preis),
-        column.anzahl -> parameter(bestellposition.anzahl)
+        column.produktId -> bestellposition.produktId,
+        column.produktBeschrieb -> bestellposition.produktBeschrieb,
+        column.preisEinheit -> bestellposition.preisEinheit,
+        column.einheit -> bestellposition.einheit,
+        column.menge -> bestellposition.menge,
+        column.preis -> bestellposition.preis,
+        column.anzahl -> bestellposition.anzahl
       )
     }
   }
@@ -492,14 +473,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Tour])(rs: WrappedResultSet): Tour =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Tour): Seq[Any] = parameters(Tour.unapply(entity).get)
+    def parameterMappings(entity: Tour): Seq[ParameterBinder] = parameters(Tour.unapply(entity).get)
 
     override def updateParameters(tour: Tour) = {
       super.updateParameters(tour) ++ Seq(
-        column.name -> parameter(tour.name),
-        column.beschreibung -> parameter(tour.beschreibung),
-        column.anzahlAbonnenten -> parameter(tour.anzahlAbonnenten),
-        column.anzahlAbonnentenAktiv -> parameter(tour.anzahlAbonnentenAktiv)
+        column.name -> tour.name,
+        column.beschreibung -> tour.beschreibung,
+        column.anzahlAbonnenten -> tour.anzahlAbonnenten,
+        column.anzahlAbonnentenAktiv -> tour.anzahlAbonnentenAktiv
       )
     }
   }
@@ -512,33 +493,33 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Depot])(rs: WrappedResultSet): Depot =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Depot): Seq[Any] = parameters(Depot.unapply(entity).get)
+    def parameterMappings(entity: Depot): Seq[ParameterBinder] = parameters(Depot.unapply(entity).get)
 
     override def updateParameters(depot: Depot) = {
       super.updateParameters(depot) ++ Seq(
-        column.name -> parameter(depot.name),
-        column.kurzzeichen -> parameter(depot.kurzzeichen),
-        column.apName -> parameter(depot.apName),
-        column.apVorname -> parameter(depot.apVorname),
-        column.apTelefon -> parameter(depot.apTelefon),
-        column.apEmail -> parameter(depot.apEmail),
-        column.vName -> parameter(depot.vName),
-        column.vVorname -> parameter(depot.vVorname),
-        column.vTelefon -> parameter(depot.vTelefon),
-        column.vEmail -> parameter(depot.vEmail),
-        column.strasse -> parameter(depot.strasse),
-        column.hausNummer -> parameter(depot.hausNummer),
-        column.plz -> parameter(depot.plz),
-        column.ort -> parameter(depot.ort),
-        column.aktiv -> parameter(depot.aktiv),
-        column.oeffnungszeiten -> parameter(depot.oeffnungszeiten),
-        column.farbCode -> parameter(depot.farbCode),
-        column.iban -> parameter(depot.iban),
-        column.bank -> parameter(depot.bank),
-        column.beschreibung -> parameter(depot.beschreibung),
-        column.anzahlAbonnenten -> parameter(depot.anzahlAbonnenten),
-        column.anzahlAbonnentenAktiv -> parameter(depot.anzahlAbonnentenAktiv),
-        column.anzahlAbonnentenMax -> parameter(depot.anzahlAbonnentenMax)
+        column.name -> depot.name,
+        column.kurzzeichen -> depot.kurzzeichen,
+        column.apName -> depot.apName,
+        column.apVorname -> depot.apVorname,
+        column.apTelefon -> depot.apTelefon,
+        column.apEmail -> depot.apEmail,
+        column.vName -> depot.vName,
+        column.vVorname -> depot.vVorname,
+        column.vTelefon -> depot.vTelefon,
+        column.vEmail -> depot.vEmail,
+        column.strasse -> depot.strasse,
+        column.hausNummer -> depot.hausNummer,
+        column.plz -> depot.plz,
+        column.ort -> depot.ort,
+        column.aktiv -> depot.aktiv,
+        column.oeffnungszeiten -> depot.oeffnungszeiten,
+        column.farbCode -> depot.farbCode,
+        column.iban -> depot.iban,
+        column.bank -> depot.bank,
+        column.beschreibung -> depot.beschreibung,
+        column.anzahlAbonnenten -> depot.anzahlAbonnenten,
+        column.anzahlAbonnentenAktiv -> depot.anzahlAbonnentenAktiv,
+        column.anzahlAbonnentenMax -> depot.anzahlAbonnentenMax
       )
     }
   }
@@ -548,20 +529,19 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Vertrieb]()
 
-    def apply(rn: ResultName[Vertrieb])(rs: WrappedResultSet): Vertrieb =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[Vertrieb])(rs: WrappedResultSet): Vertrieb = autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Vertrieb): Seq[Any] = parameters(Vertrieb.unapply(entity).get)
+    def parameterMappings(entity: Vertrieb): Seq[ParameterBinder] = parameters(Vertrieb.unapply(entity).get)
 
     override def updateParameters(vertrieb: Vertrieb) = {
       super.updateParameters(vertrieb) ++ Seq(
-        column.abotypId -> parameter(vertrieb.abotypId),
-        column.liefertag -> parameter(vertrieb.liefertag),
-        column.beschrieb -> parameter(vertrieb.beschrieb),
-        column.anzahlAbos -> parameter(vertrieb.anzahlAbos),
-        column.durchschnittspreis -> parameter(vertrieb.durchschnittspreis),
-        column.anzahlLieferungen -> parameter(vertrieb.anzahlLieferungen),
-        column.anzahlAbosAktiv -> parameter(vertrieb.anzahlAbosAktiv)
+        column.abotypId -> vertrieb.abotypId,
+        column.liefertag -> vertrieb.liefertag,
+        column.beschrieb -> vertrieb.beschrieb,
+        column.anzahlAbos -> vertrieb.anzahlAbos,
+        column.durchschnittspreis -> vertrieb.durchschnittspreis,
+        column.anzahlLieferungen -> vertrieb.anzahlLieferungen,
+        column.anzahlAbosAktiv -> vertrieb.anzahlAbosAktiv
       )
     }
   }
@@ -569,9 +549,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   trait LieferungMapping[E <: Vertriebsart] extends BaseEntitySQLSyntaxSupport[E] {
     override def updateParameters(lieferung: E) = {
       super.updateParameters(lieferung) ++ Seq(
-        column.vertriebId -> parameter(lieferung.vertriebId),
-        column.anzahlAbos -> parameter(lieferung.anzahlAbos),
-        column.anzahlAbosAktiv -> parameter(lieferung.anzahlAbosAktiv)
+        column.vertriebId -> lieferung.vertriebId,
+        column.anzahlAbos -> lieferung.anzahlAbos,
+        column.anzahlAbosAktiv -> lieferung.anzahlAbosAktiv
       )
     }
   }
@@ -584,11 +564,11 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Heimlieferung])(rs: WrappedResultSet): Heimlieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Heimlieferung): Seq[Any] = parameters(Heimlieferung.unapply(entity).get)
+    def parameterMappings(entity: Heimlieferung): Seq[ParameterBinder] = parameters(Heimlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Heimlieferung) = {
       super.updateParameters(lieferung) ++ Seq(
-        column.tourId -> parameter(lieferung.tourId)
+        column.tourId -> lieferung.tourId
       )
     }
   }
@@ -601,12 +581,12 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Depotlieferung])(rs: WrappedResultSet): Depotlieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Depotlieferung): Seq[Any] =
+    def parameterMappings(entity: Depotlieferung): Seq[ParameterBinder] =
       parameters(Depotlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Depotlieferung) = {
       super.updateParameters(lieferung) ++ Seq(
-        column.depotId -> parameter(lieferung.depotId)
+        column.depotId -> lieferung.depotId
       )
     }
   }
@@ -619,7 +599,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Postlieferung])(rs: WrappedResultSet): Postlieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Postlieferung): Seq[Any] = parameters(Postlieferung.unapply(entity).get)
+    def parameterMappings(entity: Postlieferung): Seq[ParameterBinder] = parameters(Postlieferung.unapply(entity).get)
 
     override def updateParameters(lieferung: Postlieferung) = {
       super.updateParameters(lieferung)
@@ -629,21 +609,21 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   trait BaseAboMapping[A <: Abo] extends BaseEntitySQLSyntaxSupport[A] {
     override def updateParameters(abo: A) = {
       super.updateParameters(abo) ++ Seq(
-        column.kundeId -> parameter(abo.kundeId),
-        column.kunde -> parameter(abo.kunde),
-        column.vertriebId -> parameter(abo.vertriebId),
-        column.vertriebsartId -> parameter(abo.vertriebsartId),
-        column.abotypId -> parameter(abo.abotypId),
-        column.abotypName -> parameter(abo.abotypName),
-        column.start -> parameter(abo.start),
-        column.ende -> parameter(abo.ende),
-        column.guthabenVertraglich -> parameter(abo.guthabenVertraglich),
-        column.guthaben -> parameter(abo.guthaben),
-        column.guthabenInRechnung -> parameter(abo.guthabenInRechnung),
-        column.letzteLieferung -> parameter(abo.letzteLieferung),
-        column.anzahlAbwesenheiten -> parameter(abo.anzahlAbwesenheiten),
-        column.anzahlLieferungen -> parameter(abo.anzahlLieferungen),
-        column.aktiv -> parameter(abo.aktiv)
+        column.kundeId -> abo.kundeId,
+        column.kunde -> abo.kunde,
+        column.vertriebId -> abo.vertriebId,
+        column.vertriebsartId -> abo.vertriebsartId,
+        column.abotypId -> abo.abotypId,
+        column.abotypName -> abo.abotypName,
+        column.start -> abo.start,
+        column.ende -> abo.ende,
+        column.guthabenVertraglich -> abo.guthabenVertraglich,
+        column.guthaben -> abo.guthaben,
+        column.guthabenInRechnung -> abo.guthabenInRechnung,
+        column.letzteLieferung -> abo.letzteLieferung,
+        column.anzahlAbwesenheiten -> abo.anzahlAbwesenheiten,
+        column.anzahlLieferungen -> abo.anzahlLieferungen,
+        column.aktiv -> abo.aktiv
       )
     }
   }
@@ -655,12 +635,12 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     def apply(rn: ResultName[DepotlieferungAbo])(rs: WrappedResultSet): DepotlieferungAbo = autoConstruct(rs, rn)
 
-    def parameterMappings(entity: DepotlieferungAbo): Seq[Any] = parameters(DepotlieferungAbo.unapply(entity).get)
+    def parameterMappings(entity: DepotlieferungAbo): Seq[ParameterBinder] = parameters(DepotlieferungAbo.unapply(entity).get)
 
     override def updateParameters(depotlieferungAbo: DepotlieferungAbo) = {
       super.updateParameters(depotlieferungAbo) ++ Seq(
-        column.depotId -> parameter(depotlieferungAbo.depotId),
-        column.depotName -> parameter(depotlieferungAbo.depotName)
+        column.depotId -> depotlieferungAbo.depotId,
+        column.depotName -> depotlieferungAbo.depotName
       )
     }
   }
@@ -670,16 +650,15 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[HeimlieferungAbo]()
 
-    def apply(rn: ResultName[HeimlieferungAbo])(rs: WrappedResultSet): HeimlieferungAbo =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[HeimlieferungAbo])(rs: WrappedResultSet): HeimlieferungAbo = autoConstruct(rs, rn)
 
-    def parameterMappings(entity: HeimlieferungAbo): Seq[Any] = parameters(HeimlieferungAbo.unapply(entity).get)
+    def parameterMappings(entity: HeimlieferungAbo): Seq[ParameterBinder] = parameters(HeimlieferungAbo.unapply(entity).get)
 
     override def updateParameters(heimlieferungAbo: HeimlieferungAbo) = {
       super.updateParameters(heimlieferungAbo) ++ Seq(
-        column.tourId -> parameter(heimlieferungAbo.tourId),
-        column.tourName -> parameter(heimlieferungAbo.tourName),
-        column.vertriebBeschrieb -> parameter(heimlieferungAbo.vertriebBeschrieb)
+        column.tourId -> heimlieferungAbo.tourId,
+        column.tourName -> heimlieferungAbo.tourName,
+        column.vertriebBeschrieb -> heimlieferungAbo.vertriebBeschrieb
       )
     }
   }
@@ -689,13 +668,28 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[PostlieferungAbo]()
 
-    def apply(rn: ResultName[PostlieferungAbo])(rs: WrappedResultSet): PostlieferungAbo =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[PostlieferungAbo])(rs: WrappedResultSet): PostlieferungAbo = autoConstruct(rs, rn)
 
-    def parameterMappings(entity: PostlieferungAbo): Seq[Any] = parameters(PostlieferungAbo.unapply(entity).get)
+    def parameterMappings(entity: PostlieferungAbo): Seq[ParameterBinder] = parameters(PostlieferungAbo.unapply(entity).get)
+  }
 
-    override def updateParameters(postlieferungAbo: PostlieferungAbo) = {
-      super.updateParameters(postlieferungAbo)
+  implicit val zusatzAboMapping = new BaseAboMapping[ZusatzAbo] {
+    override val tableName = "ZusatzAbo"
+
+    override lazy val columns = autoColumns[ZusatzAbo]()
+
+    def apply(rn: ResultName[ZusatzAbo])(rs: WrappedResultSet): ZusatzAbo = autoConstruct(rs, rn)
+
+    def parameterMappings(entity: ZusatzAbo): Seq[ParameterBinder] = {
+      parameters(ZusatzAbo.unapply(entity).get)
+    }
+
+    override def updateParameters(zusatzAbo: ZusatzAbo) = {
+      super.updateParameters(zusatzAbo) ++ Seq(
+        column.hauptAboId -> zusatzAbo.hauptAboId,
+        column.hauptAbotypId -> zusatzAbo.hauptAbotypId,
+        column.vertriebBeschrieb -> zusatzAbo.vertriebBeschrieb
+      )
     }
   }
 
@@ -707,18 +701,18 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Produkt])(rs: WrappedResultSet): Produkt =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Produkt): Seq[Any] = parameters(Produkt.unapply(entity).get)
+    def parameterMappings(entity: Produkt): Seq[ParameterBinder] = parameters(Produkt.unapply(entity).get)
 
     override def updateParameters(produkt: Produkt) = {
       super.updateParameters(produkt) ++ Seq(
-        column.name -> parameter(produkt.name),
-        column.verfuegbarVon -> parameter(produkt.verfuegbarVon),
-        column.verfuegbarBis -> parameter(produkt.verfuegbarBis),
-        column.kategorien -> parameter(produkt.kategorien),
-        column.standardmenge -> parameter(produkt.standardmenge),
-        column.einheit -> parameter(produkt.einheit),
-        column.preis -> parameter(produkt.preis),
-        column.produzenten -> parameter(produkt.produzenten)
+        column.name -> produkt.name,
+        column.verfuegbarVon -> produkt.verfuegbarVon,
+        column.verfuegbarBis -> produkt.verfuegbarBis,
+        column.kategorien -> produkt.kategorien,
+        column.standardmenge -> produkt.standardmenge,
+        column.einheit -> produkt.einheit,
+        column.preis -> produkt.preis,
+        column.produzenten -> produkt.produzenten
       )
     }
   }
@@ -731,28 +725,28 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Produzent])(rs: WrappedResultSet): Produzent =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Produzent): Seq[Any] = parameters(Produzent.unapply(entity).get)
+    def parameterMappings(entity: Produzent): Seq[ParameterBinder] = parameters(Produzent.unapply(entity).get)
 
     override def updateParameters(produzent: Produzent) = {
       super.updateParameters(produzent) ++ Seq(
-        column.name -> parameter(produzent.name),
-        column.vorname -> parameter(produzent.vorname),
-        column.kurzzeichen -> parameter(produzent.kurzzeichen),
-        column.strasse -> parameter(produzent.strasse),
-        column.hausNummer -> parameter(produzent.hausNummer),
-        column.adressZusatz -> parameter(produzent.adressZusatz),
-        column.plz -> parameter(produzent.plz),
-        column.ort -> parameter(produzent.ort),
-        column.bemerkungen -> parameter(produzent.bemerkungen),
-        column.email -> parameter(produzent.email),
-        column.telefonMobil -> parameter(produzent.telefonMobil),
-        column.telefonFestnetz -> parameter(produzent.telefonFestnetz),
-        column.iban -> parameter(produzent.iban),
-        column.bank -> parameter(produzent.bank),
-        column.mwst -> parameter(produzent.mwst),
-        column.mwstSatz -> parameter(produzent.mwstSatz),
-        column.mwstNr -> parameter(produzent.mwstNr),
-        column.aktiv -> parameter(produzent.aktiv)
+        column.name -> produzent.name,
+        column.vorname -> produzent.vorname,
+        column.kurzzeichen -> produzent.kurzzeichen,
+        column.strasse -> produzent.strasse,
+        column.hausNummer -> produzent.hausNummer,
+        column.adressZusatz -> produzent.adressZusatz,
+        column.plz -> produzent.plz,
+        column.ort -> produzent.ort,
+        column.bemerkungen -> produzent.bemerkungen,
+        column.email -> produzent.email,
+        column.telefonMobil -> produzent.telefonMobil,
+        column.telefonFestnetz -> produzent.telefonFestnetz,
+        column.iban -> produzent.iban,
+        column.bank -> produzent.bank,
+        column.mwst -> produzent.mwst,
+        column.mwstSatz -> produzent.mwstSatz,
+        column.mwstNr -> produzent.mwstNr,
+        column.aktiv -> produzent.aktiv
       )
     }
   }
@@ -765,11 +759,11 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Produktekategorie])(rs: WrappedResultSet): Produktekategorie =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Produktekategorie): Seq[Any] = parameters(Produktekategorie.unapply(entity).get)
+    def parameterMappings(entity: Produktekategorie): Seq[ParameterBinder] = parameters(Produktekategorie.unapply(entity).get)
 
     override def updateParameters(produktekategorie: Produktekategorie) = {
       super.updateParameters(produktekategorie) ++ Seq(
-        column.beschreibung -> parameter(produktekategorie.beschreibung)
+        column.beschreibung -> produktekategorie.beschreibung
       )
     }
   }
@@ -782,27 +776,27 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Projekt])(rs: WrappedResultSet): Projekt =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Projekt): Seq[Any] = parameters(Projekt.unapply(entity).get)
+    def parameterMappings(entity: Projekt): Seq[ParameterBinder] = parameters(Projekt.unapply(entity).get)
 
     override def updateParameters(projekt: Projekt) = {
       super.updateParameters(projekt) ++ Seq(
-        column.bezeichnung -> parameter(projekt.bezeichnung),
-        column.strasse -> parameter(projekt.strasse),
-        column.hausNummer -> parameter(projekt.hausNummer),
-        column.adressZusatz -> parameter(projekt.adressZusatz),
-        column.plz -> parameter(projekt.plz),
-        column.ort -> parameter(projekt.ort),
-        column.preiseSichtbar -> parameter(projekt.preiseSichtbar),
-        column.preiseEditierbar -> parameter(projekt.preiseEditierbar),
-        column.emailErforderlich -> parameter(projekt.emailErforderlich),
-        column.waehrung -> parameter(projekt.waehrung),
-        column.geschaeftsjahrMonat -> parameter(projekt.geschaeftsjahrMonat),
-        column.geschaeftsjahrTag -> parameter(projekt.geschaeftsjahrTag),
-        column.twoFactorAuthentication -> parameter(projekt.twoFactorAuthentication),
-        column.sprache -> parameter(projekt.sprache),
-        column.welcomeMessage1 -> parameter(projekt.welcomeMessage1),
-        column.welcomeMessage2 -> parameter(projekt.welcomeMessage2),
-        column.maintenanceMode -> parameter(projekt.maintenanceMode)
+        column.bezeichnung -> projekt.bezeichnung,
+        column.strasse -> projekt.strasse,
+        column.hausNummer -> projekt.hausNummer,
+        column.adressZusatz -> projekt.adressZusatz,
+        column.plz -> projekt.plz,
+        column.ort -> projekt.ort,
+        column.preiseSichtbar -> projekt.preiseSichtbar,
+        column.preiseEditierbar -> projekt.preiseEditierbar,
+        column.emailErforderlich -> projekt.emailErforderlich,
+        column.waehrung -> projekt.waehrung,
+        column.geschaeftsjahrMonat -> projekt.geschaeftsjahrMonat,
+        column.geschaeftsjahrTag -> projekt.geschaeftsjahrTag,
+        column.twoFactorAuthentication -> projekt.twoFactorAuthentication,
+        column.sprache -> projekt.sprache,
+        column.welcomeMessage1 -> projekt.welcomeMessage1,
+        column.welcomeMessage2 -> projekt.welcomeMessage2,
+        column.maintenanceMode -> projekt.maintenanceMode
       )
     }
   }
@@ -815,12 +809,12 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[ProduktProduzent])(rs: WrappedResultSet): ProduktProduzent =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: ProduktProduzent): Seq[Any] = parameters(ProduktProduzent.unapply(entity).get)
+    def parameterMappings(entity: ProduktProduzent): Seq[ParameterBinder] = parameters(ProduktProduzent.unapply(entity).get)
 
     override def updateParameters(projekt: ProduktProduzent) = {
       super.updateParameters(projekt) ++ Seq(
-        column.produktId -> parameter(projekt.produktId),
-        column.produzentId -> parameter(projekt.produzentId)
+        column.produktId -> projekt.produktId,
+        column.produzentId -> projekt.produzentId
       )
     }
   }
@@ -833,12 +827,12 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[ProduktProduktekategorie])(rs: WrappedResultSet): ProduktProduktekategorie =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: ProduktProduktekategorie): Seq[Any] = parameters(ProduktProduktekategorie.unapply(entity).get)
+    def parameterMappings(entity: ProduktProduktekategorie): Seq[ParameterBinder] = parameters(ProduktProduktekategorie.unapply(entity).get)
 
     override def updateParameters(produktkat: ProduktProduktekategorie) = {
       super.updateParameters(produktkat) ++ Seq(
-        column.produktId -> parameter(produktkat.produktId),
-        column.produktekategorieId -> parameter(produktkat.produktekategorieId)
+        column.produktId -> produktkat.produktId,
+        column.produktekategorieId -> produktkat.produktekategorieId
       )
     }
   }
@@ -848,17 +842,16 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Abwesenheit]()
 
-    def apply(rn: ResultName[Abwesenheit])(rs: WrappedResultSet): Abwesenheit =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[Abwesenheit])(rs: WrappedResultSet): Abwesenheit = autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Abwesenheit): Seq[Any] = parameters(Abwesenheit.unapply(entity).get)
+    def parameterMappings(entity: Abwesenheit): Seq[ParameterBinder] = parameters(Abwesenheit.unapply(entity).get)
 
     override def updateParameters(entity: Abwesenheit) = {
       super.updateParameters(entity) ++ Seq(
-        column.aboId -> parameter(entity.aboId),
-        column.lieferungId -> parameter(entity.lieferungId),
-        column.datum -> parameter(entity.datum),
-        column.bemerkung -> parameter(entity.bemerkung)
+        column.aboId -> entity.aboId,
+        column.lieferungId -> entity.lieferungId,
+        column.datum -> entity.datum,
+        column.bemerkung -> entity.bemerkung
       )
     }
   }
@@ -868,14 +861,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
 
     override lazy val columns = autoColumns[Tourlieferung]()
 
-    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung =
-      autoConstruct(rs, rn)
+    def apply(rn: ResultName[Tourlieferung])(rs: WrappedResultSet): Tourlieferung = autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Tourlieferung): Seq[Any] = parameters(Tourlieferung.unapply(entity).get)
+    def parameterMappings(entity: Tourlieferung): Seq[ParameterBinder] = parameters(Tourlieferung.unapply(entity).get)
 
     override def updateParameters(entity: Tourlieferung) = {
       super.updateParameters(entity) ++ Seq(
-        column.sort -> parameter(entity.sort)
+        column.sort -> entity.sort
       )
     }
   }
@@ -888,16 +880,16 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Korb])(rs: WrappedResultSet): Korb =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Korb): Seq[Any] = parameters(Korb.unapply(entity).get)
+    def parameterMappings(entity: Korb): Seq[ParameterBinder] = parameters(Korb.unapply(entity).get)
 
     override def updateParameters(entity: Korb) = {
       super.updateParameters(entity) ++ Seq(
-        column.lieferungId -> parameter(entity.lieferungId),
-        column.aboId -> parameter(entity.aboId),
-        column.status -> parameter(entity.status),
-        column.auslieferungId -> parameter(entity.auslieferungId),
-        column.guthabenVorLieferung -> parameter(entity.guthabenVorLieferung),
-        column.sort -> parameter(entity.sort)
+        column.lieferungId -> entity.lieferungId,
+        column.aboId -> entity.aboId,
+        column.status -> entity.status,
+        column.auslieferungId -> entity.auslieferungId,
+        column.guthabenVorLieferung -> entity.guthabenVorLieferung,
+        column.sort -> entity.sort
       )
     }
   }
@@ -905,9 +897,9 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
   trait AuslieferungMapping[E <: Auslieferung] extends BaseEntitySQLSyntaxSupport[E] {
     override def updateParameters(auslieferung: E) = {
       super.updateParameters(auslieferung) ++ Seq(
-        column.status -> parameter(auslieferung.status),
-        column.datum -> parameter(auslieferung.datum),
-        column.anzahlKoerbe -> parameter(auslieferung.anzahlKoerbe)
+        column.status -> auslieferung.status,
+        column.datum -> auslieferung.datum,
+        column.anzahlKoerbe -> auslieferung.anzahlKoerbe
       )
     }
   }
@@ -920,13 +912,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[DepotAuslieferung])(rs: WrappedResultSet): DepotAuslieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: DepotAuslieferung): Seq[Any] =
+    def parameterMappings(entity: DepotAuslieferung): Seq[ParameterBinder] =
       parameters(DepotAuslieferung.unapply(entity).get)
 
     override def updateParameters(entity: DepotAuslieferung) = {
       super.updateParameters(entity) ++ Seq(
-        column.depotId -> parameter(entity.depotId),
-        column.depotName -> parameter(entity.depotName)
+        column.depotId -> entity.depotId,
+        column.depotName -> entity.depotName
       )
     }
   }
@@ -939,13 +931,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[TourAuslieferung])(rs: WrappedResultSet): TourAuslieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: TourAuslieferung): Seq[Any] =
+    def parameterMappings(entity: TourAuslieferung): Seq[ParameterBinder] =
       parameters(TourAuslieferung.unapply(entity).get)
 
     override def updateParameters(entity: TourAuslieferung) = {
       super.updateParameters(entity) ++ Seq(
-        column.tourId -> parameter(entity.tourId),
-        column.tourName -> parameter(entity.tourName)
+        column.tourId -> entity.tourId,
+        column.tourName -> entity.tourName
       )
     }
   }
@@ -958,7 +950,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[PostAuslieferung])(rs: WrappedResultSet): PostAuslieferung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: PostAuslieferung): Seq[Any] =
+    def parameterMappings(entity: PostAuslieferung): Seq[ParameterBinder] =
       parameters(PostAuslieferung.unapply(entity).get)
   }
 
@@ -970,14 +962,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[ProjektVorlage])(rs: WrappedResultSet): ProjektVorlage =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: ProjektVorlage): Seq[Any] =
+    def parameterMappings(entity: ProjektVorlage): Seq[ParameterBinder] =
       parameters(ProjektVorlage.unapply(entity).get)
 
     override def updateParameters(entity: ProjektVorlage) = {
       super.updateParameters(entity) ++ Seq(
-        column.name -> parameter(entity.name),
-        column.beschreibung -> parameter(entity.beschreibung),
-        column.fileStoreId -> parameter(entity.fileStoreId)
+        column.name -> entity.name,
+        column.beschreibung -> entity.beschreibung,
+        column.fileStoreId -> entity.fileStoreId
       )
     }
   }
@@ -990,13 +982,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[Einladung])(rs: WrappedResultSet): Einladung =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: Einladung): Seq[Any] =
+    def parameterMappings(entity: Einladung): Seq[ParameterBinder] =
       parameters(Einladung.unapply(entity).get)
 
     override def updateParameters(entity: Einladung) = {
       super.updateParameters(entity) ++ Seq(
-        column.expires -> parameter(entity.expires),
-        column.datumVersendet -> parameter(entity.datumVersendet)
+        column.expires -> entity.expires,
+        column.datumVersendet -> entity.datumVersendet
       )
     }
   }
@@ -1009,14 +1001,14 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging {
     def apply(rn: ResultName[KontoDaten])(rs: WrappedResultSet): KontoDaten =
       autoConstruct(rs, rn)
 
-    def parameterMappings(entity: KontoDaten): Seq[Any] =
+    def parameterMappings(entity: KontoDaten): Seq[ParameterBinder] =
       parameters(KontoDaten.unapply(entity).get)
 
     override def updateParameters(entity: KontoDaten) = {
       super.updateParameters(entity) ++ Seq(
-        column.iban -> parameter(entity.iban),
-        column.teilnehmerNummer -> parameter(entity.teilnehmerNummer),
-        column.referenzNummerPrefix -> parameter(entity.referenzNummerPrefix)
+        column.iban -> entity.iban,
+        column.teilnehmerNummer -> entity.teilnehmerNummer,
+        column.referenzNummerPrefix -> entity.referenzNummerPrefix
       )
     }
   }

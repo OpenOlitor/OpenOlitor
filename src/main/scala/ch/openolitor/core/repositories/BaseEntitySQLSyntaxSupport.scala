@@ -36,15 +36,6 @@ import scala.concurrent.Future
 import ch.openolitor.core.db.MultipleAsyncConnectionPoolContext
 import ch.openolitor.core.db.OOAsyncDB._
 
-case class ParameterBindMapping[A](cl: Class[A], binder: ParameterBinder[A])
-
-trait ParameterBinderMapping[A] {
-  def bind(value: A): ParameterBinder[A]
-}
-
-trait SqlBinder[-T] extends (T => Any) {
-}
-
 trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E] with LazyLogging with DBMappings {
 
   //override def columnNames 
@@ -61,24 +52,24 @@ trait BaseEntitySQLSyntaxSupport[E <: BaseEntity[_]] extends SQLSyntaxSupport[E]
   /**
    * Declare parameter mappings for all parameters used on insert
    */
-  def parameterMappings(entity: E): Seq[Any]
+  def parameterMappings(entity: E): Seq[ParameterBinder]
 
-  def defaultColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] =
+  def defaultColumns(entity: E): Seq[Tuple2[SQLSyntax, ParameterBinder]] =
     defaultInsertColumns(entity) ++ defaultUpdateColumns(entity)
 
-  def defaultInsertColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
-    column.erstelldat -> parameter(entity.erstelldat),
-    column.ersteller -> parameter(entity.ersteller)
+  def defaultInsertColumns(entity: E): Seq[Tuple2[SQLSyntax, ParameterBinder]] = Seq(
+    column.erstelldat -> entity.erstelldat,
+    column.ersteller -> entity.ersteller
   )
 
-  def defaultUpdateColumns(entity: E): Seq[Tuple2[SQLSyntax, Any]] = Seq(
-    column.modifidat -> parameter(entity.modifidat),
-    column.modifikator -> parameter(entity.modifikator)
+  def defaultUpdateColumns(entity: E): Seq[Tuple2[SQLSyntax, ParameterBinder]] = Seq(
+    column.modifidat -> entity.modifidat,
+    column.modifikator -> entity.modifikator
   )
 
   /**
    * Declare update parameters for this entity used on update. Is by default an empty set
    */
-  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, Any]] = defaultUpdateColumns(entity)
+  def updateParameters(entity: E): Seq[Tuple2[SQLSyntax, ParameterBinder]] = defaultUpdateColumns(entity)
 }
 

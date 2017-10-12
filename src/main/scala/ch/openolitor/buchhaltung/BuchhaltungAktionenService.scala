@@ -91,7 +91,7 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
 
       buchhaltungWriteRepository.updateEntity[Rechnung, RechnungId](id)(
-        rechnungMapping.column.fileStoreId -> Some(fileStoreId)
+        rechnungMapping.column.fileStoreId -> Option(fileStoreId)
       )
     }
   }
@@ -134,8 +134,8 @@ class BuchhaltungAktionenService(override val sysConfig: SystemConfig) extends E
       buchhaltungWriteRepository.modifyEntityIf[Rechnung, RechnungId](r => Verschickt == r.status || MahnungVerschickt == r.status)(id) { rechnung =>
         Map(
           rechnungMapping.column.status -> Bezahlt,
-          rechnungMapping.column.einbezahlterBetrag -> Some(entity.einbezahlterBetrag),
-          rechnungMapping.column.eingangsDatum -> Some(entity.eingangsDatum)
+          rechnungMapping.column.einbezahlterBetrag -> Option(entity.einbezahlterBetrag),
+          rechnungMapping.column.eingangsDatum -> Option(entity.eingangsDatum)
         )
       }.map { _ =>
         val rechnungsPositionen = buchhaltungWriteRepository.getRechnungsPositionenByRechnungsId(rechnung.id)

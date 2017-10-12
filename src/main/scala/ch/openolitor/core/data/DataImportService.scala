@@ -38,7 +38,6 @@ import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 import ch.openolitor.core.repositories.BaseWriteRepository
 import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.core.repositories.SqlBinder
 import java.io.InputStream
 import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.SystemConfig
@@ -59,7 +58,7 @@ trait DataImportServiceComponent {
 }
 
 class DefaultDataImportService(override val sysConfig: SystemConfig, override val entityStore: ActorRef,
-  override val system: ActorSystem, override implicit val personId: PersonId) extends DataImportService
+  override val system: ActorSystem, override implicit val personId: PersonId) extends DataImportService()(personId)
     with DefaultStammdatenWriteRepositoryComponent
     with DefaultBuchhaltungWriteRepositoryComponent
 
@@ -93,8 +92,8 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
     case e: ParseError =>
       e.error.printStackTrace
       originator map (_ ! e)
-    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, vertriebsarten, vertriebe, lieferungen,
-      lieferplanungen, lieferpositionen, abos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
+    case ParseResult(projekt, kundentypen, kunden, personen, pendenzen, touren, depots, abotypen, zusatzAbotypen, vertriebsarten, vertriebe, lieferungen,
+      lieferplanungen, lieferpositionen, abos, zusatzAbos, abwesenheiten, produkte, produktekategorien, produktProduktekategorien,
       produzenten, produktProduzenten, sammelbestellungen, bestellungen, bestellpositionen, tourlieferungen) =>
       log.debug(s"Received parse result, start importing...")
       try {
@@ -120,6 +119,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
           result = importEntityList[Tour, TourId]("Touren", touren, result)
           result = importEntityList[Depot, DepotId]("Depots", depots, result)
           result = importEntityList[Abotyp, AbotypId]("Abotypen", abotypen, result)
+          result = importEntityList[ZusatzAbotyp, AbotypId]("ZusatzAbotypen", zusatzAbotypen, result)
 
           log.debug(s"Import ${vertriebsarten.length} Vertriebsarten...")
           vertriebsarten map {
@@ -130,6 +130,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
             case pl: Postlieferung =>
               insertEntity[Postlieferung, VertriebsartId](pl)
           }
+          result = importEntityList[ZusatzAbo, AboId]("ZusatzAbo", zusatzAbos, result)
           result = result + ("Vertriebsarten" -> vertriebsarten.length)
 
           result = importEntityList[Vertrieb, VertriebId]("Vertriebe", vertriebe, result)
@@ -145,6 +146,8 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
               insertEntity[HeimlieferungAbo, AboId](hl)
             case pl: PostlieferungAbo =>
               insertEntity[PostlieferungAbo, AboId](pl)
+            case _ =>
+            // unsupported / unknown
           }
           result = result + ("Abos" -> abos.length)
 
@@ -182,7 +185,7 @@ abstract class DataImportService(implicit val personId: PersonId) extends Actor 
   def importEntityList[E <: BaseEntity[I], I <: BaseId](name: String, entities: List[E], result: Map[String, Int])(implicit
     session: DBSession,
     syntaxSupport: BaseEntitySQLSyntaxSupport[E],
-    binder: SqlBinder[I]) = {
+    binder: Binders[I]) = {
     log.debug(s"Import ${entities.length} $name...")
     entities map { entity =>
       insertEntity[E, I](entity)

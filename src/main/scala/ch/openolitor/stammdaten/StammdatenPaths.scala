@@ -29,6 +29,7 @@ import ch.openolitor.core.SprayDeserializers
 
 trait StammdatenPaths extends SprayDeserializers {
   implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
+  implicit val zusatzAbotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
   implicit val kundeIdPath = long2BaseIdPathMatcher(KundeId.apply)
   implicit val pendenzIdPath = long2BaseIdPathMatcher(PendenzId.apply)
   implicit val personIdPath = long2BaseIdPathMatcher(PersonId.apply)

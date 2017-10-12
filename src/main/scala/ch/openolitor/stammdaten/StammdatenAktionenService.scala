@@ -130,7 +130,7 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
       stammdatenWriteRepository.getSammelbestellungen(id) map { sammelbestellung =>
         stammdatenWriteRepository.updateEntityIf[Sammelbestellung, SammelbestellungId](Abgeschlossen == _.status)(sammelbestellung.id)(
           sammelbestellungMapping.column.status -> Verrechnet,
-          sammelbestellungMapping.column.datumAbrechnung -> Some(DateTime.now)
+          sammelbestellungMapping.column.datumAbrechnung -> Option(DateTime.now)
         )
 
       }
@@ -218,7 +218,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
   def updatePasswort(meta: EventMetadata, id: PersonId, pwd: Array[Char], einladungId: Option[EinladungId])(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.updateEntity[Person, PersonId](id)(personMapping.column.passwort -> Some(pwd))
+      stammdatenWriteRepository.updateEntity[Person, PersonId](id)(personMapping.column.passwort -> Option(pwd))
 
       einladungId map { id =>
         stammdatenWriteRepository.updateEntity[Einladung, EinladungId](id)(einladungMapping.column.expires -> new DateTime())
@@ -296,7 +296,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
 
   def changeRolle(meta: EventMetadata, personId: PersonId, rolle: Rolle)(implicit originator: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.updateEntity[Person, PersonId](personId)(personMapping.column.rolle -> Some(rolle))
+      stammdatenWriteRepository.updateEntity[Person, PersonId](personId)(personMapping.column.rolle -> Option(rolle))
     }
   }
 
@@ -319,7 +319,7 @@ Summe [${projekt.waehrung}]: ${sammelbestellung.preisTotal}"""
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.updateEntityIf[Sammelbestellung, SammelbestellungId](Abgeschlossen == _.status)(id)(
         sammelbestellungMapping.column.status -> Verrechnet,
-        sammelbestellungMapping.column.datumAbrechnung -> Some(datum)
+        sammelbestellungMapping.column.datumAbrechnung -> Option(datum)
       )
 
     }

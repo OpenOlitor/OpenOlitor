@@ -26,8 +26,9 @@ import scalikejdbc._
 import ch.openolitor.util.parsing._
 import ch.openolitor.util.StringUtil
 import com.typesafe.scalalogging.LazyLogging
+import ch.openolitor.core.repositories.DBMappings
 
-object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
+object UriQueryParamToSQLSyntaxBuilder extends LazyLogging with DBMappings {
 
   def build[T](maybeExpr: Option[FilterExpr], sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], exclude: Seq[String] = Seq()): Option[SQLSyntax] = {
     maybeExpr match {
@@ -66,10 +67,10 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
     }
   }
 
-  private def usingEq[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, value: Any) =
+  private def usingEq[T, V: ParameterBinderFactory](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, value: V) =
     retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.eq(c, value))
 
-  private def usingComparator[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, value: Any, comparator: ComparatorFunction) = {
+  private def usingComparator[T, V: ParameterBinderFactory](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, value: V, comparator: ComparatorFunction) = {
     retrieveColumn(sqlSyntax, attribute.value) map { c =>
       comparator match {
         case GTE => sqls.ge(c, value)
@@ -81,10 +82,10 @@ object UriQueryParamToSQLSyntaxBuilder extends LazyLogging {
     }
   }
 
-  private def usingBetween[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, from: Any, to: Any) =
+  private def usingBetween[T, V: ParameterBinderFactory](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, from: V, to: V) =
     retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.between(c, from, to))
 
-  private def usingNotBetween[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, from: Any, to: Any) =
+  private def usingNotBetween[T, V: ParameterBinderFactory](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: Attribute, from: V, to: V) =
     retrieveColumn(sqlSyntax, attribute.value) map (c => sqls.between(c, from, to))
 
   private def retrieveColumn[T](sqlSyntax: QuerySQLSyntaxProvider[SQLSyntaxSupport[T], T], attribute: String): Option[SQLSyntax] = {

@@ -25,30 +25,21 @@ package ch.openolitor.stammdaten
 import ch.openolitor.core._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
-import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
-import java.util.UUID
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
-import ch.openolitor.core.Macros._
-import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models._
-import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import ch.openolitor.core.Macros._
 import scala.collection.immutable.TreeMap
-import scalaz._
-import Scalaz._
-import ch.openolitor.util.IdUtil
-import ch.openolitor.stammdaten.models.LieferpositionenModify
 import scalikejdbc.DBSession
 import org.joda.time.format.DateTimeFormat
 import ch.openolitor.core.repositories.EventPublishingImplicits._
 import ch.openolitor.core.repositories.EventPublisher
-
+import ch.openolitor.util.IdUtil._
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
 }
@@ -76,6 +67,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   val handle: Handle = {
     case EntityInsertedEvent(meta, id: AbotypId, abotyp: AbotypModify) =>
       createAbotyp(meta, id, abotyp)
+    case EntityInsertedEvent(meta, id: AbotypId, zusatzabotyp: ZusatzAbotypModify) =>
+      createZusatzAbotyp(meta, id, zusatzabotyp)
     case EntityInsertedEvent(meta, id: KundeId, kunde: KundeModify) =>
       createKunde(meta, id, kunde)
     case EntityInsertedEvent(meta, id: PersonId, person: PersonCreate) =>
@@ -86,6 +79,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createDepot(meta, id, depot)
     case EntityInsertedEvent(meta, id: AboId, abo: AboModify) =>
       createAbo(meta, id, abo)
+    case EntityInsertedEvent(meta, id: AboId, zusatzAbo: ZusatzAboCreate) =>
+      createZusatzAbo(meta, id, zusatzAbo)
     case EntityInsertedEvent(meta, id: LieferungId, lieferung: LieferungAbotypCreate) =>
       createLieferung(meta, id, lieferung)
     case EntityInsertedEvent(meta, id: VertriebId, vertrieb: VertriebModify) =>
@@ -120,6 +115,12 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       createSammelbestellungen(meta, id, entity)
     case EntityInsertedEvent(meta, id: ProjektVorlageId, vorlage: ProjektVorlageCreate) =>
       createProjektVorlage(meta, id, vorlage)
+    case EntityInsertedEvent(meta, id: AuslieferungId, tourAuslieferung: TourAuslieferung) =>
+      createTourAuslieferung(meta, id, tourAuslieferung)
+    case EntityInsertedEvent(meta, id: AuslieferungId, depotAuslieferung: DepotAuslieferung) =>
+      createDepotAuslieferung(meta, id, depotAuslieferung)
+    case EntityInsertedEvent(meta, id: AuslieferungId, postAuslieferung: PostAuslieferung) =>
+      createPostAuslieferung(meta, id, postAuslieferung)
     case e =>
   }
 
@@ -140,6 +141,26 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       //create abotyp
       stammdatenWriteRepository.insertEntity[Abotyp, AbotypId](typ)
+    }
+  }
+
+  def createZusatzAbotyp(meta: EventMetadata, id: AbotypId, zusatzabotyp: ZusatzAbotypModify)(implicit personId: PersonId = meta.originator) = {
+    val typ = copyTo[ZusatzAbotypModify, ZusatzAbotyp](
+      zusatzabotyp,
+      "id" -> id,
+      "anzahlAbonnenten" -> ZERO,
+      "anzahlAbonnentenAktiv" -> ZERO,
+      "letzteLieferung" -> None,
+      "waehrung" -> CHF,
+      "erstelldat" -> meta.timestamp,
+      "ersteller" -> meta.originator,
+      "modifidat" -> meta.timestamp,
+      "modifikator" -> meta.originator
+    )
+
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      //create abotyp
+      stammdatenWriteRepository.insertEntity[ZusatzAbotyp, AbotypId](typ)
     }
   }
 
@@ -207,37 +228,38 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator) = {
+  def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator): Option[Lieferung] = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.getAbotypDetail(lieferung.abotypId) match {
-        case Some(abotyp) =>
-          stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) map {
-            vertrieb =>
-              val vBeschrieb = vertrieb.beschrieb
-              val atBeschrieb = abotyp.name
+      createLieferungInner(meta, id, lieferung, None)
+    }
+  }
 
-              val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
-                "abotypBeschrieb" -> atBeschrieb,
-                "vertriebBeschrieb" -> vBeschrieb,
-                "anzahlAbwesenheiten" -> ZERO,
-                "durchschnittspreis" -> ZERO,
-                "anzahlLieferungen" -> ZERO,
-                "anzahlKoerbeZuLiefern" -> ZERO,
-                "anzahlSaldoZuTief" -> ZERO,
-                "zielpreis" -> abotyp.zielpreis,
-                "preisTotal" -> ZERO,
-                "status" -> Ungeplant,
-                "lieferplanungId" -> None,
-                "erstelldat" -> meta.timestamp,
-                "ersteller" -> meta.originator,
-                "modifidat" -> meta.timestamp,
-                "modifikator" -> meta.originator)
+  private def createLieferungInner(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate, lieferplanungId: Option[LieferplanungId])(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
 
-              //create lieferung
-              stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
-          }
-        case _ =>
-          logger.error(s"Abotyp with id ${lieferung.abotypId} not found.")
+    stammdatenWriteRepository.getAbotypById(lieferung.abotypId) flatMap { abotyp =>
+      stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) flatMap {
+        vertrieb =>
+          val vBeschrieb = vertrieb.beschrieb
+          val atBeschrieb = abotyp.name
+
+          val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
+            "abotypBeschrieb" -> atBeschrieb,
+            "vertriebBeschrieb" -> vBeschrieb,
+            "anzahlAbwesenheiten" -> ZERO,
+            "durchschnittspreis" -> ZERO,
+            "anzahlLieferungen" -> ZERO,
+            "anzahlKoerbeZuLiefern" -> ZERO,
+            "anzahlSaldoZuTief" -> ZERO,
+            "zielpreis" -> abotyp.zielpreis,
+            "preisTotal" -> ZERO,
+            "status" -> Ungeplant,
+            "lieferplanungId" -> lieferplanungId,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator)
+
+          stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
       }
     }
   }
@@ -319,7 +341,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     }
   }
 
-  def aboParameters(create: AboModify)(abotyp: Abotyp): (Option[Int], Option[LocalDate], Boolean) = {
+  def aboParameters(create: AboModify)(abotyp: IAbotyp): (Option[Int], Option[LocalDate], Boolean) = {
     abotyp.laufzeiteinheit match {
       case Unbeschraenkt =>
         (None, None, IAbo.calculateAktiv(create.start, None))
@@ -339,15 +361,25 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.getById(postlieferungMapping, vertriebsartId)
   }
 
-  private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[Abotyp] = {
-    stammdatenWriteRepository.getById(abotypMapping, abotypId)
+  private def aboById(aboId: AboId)(implicit session: DBSession): Option[Abo] = {
+    stammdatenWriteRepository.getById(depotlieferungAboMapping, aboId) orElse
+      stammdatenWriteRepository.getById(heimlieferungAboMapping, aboId) orElse
+      stammdatenWriteRepository.getById(postlieferungAboMapping, aboId)
+  }
+
+  private def zusatzAboTypById(zusatzAbotypId: AbotypId)(implicit session: DBSession): Option[IAbotyp] = {
+    stammdatenWriteRepository.getAbotypById(zusatzAbotypId)
+  }
+
+  private def abotypById(abotypId: AbotypId)(implicit session: DBSession): Option[IAbotyp] = {
+    stammdatenWriteRepository.getAbotypById(abotypId)
   }
 
   private def vertriebById(vertriebId: VertriebId)(implicit session: DBSession): Option[Vertrieb] = {
     stammdatenWriteRepository.getById(vertriebMapping, vertriebId)
   }
 
-  private def abotypByVertriebartId(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[(Vertriebsart, Vertrieb, Abotyp)] = {
+  private def abotypByVertriebartId(vertriebsartId: VertriebsartId)(implicit session: DBSession): Option[(Vertriebsart, Vertrieb, IAbotyp)] = {
     vertriebsartById(vertriebsartId) flatMap (va => vertriebById(va.vertriebId) flatMap (v => abotypById(v.abotypId).map(at => (va, v, at))))
   }
 
@@ -448,6 +480,70 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               maybeAbo map (abo => modifyKoerbeForAboDatumChange(abo, None))
           }
       }
+    }
+  }
+
+  def createZusatzAbo(meta: EventMetadata, newId: AboId, create: ZusatzAboCreate)(implicit personId: PersonId = meta.originator) = {
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      val hauptAbo = aboById(create.hauptAboId)
+      val zusatzAbotyp = zusatzAboTypById(create.abotypId)
+      hauptAbo match {
+        case Some(h) => {
+          zusatzAbotyp match {
+            case Some(z) => {
+              val startDate = defaultDateStart(h.start, z.aktivVon)
+              val endDate = defaultDateEnd(h.ende, z.aktivBis)
+              val zusatzAbo = copyTo[ZusatzAboCreate, ZusatzAbo](
+                create,
+                "id" -> newId,
+                "hauptAbotypId" -> h.abotypId,
+                "kunde" -> h.kunde,
+                "vertriebsartId" -> h.vertriebsartId,
+                "vertriebId" -> h.vertriebId,
+                "vertriebBeschrieb" -> h.vertriebBeschrieb,
+                "abotypName" -> z.name,
+                "start" -> startDate,
+                "ende" -> endDate,
+                "guthabenVertraglich" -> h.guthabenVertraglich,
+                "guthaben" -> h.guthaben,
+                "guthabenInRechnung" -> h.guthabenInRechnung,
+                "letzteLieferung" -> h.letzteLieferung,
+                "anzahlAbwesenheiten" -> h.anzahlAbwesenheiten,
+                "anzahlLieferungen" -> h.anzahlLieferungen,
+                "aktiv" -> h.aktiv,
+                "erstelldat" -> meta.timestamp,
+                "ersteller" -> meta.originator,
+                "modifidat" -> meta.timestamp,
+                "modifikator" -> meta.originator
+              )
+              DB autoCommitSinglePublish { implicit session => implicit publisher =>
+                stammdatenWriteRepository.insertEntity[ZusatzAbo, AboId](zusatzAbo)
+              }
+            }
+            case None => throw new RuntimeException("The id provided does not corresponde to any zusatzabotyp");
+          }
+        }
+        case None => throw new RuntimeException("The id provided does not corresponde to any zusatzabo");
+      }
+    }
+  }
+
+  def defaultDateStart(date1: LocalDate, date2: Option[LocalDate]): LocalDate = {
+    val today = LocalDate.now.toDateTimeAtStartOfDay.toLocalDate
+    (date1, date2) match {
+      case (d1, None) if (d1 compareTo today) > 0 => d1
+      case (d1, None) if (d1 compareTo today) <= 0 => today
+      case (d1, Some(d2)) if (d1 compareTo d2) > 0 => d1
+      case (_, date2) => date2.get
+    }
+  }
+
+  def defaultDateEnd(date1: Option[LocalDate], date2: Option[LocalDate]): Option[LocalDate] = {
+    (date1, date2) match {
+      case (Some(d1), None) => date1
+      case (None, Some(d2)) => date2
+      case (Some(d1), Some(d2)) if (d1 compareTo d2) < 0 => date1
+      case (_, d2) => d2
     }
   }
 
@@ -592,43 +688,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
         //alle nächsten Lieferungen alle Abotypen (wenn Flag es erlaubt)
         val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map { lieferung =>
           logger.debug("createLieferplanung: Lieferung " + lieferung.id + ": " + lieferung)
-          val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
-            case Some(lieferungVorher) if project.get.geschaftsjahr.isInSame(lieferungVorher.datum.toLocalDate(), lieferung.datum.toLocalDate()) =>
-              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
-
-              val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
-                case 0 => BigDecimal(0)
-                case _ => sum / lieferungVorher.anzahlLieferungen
-              }
-              val anzahlLieferungenNeu = lieferungVorher.anzahlLieferungen + 1
-              (durchschnittspreisBisher, anzahlLieferungenNeu)
-            case _ =>
-              (BigDecimal(0), 1)
-          }
-          val lpId = Some(lieferplanung.id)
-
-          val updatedLieferung = lieferung.copy(
-            lieferplanungId = lpId,
-            status = Offen,
-            durchschnittspreis = newDurchschnittspreis,
-            anzahlLieferungen = newAnzahlLieferungen,
-            modifidat = lieferplanung.modifidat,
-            modifikator = personId
-          )
-
-          //create koerbe
-          val adjustedLieferung = createKoerbe(updatedLieferung)
-
-          //update Lieferung
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
-            lieferungMapping.column.lieferplanungId -> adjustedLieferung.lieferplanungId,
-            lieferungMapping.column.status -> adjustedLieferung.status,
-            lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
-            lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
-            lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
-            lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
-            lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief
-          )
+          val adjustedLieferung: Lieferung = updateLieferungUndZusatzLieferung(meta, lieferplanungId, project, lieferung)
 
           (dateFormat.print(adjustedLieferung.datum), adjustedLieferung.abotypBeschrieb)
         }
@@ -651,60 +711,82 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
     logger.debug(s"Create Koerbe:${lieferung.id}")
-    stammdatenWriteRepository.getById(abotypMapping, lieferung.abotypId) map { abotyp =>
-      val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.vertriebId, lieferung.datum)
-      abos map { abo =>
-        upsertKorb(lieferung, abo, abotyp)
+    val ret: Option[Option[Lieferung]] = stammdatenWriteRepository.getAbotypById(lieferung.abotypId) map { abotyp =>
+      lieferung.lieferplanungId.map { lieferplanungId =>
+        val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.vertriebId, lieferung.datum, lieferplanungId)
+        val koerbe: List[(Option[Korb], Option[Korb])] = abos map { abo =>
+          upsertKorb(lieferung, abo, abotyp)
+        }
+        recalculateNumbersLieferung(lieferung)
       }
-      recalculateNumbersLieferung(lieferung)
-    } getOrElse (lieferung)
+    }
+    ret.flatten.getOrElse(lieferung)
   }
 
-  def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, data: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
+  def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, lieferungPlanungAdd: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       val project = stammdatenWriteRepository.getProjekt
-      stammdatenWriteRepository.getById(lieferplanungMapping, data.lieferplanungId) map { lieferplanung =>
-        stammdatenWriteRepository.getById(lieferungMapping, data.id) map { lieferung =>
-          val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
-            case Some(lieferungVorher) if project.get.geschaftsjahr.isInSame(lieferungVorher.datum.toLocalDate(), lieferung.datum.toLocalDate()) =>
-              val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
-
-              val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
-                case 0 => BigDecimal(0)
-                case _ => sum / lieferungVorher.anzahlLieferungen
-              }
-              val anzahlLieferungenNeu = lieferungVorher.anzahlLieferungen + 1
-              (durchschnittspreisBisher, anzahlLieferungenNeu)
-            case _ =>
-              (BigDecimal(0), 1)
-          }
-          val lpId = Some(data.lieferplanungId)
-
-          val updatedLieferung = lieferung.copy(
-            lieferplanungId = lpId,
-            status = Offen,
-            durchschnittspreis = newDurchschnittspreis,
-            anzahlLieferungen = newAnzahlLieferungen,
-            modifidat = meta.timestamp,
-            modifikator = personId
-          )
-
-          //create koerbe
-          val adjustedLieferung = createKoerbe(updatedLieferung)
-
-          //update Lieferung
-          stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
-            lieferungMapping.column.lieferplanungId -> adjustedLieferung.lieferplanungId,
-            lieferungMapping.column.status -> adjustedLieferung.status,
-            lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
-            lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
-            lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
-            lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
-            lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief
-          )
+      stammdatenWriteRepository.getById(lieferplanungMapping, lieferungPlanungAdd.lieferplanungId) map { lieferplanung =>
+        stammdatenWriteRepository.getById(lieferungMapping, lieferungPlanungAdd.id) map { lieferung =>
+          updateLieferungUndZusatzLieferung(meta, lieferungPlanungAdd.lieferplanungId, project, lieferung)
         }
       }
     }
+  }
+
+  private def updateLieferungUndZusatzLieferung(meta: EventMetadata, lieferplanungId: LieferplanungId, project: Option[Projekt], lieferung: Lieferung)(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Lieferung = {
+    val adjustedLieferung = offenLieferung(meta, lieferplanungId, project, lieferung)
+    stammdatenWriteRepository.getExistingZusatzAbotypen(adjustedLieferung.id).map { zusatzAbotyp =>
+      stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzAbotyp.id, lieferplanungId, lieferung.datum) match {
+        case None => {
+          // Using positiveRandomId because the lieferung cannot be created in commandHandler.
+          createLieferungInner(meta, LieferungId(positiveRandomId), LieferungAbotypCreate(zusatzAbotyp.id, adjustedLieferung.vertriebId, adjustedLieferung.datum), Some(lieferplanungId)).map { zusatzLieferung =>
+            offenLieferung(meta, lieferplanungId, project, zusatzLieferung)
+          }
+        }
+        case _ => //macht nichts
+      }
+    }
+    adjustedLieferung
+  }
+
+  private def offenLieferung(meta: EventMetadata, lieferplanungId: LieferplanungId, project: Option[Projekt], lieferung: Lieferung)(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Lieferung = {
+    val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
+      case Some(lieferungVorher) if project.get.geschaftsjahr.isInSame(lieferungVorher.datum.toLocalDate(), lieferung.datum.toLocalDate()) =>
+        val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
+
+        val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
+          case 0 => BigDecimal(0)
+          case _ => sum / lieferungVorher.anzahlLieferungen
+        }
+        val anzahlLieferungenNeu = lieferungVorher.anzahlLieferungen + 1
+        (durchschnittspreisBisher, anzahlLieferungenNeu)
+      case _ =>
+        (BigDecimal(0), 1)
+    }
+
+    val updatedLieferung = lieferung.copy(
+      lieferplanungId = Some(lieferplanungId),
+      status = Offen,
+      durchschnittspreis = newDurchschnittspreis,
+      anzahlLieferungen = newAnzahlLieferungen,
+      modifidat = meta.timestamp,
+      modifikator = personId
+    )
+
+    //create koerbe
+    val adjustedLieferung = createKoerbe(updatedLieferung)
+
+    stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
+      lieferungMapping.column.status -> adjustedLieferung.status,
+      lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
+      lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
+      lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
+      lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
+      lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief,
+      lieferungMapping.column.lieferplanungId -> lieferplanungId
+    )
+    adjustedLieferung
   }
 
   def createSammelbestellungen(meta: EventMetadata, id: SammelbestellungId, create: SammelbestellungModify)(implicit personId: PersonId = meta.originator) = {
@@ -725,4 +807,23 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
       stammdatenWriteRepository.insertEntity[ProjektVorlage, ProjektVorlageId](vorlage)
     }
   }
+
+  def createTourAuslieferung(meta: EventMetadata, id: AuslieferungId, tourAuslieferung: TourAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[TourAuslieferung, AuslieferungId](tourAuslieferung)
+    }
+  }
+
+  def createDepotAuslieferung(meta: EventMetadata, id: AuslieferungId, depotAuslieferung: DepotAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[DepotAuslieferung, AuslieferungId](depotAuslieferung)
+    }
+  }
+
+  def createPostAuslieferung(meta: EventMetadata, id: AuslieferungId, postAuslieferung: PostAuslieferung)(implicit personId: PersonId = meta.originator) = {
+    DB autoCommitSinglePublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.insertEntity[PostAuslieferung, AuslieferungId](postAuslieferung)
+    }
+  }
+
 }

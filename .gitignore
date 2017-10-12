@@ -6,6 +6,7 @@
 .cache-*
 .history
 .lib/
+.sbt
 dist/*
 target/
 lib_managed/

@@ -39,13 +39,14 @@ import ch.openolitor.core.db.OOAsyncDB._
 trait BaseReadRepositorySync extends BaseRepositoryQueries {
   def getById[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], id: I)(implicit
     session: DBSession,
-    binder: SqlBinder[I]): Option[E] = {
+    binder: Binders[I]): Option[E] = {
     getByIdQuery(syntax, id).apply()
   }
 
   def getByIds[E <: BaseEntity[I], I <: BaseId](syntax: BaseEntitySQLSyntaxSupport[E], ids: Seq[I])(implicit
     session: DBSession,
-    binder: SqlBinder[I]): List[E] = {
-    getByIdsQuery(syntax, ids).apply()
+    binder: Binders[I]): List[E] = {
+    val result = getByIdsQuery(syntax, ids)
+    result.apply()
   }
 }
