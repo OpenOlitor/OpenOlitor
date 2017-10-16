@@ -626,9 +626,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           if (!koerbe.isEmpty) {
             val tourAuslieferung = createTourAuslieferungHeim(idFactory, lieferdatum, tourId, tourName, koerbe.size)
             val updates = koerbe map { korb =>
-              val tourlieferung = stammdatenReadRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
-              val copy = korb.copy(auslieferungId = Some(tourAuslieferung.id), sort = tourlieferung flatMap (_.sort))
-              EntityUpdateEvent(copy.id, copy)
+              EntityUpdateEvent(korb.id, KorbAuslieferungModify(tourAuslieferung.id))
             }
             EntityInsertEvent(tourAuslieferung.id, tourAuslieferung) :: updates
           } else { Nil }
