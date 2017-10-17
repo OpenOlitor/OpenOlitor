@@ -64,7 +64,7 @@ case object Portion extends Liefereinheit
 
 object Liefereinheit {
   def apply(value: String): Liefereinheit = {
-    Vector(Stueck, Bund, Gramm, Kilogramm, Portion) find (_.toString == value) getOrElse (Kilogramm)
+    Vector(Stueck, Bund, Gramm, Kilogramm, Liter, Portion) find (_.toString == value) getOrElse (Kilogramm)
   }
 }
 
