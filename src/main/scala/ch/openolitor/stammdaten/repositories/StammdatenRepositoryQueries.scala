@@ -556,6 +556,19 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.list
   }
 
+  protected def getPersonenZusatzAboAktivByZusatzAbotypenQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(personMapping as person)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(zusatzAbo.kundeId, person.kundeId)
+        .leftJoin(zusatzAbotypMapping as zusatzAboTyp).on(sqls.eq(zusatzAbo.abotypId, zusatzAboTyp.id))
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, zusatzAboTyp))
+        .having(sqls.eq(zusatzAbo.aktiv, true))
+    }.map { rs =>
+      copyTo[Person, PersonSummary](personMapping(person)(rs))
+    }.list
+  }
+
   protected def getHeimlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select

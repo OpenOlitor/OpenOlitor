@@ -305,6 +305,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       get(list(stammdatenReadRepository.getZusatzAbotypen)) ~
         post(create[ZusatzAbotypModify, AbotypId](AbotypId.apply))
     } ~
+      path("zusatzAbotypen" / "personen" / "aktiv") {
+        get(list(stammdatenReadRepository.getPersonenZusatzAboAktivByZusatzAbotypen))
+      } ~
       path("zusatzAbotypen" / zusatzAbotypIdPath) { id =>
         get(detail(stammdatenReadRepository.getZusatzAbotypDetail(id))) ~
           (put | post)(update[ZusatzAbotypModify, AbotypId](id)) ~

@@ -141,30 +141,24 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenReadRepository.getById(lieferplanungMapping, lieferplanungPositionenModify.id) map { lieferplanung =>
           lieferplanung.status match {
             case state @ (Offen | Abgeschlossen) =>
-              stammdatenReadRepository.countEarlierLieferungOffen(lieferplanungPositionenModify.id) match {
-                case Some(0) =>
-                  val missingSammelbestellungen = if (state == Abgeschlossen) {
-                    // get existing sammelbestellungen
-                    val existingSammelbestellungen = (stammdatenReadRepository.getSammelbestellungen(lieferplanungPositionenModify.id) map { sammelbestellung =>
-                      SammelbestellungModify(sammelbestellung.produzentId, lieferplanung.id, sammelbestellung.datum)
-                    }).toSet
+              val missingSammelbestellungen = if (state == Abgeschlossen) {
+                // get existing sammelbestellungen
+                val existingSammelbestellungen = (stammdatenReadRepository.getSammelbestellungen(lieferplanungPositionenModify.id) map { sammelbestellung =>
+                  SammelbestellungModify(sammelbestellung.produzentId, lieferplanung.id, sammelbestellung.datum)
+                }).toSet
 
-                    // get distinct sammelbestellungen by lieferplanung
-                    val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
+                // get distinct sammelbestellungen by lieferplanung
+                val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
 
-                    // evaluate which sammelbestellungen are missing and have to be inserted
-                    // they will be used in handleLieferungChanged afterwards
-                    (distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
-                      SammelbestellungCreate(idFactory.newId(SammelbestellungId.apply), s.produzentId, s.lieferplanungId, s.datum)
-                    }.toSeq
-                  } else {
-                    Nil
-                  }
-
-                  Success(DefaultResultingEvent(factory => LieferplanungDataModifiedEvent(factory.newMetadata(), LieferplanungDataModify(lieferplanungPositionenModify.id, missingSammelbestellungen.toSet, lieferplanungPositionenModify.lieferungen))) :: Nil)
-                case _ =>
-                  Failure(new InvalidStateException("Es dürfen keine früheren Lieferungen in offnen Lieferplanungen hängig sein."))
+                // evaluate which sammelbestellungen are missing and have to be inserted
+                // they will be used in handleLieferungChanged afterwards
+                (distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
+                  SammelbestellungCreate(idFactory.newId(SammelbestellungId.apply), s.produzentId, s.lieferplanungId, s.datum)
+                }.toSeq
+              } else {
+                Nil
               }
+              Success(DefaultResultingEvent(factory => LieferplanungDataModifiedEvent(factory.newMetadata(), LieferplanungDataModify(lieferplanungPositionenModify.id, missingSammelbestellungen.toSet, lieferplanungPositionenModify.lieferungen))) :: Nil)
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' oder 'Abgeschlossen' aktualisiert werden"))
           }
@@ -626,9 +620,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           if (!koerbe.isEmpty) {
             val tourAuslieferung = createTourAuslieferungHeim(idFactory, lieferdatum, tourId, tourName, koerbe.size)
             val updates = koerbe map { korb =>
-              val tourlieferung = stammdatenReadRepository.getById[Tourlieferung, AboId](tourlieferungMapping, korb.aboId)
-              val copy = korb.copy(auslieferungId = Some(tourAuslieferung.id), sort = tourlieferung flatMap (_.sort))
-              EntityUpdateEvent(copy.id, copy)
+              EntityUpdateEvent(korb.id, KorbAuslieferungModify(tourAuslieferung.id))
             }
             EntityInsertEvent(tourAuslieferung.id, tourAuslieferung) :: updates
           } else { Nil }
