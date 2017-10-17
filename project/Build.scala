@@ -6,11 +6,11 @@ import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
 object BuildSettings {
-  val specs2V = "2.4.17" // based on spray 1.3.x built in support 
+  val specs2V = "2.4.17" // based on spray 1.3.x built in support
   val akkaV = "2.4.+"
   val sprayV = "1.3.+"
   val scalalikeV = "3.1.+"
- 
+
   val buildSettings = SbtScalariform.scalariformSettings ++ Seq(
     organization := "ch.openolitor.scalamacros",
     version := "2.0.0-SNAPSHOT",
@@ -21,10 +21,10 @@ object BuildSettings {
     resolvers += "dnvriend at bintray" at "http://dl.bintray.com/dnvriend/maven",
     resolvers += "Spray" at "http://repo.spray.io",
     resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-    scalacOptions ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8", "Ywarn-unused-import"),
+    scalacOptions ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-Ywarn-unused-import"),
     mainClass in (Compile, run) := Some("ch.openolitor.core.Boot"),
 
-    libraryDependencies ++= {	  
+    libraryDependencies ++= {
 	  Seq(
 	    "io.spray"                     %%  "spray-can"     					              % sprayV,
 	    "io.spray"                     %%  "spray-caching"     					          % sprayV,
@@ -34,11 +34,11 @@ object BuildSettings {
 	    "io.spray" 			               %%  "spray-client"  					              % sprayV,
 	    "com.wandoulabs.akka"          %%  "spray-websocket" 				              % "0.1.4",
 	    "com.typesafe.akka"            %%  "akka-actor"    					              % akkaV,
-	    "com.typesafe.akka"            %%  "akka-persistence"                     % akkaV,    
+	    "com.typesafe.akka"            %%  "akka-persistence"                     % akkaV,
 	    "com.typesafe.akka"            %%  "akka-persistence-query-experimental"  % akkaV,
 	    "com.typesafe.akka"            %%  "akka-slf4j"    					              % akkaV,
 	    "com.typesafe.akka"            %%  "akka-stream"    					              % akkaV,
-	    "com.typesafe.akka"            %%  "akka-testkit"  			    	            % akkaV       % "test",    
+	    "com.typesafe.akka"            %%  "akka-testkit"  			    	            % akkaV       % "test",
 	    "com.github.dnvriend"          %%  "akka-persistence-inmemory" 		        % "1.0.5"     % "test",
 	    "org.specs2"                   %%  "specs2-core"   					              % specs2V     % "test",
 	    "org.specs2"                   %%  "specs2-mock"                          % specs2V     % "test",
@@ -52,7 +52,7 @@ object BuildSettings {
 	    // use currently own fork, until PR was merged and a new release is available
 	    "org.scalikejdbc"              %%  "scalikejdbc-async"                    % "0.9.+",
 	    "com.github.mauricio"          %%  "mysql-async" 						              % "0.2.+",
-	    //                             
+	    //
 	    "org.scalikejdbc" 	           %%  "scalikejdbc-config"				            % scalalikeV,
 	    "org.scalikejdbc"              %%  "scalikejdbc-test"                     % scalalikeV   % "test",
 	    "com.h2database"               %   "h2"                                   % "1.4.191"    % "test",
@@ -78,7 +78,7 @@ object BuildSettings {
 
 object ScalaxbSettings {
   import sbtscalaxb.ScalaxbKeys._
-  
+
   lazy val scalaxbSettings = Seq(
       scalaxbXsdSource in (Compile, scalaxb) := baseDirectory.value / "src" / "main" / "resources" / "xsd",
       scalaxbPackageName in (Compile, scalaxb) := "ch.openolitor.generated.xsd"
@@ -87,8 +87,8 @@ object ScalaxbSettings {
 
 object OpenOlitorBuild extends Build {
   import BuildSettings._
- 
-  lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")  
+
+  lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")
   lazy val akkaPersistenceSqlAsync = ProjectRef(akkaPersistenceSqlAsyncUri, "core")
 
   import ScalaxbSettings._
