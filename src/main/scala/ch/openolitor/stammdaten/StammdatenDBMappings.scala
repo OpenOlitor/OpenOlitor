@@ -61,7 +61,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val sammelbestellungIdBinder: Binders[SammelbestellungId] = baseIdBinders(SammelbestellungId.apply _)
   implicit val bestellpositionIdBinder: Binders[BestellpositionId] = baseIdBinders(BestellpositionId.apply _)
   implicit val customKundentypIdBinder: Binders[CustomKundentypId] = baseIdBinders(CustomKundentypId.apply _)
-  implicit val kundentypIdBinder: Binders[KundentypId] = Binders.string.xmap(KundentypId.apply _, _.id)
+  implicit val kundentypIdBinder: Binders[KundentypId] = baseStringIdBinders(KundentypId.apply)
   implicit val produktekategorieIdBinder: Binders[ProduktekategorieId] = baseIdBinders(ProduktekategorieId.apply _)
   implicit val baseProduktekategorieIdBinder: Binders[BaseProduktekategorieId] = Binders.string.xmap(BaseProduktekategorieId.apply _, _.id)
   implicit val produktIdBinder: Binders[ProduktId] = baseIdBinders(ProduktId.apply _)
@@ -88,12 +88,13 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val preiseinheitBinders: Binders[Preiseinheit] = toStringBinder(Preiseinheit.apply)
   implicit val lieferzeitpunktBinders: Binders[Lieferzeitpunkt] = toStringBinder(Lieferzeitpunkt.apply)
   implicit val lieferzeitpunktSetBinders: Binders[Set[Lieferzeitpunkt]] = setSqlBinder(Lieferzeitpunkt.apply, _.toString)
-  implicit val kundenTypIdSetBinder: Binders[Set[KundentypId]] = setSqlBinder(KundentypId.apply, _.toString)
+  implicit val kundenTypIdSetBinder: Binders[Set[KundentypId]] = setSqlBinder(KundentypId.apply, _.id)
   implicit val laufzeiteinheitBinders: Binders[Laufzeiteinheit] = toStringBinder(Laufzeiteinheit.apply)
   implicit val liefereinheiBinders: Binders[Liefereinheit] = toStringBinder(Liefereinheit.apply)
   implicit val liefersaisonBinders: Binders[Liefersaison] = toStringBinder(Liefersaison.apply)
   implicit val vorlageTypeBinders: Binders[VorlageTyp] = toStringBinder(VorlageTyp.apply)
-  implicit val anredeBinders: Binders[Option[Anrede]] = toStringBinder(Anrede.apply)
+  implicit val anredeBinders: Binders[Anrede] = toStringBinder(Anrede.apply(_).getOrElse(null))
+  implicit val anredeOptionBinders: Binders[Option[Anrede]] = Binders.option[Anrede]
   implicit val fristBinders: Binders[Option[Frist]] = Binders.string.xmap(_ match {
     case fristeinheitPattern(wert, "W") => Some(Frist(wert.toInt, Wochenfrist))
     case fristeinheitPattern(wert, "M") => Some(Frist(wert.toInt, Monatsfrist))
@@ -115,7 +116,8 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val stringIntTreeMapBinders: Binders[TreeMap[String, Int]] = treeMapBinders[String, Int](identity, _.toInt, identity, _.toString)
   implicit val stringBigDecimalTreeMapBinders: Binders[TreeMap[String, BigDecimal]] = treeMapBinders(identity, BigDecimal(_), identity, _.toString)
   implicit val rolleMapBinders: Binders[Map[Rolle, Boolean]] = mapBinders(r => Rolle(r).getOrElse(KundenZugang), _.toBoolean, _.toString, _.toString)
-  implicit val rolleBinders: Binders[Option[Rolle]] = toStringBinder(Rolle.apply)
+  implicit val rolleBinders: Binders[Rolle] = toStringBinder(Rolle.apply(_).getOrElse(null))
+  implicit val rolleOptionBinders: Binders[Option[Rolle]] = Binders.option[Rolle]
 
   // declare parameterbinderfactories for enum type to allow dynamic type convertion of enum subtypes
   implicit def pendenzStatusParameterBinderFactory[A <: PendenzStatus]: ParameterBinderFactory[A] = ParameterBinderFactory.stringParameterBinderFactory.contramap(_.toString)

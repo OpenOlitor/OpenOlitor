@@ -46,6 +46,7 @@ trait DBMappings extends BaseParameter
   import ParameterBinderFactory._
 
   def baseIdBinders[T <: BaseId](f: Long => T): Binders[T] = Binders.long.xmap(l => f(l), _.id)
+  def baseStringIdBinders[T <: BaseStringId](f: String => T): Binders[T] = Binders.string.xmap(l => f(l), _.id)
   def optionBaseIdBinders[T <: BaseId](f: Long => T): Binders[Option[T]] = Binders.optionLong.xmap(_.map(l => f(l)), _.map(_.id))
   def toStringBinder[V](f: String => V): Binders[V] = Binders.string.xmap(f(_), _.toString)
   def seqSqlBinder[V](f: String => V, g: V => String): Binders[Seq[V]] = Binders.string.xmap({
