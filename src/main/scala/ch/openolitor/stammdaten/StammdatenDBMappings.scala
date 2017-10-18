@@ -869,6 +869,17 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
 
     override def updateParameters(entity: Tourlieferung) = {
       super.updateParameters(entity) ++ Seq(
+        column.tourId -> entity.tourId,
+        column.abotypId -> entity.abotypId,
+        column.kundeId -> entity.kundeId,
+        column.vertriebsartId -> entity.vertriebsartId,
+        column.vertriebId -> entity.vertriebId,
+        column.kundeBezeichnung -> entity.kundeBezeichnung,
+        column.strasse -> entity.strasse,
+        column.hausNummer -> entity.hausNummer,
+        column.adressZusatz -> entity.adressZusatz,
+        column.plz -> entity.plz,
+        column.ort -> entity.ort,
         column.sort -> entity.sort
       )
     }

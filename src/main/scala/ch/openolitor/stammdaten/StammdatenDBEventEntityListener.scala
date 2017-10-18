@@ -94,10 +94,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       handleAboDeleted(entity)(personId)
     case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) if entity.tourId != orig.tourId =>
       handleHeimlieferungAboTourChanged(entity, orig.tourId, entity.tourId)(personId)
-      handleHeimlieferungAboModified(orig, entity)(personId)
       handleAboModified(orig, entity)(personId)
     case e @ EntityModified(personId, entity: HeimlieferungAbo, orig: HeimlieferungAbo) =>
-      handleHeimlieferungAboModified(entity, orig)(personId)
       handleAboModified(orig, entity)(personId)
     case e @ EntityModified(personId, entity: PostlieferungAbo, orig: PostlieferungAbo) if entity.vertriebId != orig.vertriebId =>
       handleAboModified(orig, entity)(personId)
@@ -223,10 +221,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     }
   }
 
-  def handleHeimlieferungAboModified(entity: HeimlieferungAbo, orig: HeimlieferungAbo)(implicit personId: PersonId) = {
-    updateTourlieferung(entity)
-  }
-
   def handleHeimlieferungAboCreated(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenUpdateRepository.modifyEntity[Tour, TourId](entity.tourId) { tour =>
@@ -237,7 +231,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         )
       }
     }
-    updateTourlieferung(entity)
   }
 
   def handleHeimlieferungAboDeleted(abo: HeimlieferungAbo)(implicit personId: PersonId) = {
@@ -878,24 +871,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
       DB localTxPostPublish { implicit session => implicit publisher =>
         stammdatenUpdateRepository.getDepotlieferungAbosByDepot(depot.id) map { abo =>
           stammdatenUpdateRepository.updateEntity[DepotlieferungAbo, AboId](abo.id)(depotlieferungAboMapping.column.depotName -> depot.name)
-        }
-      }
-    }
-  }
-
-  def updateTourlieferung(entity: HeimlieferungAbo)(implicit personId: PersonId) = {
-    DB localTxPostPublish { implicit session => implicit publisher =>
-      stammdatenUpdateRepository.getById(kundeMapping, entity.kundeId) map { kunde =>
-        stammdatenUpdateRepository.getById(tourlieferungMapping, entity.id) map { tourlieferung =>
-          val modifications = Tourlieferung(entity, kunde, personId).copy(sort = tourlieferung.sort)
-          stammdatenUpdateRepository.updateEntity[Tourlieferung, AboId](tourlieferung.id)(
-            tourlieferungMapping.column.tourId -> modifications.tourId,
-            tourlieferungMapping.column.abotypId -> modifications.abotypId,
-            tourlieferungMapping.column.kundeId -> modifications.kundeId,
-            tourlieferungMapping.column.vertriebsartId -> modifications.vertriebsartId,
-            tourlieferungMapping.column.vertriebId -> modifications.vertriebId,
-            tourlieferungMapping.column.sort -> modifications.sort
-          )
         }
       }
     }

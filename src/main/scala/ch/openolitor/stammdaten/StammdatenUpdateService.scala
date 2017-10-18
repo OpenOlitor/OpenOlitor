@@ -342,8 +342,10 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         abo match {
           case abo: DepotlieferungAbo =>
             // wechsel innerhalb selber vertriebart-art
-            val copy = abo.copy(vertriebId = va.vertriebId, vertriebsartId = update.vertriebsartIdNeu, depotId = va.depotId, depotName = depot.name)
-            stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.getById(vertriebMapping, va.vertriebId) map { vertrieb =>
+              val copy = abo.copy(vertriebId = va.vertriebId, vertriebBeschrieb = vertrieb.beschrieb, vertriebsartId = update.vertriebsartIdNeu, depotId = va.depotId, depotName = depot.name)
+              stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
+            }
           case abo: Abo =>
             // wechsel
             val aboNeu = copyTo[Abo, DepotlieferungAbo](
@@ -354,7 +356,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
               "vertriebsartId" -> update.vertriebsartIdNeu
             )
             abo match {
-              case abo: HeimlieferungAbo => stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
+              case abo: HeimlieferungAbo =>
+                stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
+                stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](abo.id)
               case abo: PostlieferungAbo => stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](abo.id)
               case _ =>
             }
@@ -367,8 +371,17 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
         abo match {
           case abo: HeimlieferungAbo =>
             // wechsel innerhalb selber vertriebart-art
-            val copy = abo.copy(vertriebId = va.vertriebId, vertriebsartId = update.vertriebsartIdNeu, tourId = va.tourId, tourName = tour.name)
-            stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
+            stammdatenWriteRepository.getById(vertriebMapping, va.vertriebId) map { vertrieb =>
+              val copy = abo.copy(vertriebId = va.vertriebId, vertriebBeschrieb = vertrieb.beschrieb, vertriebsartId = update.vertriebsartIdNeu, tourId = va.tourId, tourName = tour.name)
+              stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
+            }
+            logger.debug("******************* HeimlieferungAbo" + abo.id + ":" + update.vertriebsartIdNeu + ":" + va.vertriebId)
+            stammdatenWriteRepository.updateEntity[Tourlieferung, AboId](abo.id)(
+              tourlieferungMapping.column.tourId -> va.tourId,
+              tourlieferungMapping.column.vertriebsartId -> update.vertriebsartIdNeu,
+              tourlieferungMapping.column.vertriebId -> va.vertriebId,
+              tourlieferungMapping.column.sort -> None
+            )
           case abo: Abo =>
             // wechsel
             val aboNeu = copyTo[Abo, HeimlieferungAbo](abo, "vertriebId" -> va.vertriebId, "tourId" -> va.tourId, "tourName" -> tour.name, "vertriebsartId" -> update.vertriebsartIdNeu)
@@ -378,6 +391,11 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
               case _ =>
             }
             stammdatenWriteRepository.insertEntity[HeimlieferungAbo, AboId](aboNeu)
+
+            // insert the tourlieferung as well
+            stammdatenWriteRepository.getById(kundeMapping, aboNeu.kundeId) map { kunde =>
+              stammdatenWriteRepository.insertEntity[Tourlieferung, AboId](Tourlieferung(aboNeu, kunde, personId))
+            }
         }
       }
     }) orElse (stammdatenWriteRepository.getById(postlieferungMapping, update.vertriebsartIdNeu) map { va =>
@@ -389,7 +407,9 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
           // wechsel
           val aboNeu = copyTo[Abo, PostlieferungAbo](abo, "vertriebId" -> va.vertriebId, "vertriebsartId" -> update.vertriebsartIdNeu)
           abo match {
-            case abo: HeimlieferungAbo => stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
+            case abo: HeimlieferungAbo =>
+              stammdatenWriteRepository.deleteEntity[HeimlieferungAbo, AboId](abo.id)
+              stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](abo.id)
             case abo: DepotlieferungAbo => stammdatenWriteRepository.deleteEntity[DepotlieferungAbo, AboId](abo.id)
             case _ =>
           }
