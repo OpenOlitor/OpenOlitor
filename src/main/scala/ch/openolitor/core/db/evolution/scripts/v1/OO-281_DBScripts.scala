@@ -69,7 +69,7 @@ object OO281_DBScripts extends DefaultDBScripts {
 
       sql"""insert into ${kontoDatenMapping.table}
         (id,   iban,  referenz_nummer_prefix,   teilnehmer_nummer,      erstelldat,   ersteller,       modifidat, modifikator) values
-        (1, ${iban}, ${referenznummerPrefix}, ${teilnehmernummer}, ${DateTime.now}, ${personId}, ${DateTime.now}, ${personId})""".execute.apply()
+        (1, ${iban}, ${referenznummerPrefix}, ${teilnehmernummer}, ${DateTime.now}, ${pid}, ${DateTime.now}, ${pid})""".execute.apply()
 
       Success(true)
     }
