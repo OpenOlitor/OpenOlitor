@@ -26,20 +26,9 @@ import ch.openolitor.core.models._
 import ch.openolitor.stammdaten.models._
 import org.odftoolkit.simple._
 import org.odftoolkit.simple.table._
-import scala.collection.JavaConversions._
-import scala.reflect.runtime.universe.{ Try => UTry, _ }
-import java.util.Date
 import akka.actor._
-import java.io.File
-import java.io.FileInputStream
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
-import ch.openolitor.util.DateTimeUtil
-import scala.collection.immutable.TreeMap
 import java.io.InputStream
 import scala.util._
-import org.joda.time.format.DateTimeFormatter
-import java.util.Locale
 import ch.openolitor.core.data.parsers._
 
 case class ParseException(msg: String) extends Exception(msg)

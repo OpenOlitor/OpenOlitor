@@ -27,7 +27,6 @@ import stamina._
 import stamina.json._
 import ch.openolitor.buchhaltung._
 import ch.openolitor.buchhaltung.models._
-import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.core.domain.EntityStoreJsonProtocol
 import ch.openolitor.buchhaltung.BuchhaltungCommandHandler._
 import zangelo.spray.json.AutoProductFormats

@@ -22,7 +22,6 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
-import java.util.UUID
 import ch.openolitor.core.models._
 import ch.openolitor.core.models.VorlageTyp
 import ch.openolitor.stammdaten.models._
@@ -31,10 +30,7 @@ import ch.openolitor.core.repositories.DBMappings
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.stammdaten.models.PendenzStatus
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.core.scalax._
 import scala.collection.immutable.TreeMap
-import ch.openolitor.core.filestore.VorlageRechnung
-import scala.math.Ordering.StringOrdering
 import ch.openolitor.core.repositories.BaseParameter
 
 //DB Model bindig

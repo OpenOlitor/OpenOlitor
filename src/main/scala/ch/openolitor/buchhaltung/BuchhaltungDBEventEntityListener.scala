@@ -24,21 +24,14 @@ package ch.openolitor.buchhaltung
 
 import akka.actor._
 import ch.openolitor.core.models._
-import ch.openolitor.core.ws._
 import spray.json._
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.db._
 import scalikejdbc._
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.Boot
-import scala.concurrent.ExecutionContext.Implicits.global
-import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.stammdaten.models.AboId
-import ch.openolitor.stammdaten.models.{ DepotlieferungAbo, HeimlieferungAbo, PostlieferungAbo }
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungUpdateRepositoryComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungUpdateRepositoryComponent
 import ch.openolitor.core.repositories.EventPublishingImplicits._
-import ch.openolitor.core.repositories.EventPublisher
 
 object BuchhaltungDBEventEntityListener extends DefaultJsonProtocol {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultBuchhaltungDBEventEntityListener], sysConfig, system)
@@ -51,7 +44,6 @@ class DefaultBuchhaltungDBEventEntityListener(sysConfig: SystemConfig, override 
  */
 class BuchhaltungDBEventEntityListener(override val sysConfig: SystemConfig) extends Actor with ActorLogging with BuchhaltungDBMappings with AsyncConnectionPoolContextAware {
   this: BuchhaltungUpdateRepositoryComponent =>
-  import BuchhaltungDBEventEntityListener._
 
   override def preStart() {
     super.preStart()

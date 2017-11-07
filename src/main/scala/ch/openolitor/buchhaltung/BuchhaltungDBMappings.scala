@@ -23,15 +23,10 @@
 package ch.openolitor.buchhaltung
 
 import ch.openolitor.stammdaten.models.AboId
-import java.util.UUID
-import ch.openolitor.core.models._
 import ch.openolitor.buchhaltung.models._
 import scalikejdbc._
-import scalikejdbc.Binders._
 import ch.openolitor.core.repositories.DBMappings
-import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
-import ch.openolitor.core.scalax._
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.core.repositories.BaseParameter
 

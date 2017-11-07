@@ -22,17 +22,12 @@
 \*                                                                           */
 package ch.openolitor.kundenportal.repositories
 
-import ch.openolitor.core.models._
 import scalikejdbc._
-import sqls.{ distinct, count }
-import ch.openolitor.core.db._
-import ch.openolitor.core.repositories._
 import ch.openolitor.stammdaten.models._
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.Macros._
 import ch.openolitor.util.DateTimeUtil._
-import org.joda.time.DateTime
 import ch.openolitor.stammdaten.StammdatenDBMappings
 import ch.openolitor.util.querybuilder.UriQueryParamToSQLSyntaxBuilder
 import ch.openolitor.util.parsing.FilterExpr

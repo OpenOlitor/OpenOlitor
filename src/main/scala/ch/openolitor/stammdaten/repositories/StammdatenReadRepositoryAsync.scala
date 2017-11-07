@@ -38,9 +38,6 @@ import ch.openolitor.core.Macros._
 import org.joda.time.DateTime
 import ch.openolitor.util.IdUtil
 import ch.openolitor.util.parsing.FilterExpr
-import scalaz._
-import Scalaz._
-import scalaz.OptionT.optionT
 
 trait StammdatenReadRepositoryAsync extends ReportReadRepository {
 

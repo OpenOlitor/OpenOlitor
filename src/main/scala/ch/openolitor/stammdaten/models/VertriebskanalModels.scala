@@ -22,11 +22,8 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import java.util.UUID
 import ch.openolitor.core.models._
 import org.joda.time.DateTime
-import ch.openolitor.core.scalax.Product27
-import ch.openolitor.core.scalax.Tuple27
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple28

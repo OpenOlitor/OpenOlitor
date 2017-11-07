@@ -30,25 +30,16 @@ import scala.util.{ Try, Success, Failure }
 import stamina.Persisters
 import spray.json.JsValue
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.repositories.DBMappings
 import akka.util.ByteString
 import akka.util.ByteStringBuilder
 import java.io.InputStream
-import java.io.InputStreamReader
-import java.io.BufferedReader
-import java.io.ByteArrayInputStream
-import scala.math.Ordering.ByteOrdering
 import scala.annotation.tailrec
-import scalaz.CharSet
-import java.nio.charset.Charset
 import akka.serialization.SerializationExtension
 import akka.serialization.Serialization
 import akka.persistence.PersistentRepr
 import ch.openolitor.core.ActorSystemReference
-import akka.persistence.PersistentImpl
 import spray.json._
-import scala.reflect.ClassTag
 import ch.openolitor.core.domain.PersistentEvent
 
 trait PersistenceDBMappings extends DBMappings with ActorSystemReference {

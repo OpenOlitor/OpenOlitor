@@ -26,7 +26,6 @@ import ch.openolitor.core.data.EntityParser
 import ch.openolitor.core.models._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.data.ParseException
-import java.util.Locale
 import org.joda.time.DateTime
 import akka.event.LoggingAdapter
 

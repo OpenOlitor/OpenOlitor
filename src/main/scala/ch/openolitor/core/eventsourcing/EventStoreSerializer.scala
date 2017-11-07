@@ -22,16 +22,12 @@
 \*                                                                           */
 package ch.openolitor.core.eventsourcing
 
-import akka.actor.{ ActorRef, ActorSystem }
-import akka.serialization._
 import stamina._
 import stamina.json._
 import ch.openolitor.core.domain.EntityStoreJsonProtocol
 import ch.openolitor.core.domain.EntityStore._
 import ch.openolitor.stammdaten.eventsourcing.StammdatenEventStoreSerializer
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.models.CustomKundentyp
-import ch.openolitor.stammdaten.models.CustomKundentypCreate
 import ch.openolitor.core.eventsourcing.events._
 import ch.openolitor.buchhaltung.eventsourcing.BuchhaltungEventStoreSerializer
 import ch.openolitor.reports.eventsourcing.ReportsEventStoreSerializer

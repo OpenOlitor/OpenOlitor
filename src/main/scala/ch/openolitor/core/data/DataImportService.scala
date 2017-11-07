@@ -24,19 +24,11 @@ package ch.openolitor.core.data
 
 import akka.actor._
 import ch.openolitor.stammdaten._
-import org.odftoolkit.simple._
-import org.odftoolkit.simple.table._
-import java.util.Date
 import ch.openolitor.stammdaten.models._
-import java.util.UUID
 import ch.openolitor.core.models._
-import ch.openolitor.core.domain.EventService
-import java.io.File
-import ch.openolitor.core.db.evolution.scripts.V1Scripts
 import scalikejdbc._
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
 import ch.openolitor.core.repositories.BaseWriteRepository
-import ch.openolitor.core.Boot
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import java.io.InputStream
 import ch.openolitor.core.db.ConnectionPoolContextAware

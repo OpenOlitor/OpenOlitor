@@ -24,7 +24,6 @@ package ch.openolitor.stammdaten
 
 import akka.actor._
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.mailservice.MailService._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.domain._
@@ -33,11 +32,7 @@ import ch.openolitor.core.models.PersonId
 import scalikejdbc._
 import ch.openolitor.stammdaten.StammdatenCommandHandler.AboAktiviertEvent
 import ch.openolitor.stammdaten.StammdatenCommandHandler.AboDeaktiviertEvent
-import ch.openolitor.core.models.BaseEntity
-import ch.openolitor.core.models.BaseId
-import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.core.repositories.EventPublishingImplicits._
-import ch.openolitor.core.repositories.EventPublisher
 
 object StammdatenGeneratedEventsListener {
   def props(implicit sysConfig: SystemConfig, system: ActorSystem): Props = Props(classOf[DefaultStammdatenGeneratedEventsListener], sysConfig, system)
@@ -53,7 +48,6 @@ class StammdatenGeneratedEventsListener(override val sysConfig: SystemConfig) ex
     with ConnectionPoolContextAware
     with AboAktivChangeHandler {
   this: StammdatenUpdateRepositoryComponent =>
-  import StammdatenGeneratedEventsListener._
 
   override def preStart() {
     super.preStart()

@@ -22,13 +22,9 @@
 \*                                                                           */
 package ch.openolitor.stammdaten.models
 
-import java.util.UUID
 import ch.openolitor.core.models._
-import java.util.Date
 import org.joda.time.DateTime
 import ch.openolitor.core.JSONSerializable
-import ch.openolitor.core.scalax.Tuple24
-import scala.collection.immutable.TreeMap
 import ch.openolitor.core.scalax.Tuple25
 
 case class KundeId(id: Long) extends BaseId

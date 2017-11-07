@@ -28,7 +28,6 @@ import ch.openolitor.core.repositories.CoreDBMappings
 import scala.util._
 import ch.openolitor.core.models._
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.db.evolution.scripts.V1Scripts
 import ch.openolitor.util.IteratorUtil
 import org.joda.time.DateTime
 import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
@@ -38,11 +37,7 @@ import ch.openolitor.buchhaltung.models._
 import scala.reflect._
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.buchhaltung.BuchhaltungDBMappings
-import ch.openolitor.reports.models._
 import ch.openolitor.reports.ReportsDBMappings
-import ch.openolitor.core.db.evolution.scripts.Scripts
-import akka.actor.ActorSystem
-import ch.openolitor.core.ActorSystemReference
 
 trait Script {
 

@@ -22,9 +22,6 @@
 \*                                                                           */
 package ch.openolitor.core.db.evolution.scripts.v1
 
-import scalikejdbc._
-import ch.openolitor.core.Macros._
-import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.db.evolution.scripts.recalculations.RecalculateAnzahlAbwesenheiten
 
 object OO433_DBScripts {

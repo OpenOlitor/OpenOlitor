@@ -23,10 +23,6 @@
 package ch.openolitor.buchhaltung
 
 import spray.json._
-import ch.openolitor.core.models._
-import java.util.UUID
-import org.joda.time._
-import org.joda.time.format._
 import ch.openolitor.core.BaseJsonProtocol
 import ch.openolitor.stammdaten.StammdatenJsonProtocol
 import ch.openolitor.buchhaltung.models._

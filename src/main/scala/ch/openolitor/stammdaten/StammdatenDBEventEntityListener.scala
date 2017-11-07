@@ -32,7 +32,6 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.core.db._
 import ch.openolitor.core.SystemConfig
-import ch.openolitor.core.repositories.BaseEntitySQLSyntaxSupport
 import ch.openolitor.buchhaltung.models._
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -57,7 +56,6 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
     with AboAktivChangeHandler
     with LieferungDurchschnittspreisHandler {
   this: StammdatenUpdateRepositoryComponent =>
-  import StammdatenDBEventEntityListener._
   import SystemEvents._
 
   val dateFormat = DateTimeFormat.forPattern("dd.MM.yyyy")
