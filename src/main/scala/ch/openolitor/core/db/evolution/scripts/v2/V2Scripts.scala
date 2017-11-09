@@ -152,5 +152,6 @@ object V2Scripts {
     OO686_Add_Rechnungspositionen.scripts ++
     OO697_Zusatzabos_add_modify_delete.scripts ++
     OO731_Reports.scripts ++
-    OO760_add_missing_keys.scripts
+    OO760_add_missing_keys.scripts ++
+    OO829_add_zusatzabo_info_to_abo.scripts
 }

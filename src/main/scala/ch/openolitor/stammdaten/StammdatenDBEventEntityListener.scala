@@ -448,6 +448,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           zusatzAbotypMapping.column.anzahlAbonnentenAktiv -> (zusatzAbotyp.anzahlAbonnentenAktiv + modZusatzAboCount)
         )
       }
+
+      stammdatenUpdateRepository.updateHauptAboAddZusatzabo(zusatzAbo)
     }
   }
 
@@ -458,6 +460,10 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
         stammdatenUpdateRepository.modifyEntity[ZusatzAbotyp, AbotypId](to.abotypId) { zusatzAbotyp =>
           Map(zusatzAbotypMapping.column.anzahlAbonnentenAktiv -> (zusatzAbotyp.anzahlAbonnentenAktiv + change))
         }
+      }
+
+      if (from.abotypName != to.abotypName) {
+        stammdatenUpdateRepository.updateHauptAboWithZusatzabo(to.hauptAboId, to, from)
       }
     }
   }
@@ -472,6 +478,8 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
           zusatzAbotypMapping.column.anzahlAbonnentenAktiv -> (zusatzAbotyp.anzahlAbonnentenAktiv - modZusatzAboCount)
         )
       }
+
+      stammdatenUpdateRepository.updateHauptAboRemoveZusatzabo(zusatzAbo)
     }
   }
 
