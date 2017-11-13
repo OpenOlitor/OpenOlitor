@@ -144,7 +144,7 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         (put | post)(update[AboVertriebsartModify, AboId](aboId))
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "koerbe") { (_, aboId) =>
-        get(list(stammdatenReadRepository.getKoerbeLieferung(aboId)))
+        get(list(stammdatenReadRepository.getKoerbe(aboId)))
       } ~
       path("kunden" / kundeIdPath / "abos" / aboIdPath / "abwesenheiten") { (_, aboId) =>
         post {

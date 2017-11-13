@@ -1471,7 +1471,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(korbMapping(korb)).list
   }
 
-  protected def getKoerbeLieferungQuery(aboId: AboId) = {
+  protected def getKoerbeQuery(aboId: AboId) = {
     withSQL {
       select
         .from(korbMapping as korb)
