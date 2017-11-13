@@ -639,42 +639,93 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   }
 
   private def handleLieferplanungAbgeschlossen(idFactory: IdFactory, lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
-
     //handle Depot- and Postlieferungen: Group all entries with the same VertriebId on the same Date
     val vertriebeDaten = lieferungen.map(l => (l.vertriebId, l.datum)).distinct
-    (vertriebeDaten map {
+    getDepotAuslieferungEvents(idFactory, getDepotAuslieferungAsAMapGrouped(vertriebeDaten)) :::
+      getPostAuslieferungEvents(idFactory, getPostAuslieferungAsAMapGrouped(vertriebeDaten))
+  }
+
+  private def getDepotAuslieferungAsAMapGrouped(vertriebeDaten: List[(VertriebId, DateTime)])(implicit personId: PersonId, session: DBSession): Map[(DepotId, DateTime), List[DepotlieferungDetail]] = {
+    val depotAuslieferungMap = (vertriebeDaten map {
       case (vertriebId, lieferungDatum) => {
-        logger.debug(s"handleLieferplanungAbgeschlossen (Depot & Post): ${vertriebId}:${lieferungDatum}.")
-        //create auslieferungen
-        val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId) map { vertriebsart =>
-          getAuslieferungDepotPost(lieferungDatum, vertriebsart) match {
-            case None => {
-              logger.debug(s"createNewAuslieferung for: ${lieferungDatum}:${vertriebsart}.")
-              val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-              if (!koerbe.isEmpty) {
-                createAuslieferungDepotPost(idFactory, lieferungDatum, vertriebsart, koerbe.size) map { newAuslieferung =>
-                  val updates = koerbe map {
-                    korb =>
-                      EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id))
-                  }
-                  EntityInsertEvent(newAuslieferung.id, newAuslieferung) :: updates
-                } getOrElse (Nil)
-              } else {
-                Nil
-              }
-            }
-            case Some(auslieferung) => {
-              val koerbe = stammdatenReadRepository.getKoerbe(lieferungDatum, vertriebsart.id, WirdGeliefert)
-              koerbe map {
-                korb =>
-                  EntityUpdateEvent(korb.id, KorbAuslieferungModify(auslieferung.id))
-              }
-            }
-          }
+        logger.debug(s"handleLieferplanungAbgeschlossen Depot: ${vertriebId}:${lieferungDatum}.")
+        val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId)
+        auslieferungL.collect {
+          case d: DepotlieferungDetail => (lieferungDatum, d)
         }
-        auslieferungL.flatten
       }
     }).flatten
+
+    depotAuslieferungMap.groupBy(l => (l._2.depotId, l._1)) map { depotAuslieferung =>
+      depotAuslieferung._1 -> depotAuslieferung._2.map(_._2)
+    }
+  }
+
+  private def getDepotAuslieferungEvents(idFactory: IdFactory, depotAuslieferungGroupedMap: Map[(DepotId, DateTime), List[DepotlieferungDetail]])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
+    val events = for {
+      ((depotId, date), listDepotLieferungDetail) <- depotAuslieferungGroupedMap
+    } yield {
+      getPostAndDepotAuslieferungEvents(idFactory: IdFactory, date, listDepotLieferungDetail)
+    }
+    events.flatten.toList
+  }
+
+  private def getPostAuslieferungAsAMapGrouped(vertriebeDaten: List[(VertriebId, DateTime)])(implicit personId: PersonId, session: DBSession): Map[DateTime, List[PostlieferungDetail]] = {
+    val postAuslieferungMap = (vertriebeDaten map {
+      case (vertriebId, lieferungDatum) => {
+        logger.debug(s"handleLieferplanungAbgeschlossen (Post): ${vertriebId}:${lieferungDatum}.")
+        //create auslieferungen
+        val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId)
+        auslieferungL.collect {
+          case d: PostlieferungDetail => (lieferungDatum, d)
+        }
+      }
+    }).flatten
+
+    postAuslieferungMap.groupBy(l => (l._1)) map { postAuslieferung =>
+      postAuslieferung._1 -> postAuslieferung._2.map(_._2)
+    }
+  }
+
+  private def getPostAuslieferungEvents(idFactory: IdFactory, postAuslieferungGroupedMap: Map[DateTime, List[PostlieferungDetail]])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
+    val events = for {
+      (date, listPostLieferungDetail) <- postAuslieferungGroupedMap
+    } yield {
+      getPostAndDepotAuslieferungEvents(idFactory: IdFactory, date, listPostLieferungDetail)
+    }
+    events.flatten.toList
+  }
+
+  private def getPostAndDepotAuslieferungEvents(idFactory: IdFactory, date: DateTime, listVertriebsartDetail: List[VertriebsartDetail])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
+    val koerbe = getAllKoerbeForDepotOrPost(date, listVertriebsartDetail)
+    val newAuslieferung = createAuslieferungDepotPost(idFactory, date, listVertriebsartDetail.head, koerbe.size).get
+    (for { vertriebsartDetail <- listVertriebsartDetail } yield {
+      val koerbe = stammdatenReadRepository.getKoerbe(date, vertriebsartDetail.id, WirdGeliefert)
+      if (vertriebsartDetail == listVertriebsartDetail.head) {
+        if (!koerbe.isEmpty) {
+          val updates = koerbe map {
+            logger.debug(s"update Auslieferung for : ${date}:${vertriebsartDetail.id}.")
+            korb => EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id))
+          }
+          logger.debug(s"createNewAuslieferung for: ${date}:${vertriebsartDetail.id}.")
+          EntityInsertEvent(newAuslieferung.id, newAuslieferung) :: updates
+        } else {
+          Nil
+        }
+      } else {
+        koerbe map {
+          logger.debug(s"update Auslieferung for : ${date}:${vertriebsartDetail.id}.")
+          korb => EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id))
+        }
+      }
+    }).flatten
+  }
+
+  private def getAllKoerbeForDepotOrPost(date: DateTime, vertriebsartDetailList: List[VertriebsartDetail])(implicit personId: PersonId, session: DBSession): List[Korb] = {
+    val koerbe = vertriebsartDetailList map { vertriebsartDetail =>
+      stammdatenReadRepository.getKoerbe(date, vertriebsartDetail.id, WirdGeliefert)
+    }
+    koerbe.flatten
   }
 
   private def recalculateValuesForLieferplanungAbgeschlossen(lieferungen: List[Lieferung])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
