@@ -36,7 +36,62 @@ import ch.openolitor.core.EventStream
 trait StammdatenUpdateRepository extends BaseUpdateRepository
     with StammdatenReadRepositorySync
     with EventStream {
+
+  def updateHauptAboAddZusatzabo(add: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo]
+
+  def updateHauptAboRemoveZusatzabo(remove: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo]
+
+  def updateHauptAboWithZusatzabo(hauptAboId: AboId, add: ZusatzAbo, remove: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo]
 }
 
 trait StammdatenUpdateRepositoryImpl extends StammdatenReadRepositorySyncImpl with StammdatenUpdateRepository with LazyLogging {
+
+  def updateHauptAboAddZusatzabo(add: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
+    updateHauptAboWithZusatzabos(add.hauptAboId, Some(add), None)
+  }
+
+  def updateHauptAboRemoveZusatzabo(add: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
+    updateHauptAboWithZusatzabos(add.hauptAboId, Some(add), None)
+  }
+
+  def updateHauptAboWithZusatzabo(hauptAboId: AboId, add: ZusatzAbo, remove: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
+    updateHauptAboWithZusatzabos(add.hauptAboId, Some(add), Some(remove))
+  }
+
+  /**
+   * Adding and/or removing a ZusatzAbo to a HauptAbo.
+   * If add and remove are provided we assume that the ZusatzAbo has been updated (the zusatzAbotypName).
+   */
+  private def updateHauptAboWithZusatzabos(hauptAboId: AboId, add: Option[ZusatzAbo], remove: Option[ZusatzAbo])(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
+    modifyEntity[DepotlieferungAbo, AboId](hauptAboId) { abo =>
+      Map(
+        depotlieferungAboMapping.column.zusatzAboIds -> withHauptAbo(abo, add, remove)._1,
+        depotlieferungAboMapping.column.zusatzAbotypNames -> withHauptAbo(abo, add, remove)._2
+      )
+    } orElse modifyEntity[HeimlieferungAbo, AboId](hauptAboId) { abo =>
+      Map(
+        heimlieferungAboMapping.column.zusatzAboIds -> withHauptAbo(abo, add, remove)._1,
+        heimlieferungAboMapping.column.zusatzAbotypNames -> withHauptAbo(abo, add, remove)._2
+      )
+    } orElse modifyEntity[PostlieferungAbo, AboId](hauptAboId) { abo =>
+      Map(
+        postlieferungAboMapping.column.zusatzAboIds -> withHauptAbo(abo, add, remove)._1,
+        postlieferungAboMapping.column.zusatzAbotypNames -> withHauptAbo(abo, add, remove)._2
+      )
+    }
+  }
+
+  private def withHauptAbo(hauptAbo: HauptAbo, add: Option[ZusatzAbo], remove: Option[ZusatzAbo]) = {
+    val removed = remove map { r =>
+      (hauptAbo.zusatzAboIds - r.id, hauptAbo.zusatzAbotypNames - r.abotypName)
+    } getOrElse {
+      (hauptAbo.zusatzAboIds, hauptAbo.zusatzAbotypNames)
+    }
+
+    add map { a =>
+      (removed._1 + a.id, removed._2 + a.abotypName)
+    } getOrElse {
+      removed
+    }
+  }
 }

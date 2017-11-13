@@ -28,6 +28,7 @@ import org.joda.time.LocalDate
 import scala.collection.immutable.TreeMap
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple23
+import ch.openolitor.core.scalax.Tuple25
 
 case class AboId(id: Long) extends BaseId
 
@@ -60,6 +61,11 @@ sealed trait Abo extends BaseEntity[AboId] with JSONSerializable {
 
   def calculateAktiv: Boolean =
     IAbo.calculateAktiv(start, ende)
+}
+
+sealed trait HauptAbo extends Abo with JSONSerializable {
+  val zusatzAboIds: Set[AboId]
+  val zusatzAbotypNames: Set[String]
 }
 
 sealed trait AboReport extends Abo {
@@ -117,16 +123,18 @@ case class DepotlieferungAbo(
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
+  zusatzAboIds: Set[AboId],
+  zusatzAbotypNames: Set[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends Abo
+) extends HauptAbo
 
 object DepotlieferungAbo {
   def unapply(o: DepotlieferungAbo) = {
-    Some(Tuple23(
+    Some(Tuple25(
       o.id,
       o.kundeId,
       o.kunde,
@@ -146,6 +154,8 @@ object DepotlieferungAbo {
       o.anzahlAbwesenheiten,
       o.anzahlLieferungen,
       o.aktiv,
+      o.zusatzAboIds,
+      o.zusatzAbotypNames,
       o.erstelldat,
       o.ersteller,
       o.modifidat,
@@ -204,6 +214,8 @@ case class DepotlieferungAboDetail(
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
+  zusatzAboIds: Set[AboId],
+  zusatzAbotypNames: Set[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -245,16 +257,18 @@ case class HeimlieferungAbo(
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
+  zusatzAboIds: Set[AboId],
+  zusatzAbotypNames: Set[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends Abo
+) extends HauptAbo
 
 object HeimlieferungAbo {
   def unapply(o: HeimlieferungAbo) = {
-    Some(Tuple23(
+    Some(Tuple25(
       o.id,
       o.kundeId,
       o.kunde,
@@ -274,6 +288,8 @@ object HeimlieferungAbo {
       o.anzahlAbwesenheiten,
       o.anzahlLieferungen,
       o.aktiv,
+      o.zusatzAboIds,
+      o.zusatzAbotypNames,
       o.erstelldat,
       o.ersteller,
       o.modifidat,
@@ -303,6 +319,8 @@ case class HeimlieferungAboDetail(
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
+  zusatzAboIds: Set[AboId],
+  zusatzAbotypNames: Set[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -342,12 +360,44 @@ case class PostlieferungAbo(
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
+  zusatzAboIds: Set[AboId],
+  zusatzAbotypNames: Set[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
   modifidat: DateTime,
   modifikator: PersonId
-) extends Abo
+) extends HauptAbo
+
+object PostlieferungAbo {
+  def unapply(o: PostlieferungAbo) = {
+    Some(Tuple23(
+      o.id,
+      o.kundeId,
+      o.kunde,
+      o.vertriebsartId,
+      o.vertriebId,
+      o.vertriebBeschrieb,
+      o.abotypId,
+      o.abotypName,
+      o.start,
+      o.ende,
+      o.guthabenVertraglich,
+      o.guthaben,
+      o.guthabenInRechnung,
+      o.letzteLieferung,
+      o.anzahlAbwesenheiten,
+      o.anzahlLieferungen,
+      o.aktiv,
+      o.zusatzAboIds,
+      o.zusatzAbotypNames,
+      o.erstelldat,
+      o.ersteller,
+      o.modifidat,
+      o.modifikator
+    ))
+  }
+}
 
 case class PostlieferungAboDetail(
   id: AboId,
@@ -368,6 +418,8 @@ case class PostlieferungAboDetail(
   anzahlAbwesenheiten: TreeMap[String, Int],
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
+  zusatzAboIds: Set[AboId],
+  zusatzAbotypNames: Set[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -525,9 +577,9 @@ case class ZusatzAbo(
   vertriebBeschrieb: Option[String],
   start: LocalDate,
   ende: Option[LocalDate],
-  guthabenVertraglich: Option[Int],
-  guthaben: Int,
-  guthabenInRechnung: Int,
+  guthabenVertraglich: Option[Int], // we don't use this for zusatzabo
+  guthaben: Int, // we don't use this for zusatzabo
+  guthabenInRechnung: Int, // we don't use this for zusatzabo
   letzteLieferung: Option[DateTime],
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],

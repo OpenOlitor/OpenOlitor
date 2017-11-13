@@ -49,6 +49,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
   implicit val kundeIdBinder: Binders[KundeId] = baseIdBinders(KundeId.apply _)
   implicit val pendenzIdBinder: Binders[PendenzId] = baseIdBinders(PendenzId.apply _)
   implicit val aboIdBinder: Binders[AboId] = baseIdBinders(AboId.apply _)
+  implicit val aboIdSetBinder: Binders[Set[AboId]] = setBaseIdBinders(AboId.apply _)
   implicit val lierferungIdBinder: Binders[LieferungId] = baseIdBinders(LieferungId.apply _)
   implicit val lieferplanungIdBinder: Binders[LieferplanungId] = baseIdBinders(LieferplanungId.apply _)
   implicit val optionLieferplanungIdBinder: Binders[Option[LieferplanungId]] = optionBaseIdBinders(LieferplanungId.apply _)
@@ -626,7 +627,16 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
     }
   }
 
-  implicit val depotlieferungAboMapping = new BaseAboMapping[DepotlieferungAbo] {
+  trait BaseHauptAboMapping[A <: HauptAbo] extends BaseAboMapping[A] {
+    override def updateParameters(abo: A) = {
+      super.updateParameters(abo) ++ Seq(
+        column.zusatzAboIds -> abo.zusatzAboIds,
+        column.zusatzAbotypNames -> abo.zusatzAbotypNames
+      )
+    }
+  }
+
+  implicit val depotlieferungAboMapping = new BaseHauptAboMapping[DepotlieferungAbo] {
     override val tableName = "DepotlieferungAbo"
 
     override lazy val columns = autoColumns[DepotlieferungAbo]()
@@ -643,7 +653,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
     }
   }
 
-  implicit val heimlieferungAboMapping = new BaseAboMapping[HeimlieferungAbo] {
+  implicit val heimlieferungAboMapping = new BaseHauptAboMapping[HeimlieferungAbo] {
     override val tableName = "HeimlieferungAbo"
 
     override lazy val columns = autoColumns[HeimlieferungAbo]()
@@ -661,7 +671,7 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
     }
   }
 
-  implicit val postlieferungAboMapping = new BaseAboMapping[PostlieferungAbo] {
+  implicit val postlieferungAboMapping = new BaseHauptAboMapping[PostlieferungAbo] {
     override val tableName = "PostlieferungAbo"
 
     override lazy val columns = autoColumns[PostlieferungAbo]()
