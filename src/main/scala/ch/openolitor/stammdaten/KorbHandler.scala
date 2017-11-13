@@ -42,30 +42,32 @@ trait KorbHandler extends KorbStatusHandler
   def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: IAbotyp)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (Option[Korb], Option[Korb]) = {
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
       case None if (lieferung.lieferplanungId.isDefined) =>
-        val status = abo match {
-          case zusatzAbo: ZusatzAbo =>
-            val mainAbo = stammdatenWriteRepository.getHauptAbo(zusatzAbo.id)
-            val abwCount = stammdatenWriteRepository.countAbwesend(mainAbo.get.id, lieferung.datum.toLocalDate)
-            calculateKorbStatus(abwCount, mainAbo.get.guthaben, abotyp.guthabenMindestbestand)
-          case abo: Abo =>
-            val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
-            calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
-        }
-        val korbId = KorbId(IdUtil.positiveRandomId)
-        val korb = Korb(
-          korbId,
-          lieferung.id,
-          abo.id,
-          status,
-          abo.guthaben,
-          None,
-          None,
-          DateTime.now,
-          personId,
-          DateTime.now,
-          personId
-        )
-        (stammdatenWriteRepository.insertEntity[Korb, KorbId](korb), None)
+        if (lieferung.vertriebId == abo.vertriebId) {
+          val status = abo match {
+            case zusatzAbo: ZusatzAbo =>
+              val mainAbo = stammdatenWriteRepository.getHauptAbo(zusatzAbo.id)
+              val abwCount = stammdatenWriteRepository.countAbwesend(mainAbo.get.id, lieferung.datum.toLocalDate)
+              calculateKorbStatus(abwCount, mainAbo.get.guthaben, abotyp.guthabenMindestbestand)
+            case abo: Abo =>
+              val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
+              calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+          }
+          val korbId = KorbId(IdUtil.positiveRandomId)
+          val korb = Korb(
+            korbId,
+            lieferung.id,
+            abo.id,
+            status,
+            abo.guthaben,
+            None,
+            None,
+            DateTime.now,
+            personId,
+            DateTime.now,
+            personId
+          )
+          (stammdatenWriteRepository.insertEntity[Korb, KorbId](korb), None)
+        } else { (None, None) }
       case None =>
         // do nothing (lieferung hast not been planned yet)
         (None, None)
