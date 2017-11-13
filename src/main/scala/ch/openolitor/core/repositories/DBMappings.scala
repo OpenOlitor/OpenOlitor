@@ -51,14 +51,24 @@ trait DBMappings extends BaseParameter
   def toStringBinder[V](f: String => V): Binders[V] = Binders.string.xmap(f(_), _.toString)
   def seqSqlBinder[V](f: String => V, g: V => String): Binders[Seq[V]] = Binders.string.xmap({
     Option(_) match {
-      case None => Seq()
-      case Some(x) => x.split(",") map (f)
+      case None => Seq() // TODO change all the seq fields to not null default ""
+      case Some(x) =>
+        if (x.isEmpty) {
+          Seq()
+        } else {
+          x.split(",") map (f) toSeq
+        }
     }
   }, { values => values map (g) mkString (",") })
   def setSqlBinder[V](f: String => V, g: V => String): Binders[Set[V]] = Binders.string.xmap({
     Option(_) match {
-      case None => Set()
-      case Some(x) => x.split(",") map (f) toSet
+      case None => Set() // TODO change all the seq fields to not null default ""
+      case Some(x) =>
+        if (x.isEmpty) {
+          Set()
+        } else {
+          x.split(",") map (f) toSet
+        }
     }
   }, { values => values map (g) mkString (",") })
   def seqBaseIdBinders[T <: BaseId](f: Long => T): Binders[Seq[T]] = seqSqlBinder[T](l => f(l.toLong), _.id.toString)
