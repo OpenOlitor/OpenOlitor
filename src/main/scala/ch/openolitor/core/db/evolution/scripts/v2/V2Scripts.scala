@@ -153,5 +153,6 @@ object V2Scripts {
     OO697_Zusatzabos_add_modify_delete.scripts ++
     OO731_Reports.scripts ++
     OO760_add_missing_keys.scripts ++
-    OO829_add_zusatzabo_info_to_abo.scripts
+    OO829_add_zusatzabo_info_to_abo.scripts ++
+    OO846_delete_unmapped_zusatzabos.scripts
 }

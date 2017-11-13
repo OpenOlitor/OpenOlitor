@@ -140,6 +140,12 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
         stammdatenWriteRepository.deleteEntity[PostlieferungAbo, AboId](id) orElse
         stammdatenWriteRepository.deleteEntity[ZusatzAbo, AboId](id)
 
+      // also delete mapped zusatzabos if it's a main abo
+      maybeAbo map {
+        case _: ZusatzAbo => // do nothing
+        case _ => stammdatenWriteRepository.deleteZusatzAbos(id)
+      }
+
       // also delete corresponding Tourlieferung
       stammdatenWriteRepository.deleteEntity[Tourlieferung, AboId](id)
 

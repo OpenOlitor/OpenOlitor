@@ -1907,6 +1907,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }
   }
 
+  protected def deleteZusatzAbosQuery(hauptAboId: AboId) = {
+    withSQL {
+      delete
+        .from(zusatzAboMapping as zusatzAbo)
+        .where.eq(zusatzAbo.hauptAboId, hauptAboId)
+    }
+  }
+
   protected def getAktivierteAbosQuery = {
     val today = LocalDate.now.toDateTimeAtStartOfDay
 
