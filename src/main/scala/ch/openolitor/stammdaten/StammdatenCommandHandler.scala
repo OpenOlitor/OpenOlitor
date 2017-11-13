@@ -646,7 +646,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   }
 
   private def getDepotAuslieferungAsAMapGrouped(vertriebeDaten: List[(VertriebId, DateTime)])(implicit personId: PersonId, session: DBSession): Map[(DepotId, DateTime), List[DepotlieferungDetail]] = {
-    val depotAuslieferungUpsertMap = (vertriebeDaten map {
+    val depotAuslieferungMap = (vertriebeDaten map {
       case (vertriebId, lieferungDatum) => {
         logger.debug(s"handleLieferplanungAbgeschlossen Depot: ${vertriebId}:${lieferungDatum}.")
         val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId)
@@ -656,14 +656,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       }
     }).flatten
 
-    depotAuslieferungUpsertMap.groupBy(l => (l._2.depotId, l._1)) map { element =>
-      element._1 -> element._2.map(_._2)
+    depotAuslieferungMap.groupBy(l => (l._2.depotId, l._1)) map { depotAuslieferung =>
+      depotAuslieferung._1 -> depotAuslieferung._2.map(_._2)
     }
   }
 
-  private def getDepotAuslieferungEvents(idFactory: IdFactory, depotAuslieferungUpsertMapGrouped: Map[(DepotId, DateTime), List[DepotlieferungDetail]])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
+  private def getDepotAuslieferungEvents(idFactory: IdFactory, depotAuslieferungGroupedMap: Map[(DepotId, DateTime), List[DepotlieferungDetail]])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
     val events = for {
-      ((depotId, date), listDepotLieferungDetail) <- depotAuslieferungUpsertMapGrouped
+      ((depotId, date), listDepotLieferungDetail) <- depotAuslieferungGroupedMap
     } yield {
       getPostAndDepotAuslieferungEvents(idFactory: IdFactory, date, listDepotLieferungDetail)
     }
@@ -671,7 +671,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
   }
 
   private def getPostAuslieferungAsAMapGrouped(vertriebeDaten: List[(VertriebId, DateTime)])(implicit personId: PersonId, session: DBSession): Map[DateTime, List[PostlieferungDetail]] = {
-    val postAuslieferungUpsertMap = (vertriebeDaten map {
+    val postAuslieferungMap = (vertriebeDaten map {
       case (vertriebId, lieferungDatum) => {
         logger.debug(s"handleLieferplanungAbgeschlossen (Post): ${vertriebId}:${lieferungDatum}.")
         //create auslieferungen
@@ -682,14 +682,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       }
     }).flatten
 
-    postAuslieferungUpsertMap.groupBy(l => (l._1)) map { element =>
-      element._1 -> element._2.map(_._2)
+    postAuslieferungMap.groupBy(l => (l._1)) map { postAuslieferung =>
+      postAuslieferung._1 -> postAuslieferung._2.map(_._2)
     }
   }
 
-  private def getPostAuslieferungEvents(idFactory: IdFactory, postAuslieferungUpsertMapGrouped: Map[DateTime, List[PostlieferungDetail]])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
+  private def getPostAuslieferungEvents(idFactory: IdFactory, postAuslieferungGroupedMap: Map[DateTime, List[PostlieferungDetail]])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
     val events = for {
-      (date, listPostLieferungDetail) <- postAuslieferungUpsertMapGrouped
+      (date, listPostLieferungDetail) <- postAuslieferungGroupedMap
     } yield {
       getPostAndDepotAuslieferungEvents(idFactory: IdFactory, date, listPostLieferungDetail)
     }
@@ -721,9 +721,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
     }).flatten
   }
 
-  private def getAllKoerbeForDepotOrPost(date: DateTime, p2: List[VertriebsartDetail])(implicit personId: PersonId, session: DBSession): List[Korb] = {
-    val koerbe = p2 map { element =>
-      stammdatenReadRepository.getKoerbe(date, element.id, WirdGeliefert)
+  private def getAllKoerbeForDepotOrPost(date: DateTime, vertriebsartDetailList: List[VertriebsartDetail])(implicit personId: PersonId, session: DBSession): List[Korb] = {
+    val koerbe = vertriebsartDetailList map { vertriebsartDetail =>
+      stammdatenReadRepository.getKoerbe(date, vertriebsartDetail.id, WirdGeliefert)
     }
     koerbe.flatten
   }
