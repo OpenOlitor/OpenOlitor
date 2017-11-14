@@ -130,7 +130,8 @@ case class KorbModify(
 ) extends JSONSerializable
 
 case class KorbAuslieferungModify(
-  auslieferungId: AuslieferungId
+  auslieferungId: AuslieferungId,
+  sort: Option[Int]
 ) extends JSONSerializable
 
 case class KorbCreate(
