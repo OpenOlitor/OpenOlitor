@@ -718,9 +718,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       } else {
         koerbe map {
-          logger.debug(s"update Auslieferung for : ${date}:${vertriebsartDetail.id}.")
-          korb => EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id, None))
           logger.debug(s"Auslieferugn already created; update Auslieferung for : ${date}:${vertriebsartDetail.id}.")
+          korb => EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id, None))
         }
       }
     }).flatten
