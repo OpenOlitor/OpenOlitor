@@ -605,6 +605,13 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     update.tourlieferungen.map { tourLieferung =>
       val copy = tourLieferung.copy(modifidat = meta.timestamp, modifikator = meta.originator)
       stammdatenWriteRepository.updateEntityFully[Tourlieferung, AboId](copy)
+
+      // update the sort accodring to the settings
+      stammdatenWriteRepository.getKoerbeNichtAusgeliefertByAbo(tourLieferung.id) map { korb =>
+        stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(
+          korbMapping.column.sort -> tourLieferung.sort
+        )
+      }
     }
   }
 
@@ -706,7 +713,8 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   private def updateKorbAuslieferungId(meta: EventMetadata, id: KorbId, entity: KorbAuslieferungModify)(implicit personId: PersonId = meta.originator): Unit = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.updateEntity[Korb, KorbId](id)(
-        korbMapping.column.auslieferungId -> Option(entity.auslieferungId)
+        korbMapping.column.auslieferungId -> Option(entity.auslieferungId),
+        korbMapping.column.sort -> entity.sort
       )
     }
   }
