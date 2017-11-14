@@ -652,8 +652,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       case (vertriebId, lieferungDatum) => {
         logger.debug(s"handleLieferplanungAbgeschlossen Depot: ${vertriebId}:${lieferungDatum}.")
         val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId)
-        val auslieferungLOnlyActifAbos = auslieferungL.filter(_.anzahlAbosAktiv > 0)
-        auslieferungLOnlyActifAbos.collect {
+        val auslieferungLOnlyActiveAbos = auslieferungL.filter(_.anzahlAbosAktiv > 0)
+        auslieferungLOnlyActiveAbos.collect {
           case d: DepotlieferungDetail => (lieferungDatum, d)
         }
       }
@@ -679,8 +679,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         logger.debug(s"handleLieferplanungAbgeschlossen (Post): ${vertriebId}:${lieferungDatum}.")
         //create auslieferungen
         val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId)
-        val auslieferungLOnlyActifAbos = auslieferungL.filter(_.anzahlAbosAktiv > 0)
-        auslieferungLOnlyActifAbos.collect {
+        val auslieferungLOnlyActiveAbos = auslieferungL.filter(_.anzahlAbosAktiv > 0)
+        auslieferungLOnlyActiveAbos.collect {
           case d: PostlieferungDetail => (lieferungDatum, d)
         }
       }
