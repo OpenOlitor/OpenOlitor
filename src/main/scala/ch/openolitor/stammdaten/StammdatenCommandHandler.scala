@@ -652,7 +652,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       case (vertriebId, lieferungDatum) => {
         logger.debug(s"handleLieferplanungAbgeschlossen Depot: ${vertriebId}:${lieferungDatum}.")
         val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId)
-        auslieferungL.collect {
+        val auslieferungLOnlyActiveAbos = auslieferungL.filter(_.anzahlAbosAktiv > 0)
+        auslieferungLOnlyActiveAbos.collect {
           case d: DepotlieferungDetail => (lieferungDatum, d)
         }
       }
@@ -678,7 +679,8 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         logger.debug(s"handleLieferplanungAbgeschlossen (Post): ${vertriebId}:${lieferungDatum}.")
         //create auslieferungen
         val auslieferungL = stammdatenReadRepository.getVertriebsarten(vertriebId)
-        auslieferungL.collect {
+        val auslieferungLOnlyActiveAbos = auslieferungL.filter(_.anzahlAbosAktiv > 0)
+        auslieferungLOnlyActiveAbos.collect {
           case d: PostlieferungDetail => (lieferungDatum, d)
         }
       }
@@ -716,7 +718,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         }
       } else {
         koerbe map {
-          logger.debug(s"update Auslieferung for : ${date}:${vertriebsartDetail.id}.")
+          logger.debug(s"Auslieferugn already created; update Auslieferung for : ${date}:${vertriebsartDetail.id}.")
           korb => EntityUpdateEvent(korb.id, KorbAuslieferungModify(newAuslieferung.id, None))
         }
       }
