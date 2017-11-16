@@ -78,6 +78,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   lazy val lieferpositionShort = lieferpositionMapping.syntax
   lazy val korbShort = korbMapping.syntax
+  lazy val zusatzAboShort = zusatzAboMapping.syntax
 
   protected def getAbotypenQuery(filter: Option[FilterExpr]) = {
     withSQL {
@@ -1910,8 +1911,8 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
   protected def deleteZusatzAbosQuery(hauptAboId: AboId) = {
     withSQL {
       delete
-        .from(zusatzAboMapping as zusatzAbo)
-        .where.eq(zusatzAbo.hauptAboId, hauptAboId)
+        .from(zusatzAboMapping as zusatzAboShort)
+        .where.eq(zusatzAboShort.hauptAboId, hauptAboId)
     }
   }
 
