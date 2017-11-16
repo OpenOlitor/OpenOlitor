@@ -79,9 +79,10 @@ object RechnungsPositionStatus {
 object RechnungsPositionTyp {
   sealed trait RechnungsPositionTyp
   case object Abo extends RechnungsPositionTyp
+  case object ZusatzAbo extends RechnungsPositionTyp
 
   def apply(value: String): RechnungsPositionTyp = {
-    Vector(Abo).find(_.toString == value).getOrElse(Abo)
+    Vector(Abo).find(_.toString == value).getOrElse(ZusatzAbo)
   }
 }
 
@@ -172,6 +173,7 @@ object Rechnung {
 case class RechnungsPositionDetail(
   id: RechnungsPositionId,
   abo: Abo,
+  parentRechnungsPositionId: Option[RechnungsPositionId],
   betrag: BigDecimal,
   waehrung: Waehrung,
   anzahlLieferungen: Option[Int],
@@ -282,6 +284,7 @@ case class RechnungModify(
 case class RechnungsPositionCreate(
   kundeId: KundeId,
   aboId: Option[AboId],
+  parentRechnungsPositionId: Option[RechnungsPositionId],
   beschrieb: String,
   anzahlLieferungen: Option[Int],
   betrag: BigDecimal,
