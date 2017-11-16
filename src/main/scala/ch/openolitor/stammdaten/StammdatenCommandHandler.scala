@@ -481,10 +481,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       if (events.isEmpty) {
         Failure(new InvalidStateException(s"Keine der RechnungsPositionen konnte erstellt werden"))
       } else {
-        val eventsList = for (event <- events) yield {
-          event.get
-        }
-        Success(eventsList.flatten)
+        Success(events flatMap (_.get))
       }
     }
   }
@@ -557,10 +554,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       if (events.isEmpty) {
         Failure(new InvalidStateException(s"Keine der RechnungsPositionen konnte erstellt werden"))
       } else {
-        val eventsList = for (event <- events) yield {
-          event.get
-        }
-        Success(eventsList.flatten)
+        Success(events flatMap (_.get))
       }
     }
   }
