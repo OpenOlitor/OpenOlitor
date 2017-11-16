@@ -8,7 +8,7 @@
 *                                                                             *
 * This program is free software: you can redistribute it and/or modify it     *
 * under the terms of the GNU General Public License as published by           *
-* the Free Software Foundation, either version 3 of the License,              *
+* the Free Software Foundation, either versiON 3 of the License,              *
 * or (at your option) any later version.                                      *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but         *
@@ -45,17 +45,20 @@ object OO829_add_zusatzabo_info_to_abo {
       alterTableAddColumnIfNotExists(postlieferungAboMapping, "zusatz_abo_ids", "VARCHAR(2000)", "aktiv")
       alterTableAddColumnIfNotExists(postlieferungAboMapping, "zusatz_abotyp_names", "VARCHAR(2000)", "zusatz_abo_ids")
 
-      sql"""UPDATE DepotlieferungAbo a JOIN ZusatzAbo z ON a.id = z.haupt_abo_id
-SET a.zusatz_abo_ids = CONCAT(COALESCE(CONCAT(a.zusatz_abo_ids, ','), ''), z.id),
-  a.zusatz_abotyp_names = CONCAT(COALESCE(CONCAT(a.zusatz_abotyp_names, ','), ''), z.abotyp_name);""".execute.apply()
+      sql"""update DepotlieferungAbo a join
+(SELECT haupt_abo_id, GROUP_CONCAT(z.id) as ids, GROUP_CONCAT(z.abotyp_name) as names from ZusatzAbo z GROUP BY z.haupt_abo_id) pairs
+ON a.id = pairs.haupt_abo_id
+SET a.zusatz_abo_ids = pairs.ids, a.zusatz_abotyp_names = pairs.names;""".execute.apply()
 
-      sql"""UPDATE HeimlieferungAbo a JOIN ZusatzAbo z ON a.id = z.haupt_abo_id
-SET a.zusatz_abo_ids = CONCAT(COALESCE(CONCAT(a.zusatz_abo_ids, ','), ''), z.id),
-  a.zusatz_abotyp_names = CONCAT(COALESCE(CONCAT(a.zusatz_abotyp_names, ','), ''), z.abotyp_name);""".execute.apply()
+      sql"""update HeimlieferungAbo a join
+(SELECT haupt_abo_id, GROUP_CONCAT(z.id) as ids, GROUP_CONCAT(z.abotyp_name) as names from ZusatzAbo z GROUP BY z.haupt_abo_id) pairs
+ON a.id = pairs.haupt_abo_id
+SET a.zusatz_abo_ids = pairs.ids, a.zusatz_abotyp_names = pairs.names;""".execute.apply()
 
-      sql"""UPDATE PostlieferungAbo a JOIN ZusatzAbo z ON a.id = z.haupt_abo_id
-SET a.zusatz_abo_ids = CONCAT(COALESCE(CONCAT(a.zusatz_abo_ids, ','), ''), z.id),
-  a.zusatz_abotyp_names = CONCAT(COALESCE(CONCAT(a.zusatz_abotyp_names, ','), ''), z.abotyp_name);""".execute.apply()
+      sql"""update PostlieferungAbo a join
+(SELECT haupt_abo_id, GROUP_CONCAT(z.id) as ids, GROUP_CONCAT(z.abotyp_name) as names from ZusatzAbo z GROUP BY z.haupt_abo_id) pairs
+ON a.id = pairs.haupt_abo_id
+SET a.zusatz_abo_ids = pairs.ids, a.zusatz_abotyp_names = pairs.names;""".execute.apply()
 
       Success(true)
     }
