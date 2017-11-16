@@ -461,20 +461,17 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             // has to be refactored as soon as more modes are available
             val anzahlLieferungen = aboRechnungCreate.anzahlLieferungen
             if (anzahlLieferungen > 0) {
-              val betrag = aboRechnungCreate.betrag.getOrElse(abotyp.preis * anzahlLieferungen)
+              val hauptAboBetrag = aboRechnungCreate.betrag.getOrElse(abotyp.preis * anzahlLieferungen)
 
-              val rechnungsPosition = RechnungsPositionCreate(
-                abo.kundeId,
-                Some(abo.id),
-                aboRechnungCreate.titel,
-                Some(anzahlLieferungen),
-                betrag,
-                aboRechnungCreate.waehrung,
-                RechnungsPositionStatus.Offen,
-                RechnungsPositionTyp.Abo
-              )
+              val hauptRechnungPosition = createRechnungPositionEvent(abo, aboRechnungCreate.titel, anzahlLieferungen, hauptAboBetrag, aboRechnungCreate.waehrung)
+              val parentRechnungPositionId = idFactory.newId(RechnungsPositionId.apply)
 
-              Success(insertEntityEvent(idFactory, meta, rechnungsPosition, RechnungsPositionId.apply))
+              val zusatzRechnungPositionEventList = createRechnungPositionForZusatzabos(idFactory, abo, aboRechnungCreate.titel, anzahlLieferungen, Some(parentRechnungPositionId), aboRechnungCreate.waehrung)
+
+              val result = (zusatzRechnungPositionEventList :+ EntityInsertEvent(parentRechnungPositionId, hauptRechnungPosition))
+
+              Success(result)
+
             } else {
               Failure(new InvalidStateException(s"Für das Abo mit der Id ${abo.id} wurde keine RechnungsPositionen erstellt. Anzahl Lieferungen 0"))
             }
@@ -484,9 +481,35 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       if (events.isEmpty) {
         Failure(new InvalidStateException(s"Keine der RechnungsPositionen konnte erstellt werden"))
       } else {
-        Success(events map (_.get))
+        Success(events flatMap (_.get))
       }
     }
+  }
+
+  private def createRechnungPositionForZusatzabos(idFactory: IdFactory, hauptAbo: Abo, titel: String, anzahlLieferungen: Int, parentRechnungsPositionId: Option[RechnungsPositionId], waehrung: Waehrung): Seq[ResultingEvent] = {
+    DB readOnly { implicit session =>
+      val zusatzabos = stammdatenReadRepository.getZusatzAbos(hauptAbo.id)
+      for (zusatzabo <- zusatzabos) yield {
+        val zusatzRechnungPositionId = idFactory.newId(RechnungsPositionId.apply)
+        val zusatzabosTyp = stammdatenReadRepository.getZusatzAbotypDetail(zusatzabo.abotypId)
+        val zusatzRechnungPosition = createRechnungPositionEvent(zusatzabo, titel, anzahlLieferungen, anzahlLieferungen * zusatzabosTyp.get.preis, waehrung, parentRechnungsPositionId, RechnungsPositionTyp.ZusatzAbo)
+        EntityInsertEvent(zusatzRechnungPositionId, zusatzRechnungPosition)
+      }
+    }
+  }
+
+  private def createRechnungPositionEvent(abo: Abo, titel: String, anzahlLieferungen: Int, betrag: BigDecimal, waehrung: Waehrung, parentRechnungsPositionId: Option[RechnungsPositionId] = None, rechnungsPositionTyp: RechnungsPositionTyp.RechnungsPositionTyp = RechnungsPositionTyp.Abo): RechnungsPositionCreate = {
+    RechnungsPositionCreate(
+      abo.kundeId,
+      Some(abo.id),
+      parentRechnungsPositionId,
+      titel,
+      Some(anzahlLieferungen),
+      betrag,
+      waehrung,
+      RechnungsPositionStatus.Offen,
+      RechnungsPositionTyp(rechnungsPositionTyp.toString)
+    )
   }
 
   def createAboRechnungsPositionenBisGuthaben(idFactory: IdFactory, meta: EventTransactionMetadata, aboRechnungCreate: AboRechnungsPositionBisGuthabenCreate) = {
@@ -512,20 +535,16 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             val anzahlLieferungen = math.max((aboRechnungCreate.bisGuthaben - abo.guthaben), 0)
 
             if (anzahlLieferungen > 0) {
-              val betrag = abotyp.preis * anzahlLieferungen
+              val hauptAboBetrag = abotyp.preis * anzahlLieferungen
 
-              val rechnungsPosition = RechnungsPositionCreate(
-                abo.kundeId,
-                Some(abo.id),
-                aboRechnungCreate.titel,
-                Some(anzahlLieferungen),
-                betrag,
-                aboRechnungCreate.waehrung,
-                RechnungsPositionStatus.Offen,
-                RechnungsPositionTyp.Abo
-              )
+              val hauptRechnungPosition = createRechnungPositionEvent(abo, aboRechnungCreate.titel, anzahlLieferungen, hauptAboBetrag, aboRechnungCreate.waehrung)
+              val parentRechnungPositionId = idFactory.newId(RechnungsPositionId.apply)
 
-              Success(insertEntityEvent(idFactory, meta, rechnungsPosition, RechnungsPositionId.apply))
+              val zusatzRechnungPositionEventList = createRechnungPositionForZusatzabos(idFactory, abo, aboRechnungCreate.titel, anzahlLieferungen, Some(parentRechnungPositionId), aboRechnungCreate.waehrung)
+
+              val result = (zusatzRechnungPositionEventList :+ EntityInsertEvent(parentRechnungPositionId, hauptRechnungPosition))
+
+              Success(result)
             } else {
               Failure(new InvalidStateException(s"Für das Abo mit der Id ${abo.id} wurde keine Rechnungsposition erstellt. Anzahl Lieferungen 0"))
             }
@@ -533,9 +552,9 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       } partition (_.isSuccess)
 
       if (events.isEmpty) {
-        Failure(new InvalidStateException(s"Keine der Rechnungspositionen konnte erstellt werden"))
+        Failure(new InvalidStateException(s"Keine der RechnungsPositionen konnte erstellt werden"))
       } else {
-        Success(events map (_.get))
+        Success(events flatMap (_.get))
       }
     }
   }
