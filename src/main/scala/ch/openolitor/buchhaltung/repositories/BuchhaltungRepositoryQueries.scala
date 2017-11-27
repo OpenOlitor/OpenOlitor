@@ -41,6 +41,7 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
   lazy val depotlieferungAbo = depotlieferungAboMapping.syntax("depotlieferungAbo")
   lazy val heimlieferungAbo = heimlieferungAboMapping.syntax("heimlieferungAbo")
   lazy val postlieferungAbo = postlieferungAboMapping.syntax("postlieferungAbo")
+  lazy val zusatzAbo = zusatzAboMapping.syntax("zusatzAbo")
   lazy val kontoDaten = kontoDatenMapping.syntax("kontoDaten")
 
   protected def getRechnungenQuery(filter: Option[FilterExpr]) = {
@@ -88,6 +89,7 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
         .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(rechnungsPosition.aboId, depotlieferungAbo.id)
         .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(rechnungsPosition.aboId, heimlieferungAbo.id)
         .leftJoin(postlieferungAboMapping as postlieferungAbo).on(rechnungsPosition.aboId, postlieferungAbo.id)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(rechnungsPosition.aboId, zusatzAbo.id)
         .where.eq(rechnung.id, id)
         .orderBy(rechnung.rechnungsDatum)
     }.one(rechnungMapping(rechnung))
@@ -96,11 +98,12 @@ trait BuchhaltungRepositoryQueries extends LazyLogging with BuchhaltungDBMapping
         rs => rechnungsPositionMapping.opt(rechnungsPosition)(rs),
         rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
-        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs)
+        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
+        rs => zusatzAboMapping.opt(zusatzAbo)(rs)
       )
-      .map({ (rechnung, kunden, rechnungsPositionen, pl, hl, dl) =>
+      .map({ (rechnung, kunden, rechnungsPositionen, pl, hl, dl, zusatzAbos) =>
         val kunde = kunden.head
-        val abos = pl ++ hl ++ dl
+        val abos = pl ++ hl ++ dl ++ zusatzAbos
         val rechnungsPositionenDetail = {
           for {
             rechnungsPosition <- rechnungsPositionen

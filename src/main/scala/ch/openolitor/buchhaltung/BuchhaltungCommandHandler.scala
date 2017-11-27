@@ -50,7 +50,8 @@ import scala.concurrent.Future
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositorySyncComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositorySyncComponent
-import org.joda.time.DateTime
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.TreeMap
 
 object BuchhaltungCommandHandler {
   case class RechnungVerschickenCommand(originator: PersonId, id: RechnungId) extends UserCommand
@@ -246,7 +247,7 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
                 rechnungsPositionen.map(_.betrag).sum,
                 rechnungsPositionenCreateRechnungen.rechnungsDatum,
                 rechnungsPositionenCreateRechnungen.faelligkeitsDatum,
-                Some(new DateTime),
+                Some(meta.timestamp),
                 kunde.strasse,
                 kunde.hausNummer,
                 kunde.adressZusatz,
@@ -255,12 +256,16 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
               )
             )
 
-            val assignRechnungsPositionen = rechnungsPositionen.zipWithIndex.map {
-              case (rp, idx) =>
-                EntityUpdateEvent(
-                  rp.id,
-                  RechnungsPositionAssignToRechnung(rechnungCreate.id, idx + 1)
-                )
+            // create an ordering of the form: parent sort 100, sub sort 101, 102, parent sort 200, subsort 201
+            val assignRechnungsPositionen = (rechnungsPositionen sortBy (_.id.id) groupBy (_.parentRechnungsPositionId) filterKeys (_.isDefined)).zipWithIndex flatMap {
+              case ((Some(parentId), subPositions), index) =>
+                val parentIndex = (index + 1) * 100
+
+                // main position update with it's sub position updates
+                rechnungsPositionAssignmentUpdateEvent(rechnungCreate.id, parentId, parentIndex) +: (subPositions.zipWithIndex map {
+                  case (rp, subIndex) =>
+                    rechnungsPositionAssignmentUpdateEvent(rechnungCreate.id, rp.id, parentIndex + subIndex + 1)
+                })
             }
 
             Seq(rechnungCreate) ++ assignRechnungsPositionen
@@ -298,6 +303,13 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
        */
     case e @ InsertEntityCommand(personId, entity: RechnungCreateFromRechnungsPositionen) => idFactory => meta =>
       handleEntityInsert[RechnungCreateFromRechnungsPositionen, RechnungId](idFactory, meta, entity, RechnungId.apply)
+  }
+
+  private def rechnungsPositionAssignmentUpdateEvent(rechnungId: RechnungId, rechnungsPositionId: RechnungsPositionId, index: Int) = {
+    EntityUpdateEvent(
+      rechnungsPositionId,
+      RechnungsPositionAssignToRechnung(rechnungId, index)
+    )
   }
 }
 
