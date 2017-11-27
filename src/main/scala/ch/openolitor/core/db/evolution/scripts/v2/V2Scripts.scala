@@ -154,5 +154,6 @@ object V2Scripts {
     OO731_Reports.scripts ++
     OO760_add_missing_keys.scripts ++
     OO829_add_zusatzabo_info_to_abo.scripts ++
-    OO846_delete_unmapped_zusatzabos.scripts
+    OO846_delete_unmapped_zusatzabos.scripts ++
+    OO854_zusatzinfo_lieferung_200.scripts
 }
