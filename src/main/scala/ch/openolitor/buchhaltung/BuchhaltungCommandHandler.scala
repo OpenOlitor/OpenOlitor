@@ -25,7 +25,8 @@ package ch.openolitor.buchhaltung
 import ch.openolitor.core.domain._
 import ch.openolitor.buchhaltung.models._
 import ch.openolitor.core.models._
-import ch.openolitor.stammdaten.models.{ KundeId, Kunde }
+import ch.openolitor.stammdaten.models.{ Kunde, KundeId }
+
 import scala.util._
 import scalikejdbc.DB
 import ch.openolitor.buchhaltung.models._
@@ -36,20 +37,25 @@ import ch.openolitor.core.db.ConnectionPoolContextAware
 import ch.openolitor.core.filestore.FileStoreComponent
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import ch.openolitor.core.filestore.ZahlungsImportBucket
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.domain.EntityStore.EntityInsertedEvent
 import ch.openolitor.core.filestore.FileStoreComponent
 import ch.openolitor.core.filestore.DefaultFileStoreComponent
 import ch.openolitor.core.filestore.FileStoreBucket
+
 import scala.io.Source
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportParser
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecord
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportTotalRecord
 import ch.openolitor.core.db.AsyncConnectionPoolContextAware
+
 import scala.concurrent.Future
 import ch.openolitor.buchhaltung.zahlungsimport.ZahlungsImportRecordResult
 import ch.openolitor.buchhaltung.repositories.DefaultBuchhaltungReadRepositorySyncComponent
 import ch.openolitor.buchhaltung.repositories.BuchhaltungReadRepositorySyncComponent
+
+import scala.collection.immutable
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.TreeMap
 
@@ -257,15 +263,21 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
             )
 
             // create an ordering of the form: parent sort 100, sub sort 101, 102, parent sort 200, subsort 201
-            val assignRechnungsPositionen = (rechnungsPositionen sortBy (_.id.id) groupBy (_.parentRechnungsPositionId) filterKeys (_.isDefined)).zipWithIndex flatMap {
-              case ((Some(parentId), subPositions), index) =>
-                val parentIndex = (index + 1) * 100
+            val (zusatzabos, abos) = rechnungsPositionen.sortBy(_.id.id).partition(_.parentRechnungsPositionId.isDefined)
 
-                // main position update with it's sub position updates
-                rechnungsPositionAssignmentUpdateEvent(rechnungCreate.id, parentId, parentIndex) +: (subPositions.zipWithIndex map {
-                  case (rp, subIndex) =>
-                    rechnungsPositionAssignmentUpdateEvent(rechnungCreate.id, rp.id, parentIndex + subIndex + 1)
-                })
+            val aboIds = abos.map(_.id)
+            val zusatzabosByAbo: Map[RechnungsPositionId, Seq[RechnungsPositionId]] =
+              zusatzabos.map(z => (z.id, z.parentRechnungsPositionId.get)).groupBy(_._2).mapValues(_.map(_._1))
+
+            val abosWithSort = Range(100, Int.MaxValue, 100).zip(aboIds)
+            val allAbosWithSort = abosWithSort.flatMap {
+              case (sort, aboId) =>
+                (sort, aboId) +: Range(sort + 1, Int.MaxValue, 1).zip(zusatzabosByAbo.getOrElse(aboId, List()))
+            }
+
+            val assignRechnungsPositionen = allAbosWithSort.map {
+              case (sort, aboId) =>
+                rechnungsPositionAssignmentUpdateEvent(rechnungCreate.id, aboId, sort)
             }
 
             Seq(rechnungCreate) ++ assignRechnungsPositionen
