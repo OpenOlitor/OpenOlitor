@@ -263,16 +263,16 @@ trait BuchhaltungCommandHandler extends CommandHandler with BuchhaltungDBMapping
             )
 
             // create an ordering of the form: parent sort 100, sub sort 101, 102, parent sort 200, subsort 201
-            val (zusatzabos, abos) = rechnungsPositionen.sortBy(_.id.id).partition(_.parentRechnungsPositionId.isDefined)
+            val (zusatzabos, abos) = rechnungsPositionen sortBy (_.id.id) partition (_.parentRechnungsPositionId.isDefined)
 
-            val aboIds = abos.map(_.id)
+            val aboIds = abos map (_.id)
             val zusatzabosByAbo: Map[RechnungsPositionId, Seq[RechnungsPositionId]] =
-              zusatzabos.map(z => (z.id, z.parentRechnungsPositionId.get)).groupBy(_._2).mapValues(_.map(_._1))
+              zusatzabos map (z => (z.id, z.parentRechnungsPositionId.get)) groupBy (_._2) mapValues (_ map (_._1))
 
-            val abosWithSort = Range(100, Int.MaxValue, 100).zip(aboIds)
+            val abosWithSort = Range(100, Int.MaxValue, 100) zip (aboIds)
             val allAbosWithSort = abosWithSort.flatMap {
               case (sort, aboId) =>
-                (sort, aboId) +: Range(sort + 1, Int.MaxValue, 1).zip(zusatzabosByAbo.getOrElse(aboId, List()))
+                (sort, aboId) +: (Range(sort + 1, Int.MaxValue) zip (zusatzabosByAbo getOrElse (aboId, List())))
             }
 
             val assignRechnungsPositionen = allAbosWithSort.map {
