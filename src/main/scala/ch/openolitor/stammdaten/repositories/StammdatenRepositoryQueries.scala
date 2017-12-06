@@ -1487,29 +1487,6 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).list
   }
 
-  protected def getKoerbeQuery(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus) = {
-    withSQL {
-      select
-        .from(korbMapping as korb)
-        .innerJoin(lieferungMapping as lieferung).on(lieferung.id, korb.lieferungId)
-        .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(depotlieferungAbo.id, korb.aboId)
-        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(heimlieferungAbo.id, korb.aboId)
-        .leftJoin(postlieferungAboMapping as postlieferungAbo).on(postlieferungAbo.id, korb.aboId)
-        .where.eq(lieferung.datum, datum).and.eq(korb.status, status).and.
-        withRoundBracket(_.eq(depotlieferungAbo.vertriebsartId, vertriebsartId).
-          or.eq(heimlieferungAbo.vertriebsartId, vertriebsartId).
-          or.eq(postlieferungAbo.vertriebsartId, vertriebsartId))
-    }.one(korbMapping(korb))
-      .toManies(
-        rs => lieferungMapping.opt(lieferung)(rs),
-        rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
-        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
-        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs)
-      )
-      .map { (korb, _, _, _, _) => korb }
-      .list
-  }
-
   protected def getKoerbeQuery(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus) = {
     withSQL {
       select
@@ -1518,18 +1495,21 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(depotlieferungAboMapping as depotlieferungAbo).on(depotlieferungAbo.id, korb.aboId)
         .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(heimlieferungAbo.id, korb.aboId)
         .leftJoin(postlieferungAboMapping as postlieferungAbo).on(postlieferungAbo.id, korb.aboId)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(zusatzAbo.id, korb.aboId)
         .where.eq(lieferung.datum, datum).and.eq(korb.status, status).and.
         withRoundBracket(_.in(depotlieferungAbo.vertriebsartId, vertriebsartIds.map(_.id)).
           or.in(heimlieferungAbo.vertriebsartId, vertriebsartIds.map(_.id)).
-          or.in(postlieferungAbo.vertriebsartId, vertriebsartIds.map(_.id)))
+          or.in(postlieferungAbo.vertriebsartId, vertriebsartIds.map(_.id)).
+          or.in(zusatzAbo.vertriebsartId, vertriebsartIds.map(_.id)))
     }.one(korbMapping(korb))
       .toManies(
         rs => lieferungMapping.opt(lieferung)(rs),
         rs => depotlieferungAboMapping.opt(depotlieferungAbo)(rs),
         rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
-        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs)
+        rs => postlieferungAboMapping.opt(postlieferungAbo)(rs),
+        rs => zusatzAboMapping.opt(zusatzAbo)(rs)
       )
-      .map { (korb, _, _, _, _) => korb }
+      .map { (korb, _, _, _, _, _) => korb }
       .list
   }
 

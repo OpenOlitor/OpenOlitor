@@ -210,15 +210,24 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.deleteLieferpositionen(id.getLieferungId())
 
-      stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](id.getLieferungId())(
-        lieferungMapping.column.durchschnittspreis -> ZERO,
-        lieferungMapping.column.anzahlLieferungen -> ZERO,
-        lieferungMapping.column.anzahlKoerbeZuLiefern -> ZERO,
-        lieferungMapping.column.anzahlAbwesenheiten -> ZERO,
-        lieferungMapping.column.anzahlSaldoZuTief -> ZERO,
-        lieferungMapping.column.lieferplanungId -> Option.empty[LieferplanungId],
-        lieferungMapping.column.status -> Ungeplant
-      )
+      stammdatenWriteRepository.getById[Lieferung, LieferungId](lieferungMapping, id.getLieferungId) map { lieferung =>
+        stammdatenWriteRepository.getAbotypById(lieferung.abotypId) collect {
+          case abotyp: ZusatzAbotyp =>
+            stammdatenWriteRepository.deleteEntity[Lieferung, LieferungId](id.getLieferungId)
+
+          case _ =>
+            stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](id.getLieferungId())(
+              lieferungMapping.column.durchschnittspreis -> ZERO,
+              lieferungMapping.column.anzahlLieferungen -> ZERO,
+              lieferungMapping.column.anzahlKoerbeZuLiefern -> ZERO,
+              lieferungMapping.column.anzahlAbwesenheiten -> ZERO,
+              lieferungMapping.column.anzahlSaldoZuTief -> ZERO,
+              lieferungMapping.column.lieferplanungId -> Option.empty[LieferplanungId],
+              lieferungMapping.column.status -> Ungeplant
+            )
+        }
+      }
+
     }
   }
 

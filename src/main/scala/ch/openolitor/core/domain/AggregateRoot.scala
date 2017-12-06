@@ -75,7 +75,6 @@ trait AggregateRoot extends PersistentActor with ActorLogging with PersistenceEv
 
     setLastProcessedSequenceNr(evt.meta)
 
-    log.debug(s"afterEventPersisted:send back state:$state")
     sender ! state
   }
 
