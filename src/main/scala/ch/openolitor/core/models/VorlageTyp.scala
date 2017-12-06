@@ -44,7 +44,6 @@ object VorlageTyp extends LazyLogging {
   )
 
   def apply(value: String): VorlageTyp = {
-    logger.debug(s"Vorlagetyp.apply:$value")
     AlleVorlageTypen.find(_.toString.toLowerCase == value.toLowerCase).getOrElse(UnknownFileType)
   }
 }

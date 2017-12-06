@@ -151,7 +151,6 @@ trait EntityStore extends AggregateRoot
 
   def updateId[E, I <: BaseId](clOf: Class[_ <: BaseId], id: Long) = {
     if (state.dbSeeds.get(clOf) map (_ < id) getOrElse (true)) {
-      log.debug(s"updateId:$clOf -> $id")
       //only update if current id is smaller than new one or no id did exist
       state = state.copy(dbSeeds = state.dbSeeds + (clOf -> id))
     }
@@ -168,7 +167,6 @@ trait EntityStore extends AggregateRoot
         log.debug(s"EntityStoreInitialized")
       case e @ EntityInsertedEvent(meta, id, entity) =>
         updateId(e.idType, id.id)
-        log.debug(s"EntityInsertedEvent, update id to:${e.idType} -> ${id.id}")
       case _ =>
     }
   }

@@ -95,7 +95,6 @@ trait PersistenceEventStateSupport extends Actor with ActorLogging with CoreDBMa
   }
 
   protected def setLastProcessedSequenceNr(meta: EventMetadata): Boolean = {
-    log.debug(s"setLastProcessedSequenceNr in $persistenceStateStoreId ${meta.transactionNr}.${meta.seqNr} > ${lastTransactionNr}.${lastSequenceNr}")
     if (meta.transactionNr > lastTransactionNr) {
       lastSequenceNr = meta.seqNr
       lastTransactionNr = meta.transactionNr

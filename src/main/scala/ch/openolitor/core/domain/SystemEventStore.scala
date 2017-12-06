@@ -57,7 +57,6 @@ trait SystemEventStore extends AggregateRoot {
    * @param evt Event to apply
    */
   override def updateState(recovery: Boolean = false)(evt: PersistentEvent): Unit = {
-    log.debug(s"updateState:$evt")
     evt match {
       case PersistentSystemEvent(meta, event) if !recovery =>
         //publish event to eventstream

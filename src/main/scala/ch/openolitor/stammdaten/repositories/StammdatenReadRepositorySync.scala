@@ -323,7 +323,7 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
   }
 
   def getKoerbe(datum: DateTime, vertriebsartId: VertriebsartId, status: KorbStatus)(implicit session: DBSession): List[Korb] = {
-    getKoerbeQuery(datum, vertriebsartId, status).apply()
+    getKoerbeQuery(datum, vertriebsartId :: Nil, status).apply()
   }
 
   def getKoerbe(datum: DateTime, vertriebsartIds: List[VertriebsartId], status: KorbStatus)(implicit session: DBSession): List[Korb] = {
