@@ -64,6 +64,6 @@ class ReportsAktionenService(override val sysConfig: SystemConfig) extends Event
   val handle: Handle = {
 
     case e =>
-      logger.warn(s"Unknown event:$e")
+    // unknown event
   }
 }

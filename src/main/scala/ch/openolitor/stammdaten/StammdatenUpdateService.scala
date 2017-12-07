@@ -59,9 +59,6 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
     with KorbHandler {
   self: StammdatenWriteRepositoryComponent =>
 
-  // Hotfix
-  lazy val startTime = DateTime.now.minusSeconds(sysConfig.mandantConfiguration.config.getIntOption("startTimeDelationSeconds") getOrElse 10)
-
   val handle: Handle = {
     case EntityUpdatedEvent(meta, id: VertriebId, entity: VertriebModify) => updateVertrieb(meta, id, entity)
     case EntityUpdatedEvent(meta, id: AbotypId, entity: AbotypModify) => updateAbotyp(meta, id, entity)
@@ -302,37 +299,42 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   private def updateAboGuthaben(meta: EventMetadata, id: AboId, update: AboGuthabenModify)(implicit personId: PersonId = meta.originator): Unit = {
-    // Hotfix: only execute in live using the meta info to determine
-    if (meta.timestamp.isAfter(this.startTime)) {
-      DB localTxPostPublish { implicit session => implicit publisher =>
-        stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
-          if (abo.guthaben == update.guthabenAlt) {
-            val copy = abo.copy(guthaben = update.guthabenNeu)
-            stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
-            adjustGuthabenVorLieferung(id, update.guthabenNeu)
-          }
+    DB localTxPostPublish { implicit session => implicit publisher =>
+      stammdatenWriteRepository.getById(depotlieferungAboMapping, id) map { abo =>
+        if (abo.guthaben == update.guthabenAlt) {
+          val copy = abo.copy(guthaben = update.guthabenNeu)
+          stammdatenWriteRepository.updateEntityFully[DepotlieferungAbo, AboId](copy)
+          adjustGuthabenVorLieferung(copy, update.guthabenNeu)
         }
-        stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
-          if (abo.guthaben == update.guthabenAlt) {
-            val copy = abo.copy(guthaben = update.guthabenNeu)
-            stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
-            adjustGuthabenVorLieferung(id, update.guthabenNeu)
-          }
+      }
+      stammdatenWriteRepository.getById(heimlieferungAboMapping, id) map { abo =>
+        if (abo.guthaben == update.guthabenAlt) {
+          val copy = abo.copy(guthaben = update.guthabenNeu)
+          stammdatenWriteRepository.updateEntityFully[HeimlieferungAbo, AboId](copy)
+          adjustGuthabenVorLieferung(copy, update.guthabenNeu)
         }
-        stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
-          if (abo.guthaben == update.guthabenAlt) {
-            val copy = abo.copy(guthaben = update.guthabenNeu)
-            stammdatenWriteRepository.updateEntityFully[PostlieferungAbo, AboId](copy)
-            adjustGuthabenVorLieferung(id, update.guthabenNeu)
-          }
+      }
+      stammdatenWriteRepository.getById(postlieferungAboMapping, id) map { abo =>
+        if (abo.guthaben == update.guthabenAlt) {
+          val copy = abo.copy(guthaben = update.guthabenNeu)
+          stammdatenWriteRepository.updateEntityFully[PostlieferungAbo, AboId](copy)
+          adjustGuthabenVorLieferung(copy, update.guthabenNeu)
         }
       }
     }
   }
 
-  private def adjustGuthabenVorLieferung(id: AboId, guthaben: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
-    stammdatenWriteRepository.getKoerbeNichtAusgeliefertByAbo(id) map { korb =>
-      stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(korbMapping.column.guthabenVorLieferung -> guthaben)
+  private def adjustGuthabenVorLieferung(abo: Abo, guthaben: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+    stammdatenWriteRepository.getAbotypById(abo.abotypId) map { abotyp =>
+      stammdatenWriteRepository.getKoerbeNichtAusgeliefertAndSaldoZuTiefByAbo(abo.id) map { korb =>
+        val countAbwesend = stammdatenWriteRepository.countAbwesend(korb.lieferungId, abo.id)
+        val status = calculateKorbStatus(countAbwesend, abo.guthaben, abotyp.guthabenMindestbestand)
+
+        stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(
+          korbMapping.column.guthabenVorLieferung -> guthaben,
+          korbMapping.column.status -> status
+        )
+      }
     }
   }
 
