@@ -612,6 +612,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(lieferungMapping as lieferung).on(vertrieb.id, lieferung.vertriebId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .where.eq(depotlieferungAbo.id, id)
+        .and.eq(lieferung.abotypId, depotlieferungAbo.abotypId)
         .and(sqls.toAndConditionOpt(
           ausstehend map (_ => sqls.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
         ))
@@ -649,6 +650,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(lieferungMapping as lieferung).on(vertrieb.id, lieferung.vertriebId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .where.eq(heimlieferungAbo.id, id)
+        .and.eq(lieferung.abotypId, heimlieferungAbo.abotypId)
         .and(sqls.toAndConditionOpt(
           ausstehend map (_ => sqls.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
         ))
@@ -685,6 +687,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(lieferungMapping as lieferung).on(vertrieb.id, lieferung.vertriebId)
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .where.eq(postlieferungAbo.id, id)
+        .and.eq(lieferung.abotypId, postlieferungAbo.abotypId)
         .and(sqls.toAndConditionOpt(
           ausstehend map (_ => sqls.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
         ))
