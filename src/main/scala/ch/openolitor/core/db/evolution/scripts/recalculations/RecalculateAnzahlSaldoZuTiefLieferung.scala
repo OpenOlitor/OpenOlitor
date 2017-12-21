@@ -35,22 +35,22 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.core.Boot
 import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
 
-object RecalculateAnzahlAbwesenheitenLieferung {
+object RecalculateAnzahlSaldoZuTiefLieferung {
   val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
 
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      // recalculate abwesenheiten
-      sql"""update Lieferung set anzahl_abwesenheiten = 0""".execute.apply()
+      // recalculate Körbe Saldo zu tief
+      sql"""update Lieferung set anzahl_saldo_zu_tief = 0""".execute.apply()
 
-      val abw = abwesenheitMapping.syntax("abw")
+      val korb = korbMapping.syntax("korb")
       implicit val personId = Boot.systemPersonId
 
       getProjekt map { projekt =>
         withSQL {
-          select.from(abwesenheitMapping as abw)
-        }.map(abwesenheitMapping(abw)).list.apply().groupBy(_.lieferungId) map {
-          case (lieferungId, abwesenheiten) =>
-            updateEntity[Lieferung, LieferungId](lieferungId)(lieferungMapping.column.anzahlAbwesenheiten -> abwesenheiten.size)
+          select.from(korbMapping as korb).where.eq(korb.status, FaelltAusSaldoZuTief)
+        }.map(korbMapping(korb)).list.apply().groupBy(_.lieferungId) map {
+          case (lieferungId, koerbe) =>
+            updateEntity[Lieferung, LieferungId](lieferungId)(lieferungMapping.column.anzahlSaldoZuTief -> koerbe.size)
         }
       }
 

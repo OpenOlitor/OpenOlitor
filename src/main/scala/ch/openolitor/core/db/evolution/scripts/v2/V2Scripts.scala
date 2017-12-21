@@ -104,7 +104,7 @@ object V2Scripts {
         laufzeiteinheit varchar(50),
         vertragslaufzeit varchar(50),
         kuendigungsfrist varchar(50),
-        anzahl_abwesenheiten int, 
+        anzahl_abwesenheiten int,
         farb_code varchar(20),
         zielpreis DECIMAL(7,2),
         guthaben_mindestbestand int,
@@ -155,5 +155,6 @@ object V2Scripts {
     OO760_add_missing_keys.scripts ++
     OO829_add_zusatzabo_info_to_abo.scripts ++
     OO846_delete_unmapped_zusatzabos.scripts ++
-    OO854_zusatzinfo_lieferung_200.scripts
+    OO854_zusatzinfo_lieferung_200.scripts ++
+    OO861_recalculate_lieferung_counts.scripts
 }
