@@ -20,41 +20,16 @@
 * with this program. If not, see http://www.gnu.org/licenses/                 *
 *                                                                             *
 \*                                                                           */
-package ch.openolitor.core.db.evolution.scripts.recalculations
+package ch.openolitor.core.db.evolution.scripts.v2
 
-import ch.openolitor.core.db.evolution.Script
-import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.stammdaten.StammdatenDBMappings
-import ch.openolitor.core.SystemConfig
-import scalikejdbc._
-import scala.util.Try
-import scala.util.Success
-import ch.openolitor.stammdaten.repositories.StammdatenWriteRepositoryImpl
-import ch.openolitor.core.NoPublishEventStream
-import ch.openolitor.stammdaten.models._
-import ch.openolitor.core.Boot
-import ch.openolitor.core.db.evolution.scripts.DefaultDBScripts
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalculateAnzahlSaldoZuTiefLieferung
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalculateAnzahlAbwesenheitenLieferung
+import ch.openolitor.core.db.evolution.scripts.recalculations.RecalculateAnzahlGeliefertLieferung
 
-object RecalculateAnzahlAbwesenheitenLieferung {
-  val scripts = new Script with LazyLogging with StammdatenDBMappings with DefaultDBScripts with StammdatenWriteRepositoryImpl with NoPublishEventStream {
-
-    def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
-      // recalculate abwesenheiten
-      sql"""update Lieferung set anzahl_abwesenheiten = 0""".execute.apply()
-
-      val abw = abwesenheitMapping.syntax("abw")
-      implicit val personId = Boot.systemPersonId
-
-      getProjekt map { projekt =>
-        withSQL {
-          select.from(abwesenheitMapping as abw)
-        }.map(abwesenheitMapping(abw)).list.apply().groupBy(_.lieferungId) map {
-          case (lieferungId, abwesenheiten) =>
-            updateEntity[Lieferung, LieferungId](lieferungId)(lieferungMapping.column.anzahlAbwesenheiten -> abwesenheiten.size)
-        }
-      }
-
-      Success(true)
-    }
-  }
+object OO861_recalculate_lieferung_counts {
+  val scripts = Seq(
+    RecalculateAnzahlSaldoZuTiefLieferung.scripts,
+    RecalculateAnzahlAbwesenheitenLieferung.scripts,
+    RecalculateAnzahlGeliefertLieferung.scripts
+  )
 }

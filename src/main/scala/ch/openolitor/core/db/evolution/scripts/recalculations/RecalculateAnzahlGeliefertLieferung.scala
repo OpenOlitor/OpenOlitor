@@ -40,12 +40,14 @@ object RecalculateAnzahlGeliefertLieferung {
 
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       // recalculate Körbe zu liefern
+      sql"""update Lieferung set anzahl_koerbe_zu_liefern = 0""".execute.apply()
 
       val korb = korbMapping.syntax("korb")
       implicit val personId = Boot.systemPersonId
 
       getProjekt map { projekt =>
         withSQL {
+
           select.from(korbMapping as korb).where.eq(korb.status, WirdGeliefert).or.eq(korb.status, Geliefert)
         }.map(korbMapping(korb)).list.apply().groupBy(_.lieferungId) map {
           case (lieferungId, koerbe) =>
