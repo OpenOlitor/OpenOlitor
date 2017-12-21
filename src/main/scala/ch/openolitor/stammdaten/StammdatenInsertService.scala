@@ -733,8 +733,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     DB localTxPostPublish { implicit session => implicit publisher =>
       val project = stammdatenWriteRepository.getProjekt
       stammdatenWriteRepository.getById(lieferplanungMapping, lieferungPlanungAdd.lieferplanungId) map { lieferplanung =>
-        stammdatenWriteRepository.getById(lieferungMapping, lieferungPlanungAdd.id) map { lieferung =>
-          updateLieferungUndZusatzLieferung(meta, lieferungPlanungAdd.lieferplanungId, project, lieferung)
+        if (Offen == lieferplanung.status) {
+          stammdatenWriteRepository.getById(lieferungMapping, lieferungPlanungAdd.id) map { lieferung =>
+            updateLieferungUndZusatzLieferung(meta, lieferungPlanungAdd.lieferplanungId, project, lieferung)
+          }
         }
       }
     }
