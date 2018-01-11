@@ -40,6 +40,8 @@ import org.joda.time.format.DateTimeFormat
 import ch.openolitor.core.repositories.EventPublishingImplicits._
 import ch.openolitor.core.repositories.EventPublisher
 import ch.openolitor.util.IdUtil._
+import org.joda.time.DateTime
+
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
 }
@@ -719,14 +721,22 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     logger.debug(s"Create Koerbe:${lieferung.id}")
     val ret: Option[Option[Lieferung]] = stammdatenWriteRepository.getAbotypById(lieferung.abotypId) map { abotyp =>
       lieferung.lieferplanungId.map { lieferplanungId =>
+
         val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.vertriebId, lieferung.datum, lieferplanungId)
         val koerbe: List[(Option[Korb], Option[Korb])] = abos map { abo =>
-          upsertKorb(lieferung, abo, abotyp)
+          // if lieferung.vertriebId is happening the same date than any other vertrieb, this condition should be true
+          if (vertriebInDelivery(abo.vertriebId, lieferung.datum)) {
+            upsertKorb(lieferung, abo, abotyp)
+          } else { (None, None) }
         }
         recalculateNumbersLieferung(lieferung)
       }
     }
     ret.flatten.getOrElse(lieferung)
+  }
+
+  def vertriebInDelivery(vertriebId: VertriebId, datum: DateTime)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Boolean = {
+    stammdatenWriteRepository.getVertriebByDate(datum).exists(vertrieb => vertrieb.id == vertriebId)
   }
 
   def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, lieferungPlanungAdd: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
