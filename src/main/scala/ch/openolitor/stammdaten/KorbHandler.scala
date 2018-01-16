@@ -27,9 +27,11 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.util.IdUtil
 import ch.openolitor.core.repositories.EventPublisher
+import scala.collection._
 import org.joda.time.DateTime
 import com.github.nscala_time.time.Imports._
 import scalikejdbc._
+import ch.openolitor.core.Macros._
 
 trait KorbHandler extends KorbStatusHandler
     with StammdatenDBMappings {
@@ -40,6 +42,7 @@ trait KorbHandler extends KorbStatusHandler
    * @return (created/updated, existing)
    */
   def upsertKorb(lieferung: Lieferung, abo: Abo, abotyp: IAbotyp)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (Option[Korb], Option[Korb]) = {
+    logger.debug(s"upsertKorb lieferung: $Lieferung abo: $abo abotyp: $abotyp")
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
       case None if (lieferung.lieferplanungId.isDefined) =>
         val status = abo match {
@@ -90,13 +93,154 @@ trait KorbHandler extends KorbStatusHandler
     }
   }
 
+  def adjustOpenLieferplanung(zusatzAboId: AboId)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+    val dateFormat = DateTimeFormat.forPattern("dd.MM.yyyy")
+    val project = stammdatenWriteRepository.getProjekt
+    stammdatenWriteRepository.getOpenLieferplanung map { lieferplanung =>
+      val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map { lieferung =>
+        logger.debug(s"---------------------------------------------------------------------------- zusatzAboId: $zusatzAboId   lieferung:   $lieferung")
+        stammdatenWriteRepository.getAbo(zusatzAboId) map { zusatzabo =>
+          logger.debug(s"---------------------------------------------------------------------------- zusatzabo:   $zusatzabo")
+          stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanung.id, lieferung.datum) match {
+            case None => {
+              // Using positiveRandomId because the lieferung cannot be created in commandHandler.
+              createLieferungInner(LieferungId(IdUtil.positiveRandomId), LieferungAbotypCreate(zusatzabo.abotypId, lieferung.vertriebId, lieferung.datum), Some(lieferplanung.id)).map { zusatzLieferung =>
+                offenLieferung(lieferplanung.id, project, zusatzLieferung)
+              }
+            }
+            case Some(zusatzLieferung) => {
+              offenLieferung(lieferplanung.id, project, zusatzLieferung)
+            }
+          }
+        }
+        (dateFormat.print(lieferung.datum), lieferung.abotypBeschrieb)
+      }
+      val abotypDates = (abotypDepotTour.groupBy(_._1).mapValues(_ map { _._2 }) map {
+        case (datum, abotypBeschrieb) =>
+          datum + ": " + abotypBeschrieb.mkString(", ")
+      }).mkString("; ")
+
+      //update lieferplanung
+      stammdatenWriteRepository.updateEntity[Lieferplanung, LieferplanungId](lieferplanung.id)(
+        lieferplanungMapping.column.abotypDepotTour -> abotypDates
+      )
+    }
+  }
+
+  def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
+    logger.debug(s"Create Koerbe => lieferung : ${lieferung}")
+    val ret: Option[Option[Lieferung]] = stammdatenWriteRepository.getAbotypById(lieferung.abotypId) map { abotyp =>
+      lieferung.lieferplanungId.map { lieferplanungId =>
+        logger.debug(s"------------------------------- lieferung: $lieferung  lieferplanungId: $lieferplanungId")
+        val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.vertriebId, lieferung.datum, lieferplanungId)
+        logger.debug(s"------------------------------- abos: $abos")
+        val koerbe: List[(Option[Korb], Option[Korb])] = abos map { abo =>
+          upsertKorb(lieferung, abo, abotyp)
+        }
+        recalculateNumbersLieferung(lieferung)
+      }
+    }
+    ret.flatten.getOrElse(lieferung)
+  }
+
+  def updateLieferungUndZusatzLieferung(lieferplanungId: LieferplanungId, project: Option[Projekt], lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
+    val adjustedLieferung = offenLieferung(lieferplanungId, project, lieferung)
+    stammdatenWriteRepository.getExistingZusatzAbotypen(adjustedLieferung.id).map { zusatzAbotyp =>
+      stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzAbotyp.id, lieferplanungId, lieferung.datum) match {
+        case None => {
+          // Using positiveRandomId because the lieferung cannot be created in commandHandler.
+          createLieferungInner(LieferungId(IdUtil.positiveRandomId), LieferungAbotypCreate(zusatzAbotyp.id, adjustedLieferung.vertriebId, adjustedLieferung.datum), Some(lieferplanungId)).map { zusatzLieferung =>
+            offenLieferung(lieferplanungId, project, zusatzLieferung)
+          }
+        }
+        case _ => //macht nichts
+      }
+    }
+    adjustedLieferung
+  }
+
+  private def offenLieferung(lieferplanungId: LieferplanungId, project: Option[Projekt], lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
+    logger.debug(s" offenLieferung : lieferplanungId : $lieferplanungId project : $project lieferung : $lieferung")
+    val (newDurchschnittspreis, newAnzahlLieferungen) = stammdatenWriteRepository.getGeplanteLieferungVorher(lieferung.vertriebId, lieferung.datum) match {
+      case Some(lieferungVorher) if project.get.geschaftsjahr.isInSame(lieferungVorher.datum.toLocalDate(), lieferung.datum.toLocalDate()) =>
+        val sum = stammdatenWriteRepository.sumPreisTotalGeplanteLieferungenVorher(lieferung.vertriebId, lieferung.datum, project.get.geschaftsjahr.start(lieferung.datum.toLocalDate()).toDateTimeAtCurrentTime()).getOrElse(BigDecimal(0))
+
+        val durchschnittspreisBisher: BigDecimal = lieferungVorher.anzahlLieferungen match {
+          case 0 => BigDecimal(0)
+          case _ => sum / lieferungVorher.anzahlLieferungen
+        }
+        val anzahlLieferungenNeu = lieferungVorher.anzahlLieferungen + 1
+        (durchschnittspreisBisher, anzahlLieferungenNeu)
+      case _ =>
+        (BigDecimal(0), 1)
+    }
+
+    val now = DateTime.now
+    val updatedLieferung = lieferung.copy(
+      lieferplanungId = Some(lieferplanungId),
+      status = Offen,
+      durchschnittspreis = newDurchschnittspreis,
+      anzahlLieferungen = newAnzahlLieferungen,
+      modifidat = now,
+      modifikator = personId
+    )
+
+    //create koerbe
+    val adjustedLieferung = createKoerbe(updatedLieferung)
+
+    stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
+      lieferungMapping.column.status -> adjustedLieferung.status,
+      lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
+      lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
+      lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
+      lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
+      lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief,
+      lieferungMapping.column.lieferplanungId -> lieferplanungId
+    )
+    adjustedLieferung
+  }
+
+  private def createLieferungInner(id: LieferungId, lieferung: LieferungAbotypCreate, lieferplanungId: Option[LieferplanungId])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
+    logger.debug(s"createLieferungInner LieferungId : $id lieferung : $lieferung lieferplanungId : $lieferplanungId")
+    stammdatenWriteRepository.getAbotypById(lieferung.abotypId) flatMap { abotyp =>
+      stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) flatMap {
+        vertrieb =>
+          val vBeschrieb = vertrieb.beschrieb
+          val atBeschrieb = abotyp.name
+          val now = DateTime.now
+          val ZERO = 0
+
+          val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
+            "abotypBeschrieb" -> atBeschrieb,
+            "vertriebBeschrieb" -> vBeschrieb,
+            "anzahlAbwesenheiten" -> ZERO,
+            "durchschnittspreis" -> ZERO,
+            "anzahlLieferungen" -> ZERO,
+            "anzahlKoerbeZuLiefern" -> ZERO,
+            "anzahlSaldoZuTief" -> ZERO,
+            "zielpreis" -> abotyp.zielpreis,
+            "preisTotal" -> ZERO,
+            "status" -> Ungeplant,
+            "lieferplanungId" -> lieferplanungId,
+            "erstelldat" -> now,
+            "ersteller" -> personId,
+            "modifidat" -> now,
+            "modifikator" -> personId)
+
+          stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
+      }
+    }
+  }
+
   def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Option[Korb] = {
+    logger.debug(s"deleteKorb lieferung: $lieferung abo: $abo")
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) flatMap { korb =>
       stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
     }
   }
 
   def modifyKoerbeForAboVertriebChange(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+    logger.debug(s"modifyKoerbeForAboVertriebChange abo: $abo orig: $orig")
     for {
       originalAbo <- orig
       if (abo.vertriebId != originalAbo.vertriebId)
@@ -115,6 +259,7 @@ trait KorbHandler extends KorbStatusHandler
   }
 
   def modifyKoerbeForAboDatumChange(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+    logger.debug(s"modifyKoerbeForAboDatumChange abo: $abo orig: $orig")
     for {
       originalAbo <- orig
       // only modify koerbe if the start or end of this abo has changed or we're creating them for a new abo
@@ -139,6 +284,7 @@ trait KorbHandler extends KorbStatusHandler
   }
 
   def recalculateNumbersLieferung(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
+    logger.debug(s"recalculateNumbersLieferung lieferung: $lieferung")
     val stati: List[KorbStatus] = stammdatenWriteRepository.getNichtGelieferteKoerbe(lieferung.id).map(_.status)
     val counts: Map[KorbStatus, Int] = stati.groupBy {
       s => s
@@ -152,5 +298,30 @@ trait KorbHandler extends KorbStatusHandler
       lieferungMapping.column.anzahlAbwesenheiten -> abwesenheiten,
       lieferungMapping.column.anzahlSaldoZuTief -> saldoZuTief
     ).getOrElse(lieferung)
+  }
+
+  def modifyKoerbeForAbo(abo: Abo, orig: Option[Abo])(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+    logger.debug(s"modifyKoerbeForAbo abo: $abo orig: $orig")
+    // koerbe erstellen, modifizieren, loeschen falls noetig
+    val isExistingAbo = orig.isDefined
+    // only modify koerbe if the start or end of this abo has changed or we're creating them for a new abo
+    if (!isExistingAbo || abo.start != orig.get.start || abo.ende != orig.get.ende) {
+      stammdatenWriteRepository.getById(abotypMapping, abo.abotypId) map { abotyp =>
+        stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+          if (isExistingAbo && (abo.start > lieferung.datum.toLocalDate || (abo.ende map (_ <= (lieferung.datum.toLocalDate - 1.day)) getOrElse false))) {
+            deleteKorb(lieferung, abo)
+          } else if (abo.start <= lieferung.datum.toLocalDate && (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
+            upsertKorb(lieferung, abo, abotyp) match {
+              case (Some(created), None) =>
+                // nur im created Fall muss eins dazu gezählt werden
+                // bei Statuswechsel des Korbs wird handleKorbStatusChanged die Counts justieren
+                recalculateNumbersLieferung(lieferung)
+              case _ =>
+              // counts werden andersweitig angepasst
+            }
+          }
+        }
+      }
+    }
   }
 }
