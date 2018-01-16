@@ -719,13 +719,14 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
 
   def createKoerbe(lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
     logger.debug(s"Create Koerbe:${lieferung.id}")
+    val vertriebList = vertriebInDelivery(lieferung.datum)
     val ret: Option[Option[Lieferung]] = stammdatenWriteRepository.getAbotypById(lieferung.abotypId) map { abotyp =>
       lieferung.lieferplanungId.map { lieferplanungId =>
 
         val abos: List[Abo] = stammdatenWriteRepository.getAktiveAbos(lieferung.abotypId, lieferung.vertriebId, lieferung.datum, lieferplanungId)
         val koerbe: List[(Option[Korb], Option[Korb])] = abos map { abo =>
           // if lieferung.vertriebId is happening the same date than any other vertrieb, this condition should be true
-          if (vertriebInDelivery(abo.vertriebId, lieferung.datum)) {
+          if (vertriebList.exists { vertrieb => vertrieb.id == abo.vertriebId }) {
             upsertKorb(lieferung, abo, abotyp)
           } else { (None, None) }
         }
@@ -735,8 +736,8 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
     ret.flatten.getOrElse(lieferung)
   }
 
-  def vertriebInDelivery(vertriebId: VertriebId, datum: DateTime)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Boolean = {
-    stammdatenWriteRepository.getVertriebByDate(datum).exists(vertrieb => vertrieb.id == vertriebId)
+  def vertriebInDelivery(datum: DateTime)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): List[Vertrieb] = {
+    stammdatenWriteRepository.getVertriebByDate(datum)
   }
 
   def addLieferungToPlanung(meta: EventMetadata, id: LieferungId, lieferungPlanungAdd: LieferungPlanungAdd)(implicit personId: PersonId = meta.originator) = {
