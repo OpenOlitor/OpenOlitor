@@ -1781,6 +1781,16 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(vertriebMapping(vertrieb)).single
   }
 
+  protected def getVertriebByDateQuery(datum: DateTime) = {
+    withSQL {
+      select
+        .from(vertriebMapping as vertrieb)
+        .where.in(vertrieb.id, (select(lieferung.vertriebId)
+          .from(lieferungMapping as lieferung)
+          .where.eq(lieferung.datum, datum)))
+    }.map(vertriebMapping(vertrieb)).list
+  }
+
   protected def getVertriebeQuery(abotypId: AbotypId) = {
     withSQL {
       select
