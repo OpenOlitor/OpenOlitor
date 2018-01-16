@@ -1008,6 +1008,14 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(lieferplanungMapping(lieferplanung)).single
   }
 
+  protected def getOpenLieferplanungQuery = {
+    withSQL {
+      select
+        .from(lieferplanungMapping as lieferplanung)
+        .where.eq(lieferplanung.status, "Offen")
+    }.map(lieferplanungMapping(lieferplanung)).list
+  }
+
   protected def getLieferplanungQuery(id: LieferplanungId) = {
     withSQL {
       select

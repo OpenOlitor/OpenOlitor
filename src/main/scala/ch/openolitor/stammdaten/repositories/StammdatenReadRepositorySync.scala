@@ -51,6 +51,7 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getPendenzen(id: KundeId)(implicit session: DBSession): List[Pendenz]
 
   def getLatestLieferplanung(implicit session: DBSession): Option[Lieferplanung]
+  def getOpenLieferplanung(implicit session: DBSession): List[Lieferplanung]
   def getLieferungenNext()(implicit session: DBSession): List[Lieferung]
   def getLastGeplanteLieferung(abotypId: AbotypId)(implicit session: DBSession): Option[Lieferung]
   def getLieferplanung(id: LieferplanungId)(implicit session: DBSession): Option[Lieferplanung]
@@ -249,6 +250,10 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getLatestLieferplanung(implicit session: DBSession): Option[Lieferplanung] = {
     getLatestLieferplanungQuery.apply()
+  }
+
+  def getOpenLieferplanung(implicit session: DBSession): List[Lieferplanung] = {
+    getOpenLieferplanungQuery.apply()
   }
 
   def getLieferung(id: AbwesenheitId)(implicit session: DBSession): Option[Lieferung] = {
