@@ -159,7 +159,8 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
   private def deleteKoerbeForDeletedAbo(abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
     logger.debug(s"deleteKoerbeForDeletedAbo => abo: $abo")
     // koerbe der offenen lieferungen loeschen
-    stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId) map { lieferung =>
+    val plannedLieferung = stammdatenWriteRepository.getLieferungenOffenByAbotyp(abo.abotypId).filter(_.lieferplanungId != None)
+    plannedLieferung map { lieferung =>
       deleteKorb(lieferung, abo)
       recalculateNumbersLieferung(lieferung)
       val lieferplanung = stammdatenWriteRepository.getById[Lieferplanung, LieferplanungId](lieferplanungMapping, lieferung.lieferplanungId.get)
