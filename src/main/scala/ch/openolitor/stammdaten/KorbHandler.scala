@@ -160,7 +160,7 @@ trait KorbHandler extends KorbStatusHandler
         recalculateNumbersLieferung(lieferung)
       }
     }
-   ret.flatten.getOrElse(lieferung)
+    ret.flatten.getOrElse(lieferung)
   }
 
   def updateLieferungUndZusatzLieferung(lieferplanungId: LieferplanungId, project: Option[Projekt], lieferung: Lieferung)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Lieferung = {
@@ -209,10 +209,10 @@ trait KorbHandler extends KorbStatusHandler
     val adjustedLieferung = createKoerbe(updatedLieferung)
 
     stammdatenWriteRepository.updateEntity[Lieferung, LieferungId](adjustedLieferung.id)(
+      lieferungMapping.column.status -> adjustedLieferung.status,
       lieferungMapping.column.durchschnittspreis -> adjustedLieferung.durchschnittspreis,
       lieferungMapping.column.anzahlLieferungen -> adjustedLieferung.anzahlLieferungen,
       lieferungMapping.column.anzahlKoerbeZuLiefern -> adjustedLieferung.anzahlKoerbeZuLiefern,
-      lieferungMapping.column.status -> adjustedLieferung.status,
       lieferungMapping.column.anzahlAbwesenheiten -> adjustedLieferung.anzahlAbwesenheiten,
       lieferungMapping.column.anzahlSaldoZuTief -> adjustedLieferung.anzahlSaldoZuTief,
       lieferungMapping.column.lieferplanungId -> lieferplanungId

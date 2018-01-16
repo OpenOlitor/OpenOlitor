@@ -38,7 +38,6 @@ import scala.collection.immutable.TreeMap
 import scalikejdbc.DBSession
 import org.joda.time.format.DateTimeFormat
 import ch.openolitor.core.repositories.EventPublishingImplicits._
-
 object StammdatenInsertService {
   def apply(implicit sysConfig: SystemConfig, system: ActorSystem): StammdatenInsertService = new DefaultStammdatenInsertService(sysConfig, system)
 }
@@ -450,6 +449,10 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
               maybeAbo map (abo => modifyKoerbeForAbo(abo, None))
           }
       }
+
+      //stammdatenWriteRepository.getAbo(id) map { abo =>
+      //  modifyKoerbeForAbo(abo, None)
+      //}
     }
   }
 
@@ -684,6 +687,37 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createLieferung(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate)(implicit personId: PersonId = meta.originator): Option[Lieferung] = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       createLieferungInner(id, lieferung, None)
+    }
+  }
+
+  private def createLieferungInner(meta: EventMetadata, id: LieferungId, lieferung: LieferungAbotypCreate, lieferplanungId: Option[LieferplanungId])(implicit personId: PersonId = meta.originator, session: DBSession, publisher: EventPublisher): Option[Lieferung] = {
+    logger.debug(s"createLieferungInner LieferungId : $id lieferung : $lieferung lieferplanungId : $lieferplanungId")
+    stammdatenWriteRepository.getAbotypById(lieferung.abotypId) flatMap { abotyp =>
+      stammdatenWriteRepository.getById(vertriebMapping, lieferung.vertriebId) flatMap {
+        vertrieb =>
+          val vBeschrieb = vertrieb.beschrieb
+          val atBeschrieb = abotyp.name
+
+          val insert = copyTo[LieferungAbotypCreate, Lieferung](lieferung, "id" -> id,
+            "abotypBeschrieb" -> atBeschrieb,
+            "vertriebBeschrieb" -> vBeschrieb,
+            "anzahlAbwesenheiten" -> ZERO,
+            "durchschnittspreis" -> ZERO,
+            "anzahlLieferungen" -> ZERO,
+            "anzahlKoerbeZuLiefern" -> ZERO,
+            "anzahlSaldoZuTief" -> ZERO,
+            "zielpreis" -> abotyp.zielpreis,
+            "preisTotal" -> ZERO,
+            "status" -> Ungeplant,
+            "lieferplanungId" -> lieferplanungId,
+            "erstelldat" -> meta.timestamp,
+            "ersteller" -> meta.originator,
+            "modifidat" -> meta.timestamp,
+            "modifikator" -> meta.originator)
+
+          stammdatenWriteRepository.insertEntity[Lieferung, LieferungId](insert)
+      }
+>>>>>>> 9d9f48c1c2dd433f2ff83c650af0dfb6604f2a1c
     }
   }
 
