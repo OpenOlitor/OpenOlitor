@@ -143,7 +143,7 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
       // also delete mapped zusatzabos if it's a main abo
       maybeAbo map {
-        case _: ZusatzAbo => // do nothing
+        case abo: ZusatzAbo => deleteKoerbeForDeletedAbo(abo)
         case _ => stammdatenWriteRepository.deleteZusatzAbos(id)
       }
 
