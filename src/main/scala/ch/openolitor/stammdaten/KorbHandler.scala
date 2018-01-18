@@ -98,10 +98,11 @@ trait KorbHandler extends KorbStatusHandler
   }
 
   def adjustOpenLieferplanung(zusatzAboId: AboId)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
+    logger.debug(s"adjustOpenLieferplanung => zusatzAboId = $zusatzAboId")
     val dateFormat = DateTimeFormat.forPattern("dd.MM.yyyy")
     val project = stammdatenWriteRepository.getProjekt
     stammdatenWriteRepository.getOpenLieferplanung map { lieferplanung =>
-      val abotypDepotTour = stammdatenWriteRepository.getLieferungenNext() map { lieferung =>
+      val abotypDepotTour = stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
         stammdatenWriteRepository.getAbo(zusatzAboId) map { zusatzabo =>
           stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanung.id, lieferung.datum) match {
             case None => {

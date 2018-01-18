@@ -454,6 +454,7 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
   }
 
   def updateZusatzAboModify(meta: EventMetadata, id: AboId, update: ZusatzAboModify)(implicit personId: PersonId = meta.originator) = {
+    logger.debug(s"updateZusatzAboModify=> aboId : $id, modify: $update")
     DB localTxPostPublish { implicit session => implicit publisher =>
       stammdatenWriteRepository.getById(zusatzAboMapping, id) map { abo =>
         //map all updatable fields
