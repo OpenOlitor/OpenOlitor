@@ -233,7 +233,6 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
             )
         }
       }
-
     }
   }
 
