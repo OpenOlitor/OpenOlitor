@@ -80,6 +80,14 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
       val maybeAbotyp: Option[IAbotyp] = stammdatenWriteRepository.deleteEntity[Abotyp, AbotypId](id, { abotyp: Abotyp => abotyp.anzahlAbonnenten == 0 && abotyp.anzahlAbonnentenAktiv == 0 }) orElse
         stammdatenWriteRepository.deleteEntity[ZusatzAbotyp, AbotypId](id, { zusatzabotyp: ZusatzAbotyp => zusatzabotyp.anzahlAbonnenten == 0 && zusatzabotyp.anzahlAbonnentenAktiv == 0 })
+
+      maybeAbotyp match {
+        case Some(abotyp) =>
+          stammdatenWriteRepository.getVertriebe(abotyp.id) map { vertrieb =>
+            noSessionDeleteVertrieb(vertrieb.id)
+          }
+        case None =>
+      }
     }
   }
 
@@ -238,8 +246,12 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteLieferung(meta: EventMetadata, id: LieferungId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.deleteEntity[Lieferung, LieferungId](id, { lieferung: Lieferung => lieferung.lieferplanungId == None })
+      noSessionDeleteLieferung(id)
     }
+  }
+
+  def noSessionDeleteLieferung(id: LieferungId)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+    stammdatenWriteRepository.deleteEntity[Lieferung, LieferungId](id, { lieferung: Lieferung => lieferung.lieferplanungId == None })
   }
 
   def deleteProdukt(meta: EventMetadata, id: ProduktId)(implicit personId: PersonId = meta.originator) = {
@@ -278,7 +290,15 @@ class StammdatenDeleteService(override val sysConfig: SystemConfig) extends Even
 
   def deleteVertrieb(meta: EventMetadata, id: VertriebId)(implicit personId: PersonId = meta.originator) = {
     DB autoCommitSinglePublish { implicit session => implicit publisher =>
-      stammdatenWriteRepository.deleteEntity[Vertrieb, VertriebId](id, { vertrieb: Vertrieb => vertrieb.anzahlAbos == 0 && vertrieb.anzahlAbosAktiv == 0 })
+      noSessionDeleteVertrieb(id)
+    }
+  }
+
+  def noSessionDeleteVertrieb(id: VertriebId)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher) = {
+    stammdatenWriteRepository.deleteEntity[Vertrieb, VertriebId](id, { vertrieb: Vertrieb => vertrieb.anzahlAbos == 0 && vertrieb.anzahlAbosAktiv == 0 }) map { vertrieb =>
+      stammdatenWriteRepository.getLieferungen(vertrieb.id) map { lieferung =>
+        noSessionDeleteLieferung(lieferung.id)
+      }
     }
   }
 
