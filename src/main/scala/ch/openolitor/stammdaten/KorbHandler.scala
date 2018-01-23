@@ -101,20 +101,33 @@ trait KorbHandler extends KorbStatusHandler
     logger.debug(s"adjustOpenLieferplanung => zusatzAboId = $zusatzAboId")
     val dateFormat = DateTimeFormat.forPattern("dd.MM.yyyy")
     val project = stammdatenWriteRepository.getProjekt
+    // for all the lieferplanung that are opened
     stammdatenWriteRepository.getOpenLieferplanung map { lieferplanung =>
       val abotypDepotTour = stammdatenWriteRepository.getLieferungen(lieferplanung.id) map { lieferung =>
-        stammdatenWriteRepository.getAbo(zusatzAboId) map { zusatzabo =>
-          stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanung.id, lieferung.datum) match {
-            case None => {
-              // Using positiveRandomId because the lieferung cannot be created in commandHandler.
-              createLieferungInner(LieferungId(IdUtil.positiveRandomId), LieferungAbotypCreate(zusatzabo.abotypId, lieferung.vertriebId, lieferung.datum), Some(lieferplanung.id)).map { zusatzLieferung =>
-                offenLieferung(lieferplanung.id, project, zusatzLieferung)
+        stammdatenWriteRepository.getAbo(zusatzAboId) match {
+          case Some(zusatzabo: ZusatzAbo) => {
+            // in case there is not programmed korb for the hauptAbo or it is not plan to be delivered
+            stammdatenWriteRepository.getKorb(lieferung.id, zusatzabo.hauptAboId) match {
+              case Some(hauptAboKorb) => {
+                if (hauptAboKorb.status == WirdGeliefert) {
+                  stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanung.id, lieferung.datum) match {
+                    case None => {
+                      // Using positiveRandomId because the lieferung cannot be created in commandHandler.
+                      createLieferungInner(LieferungId(IdUtil.positiveRandomId), LieferungAbotypCreate(zusatzabo.abotypId, lieferung.vertriebId, lieferung.datum), Some(lieferplanung.id)).map { zusatzLieferung =>
+                        offenLieferung(lieferplanung.id, project, zusatzLieferung)
+                      }
+                    }
+                    case Some(zusatzLieferung) => {
+                      offenLieferung(lieferplanung.id, project, zusatzLieferung)
+                    }
+                  }
+                }
               }
-            }
-            case Some(zusatzLieferung) => {
-              offenLieferung(lieferplanung.id, project, zusatzLieferung)
+              case None =>
             }
           }
+          case Some(_) =>
+          case None =>
         }
         (dateFormat.print(lieferung.datum), lieferung.abotypBeschrieb)
       }
