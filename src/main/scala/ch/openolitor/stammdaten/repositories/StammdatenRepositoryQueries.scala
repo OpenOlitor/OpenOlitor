@@ -647,10 +647,12 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
         .leftJoin(abwesenheitMapping as abwesenheit).on(heimlieferungAbo.id, abwesenheit.aboId)
         .leftJoin(abotypMapping as aboTyp).on(heimlieferungAbo.abotypId, aboTyp.id)
         .leftJoin(vertriebMapping as vertrieb).on(heimlieferungAbo.vertriebId, vertrieb.id)
-        .leftJoin(lieferungMapping as lieferung).on(vertrieb.id, lieferung.vertriebId)
+        .leftJoin(lieferungMapping as lieferung).on(
+          sqls.eq(vertrieb.id, lieferung.vertriebId)
+            .and.eq(lieferung.abotypId, heimlieferungAbo.abotypId)
+        )
         .leftJoin(lieferplanungMapping as lieferplanung).on(lieferung.lieferplanungId, lieferplanung.id)
         .where.eq(heimlieferungAbo.id, id)
-        .and.eq(lieferung.abotypId, heimlieferungAbo.abotypId)
         .and(sqls.toAndConditionOpt(
           ausstehend map (_ => sqls.isNull(lieferung.lieferplanungId).or.eq(lieferplanung.status, Ungeplant).or.eq(lieferplanung.status, Offen))
         ))
