@@ -637,7 +637,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
           val koerbe = stammdatenReadRepository.getKoerbe(lieferdatum, vertriebsartIds, WirdGeliefert)
           if (!koerbe.isEmpty) {
             val tourlieferungen = stammdatenReadRepository.getTourlieferungen(tourId)
-            val tourAuslieferung = createTourAuslieferungHeim(idFactory, meta, lieferdatum, tourId, tourName, koerbe.size)
+            val tourAuslieferung = createTourAuslieferungHeim(idFactory, meta, lieferdatum, tourId, tourName, countHauptAbos(koerbe))
             val updates = koerbe map { korb =>
               // also update the sort of the korb according to the settings made in tour detail
               EntityUpdateEvent(korb.id, KorbAuslieferungModify(tourAuslieferung.id, tourlieferungen find (_.id == korb.aboId) flatMap (_.sort)))
@@ -647,6 +647,17 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         } else { Nil }
       }
     }).toSeq
+  }
+
+  private def countHauptAbos(koerbe: List[Korb])(implicit personId: PersonId, session: DBSession): Int = {
+    val hauptAboKoerbe = koerbe map { korb =>
+      stammdatenReadRepository.getAbo(korb.aboId) match {
+        case Some(abo: ZusatzAbo) => None
+        case None => None
+        case _ => Some(korb)
+      }
+    }
+    hauptAboKoerbe.flatten.size
   }
 
   private def getCreateDepotAuslieferungAndPostAusliferungEvent(idFactory: IdFactory, meta: EventTransactionMetadata, lieferplanung: Lieferplanung)(implicit personId: PersonId, session: DBSession): Seq[ResultingEvent] = {
@@ -721,7 +732,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
 
   private def getPostAndDepotAuslieferungEvents(idFactory: IdFactory, meta: EventTransactionMetadata, date: DateTime, listVertriebsartDetail: List[VertriebsartDetail])(implicit personId: PersonId, session: DBSession): List[ResultingEvent] = {
     val koerbe = getAllKoerbeForDepotOrPost(date, listVertriebsartDetail)
-    val newAuslieferung = createAuslieferungDepotPost(idFactory, meta, date, listVertriebsartDetail.head, koerbe.size).get
+    val newAuslieferung = createAuslieferungDepotPost(idFactory, meta, date, listVertriebsartDetail.head, countHauptAbos(koerbe)).get
     (for { vertriebsartDetail <- listVertriebsartDetail } yield {
       val koerbe = stammdatenReadRepository.getKoerbe(date, vertriebsartDetail.id, WirdGeliefert)
       if (vertriebsartDetail == listVertriebsartDetail.head) {
