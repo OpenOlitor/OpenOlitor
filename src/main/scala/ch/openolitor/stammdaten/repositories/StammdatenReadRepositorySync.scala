@@ -114,6 +114,7 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def getPostlieferungAbo(id: AboId)(implicit session: DBSession): Option[PostlieferungAboDetail]
 
   def getAbo(id: AboId)(implicit session: DBSession): Option[Abo]
+  def getDistinctSammelbestellungModifyByLieferplan(lieferplanungId: LieferplanungId)(implicit session: DBSession): Set[SammelbestellungModify]
 }
 
 trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with LazyLogging with StammdatenRepositoryQueries {
@@ -502,5 +503,13 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
 
   def getLieferungenOffenByAbotyp(abotypId: AbotypId)(implicit session: DBSession): List[Lieferung] = {
     getLieferungenOffenByAbotypQuery(abotypId)()
+  }
+
+  def getDistinctSammelbestellungModifyByLieferplan(lieferplanungId: LieferplanungId)(implicit session: DBSession): Set[SammelbestellungModify] = {
+    getLieferpositionenByLieferplan(lieferplanungId).map { lieferposition =>
+      getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+        SammelbestellungModify(lieferposition.produzentId, lieferplanungId, lieferung.datum)
+      }
+    }.flatten.toSet
   }
 }

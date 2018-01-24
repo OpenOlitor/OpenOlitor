@@ -27,19 +27,15 @@ import ch.openolitor.core.Macros._
 import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import scala.concurrent.duration._
-import ch.openolitor.stammdaten._
 import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.repositories._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
-import ch.openolitor.core.domain.EntityStore._
 import akka.actor.ActorSystem
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import shapeless.LabelledGeneric
+import ch.openolitor.util.IdUtil
 import scala.concurrent.ExecutionContext.Implicits.global
-import java.util.UUID
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
 import ch.openolitor.stammdaten.repositories._
@@ -59,7 +55,8 @@ object StammdatenAktionenService {
 }
 
 class DefaultStammdatenAktionenService(sysConfig: SystemConfig, override val system: ActorSystem, override val mailService: ActorRef)
-    extends StammdatenAktionenService(sysConfig, mailService) with DefaultStammdatenWriteRepositoryComponent {
+    extends StammdatenAktionenService(sysConfig, mailService)
+    with DefaultStammdatenWriteRepositoryComponent {
 }
 
 /**
@@ -132,7 +129,6 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
           sammelbestellungMapping.column.status -> Verrechnet,
           sammelbestellungMapping.column.datumAbrechnung -> Option(DateTime.now)
         )
-
       }
     }
   }
@@ -151,10 +147,25 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
             createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
           }
 
+          // get existing sammelbestellungen
+          val existingSammelbestellungen = (stammdatenWriteRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
+            SammelbestellungModify(sammelbestellung.produzentId, lieferplanung.id, sammelbestellung.datum)
+          }).toSet
+
+          // get distinct sammelbestellungen by lieferplanung
+          val distinctSammelbestellungen = stammdatenWriteRepository.getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
+
+          // evaluate which sammelbestellungen are missing and have to be inserted
+          // they will be used in handleLieferungChanged afterwards
+          val missingSammelbestellungen = (distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
+            SammelbestellungCreate(SammelbestellungId(IdUtil.positiveRandomId), s.produzentId, s.lieferplanungId, s.datum)
+          }.toSeq
+
           // neue sammelbestellungen erstellen
-          result.newSammelbestellungen map { s =>
+          missingSammelbestellungen map { s =>
             createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
           }
+
         }
       }
     }
