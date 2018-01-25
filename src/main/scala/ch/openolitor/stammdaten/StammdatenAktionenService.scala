@@ -34,7 +34,6 @@ import akka.actor.ActorSystem
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import ch.openolitor.util.IdUtil
 import scala.concurrent.ExecutionContext.Implicits.global
 import ch.openolitor.core.models.PersonId
 import ch.openolitor.stammdaten.StammdatenCommandHandler._
@@ -147,25 +146,10 @@ class StammdatenAktionenService(override val sysConfig: SystemConfig, override v
             createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
           }
 
-          // get existing sammelbestellungen
-          val existingSammelbestellungen = (stammdatenWriteRepository.getSammelbestellungen(lieferplanung.id) map { sammelbestellung =>
-            SammelbestellungModify(sammelbestellung.produzentId, lieferplanung.id, sammelbestellung.datum)
-          }).toSet
-
-          // get distinct sammelbestellungen by lieferplanung
-          val distinctSammelbestellungen = stammdatenWriteRepository.getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
-
-          // evaluate which sammelbestellungen are missing and have to be inserted
-          // they will be used in handleLieferungChanged afterwards
-          val missingSammelbestellungen = (distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
-            SammelbestellungCreate(SammelbestellungId(IdUtil.positiveRandomId), s.produzentId, s.lieferplanungId, s.datum)
-          }.toSeq
-
           // neue sammelbestellungen erstellen
-          missingSammelbestellungen map { s =>
+          result.newSammelbestellungen map { s =>
             createOrUpdateSammelbestellungen(s.id, SammelbestellungModify(s.produzentId, s.lieferplanungId, s.datum))
           }
-
         }
       }
     }

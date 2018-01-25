@@ -113,7 +113,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             case Offen =>
               stammdatenReadRepository.countEarlierLieferungOffen(id) match {
                 case Some(0) =>
-                  val distinctSammelbestellungen = stammdatenReadRepository.getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
+                  val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
 
                   val bestellEvents = distinctSammelbestellungen.map { sammelbestellungCreate =>
                     val insertEvent = EntityInsertEvent(idFactory.newId(SammelbestellungId.apply), sammelbestellungCreate)
@@ -142,7 +142,39 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenReadRepository.getById(lieferplanungMapping, lieferplanungPositionenModify.id) map { lieferplanung =>
           lieferplanung.status match {
             case state @ (Offen | Abgeschlossen) =>
-              Success(DefaultResultingEvent(factory => LieferplanungDataModifiedEvent(factory.newMetadata(), LieferplanungDataModify(lieferplanungPositionenModify.id, Set.empty, lieferplanungPositionenModify.lieferungen))) :: Nil)
+
+              val missingSammelbestellungen = if (state == Abgeschlossen) {
+                // get existing sammelbestellungen
+                val existingSammelbestellungen = (stammdatenReadRepository.getSammelbestellungen(lieferplanungPositionenModify.id) map { sammelbestellung =>
+                  SammelbestellungModify(sammelbestellung.produzentId, lieferplanung.id, sammelbestellung.datum)
+                }).toSet
+
+                // get distinct sammelbestellungen by lieferplanung
+                val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
+
+                // in case a sammelbestellung needs to be created from one of the new lieferpositions, this needs to be extracted
+                // and added to the set of new sammelbestellungen
+                val newSammelbestellungen = lieferplanungPositionenModify.lieferungen flatMap { lieferungPosition =>
+                  lieferungPosition.lieferpositionen.lieferpositionen flatMap { lieferposition =>
+                    stammdatenReadRepository.getById(lieferungMapping, lieferposition.lieferungId) flatMap { lieferung =>
+                      stammdatenReadRepository.getSammelbestellungenByProduzent(lieferposition.produzentId, lieferplanung.id) match {
+                        case Nil =>
+                          Option(SammelbestellungCreate(idFactory.newId(SammelbestellungId.apply), lieferposition.produzentId, lieferplanung.id, lieferung.datum))
+                        case _ => None
+                      }
+                    }
+                  }
+                }
+
+                // evaluate which sammelbestellungen are missing and have to be inserted
+                // they will be used in handleLieferungChanged afterwards
+                ((distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
+                  SammelbestellungCreate(idFactory.newId(SammelbestellungId.apply), s.produzentId, s.lieferplanungId, s.datum)
+                } ++ newSammelbestellungen).toSeq
+              } else {
+                Nil
+              }
+              Success(DefaultResultingEvent(factory => LieferplanungDataModifiedEvent(factory.newMetadata(), LieferplanungDataModify(lieferplanungPositionenModify.id, missingSammelbestellungen.toSet, lieferplanungPositionenModify.lieferungen))) :: Nil)
             case _ =>
               Failure(new InvalidStateException("Eine Lieferplanung kann nur im Status 'Offen' oder 'Abgeschlossen' aktualisiert werden"))
           }
@@ -856,6 +888,14 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
       meta.timestamp,
       personId
     )
+  }
+
+  private def getDistinctSammelbestellungModifyByLieferplan(lieferplanungId: LieferplanungId)(implicit session: DBSession): Set[SammelbestellungModify] = {
+    stammdatenReadRepository.getLieferpositionenByLieferplan(lieferplanungId).map { lieferposition =>
+      stammdatenReadRepository.getById(lieferungMapping, lieferposition.lieferungId).map { lieferung =>
+        SammelbestellungModify(lieferposition.produzentId, lieferplanungId, lieferung.datum)
+      }
+    }.flatten.toSet
   }
 }
 
