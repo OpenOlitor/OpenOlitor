@@ -37,7 +37,7 @@ object OO556_DBScripts {
       alterTableAddColumnIfNotExists(projektMapping, "welcome_message1", "VARCHAR(2000)", "sprache")
       alterTableAddColumnIfNotExists(projektMapping, "welcome_message2", "VARCHAR(2000)", "welcome_message1")
       alterTableAddColumnIfNotExists(projektMapping, "maintenance_mode", "VARCHAR(1)", "welcome_message2")
-      sql"""UPDATE Projekt SET maintenance_mode='0' where id='1'""".execute.apply()
+      sql"""UPDATE Projekt SET maintenance_mode='0'""".execute.apply()
 
       Success(true)
 
