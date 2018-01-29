@@ -88,6 +88,7 @@ trait StammdatenReadRepositorySync extends BaseReadRepositorySync {
   def countEarlierLieferungOffen(id: LieferplanungId)(implicit session: DBSession): Option[Int]
   def getSammelbestellungen(id: LieferplanungId)(implicit session: DBSession): List[Sammelbestellung]
   def getSammelbestellungen(id: LieferungId)(implicit session: DBSession): List[Sammelbestellung]
+  def getSammelbestellungenByProduzent(produzent: ProduzentId, lieferplanungId: LieferplanungId)(implicit session: DBSession): List[Sammelbestellung]
   def getBestellung(id: SammelbestellungId, adminProzente: BigDecimal)(implicit session: DBSession): Option[Bestellung]
   def getBestellungen(id: SammelbestellungId)(implicit session: DBSession): List[Bestellung]
   def getBestellpositionen(id: BestellungId)(implicit session: DBSession): List[Bestellposition]
@@ -421,6 +422,9 @@ trait StammdatenReadRepositorySyncImpl extends StammdatenReadRepositorySync with
     getSammelbestellungenQuery(id)()
   }
 
+  def getSammelbestellungenByProduzent(produzent: ProduzentId, lieferplanungId: LieferplanungId)(implicit session: DBSession): List[Sammelbestellung] = {
+    getSammelbestellungenByProduzentQuery(produzent, lieferplanungId)()
+  }
   def getBestellung(id: SammelbestellungId, adminProzente: BigDecimal)(implicit session: DBSession): Option[Bestellung] = {
     getBestellungQuery(id, adminProzente)()
   }

@@ -22,15 +22,6 @@
 \*                                                                           */
 package ch.openolitor.stammdaten
 
-import ch.openolitor.core.Macros._
-import ch.openolitor.core.models._
-import ch.openolitor.stammdaten.models._
-import ch.openolitor.stammdaten.repositories._
-import scalikejdbc._
-import ch.openolitor.util.IdUtil
-import ch.openolitor.core.domain.EventMetadata
-import ch.openolitor.core.repositories.EventPublisher
-
 trait LieferungDurchschnittspreisHandler {
   def calcDurchschnittspreis(durchschnittspreis: BigDecimal, anzahlLieferungen: Int, neuerPreis: BigDecimal): BigDecimal =
     if (anzahlLieferungen == 0) {

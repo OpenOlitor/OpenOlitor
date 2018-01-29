@@ -85,7 +85,9 @@ object StammdatenCommandHandler {
   case class AboDeaktiviertEvent(meta: EventMetadata, aboId: AboId) extends PersistentGeneratedEvent with JSONSerializable
 }
 
-trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware with LieferungDurchschnittspreisHandler {
+trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings with ConnectionPoolContextAware
+    with LieferungDurchschnittspreisHandler {
+
   self: StammdatenReadRepositorySyncComponent =>
   import StammdatenCommandHandler._
   import EntityStore._
@@ -140,6 +142,7 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
         stammdatenReadRepository.getById(lieferplanungMapping, lieferplanungPositionenModify.id) map { lieferplanung =>
           lieferplanung.status match {
             case state @ (Offen | Abgeschlossen) =>
+
               val missingSammelbestellungen = if (state == Abgeschlossen) {
                 // get existing sammelbestellungen
                 val existingSammelbestellungen = (stammdatenReadRepository.getSammelbestellungen(lieferplanungPositionenModify.id) map { sammelbestellung =>
@@ -149,11 +152,25 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
                 // get distinct sammelbestellungen by lieferplanung
                 val distinctSammelbestellungen = getDistinctSammelbestellungModifyByLieferplan(lieferplanung.id)
 
+                // in case a sammelbestellung needs to be created from one of the new lieferpositions, this needs to be extracted
+                // and added to the set of new sammelbestellungen
+                val newSammelbestellungen = lieferplanungPositionenModify.lieferungen flatMap { lieferungPosition =>
+                  lieferungPosition.lieferpositionen.lieferpositionen flatMap { lieferposition =>
+                    stammdatenReadRepository.getById(lieferungMapping, lieferposition.lieferungId) flatMap { lieferung =>
+                      stammdatenReadRepository.getSammelbestellungenByProduzent(lieferposition.produzentId, lieferplanung.id) match {
+                        case Nil =>
+                          Option(SammelbestellungCreate(idFactory.newId(SammelbestellungId.apply), lieferposition.produzentId, lieferplanung.id, lieferung.datum))
+                        case _ => None
+                      }
+                    }
+                  }
+                }
+
                 // evaluate which sammelbestellungen are missing and have to be inserted
                 // they will be used in handleLieferungChanged afterwards
-                (distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
+                ((distinctSammelbestellungen -- existingSammelbestellungen).map { s =>
                   SammelbestellungCreate(idFactory.newId(SammelbestellungId.apply), s.produzentId, s.lieferplanungId, s.datum)
-                }.toSeq
+                } ++ newSammelbestellungen).toSeq
               } else {
                 Nil
               }
