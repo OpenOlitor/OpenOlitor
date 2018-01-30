@@ -270,20 +270,18 @@ trait KorbHandler extends KorbStatusHandler
     logger.debug(s"deleteKorb lieferung: $lieferung abo: $abo")
     abo match {
       case _: ZusatzAbo =>
-      case _ =>
-        {
-          lieferung.lieferplanungId map { lieferplanungId =>
-            stammdatenWriteRepository.getZusatzAbos(abo.id) flatMap { zusatzabo =>
-
-              stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanungId, lieferung.datum) map { lieferung =>
-                stammdatenWriteRepository.getKorb(lieferung.id, zusatzabo.id) flatMap { korb =>
-                  stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
-                }
-                recalculateNumbersLieferung(lieferung)
+      case _ => {
+        lieferung.lieferplanungId map { lieferplanungId =>
+          stammdatenWriteRepository.getZusatzAbos(abo.id) flatMap { zusatzabo =>
+            stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanungId, lieferung.datum) map { zusatzAboLieferung =>
+              stammdatenWriteRepository.getKorb(zusatzAboLieferung.id, zusatzabo.id) flatMap { korb =>
+                stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
               }
+              recalculateNumbersLieferung(zusatzAboLieferung)
             }
           }
         }
+      }
     }
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) flatMap { korb =>
       stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
