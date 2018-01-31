@@ -1663,7 +1663,7 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
 
   protected def getTourAuslieferungReportQuery(auslieferungId: AuslieferungId, projekt: ProjektReport) = {
     getTourAuslieferungQuery(auslieferungId) { (auslieferung, tour, koerbe, abos, abotypen, kunden, personen, zusatzAbos) =>
-      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, personen, zusatzAbos).sortBy(_.abotyp.name)
+      val korbReports = getKorbReports(koerbe, abos, abotypen, kunden, personen, zusatzAbos).sortBy(_.sort)
 
       copyTo[TourAuslieferung, TourAuslieferungReport](auslieferung, "tour" -> tour, "koerbe" -> korbReports, "projekt" -> projekt)
     }
