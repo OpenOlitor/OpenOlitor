@@ -268,6 +268,21 @@ trait KorbHandler extends KorbStatusHandler
 
   def deleteKorb(lieferung: Lieferung, abo: Abo)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Option[Korb] = {
     logger.debug(s"deleteKorb lieferung: $lieferung abo: $abo")
+    abo match {
+      case _: ZusatzAbo =>
+      case _ => {
+        lieferung.lieferplanungId map { lieferplanungId =>
+          stammdatenWriteRepository.getZusatzAbos(abo.id) flatMap { zusatzabo =>
+            stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanungId, lieferung.datum) map { zusatzAboLieferung =>
+              stammdatenWriteRepository.getKorb(zusatzAboLieferung.id, zusatzabo.id) flatMap { korb =>
+                stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
+              }
+              recalculateNumbersLieferung(zusatzAboLieferung)
+            }
+          }
+        }
+      }
+    }
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) flatMap { korb =>
       stammdatenWriteRepository.deleteEntity[Korb, KorbId](korb.id)
     }
@@ -305,11 +320,13 @@ trait KorbHandler extends KorbStatusHandler
           deleteKorb(lieferung, abo)
         } else if ((abo.start <= lieferung.datum.toLocalDate) &&
           (abo.ende map (_ >= lieferung.datum.toLocalDate) getOrElse true)) {
-
           if (abo.vertriebId != lieferung.vertriebId) {
             deleteKorb(lieferung, originalAbo)
           } else {
             upsertKorb(lieferung, abo, abotyp)
+            stammdatenWriteRepository.getZusatzAbos(abo.id) map { zusatzabo =>
+              adjustOpenLieferplanung(zusatzabo.id)
+            }
           }
         }
         recalculateNumbersLieferung(lieferung)
