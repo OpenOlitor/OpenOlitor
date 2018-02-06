@@ -65,7 +65,7 @@ sealed trait Abo extends BaseEntity[AboId] with JSONSerializable {
 
 sealed trait HauptAbo extends Abo with JSONSerializable {
   val zusatzAboIds: Set[AboId]
-  val zusatzAbotypNames: Set[String]
+  val zusatzAbotypNames: Seq[String]
 }
 
 sealed trait AboReport extends Abo {
@@ -124,7 +124,7 @@ case class DepotlieferungAbo(
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
   zusatzAboIds: Set[AboId],
-  zusatzAbotypNames: Set[String],
+  zusatzAbotypNames: Seq[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -215,7 +215,7 @@ case class DepotlieferungAboDetail(
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
   zusatzAboIds: Set[AboId],
-  zusatzAbotypNames: Set[String],
+  zusatzAbotypNames: Seq[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -258,7 +258,7 @@ case class HeimlieferungAbo(
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
   zusatzAboIds: Set[AboId],
-  zusatzAbotypNames: Set[String],
+  zusatzAbotypNames: Seq[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -320,7 +320,7 @@ case class HeimlieferungAboDetail(
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
   zusatzAboIds: Set[AboId],
-  zusatzAbotypNames: Set[String],
+  zusatzAbotypNames: Seq[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -361,7 +361,7 @@ case class PostlieferungAbo(
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
   zusatzAboIds: Set[AboId],
-  zusatzAbotypNames: Set[String],
+  zusatzAbotypNames: Seq[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,
@@ -419,7 +419,7 @@ case class PostlieferungAboDetail(
   anzahlLieferungen: TreeMap[String, Int],
   aktiv: Boolean,
   zusatzAboIds: Set[AboId],
-  zusatzAbotypNames: Set[String],
+  zusatzAbotypNames: Seq[String],
   //modification flags
   erstelldat: DateTime,
   ersteller: PersonId,

@@ -46,8 +46,8 @@ trait StammdatenUpdateRepositoryImpl extends StammdatenReadRepositorySyncImpl wi
     updateHauptAboWithZusatzabos(add.hauptAboId, Some(add), None)
   }
 
-  def updateHauptAboRemoveZusatzabo(add: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
-    updateHauptAboWithZusatzabos(add.hauptAboId, Some(add), None)
+  def updateHauptAboRemoveZusatzabo(remove: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
+    updateHauptAboWithZusatzabos(remove.hauptAboId, None, Some(remove))
   }
 
   def updateHauptAboWithZusatzabo(hauptAboId: AboId, add: ZusatzAbo, remove: ZusatzAbo)(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
@@ -60,34 +60,53 @@ trait StammdatenUpdateRepositoryImpl extends StammdatenReadRepositorySyncImpl wi
    */
   private def updateHauptAboWithZusatzabos(hauptAboId: AboId, add: Option[ZusatzAbo], remove: Option[ZusatzAbo])(implicit session: DBSession, publisher: EventPublisher, personId: PersonId): Option[HauptAbo] = {
     modifyEntity[DepotlieferungAbo, AboId](hauptAboId) { abo =>
+      val zusatzAbos = withHauptAbo(abo, add, remove)
       Map(
-        depotlieferungAboMapping.column.zusatzAboIds -> withHauptAbo(abo, add, remove)._1,
-        depotlieferungAboMapping.column.zusatzAbotypNames -> withHauptAbo(abo, add, remove)._2
+        depotlieferungAboMapping.column.zusatzAboIds -> zusatzAbos._1,
+        depotlieferungAboMapping.column.zusatzAbotypNames -> zusatzAbos._2
       )
     } orElse modifyEntity[HeimlieferungAbo, AboId](hauptAboId) { abo =>
+      val zusatzAbos = withHauptAbo(abo, add, remove)
       Map(
-        heimlieferungAboMapping.column.zusatzAboIds -> withHauptAbo(abo, add, remove)._1,
-        heimlieferungAboMapping.column.zusatzAbotypNames -> withHauptAbo(abo, add, remove)._2
+        heimlieferungAboMapping.column.zusatzAboIds -> zusatzAbos._1,
+        heimlieferungAboMapping.column.zusatzAbotypNames -> zusatzAbos._2
       )
     } orElse modifyEntity[PostlieferungAbo, AboId](hauptAboId) { abo =>
+      val zusatzAbos = withHauptAbo(abo, add, remove)
       Map(
-        postlieferungAboMapping.column.zusatzAboIds -> withHauptAbo(abo, add, remove)._1,
-        postlieferungAboMapping.column.zusatzAbotypNames -> withHauptAbo(abo, add, remove)._2
+        postlieferungAboMapping.column.zusatzAboIds -> zusatzAbos._1,
+        postlieferungAboMapping.column.zusatzAbotypNames -> zusatzAbos._2
       )
     }
   }
 
-  private def withHauptAbo(hauptAbo: HauptAbo, add: Option[ZusatzAbo], remove: Option[ZusatzAbo]) = {
+  private def withHauptAbo(hauptAbo: HauptAbo, add: Option[ZusatzAbo], remove: Option[ZusatzAbo]): (Set[AboId], Seq[String]) = {
+    logger.error(s"--------------------withHauptAbo : ${hauptAbo.zusatzAbotypNames}: ${remove}")
     val removed = remove map { r =>
-      (hauptAbo.zusatzAboIds - r.id, hauptAbo.zusatzAbotypNames - r.abotypName)
+      (hauptAbo.zusatzAboIds - r.id, dropFirstMatch(hauptAbo.zusatzAbotypNames, r.abotypName))
     } getOrElse {
       (hauptAbo.zusatzAboIds, hauptAbo.zusatzAbotypNames)
     }
+    logger.error(s"--------------------withHauptAbo:removed : ${removed}")
 
     add map { a =>
-      (removed._1 + a.id, removed._2 + a.abotypName)
+      (removed._1 + a.id, removed._2 :+ a.abotypName)
     } getOrElse {
       removed
+    }
+  }
+
+  private def dropFirstMatch[A](ls: Seq[A], value: A): Seq[A] = {
+    logger.error(s"--------------------dropFirstMatch : ${ls} : ${value}")
+    val index = ls.indexOf(value) //index is -1 if there is no match
+    if (index < 0) {
+      ls
+    } else if (index == 0) {
+      ls.tail
+    } else {
+      // splitAt keeps the matching element in the second group
+      val (a, b) = ls.splitAt(index)
+      a ++ b.tail
     }
   }
 }

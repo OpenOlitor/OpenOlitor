@@ -24,7 +24,6 @@ package ch.openolitor.core.db.evolution.scripts.v2
 
 import ch.openolitor.core.SystemConfig
 import ch.openolitor.core.db.evolution.Script
-import ch.openolitor.reports.ReportsDBMappings
 import com.typesafe.scalalogging.LazyLogging
 import scalikejdbc._
 
