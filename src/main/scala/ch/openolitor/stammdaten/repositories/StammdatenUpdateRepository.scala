@@ -81,13 +81,11 @@ trait StammdatenUpdateRepositoryImpl extends StammdatenReadRepositorySyncImpl wi
   }
 
   private def withHauptAbo(hauptAbo: HauptAbo, add: Option[ZusatzAbo], remove: Option[ZusatzAbo]): (Set[AboId], Seq[String]) = {
-    logger.error(s"--------------------withHauptAbo : ${hauptAbo.zusatzAbotypNames}: ${remove}")
     val removed = remove map { r =>
       (hauptAbo.zusatzAboIds - r.id, dropFirstMatch(hauptAbo.zusatzAbotypNames, r.abotypName))
     } getOrElse {
       (hauptAbo.zusatzAboIds, hauptAbo.zusatzAbotypNames)
     }
-    logger.error(s"--------------------withHauptAbo:removed : ${removed}")
 
     add map { a =>
       (removed._1 + a.id, removed._2 :+ a.abotypName)
@@ -97,7 +95,6 @@ trait StammdatenUpdateRepositoryImpl extends StammdatenReadRepositorySyncImpl wi
   }
 
   private def dropFirstMatch[A](ls: Seq[A], value: A): Seq[A] = {
-    logger.error(s"--------------------dropFirstMatch : ${ls} : ${value}")
     val index = ls.indexOf(value) //index is -1 if there is no match
     if (index < 0) {
       ls
