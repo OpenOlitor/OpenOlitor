@@ -350,7 +350,7 @@ case class Person(
     modifidat: DateTime,
     modifikator: PersonId
 ) extends BaseEntity[PersonId] {
-  def fullName = vorname + ' ' + name
+  def fullName = name + ' ' + vorname
 }
 
 case class PersonDetail(
@@ -428,7 +428,7 @@ case class PersonModify(
     telefonFestnetz: Option[String],
     bemerkungen: Option[String]
 ) extends JSONSerializable {
-  def fullName = vorname + ' ' + name
+  def fullName = name + ' ' + vorname
 }
 
 case class PersonCreate(
@@ -443,7 +443,7 @@ case class PersonCreate(
     bemerkungen: Option[String],
     sort: Int
 ) extends JSONSerializable {
-  def fullName = vorname + ' ' + name
+  def fullName = name + ' ' + vorname
 }
 
 sealed trait PendenzStatus
