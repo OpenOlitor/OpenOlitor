@@ -326,14 +326,21 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
 
   private def adjustGuthabenVorLieferung(abo: Abo, guthaben: Int)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): Unit = {
     stammdatenWriteRepository.getAbotypById(abo.abotypId) map { abotyp =>
-      stammdatenWriteRepository.getKoerbeNichtAusgeliefertAndSaldoZuTiefByAbo(abo.id) map { korb =>
-        val countAbwesend = stammdatenWriteRepository.countAbwesend(korb.lieferungId, abo.id)
-        val status = calculateKorbStatus(countAbwesend, abo.guthaben, abotyp.guthabenMindestbestand)
+      stammdatenWriteRepository.getKoerbeNichtAusgeliefertAndSaldoZuTiefByAbo(abo.id).zipWithIndex.map {
+        case (korb, index) =>
+          val countAbwesend = stammdatenWriteRepository.countAbwesend(korb.lieferungId, abo.id)
+          val status = korb.auslieferungId match {
+            //we don't modify the status as this korb is going to be deliverd (or not) as the order to the producer has been made
+            case Some(_) => korb.status
+            //recalculate the status for future körbe
+            case None => calculateKorbStatus(countAbwesend, korb.guthabenVorLieferung, abotyp.guthabenMindestbestand)
+          }
+          val guthabenNeu = guthaben - index
 
-        stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(
-          korbMapping.column.guthabenVorLieferung -> guthaben,
-          korbMapping.column.status -> status
-        )
+          stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(
+            korbMapping.column.guthabenVorLieferung -> guthabenNeu,
+            korbMapping.column.status -> status
+          )
       }
     }
   }
