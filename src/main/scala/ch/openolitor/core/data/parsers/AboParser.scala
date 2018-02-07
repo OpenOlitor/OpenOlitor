@@ -79,7 +79,7 @@ object AboParser extends EntityParser {
         val tourIdOpt = row.value[Option[Long]](tourIdIndex)
         val vertriebBeschrieb = vertrieb.beschrieb
         val aktiv = IAbo.calculateAktiv(start, ende)
-        val zusatzAboIds = (row.value[String](zusatzAboIdsIndex) split (",") map (id => AboId(id.toLong))).toSet
+        val zusatzAboIds = (row.value[String](zusatzAboIdsIndex) split (",") filter (_.size > 0) map (id => AboId(id.toLong))).toSet
         val zusatzAbotypNames = (row.value[String](zusatzAbotypNamesIndex) split (",")).toSet
 
         depotIdOpt map { depotIdInt =>
