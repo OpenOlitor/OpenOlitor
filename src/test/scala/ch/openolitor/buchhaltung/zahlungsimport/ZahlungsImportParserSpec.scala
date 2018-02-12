@@ -43,6 +43,16 @@ class ZahlungsImportParserSpec extends Specification {
       result.get.records.size === 225
     }
 
+    "parse example esr file with blank lines" in {
+      val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/esrimport_with_blank_lines.esr").toURI()))
+
+      val result = ZahlungsImportParser.parse(bytes)
+
+      beSuccessfulTry(result)
+
+      result.get.records.size === 5
+    }
+
     "parse example camt.054 file" in {
       val bytes = Files.readAllBytes(Paths.get(getClass.getResource("/camt_054_Beispiel_ZA1_ESR_ZE.xml").toURI()))
 
