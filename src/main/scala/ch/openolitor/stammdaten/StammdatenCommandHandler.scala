@@ -549,7 +549,13 @@ trait StammdatenCommandHandler extends CommandHandler with StammdatenDBMappings 
             Failure(new InvalidStateException(s"Für den Abotyp dieses Abos (${abo.id}) kann keine Guthabenrechngsposition erstellt werden"))
           } else {
             // has to be refactored as soon as more modes are available
-            val anzahlLieferungen = math.max((aboRechnungCreate.bisGuthaben - abo.guthaben), 0)
+            val guthaben = abo match {
+              case zusatzAbo: ZusatzAbo =>
+                val hauptabo = stammdatenReadRepository.getHauptAbo(zusatzAbo.id)
+                hauptabo.get.guthaben
+              case abo: HauptAbo => abo.guthaben
+            }
+            val anzahlLieferungen = math.max((aboRechnungCreate.bisGuthaben - guthaben), 0)
 
             if (anzahlLieferungen > 0) {
               val hauptAboBetrag = abotyp.preis * anzahlLieferungen

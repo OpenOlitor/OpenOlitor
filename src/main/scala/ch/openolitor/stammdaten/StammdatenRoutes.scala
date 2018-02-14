@@ -338,7 +338,10 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   private def aboRoute(implicit subject: Subject, filter: Option[FilterExpr]): Route =
     path("abos" ~ exportFormatPath.?) { exportFormat =>
-      get(list(stammdatenReadRepository.getAbos, exportFormat))
+      parameter('zusatzAbosAktiv.as[Boolean]) { zusatzAbosAktiv =>
+        val xFlags = Some(AbosComplexFlags(zusatzAbosAktiv))
+        get(list(stammdatenReadRepository.getAbos(xFlags), exportFormat))
+      }
     } ~
       path("abos" / "aktionen" / "anzahllieferungenrechnungspositionen") {
         post {

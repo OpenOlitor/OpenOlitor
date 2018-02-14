@@ -28,6 +28,7 @@ import ch.openolitor.core.db._
 import ch.openolitor.core.domain._
 import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
+import ch.openolitor.core.exceptions._
 import scalikejdbc.DB
 import com.typesafe.scalalogging.LazyLogging
 import ch.openolitor.core.domain.EntityStore._
@@ -333,7 +334,20 @@ class StammdatenUpdateService(override val sysConfig: SystemConfig) extends Even
             //we don't modify the status as this korb is going to be deliverd (or not) as the order to the producer has been made
             case Some(_) => korb.status
             //recalculate the status for future körbe
-            case None => calculateKorbStatus(countAbwesend, korb.guthabenVorLieferung, abotyp.guthabenMindestbestand)
+            case None =>
+              abo match {
+                case zusatzAbo: ZusatzAbo =>
+                  val hauptAbotyp = stammdatenWriteRepository.getAbotypDetail(zusatzAbo.hauptAbotypId)
+                  calculateKorbStatus(countAbwesend, korb.guthabenVorLieferung, hauptAbotyp.get.guthabenMindestbestand)
+                case _ =>
+                  abotyp match {
+                    case hauptAbotyp: Abotyp => calculateKorbStatus(countAbwesend, korb.guthabenVorLieferung, hauptAbotyp.guthabenMindestbestand)
+                    case _ =>
+                      logger.error(s"adjustGuthabenVorLieferung: Abotype of Hauptabo must never be a ZusatzAbotyp. Is the case for abo: ${abo.id}")
+                      throw new InvalidStateException(s"adjustGuthabenVorLieferung: Abotype of Hauptabo must never be a ZusatzAbotyp. Is the case for abo: ${abo.id}")
+                  }
+
+              }
           }
           val guthabenNeu = guthaben - index
 

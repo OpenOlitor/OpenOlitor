@@ -467,6 +467,23 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
       }).single
   }
 
+  protected def getDepotlieferungAbosOnlyAktiveZusatzabosQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(depotlieferungAboMapping as depotlieferungAbo)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(sqls"${depotlieferungAbo.id} = ${zusatzAbo.hauptAboId} and ${zusatzAbo.aktiv} =  true")
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, depotlieferungAbo))
+    }.one(depotlieferungAboMapping(depotlieferungAbo))
+      .toMany(
+        rs => zusatzAboMapping.opt(zusatzAbo)(rs)
+      )
+      .map((depotlieferungAbo, zusatzAbos) => {
+        val zusatzAboIds = zusatzAbos.map(_.id).toSet
+        val zusatzAbotypNames = zusatzAbos.map(_.abotypName).toSet
+        copyTo[DepotlieferungAbo, DepotlieferungAbo](depotlieferungAbo, "zusatzAboIds" -> zusatzAboIds, "zusatzAbotypNames" -> zusatzAbotypNames)
+      }).list
+  }
+
   protected def getDepotlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
@@ -570,12 +587,46 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.list
   }
 
+  protected def getHeimlieferungAbosOnlyAktiveZusatzabosQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(heimlieferungAboMapping as heimlieferungAbo)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(sqls"${heimlieferungAbo.id} = ${zusatzAbo.hauptAboId} and ${zusatzAbo.aktiv} =  true")
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, heimlieferungAbo))
+    }.one(heimlieferungAboMapping(heimlieferungAbo))
+      .toMany(
+        rs => zusatzAboMapping.opt(zusatzAbo)(rs)
+      )
+      .map((heimlieferungAbo, zusatzAbos) => {
+        val zusatzAboIds = zusatzAbos.map(_.id).toSet
+        val zusatzAbotypNames = zusatzAbos.map(_.abotypName).toSet
+        copyTo[HeimlieferungAbo, HeimlieferungAbo](heimlieferungAbo, "zusatzAboIds" -> zusatzAboIds, "zusatzAbotypNames" -> zusatzAbotypNames)
+      }).list
+  }
+
   protected def getHeimlieferungAbosQuery(filter: Option[FilterExpr]) = {
     withSQL {
       select
         .from(heimlieferungAboMapping as heimlieferungAbo)
         .where(UriQueryParamToSQLSyntaxBuilder.build(filter, heimlieferungAbo))
     }.map(heimlieferungAboMapping(heimlieferungAbo)).list
+  }
+
+  protected def getPostlieferungAbosOnlyAktiveZusatzabosQuery(filter: Option[FilterExpr]) = {
+    withSQL {
+      select
+        .from(postlieferungAboMapping as postlieferungAbo)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(sqls"${postlieferungAbo.id} = ${zusatzAbo.hauptAboId} and ${zusatzAbo.aktiv} =  true")
+        .where(UriQueryParamToSQLSyntaxBuilder.build(filter, postlieferungAbo))
+    }.one(postlieferungAboMapping(postlieferungAbo))
+      .toMany(
+        rs => zusatzAboMapping.opt(zusatzAbo)(rs)
+      )
+      .map((postlieferungAbo, zusatzAbos) => {
+        val zusatzAboIds = zusatzAbos.map(_.id).toSet
+        val zusatzAbotypNames = zusatzAbos.map(_.abotypName).toSet
+        copyTo[PostlieferungAbo, PostlieferungAbo](postlieferungAbo, "zusatzAboIds" -> zusatzAboIds, "zusatzAbotypNames" -> zusatzAbotypNames)
+      }).list
   }
 
   protected def getPostlieferungAbosQuery(filter: Option[FilterExpr]) = {
