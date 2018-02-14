@@ -24,10 +24,9 @@ package ch.openolitor.core
 
 import spray.httpx.unmarshalling._
 import ch.openolitor.core.models.BaseId
-import java.util.UUID
+import spray.json._
 import spray.routing._
-import spray.http.Uri.Path
-import ch.openolitor.core.ws.ExportFormat
+import spray.httpx.unmarshalling._
 
 trait SprayDeserializers {
   implicit val string2BooleanConverter = new Deserializer[String, Boolean] {
@@ -35,6 +34,12 @@ trait SprayDeserializers {
       case "true" | "yes" | "on" => Right(true)
       case "false" | "no" | "off" => Right(false)
       case x => Left(MalformedContent("'" + x + "' is not a valid Boolean value"))
+    }
+  }
+
+  def jsonDeserializer[T](implicit read: JsonReader[T]) = new Deserializer[String, T] {
+    def apply(str: String) = {
+      Right(read.read(str.parseJson))
     }
   }
 
