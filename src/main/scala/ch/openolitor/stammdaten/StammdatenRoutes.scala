@@ -341,10 +341,6 @@ trait StammdatenRoutes extends HttpService with ActorReferences
       parameter('x.?.as[AbosComplexFlags]) { xFlags: AbosComplexFlags =>
         get(list(stammdatenReadRepository.getAbos(Option(xFlags)), exportFormat))
       }
-      /*parameter('zusatzAbosAktiv.as[Boolean]) { zusatzAbosAktiv =>
-        val xFlags = Some(AbosComplexFlags(zusatzAbosAktiv))
-        get(list(stammdatenReadRepository.getAbos(xFlags), exportFormat))
-      }*/
     } ~
       path("abos" / "aktionen" / "anzahllieferungenrechnungspositionen") {
         post {
@@ -417,7 +413,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(stammdatenReadRepository.getPersonenAboAktivByTouren))
       } ~
       path("touren" / tourIdPath) { id =>
-        get(detail(stammdatenReadRepository.getTourDetail(id))) ~
+        parameter('aktiveOnly.?.as[Boolean]) { aktiveOnly: Boolean =>
+          get(detail(stammdatenReadRepository.getTourDetail(id, aktiveOnly)))
+        } ~
           (put | post)(update[TourModify, TourId](id)) ~
           delete(remove(id))
       }

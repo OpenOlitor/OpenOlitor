@@ -919,20 +919,23 @@ trait StammdatenRepositoryQueries extends LazyLogging with StammdatenDBMappings 
     }.map(tourMapping(tour)).list
   }
 
-  protected def getTourDetailQuery(id: TourId) = {
+  protected def getTourDetailQuery(id: TourId, aktiveOnly: Boolean) = {
     withSQL {
       select
         .from(tourMapping as tour)
         .leftJoin(tourlieferungMapping as tourlieferung).on(tour.id, tourlieferung.tourId)
-        .leftJoin(zusatzAboMapping as zusatzAbo).on(tourlieferung.id, zusatzAbo.hauptAboId)
+        .leftJoin(heimlieferungAboMapping as heimlieferungAbo).on(tourlieferung.id, heimlieferungAbo.id)
+        .leftJoin(zusatzAboMapping as zusatzAbo).on(sqls"${tourlieferung.id} = ${zusatzAbo.hauptAboId} and ${zusatzAbo.aktiv} IN (${aktiveOnly}, true)")
         .where.eq(tour.id, id)
+        .and.in(heimlieferungAbo.aktiv, List[Boolean](aktiveOnly, true))
         .orderBy(tourlieferung.sort)
     }.one(tourMapping(tour))
       .toManies(
         rs => tourlieferungMapping.opt(tourlieferung)(rs),
+        rs => heimlieferungAboMapping.opt(heimlieferungAbo)(rs),
         rs => zusatzAboMapping.opt(zusatzAbo)(rs)
       )
-      .map({ (tour, tourlieferungen, zusatzAbos) =>
+      .map({ (tour, tourlieferungen, heimlieferungAbo, zusatzAbos) =>
         val tourlieferungenDetails = tourlieferungen map { t =>
           val z = zusatzAbos filter (_.hauptAboId == t.id)
 

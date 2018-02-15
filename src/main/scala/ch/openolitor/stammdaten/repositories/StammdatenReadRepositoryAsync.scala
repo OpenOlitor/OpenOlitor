@@ -106,7 +106,7 @@ trait StammdatenReadRepositoryAsync extends ReportReadRepository {
   def getProduzentenabrechnungReport(sammelbestellungIds: Seq[SammelbestellungId], projekt: ProjektReport)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[ProduzentenabrechnungReport]]
 
   def getTouren(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[List[Tour]]
-  def getTourDetail(id: TourId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourDetail]]
+  def getTourDetail(id: TourId, aktiveOnly: Boolean)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourDetail]]
 
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]]
   def getProjektPublik(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[ProjektPublik]]
@@ -424,8 +424,8 @@ class StammdatenReadRepositoryAsyncImpl extends BaseReadRepositoryAsync with Sta
     getTourenQuery.future
   }
 
-  def getTourDetail(id: TourId)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourDetail]] = {
-    getTourDetailQuery(id).future
+  def getTourDetail(id: TourId, aktiveOnly: Boolean)(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[TourDetail]] = {
+    getTourDetailQuery(id, aktiveOnly).future
   }
 
   def getProjekt(implicit context: ExecutionContext, asyncCpContext: MultipleAsyncConnectionPoolContext): Future[Option[Projekt]] = {
