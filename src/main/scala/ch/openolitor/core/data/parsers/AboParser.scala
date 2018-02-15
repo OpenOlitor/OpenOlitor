@@ -80,7 +80,7 @@ object AboParser extends EntityParser {
         val vertriebBeschrieb = vertrieb.beschrieb
         val aktiv = IAbo.calculateAktiv(start, ende)
         val zusatzAboIds = (row.value[String](zusatzAboIdsIndex) split (",") filter (_.size > 0) map (id => AboId(id.toLong))).toSet
-        val zusatzAbotypNames = (row.value[String](zusatzAbotypNamesIndex) split (",")).toSet
+        val zusatzAbotypNames = (row.value[String](zusatzAbotypNamesIndex) split (",")).toSeq
 
         depotIdOpt map { depotIdInt =>
           val depotId = depotIdMapping getOrElse (depotIdInt, throw ParseException(s"Depot id $depotIdInt referenced from abo not found"))
