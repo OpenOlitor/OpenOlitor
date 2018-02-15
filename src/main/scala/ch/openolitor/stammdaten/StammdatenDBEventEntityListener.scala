@@ -558,17 +558,17 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
 
       stammdatenUpdateRepository.getAboDetailAusstehend(abw.aboId) match {
         case Some(abo) => {
-          stammdatenUpdateRepository.getKorb(abw.lieferungId, abw.aboId).toList ++
-            stammdatenUpdateRepository.getZusatzAboKorb(abw.lieferungId, abw.aboId) map { korb =>
-              stammdatenUpdateRepository.getAbotypById(abo.abotypId) map { abotyp =>
-                //re count because the might be another abwesenheit for the same date
-                val newAbwesenheitCount = stammdatenUpdateRepository.countAbwesend(abw.aboId, abw.datum)
-                val status = calculateKorbStatus(newAbwesenheitCount, abo.guthaben, abotyp.guthabenMindestbestand)
+          stammdatenUpdateRepository.getAbotypDetail(abo.abotypId) map { abotyp =>
+            //re count because the might be another abwesenheit for the same date
+            val newAbwesenheitCount = stammdatenUpdateRepository.countAbwesend(abw.aboId, abw.datum)
+            val status = calculateKorbStatus(newAbwesenheitCount, abo.guthaben, abotyp.guthabenMindestbestand)
+            stammdatenUpdateRepository.getKorb(abw.lieferungId, abw.aboId).toList ++
+              stammdatenUpdateRepository.getZusatzAboKorb(abw.lieferungId, abw.aboId) map { korb =>
                 val statusAlt = korb.status
                 log.debug(s"Modify Korb-Status as Abwesenheit was deleted ${abw.id}, newCount:$newAbwesenheitCount, newStatus:${status}.")
                 stammdatenUpdateRepository.updateEntity[Korb, KorbId](korb.id)(korbMapping.column.status -> status)
               }
-            }
+          }
         }
         case None => log.error(s"There should be an abo with this id : ${abw.aboId}")
       }

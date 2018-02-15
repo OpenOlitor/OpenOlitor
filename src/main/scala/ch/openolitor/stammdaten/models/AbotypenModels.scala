@@ -27,7 +27,7 @@ import ch.openolitor.core.models._
 import org.joda.time.LocalDate
 import ch.openolitor.core.JSONSerializable
 import ch.openolitor.core.scalax.Tuple26
-import ch.openolitor.core.scalax.Tuple25
+import ch.openolitor.core.scalax.Tuple24
 
 sealed trait Lieferzeitpunkt extends Product
 sealed trait Wochentag extends Lieferzeitpunkt
@@ -120,7 +120,6 @@ sealed trait IAbotyp extends BaseEntity[AbotypId] with AktivRange with Product w
   val anzahlAbwesenheiten: Option[Int]
   val farbCode: String
   val zielpreis: Option[BigDecimal]
-  val guthabenMindestbestand: Int
   val adminProzente: BigDecimal
   val anzahlAbonnenten: Int
   val anzahlAbonnentenAktiv: Int
@@ -235,7 +234,6 @@ case class ZusatzAbotyp(
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
-  guthabenMindestbestand: Int,
   adminProzente: BigDecimal,
   wirdGeplant: Boolean,
   //Zusatzinformationen
@@ -252,7 +250,7 @@ case class ZusatzAbotyp(
 
 object ZusatzAbotyp {
   def unapply(a: ZusatzAbotyp) = {
-    Some(Tuple25(
+    Some(Tuple24(
       a.id,
       a.name,
       a.beschreibung,
@@ -267,7 +265,6 @@ object ZusatzAbotyp {
       a.anzahlAbwesenheiten,
       a.farbCode,
       a.zielpreis,
-      a.guthabenMindestbestand,
       a.adminProzente,
       a.wirdGeplant,
       a.anzahlAbonnenten,
@@ -296,7 +293,6 @@ case class ZusatzAbotypModify(
   anzahlAbwesenheiten: Option[Int],
   farbCode: String,
   zielpreis: Option[BigDecimal],
-  guthabenMindestbestand: Int,
   adminProzente: BigDecimal,
   wirdGeplant: Boolean,
   waehrung: Waehrung

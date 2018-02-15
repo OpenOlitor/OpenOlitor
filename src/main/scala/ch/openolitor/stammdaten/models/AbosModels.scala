@@ -50,9 +50,6 @@ sealed trait Abo extends BaseEntity[AboId] with JSONSerializable {
   val kunde: String
   val start: LocalDate
   val ende: Option[LocalDate]
-  val guthabenVertraglich: Option[Int]
-  val guthaben: Int
-  val guthabenInRechnung: Int
   val letzteLieferung: Option[DateTime]
   //calculated fields
   val anzahlAbwesenheiten: TreeMap[String, Int]
@@ -66,6 +63,9 @@ sealed trait Abo extends BaseEntity[AboId] with JSONSerializable {
 sealed trait HauptAbo extends Abo with JSONSerializable {
   val zusatzAboIds: Set[AboId]
   val zusatzAbotypNames: Seq[String]
+  val guthabenVertraglich: Option[Int]
+  val guthaben: Int
+  val guthabenInRechnung: Int
 }
 
 sealed trait AboReport extends Abo {
@@ -577,9 +577,6 @@ case class ZusatzAbo(
   vertriebBeschrieb: Option[String],
   start: LocalDate,
   ende: Option[LocalDate],
-  guthabenVertraglich: Option[Int], // we don't use this for zusatzabo
-  guthaben: Int, // we don't use this for zusatzabo
-  guthabenInRechnung: Int, // we don't use this for zusatzabo
   letzteLieferung: Option[DateTime],
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
@@ -591,36 +588,6 @@ case class ZusatzAbo(
   modifidat: DateTime,
   modifikator: PersonId
 ) extends Abo
-
-object ZusatzAbo {
-  def unapply(o: ZusatzAbo) = {
-    Some(Tuple23(
-      o.id,
-      o.hauptAboId,
-      o.hauptAbotypId,
-      o.abotypId,
-      o.abotypName,
-      o.kundeId,
-      o.kunde,
-      o.vertriebsartId,
-      o.vertriebId,
-      o.vertriebBeschrieb,
-      o.start,
-      o.ende,
-      o.guthabenVertraglich,
-      o.guthaben,
-      o.guthabenInRechnung,
-      o.letzteLieferung,
-      o.anzahlAbwesenheiten,
-      o.anzahlLieferungen,
-      o.aktiv,
-      o.erstelldat,
-      o.ersteller,
-      o.modifidat,
-      o.modifikator
-    ))
-  }
-}
 
 case class ZusatzAboDetail(
   id: AboId,
@@ -635,9 +602,6 @@ case class ZusatzAboDetail(
   vertriebBeschrieb: Option[String],
   start: LocalDate,
   ende: Option[LocalDate],
-  guthabenVertraglich: Option[Int],
-  guthaben: Int,
-  guthabenInRechnung: Int,
   letzteLieferung: Option[DateTime],
   //calculated fields
   anzahlAbwesenheiten: TreeMap[String, Int],
@@ -663,4 +627,10 @@ case class ZusatzAboCreate(
   hauptAboId: AboId,
   abotypId: AbotypId,
   kundeId: KundeId
+) extends JSONSerializable
+
+/* Used to trigger more complex filtering on overview searches */
+
+case class AbosComplexFlags(
+  zusatzAbosAktiv: Boolean
 ) extends JSONSerializable

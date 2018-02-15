@@ -27,7 +27,7 @@ import ch.openolitor.core.models._
 import ch.openolitor.core.filestore.UnknownFileType
 import ch.openolitor.core.SprayDeserializers
 
-trait StammdatenPaths extends SprayDeserializers {
+trait StammdatenPaths extends SprayDeserializers with StammdatenJsonProtocol {
   implicit val abotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
   implicit val zusatzAbotypIdPath = long2BaseIdPathMatcher(AbotypId.apply)
   implicit val kundeIdPath = long2BaseIdPathMatcher(KundeId.apply)
@@ -59,4 +59,6 @@ trait StammdatenPaths extends SprayDeserializers {
     case UnknownFileType => None
     case x => Some(x)
   })
+
+  implicit val abosComplexFlagsParameter = jsonDeserializer[AbosComplexFlags]
 }

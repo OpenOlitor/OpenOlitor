@@ -36,7 +36,7 @@ object ZusatzAboParser extends EntityParser {
   def parse(kundeIdMapping: Map[Long, KundeId], kunden: List[Kunde], vertriebsartIdMapping: Map[Long, VertriebsartId], vertriebsarten: List[Vertriebsart], vertriebe: List[Vertrieb],
     abotypen: List[ZusatzAbotyp], abos: List[Abo], abwesenheiten: List[Abwesenheit])(implicit loggingAdapter: LoggingAdapter) = {
     parseEntity[ZusatzAbo, AboId]("id", Seq("haupt_abo_id", "abotyp_id", "kunde_id", "vertriebsart_id", "start", "ende",
-      "guthaben_vertraglich", "guthaben", "guthaben_in_rechnung", "letzte_lieferung", "anzahl_abwesenheiten", "anzahl_lieferungen") ++ modifyColumns) { id => indexes =>
+      "letzte_lieferung", "anzahl_abwesenheiten", "anzahl_lieferungen") ++ modifyColumns) { id => indexes =>
       row =>
         //match column indexes
         val Seq(haupAboIdIndex, zusatzAbotypIdIndex, kundeIdIndex, vertriebsartIdIndex, startIndex, endeIndex,
@@ -50,10 +50,6 @@ object ZusatzAboParser extends EntityParser {
         val start = row.value[LocalDate](startIndex)
         val ende = row.value[Option[LocalDate]](endeIndex)
         val aboId = AboId(id)
-
-        val guthabenVertraglich = row.value[Option[Int]](guthabenVertraglichIndex)
-        val guthaben = row.value[Int](guthabenIndex)
-        val guthabenInRechnung = row.value[Int](guthabenInRechnungIndex)
 
         val letzteLieferung = row.value[Option[DateTime]](indexLetzteLieferung)
         //calculate count
@@ -85,9 +81,6 @@ object ZusatzAboParser extends EntityParser {
           vertriebBeschrieb = hauptAbo.vertriebBeschrieb,
           start = start,
           ende = ende,
-          guthabenVertraglich = guthabenVertraglich,
-          guthaben = guthaben,
-          guthabenInRechnung = guthabenInRechnung,
           letzteLieferung = letzteLieferung,
           //calculated fields
           anzahlAbwesenheiten = anzahlAbwesenheiten,

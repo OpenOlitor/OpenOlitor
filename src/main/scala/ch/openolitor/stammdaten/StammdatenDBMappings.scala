@@ -192,7 +192,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
         column.anzahlAbwesenheiten -> zusatzabotyp.anzahlAbwesenheiten,
         column.farbCode -> zusatzabotyp.farbCode,
         column.zielpreis -> zusatzabotyp.zielpreis,
-        column.guthabenMindestbestand -> zusatzabotyp.guthabenMindestbestand,
         column.adminProzente -> zusatzabotyp.adminProzente,
         column.wirdGeplant -> zusatzabotyp.wirdGeplant,
         column.anzahlAbonnenten -> zusatzabotyp.anzahlAbonnenten,
@@ -616,9 +615,6 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
         column.abotypName -> abo.abotypName,
         column.start -> abo.start,
         column.ende -> abo.ende,
-        column.guthabenVertraglich -> abo.guthabenVertraglich,
-        column.guthaben -> abo.guthaben,
-        column.guthabenInRechnung -> abo.guthabenInRechnung,
         column.letzteLieferung -> abo.letzteLieferung,
         column.anzahlAbwesenheiten -> abo.anzahlAbwesenheiten,
         column.anzahlLieferungen -> abo.anzahlLieferungen,
@@ -631,7 +627,10 @@ trait StammdatenDBMappings extends DBMappings with LazyLogging with BaseParamete
     override def updateParameters(abo: A) = {
       super.updateParameters(abo) ++ Seq(
         column.zusatzAboIds -> abo.zusatzAboIds,
-        column.zusatzAbotypNames -> abo.zusatzAbotypNames
+        column.zusatzAbotypNames -> abo.zusatzAbotypNames,
+        column.guthabenVertraglich -> abo.guthabenVertraglich,
+        column.guthaben -> abo.guthaben,
+        column.guthabenInRechnung -> abo.guthabenInRechnung
       )
     }
   }

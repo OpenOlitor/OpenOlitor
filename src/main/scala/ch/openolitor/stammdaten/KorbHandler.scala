@@ -27,6 +27,7 @@ import ch.openolitor.stammdaten.models._
 import ch.openolitor.stammdaten.repositories._
 import ch.openolitor.util.IdUtil
 import ch.openolitor.core.repositories.EventPublisher
+import ch.openolitor.core.exceptions._
 import scala.collection._
 import org.joda.time.DateTime
 import com.github.nscala_time.time.Imports._
@@ -45,22 +46,14 @@ trait KorbHandler extends KorbStatusHandler
     logger.debug(s"upsertKorb lieferung: $Lieferung abo: $abo abotyp: $abotyp")
     stammdatenWriteRepository.getKorb(lieferung.id, abo.id) match {
       case None if (lieferung.lieferplanungId.isDefined) =>
-        val status = abo match {
-          case zusatzAbo: ZusatzAbo =>
-            val mainAbo = stammdatenWriteRepository.getHauptAbo(zusatzAbo.id)
-            val abwCount = stammdatenWriteRepository.countAbwesend(mainAbo.get.id, lieferung.datum.toLocalDate)
-            calculateKorbStatus(abwCount, mainAbo.get.guthaben, abotyp.guthabenMindestbestand)
-          case abo: Abo =>
-            val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
-            calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
-        }
+        val (status, guthaben) = calculateStatusGuthaben(abo, lieferung, abotyp)
         val korbId = KorbId(IdUtil.positiveRandomId)
         val korb = Korb(
           korbId,
           lieferung.id,
           abo.id,
           status,
-          abo.guthaben,
+          guthaben,
           None,
           None,
           DateTime.now,
@@ -74,21 +67,40 @@ trait KorbHandler extends KorbStatusHandler
         (None, None)
       case Some(korb) =>
         val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
-        val status = calculateKorbStatus(abwCount, abo.guthaben, abotyp.guthabenMindestbestand)
+        val (status, guthaben) = calculateStatusGuthaben(abo, lieferung, abotyp)
 
         val copy = korb.copy(
           status = status,
-          guthabenVorLieferung = abo.guthaben
+          guthabenVorLieferung = guthaben
         )
 
         // only update if changed
         if (korb != copy) {
           (stammdatenWriteRepository.updateEntity[Korb, KorbId](korb.id)(
             korbMapping.column.status -> status,
-            korbMapping.column.guthabenVorLieferung -> abo.guthaben
+            korbMapping.column.guthabenVorLieferung -> guthaben
           ), Some(korb))
         } else {
           (Some(korb), Some(korb))
+        }
+    }
+  }
+
+  private def calculateStatusGuthaben(abo: Abo, lieferung: Lieferung, abotyp: IAbotyp)(implicit personId: PersonId, session: DBSession, publisher: EventPublisher): (KorbStatus, Int) = {
+    abo match {
+      case zusatzAbo: ZusatzAbo =>
+        val mainAbo = stammdatenWriteRepository.getHauptAbo(zusatzAbo.id)
+        val hauptabotyp = stammdatenWriteRepository.getAbotypDetail(zusatzAbo.hauptAbotypId)
+        val abwCount = stammdatenWriteRepository.countAbwesend(mainAbo.get.id, lieferung.datum.toLocalDate)
+        (calculateKorbStatus(abwCount, mainAbo.get.guthaben, hauptabotyp.get.guthabenMindestbestand), mainAbo.get.guthaben)
+      case abo: HauptAbo =>
+        val abwCount = stammdatenWriteRepository.countAbwesend(lieferung.id, abo.id)
+        abotyp match {
+          case hauptabotyp: Abotyp =>
+            (calculateKorbStatus(abwCount, abo.guthaben, hauptabotyp.guthabenMindestbestand), abo.guthaben)
+          case _ =>
+            logger.error(s"calculateStatusGuthaben: Abotype of Hauptabo must never be a ZusatzAbotyp. Is the case for abo: ${abo.id}")
+            throw new InvalidStateException(s"calculateStatusGuthaben: Abotype of Hauptabo must never be a ZusatzAbotyp. Is the case for abo: ${abo.id}")
         }
     }
   }

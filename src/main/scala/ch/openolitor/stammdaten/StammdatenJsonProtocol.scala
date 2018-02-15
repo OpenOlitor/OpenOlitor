@@ -216,6 +216,9 @@ trait StammdatenJsonProtocol extends BaseJsonProtocol with ReportJsonProtocol wi
   implicit val depotlieferungModifyFormat = jsonFormat1(DepotlieferungModify)
   implicit val heimlieferungModifyFormat = jsonFormat1(HeimlieferungModify)
 
+  implicit val abosComplexFlagsFormat = jsonFormat1(AbosComplexFlags)
+  implicit val optionAbosComplexFlagsFormat = new OptionFormat[AbosComplexFlags]
+
   implicit val vertriebsartModifyFormat = new RootJsonFormat[VertriebsartModify] {
     def write(obj: VertriebsartModify): JsValue =
       JsObject((obj match {

@@ -338,7 +338,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
 
   private def aboRoute(implicit subject: Subject, filter: Option[FilterExpr]): Route =
     path("abos" ~ exportFormatPath.?) { exportFormat =>
-      get(list(stammdatenReadRepository.getAbos, exportFormat))
+      parameter('x.?.as[AbosComplexFlags]) { xFlags: AbosComplexFlags =>
+        get(list(stammdatenReadRepository.getAbos(Option(xFlags)), exportFormat))
+      }
     } ~
       path("abos" / "aktionen" / "anzahllieferungenrechnungspositionen") {
         post {
@@ -411,7 +413,9 @@ trait StammdatenRoutes extends HttpService with ActorReferences
         get(list(stammdatenReadRepository.getPersonenAboAktivByTouren))
       } ~
       path("touren" / tourIdPath) { id =>
-        get(detail(stammdatenReadRepository.getTourDetail(id))) ~
+        parameter('aktiveOnly.?.as[Boolean]) { aktiveOnly: Boolean =>
+          get(detail(stammdatenReadRepository.getTourDetail(id, aktiveOnly)))
+        } ~
           (put | post)(update[TourModify, TourId](id)) ~
           delete(remove(id))
       }
