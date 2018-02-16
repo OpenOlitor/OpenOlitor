@@ -37,9 +37,9 @@ object OO900_Guthaben {
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"""
 ALTER TABLE ZusatzAbo
-DROP COLUMN guthaben_vertraglich,
-DROP COLUMN guthaben,
-DROP COLUMN guthaben_in_rechnung
+DROP COLUMN IF EXISTS guthaben_vertraglich,
+DROP COLUMN IF EXISTS guthaben,
+DROP COLUMN IF EXISTS guthaben_in_rechnung
 """.execute.apply()
       Success(true)
     }
@@ -49,7 +49,7 @@ DROP COLUMN guthaben_in_rechnung
     def execute(sysConfig: SystemConfig)(implicit session: DBSession): Try[Boolean] = {
       sql"""
 ALTER TABLE ZusatzAbotyp
-DROP COLUMN guthaben_mindestbestand
+DROP COLUMN IF EXISTS guthaben_mindestbestand
 """.execute.apply()
       Success(true)
     }
