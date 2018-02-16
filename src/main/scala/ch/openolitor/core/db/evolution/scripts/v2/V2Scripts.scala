@@ -156,5 +156,6 @@ object V2Scripts {
     OO829_add_zusatzabo_info_to_abo.scripts ++
     OO846_delete_unmapped_zusatzabos.scripts ++
     OO854_zusatzinfo_lieferung_200.scripts ++
-    OO861_recalculate_lieferung_counts.scripts
+    OO861_recalculate_lieferung_counts.scripts ++
+    OO900_Guthaben.scripts
 }
