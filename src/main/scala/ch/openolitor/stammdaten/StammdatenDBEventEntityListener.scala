@@ -851,6 +851,15 @@ class StammdatenDBEventEntityListener(override val sysConfig: SystemConfig) exte
               postlieferungAboMapping.column.anzahlLieferungen -> abo.anzahlLieferungen.updated(geschaeftsjahrKey, value)
             )
           }
+
+          stammdatenUpdateRepository.modifyEntity[ZusatzAbo, AboId](korb.aboId) { abo =>
+            val value = abo.anzahlLieferungen.get(geschaeftsjahrKey).map(_ + 1).getOrElse(1)
+            updateAbotypOnAusgeliefert(abo.abotypId, entity.datum)
+            Map(
+              zusatzAboMapping.column.letzteLieferung -> getLatestDate(abo.letzteLieferung, Some(entity.datum)),
+              zusatzAboMapping.column.anzahlLieferungen -> abo.anzahlLieferungen.updated(geschaeftsjahrKey, value)
+            )
+          }
         }
       }
     }

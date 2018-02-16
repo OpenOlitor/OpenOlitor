@@ -459,6 +459,7 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
   def createZusatzAbo(meta: EventMetadata, newId: AboId, create: ZusatzAboCreate)(implicit personId: PersonId = meta.originator) = {
     logger.debug(s"createZusatzAbo id= $newId zusatzabocreate= $create")
     DB localTxPostPublish { implicit session => implicit publisher =>
+      val emptyMap: TreeMap[String, Int] = TreeMap()
       val hauptAbo = aboById(create.hauptAboId)
       val zusatzAbotyp = zusatzAboTypById(create.abotypId)
       hauptAbo match {
@@ -479,9 +480,9 @@ class StammdatenInsertService(override val sysConfig: SystemConfig) extends Even
                   "abotypName" -> z.name,
                   "start" -> startDate,
                   "ende" -> endDate,
-                  "letzteLieferung" -> h.letzteLieferung,
-                  "anzahlAbwesenheiten" -> h.anzahlAbwesenheiten,
-                  "anzahlLieferungen" -> h.anzahlLieferungen,
+                  "letzteLieferung" -> None,
+                  "anzahlAbwesenheiten" -> emptyMap,
+                  "anzahlLieferungen" -> emptyMap,
                   "aktiv" -> h.aktiv,
                   "erstelldat" -> meta.timestamp,
                   "ersteller" -> meta.originator,
