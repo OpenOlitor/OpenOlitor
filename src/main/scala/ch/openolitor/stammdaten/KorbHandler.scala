@@ -121,17 +121,15 @@ trait KorbHandler extends KorbStatusHandler
             // in case there is not programmed korb for the hauptAbo or it is not plan to be delivered
             stammdatenWriteRepository.getKorb(lieferung.id, zusatzabo.hauptAboId) match {
               case Some(hauptAboKorb) => {
-                if (hauptAboKorb.status == WirdGeliefert) {
-                  stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanung.id, lieferung.datum) match {
-                    case None => {
-                      // Using positiveRandomId because the lieferung cannot be created in commandHandler.
-                      createLieferungInner(LieferungId(IdUtil.positiveRandomId), LieferungAbotypCreate(zusatzabo.abotypId, lieferung.vertriebId, lieferung.datum), Some(lieferplanung.id)).map { zusatzLieferung =>
-                        offenLieferung(lieferplanung.id, project, zusatzLieferung)
-                      }
-                    }
-                    case Some(zusatzLieferung) => {
+                stammdatenWriteRepository.getExistingZusatzaboLieferung(zusatzabo.abotypId, lieferplanung.id, lieferung.datum) match {
+                  case None => {
+                    // Using positiveRandomId because the lieferung cannot be created in commandHandler.
+                    createLieferungInner(LieferungId(IdUtil.positiveRandomId), LieferungAbotypCreate(zusatzabo.abotypId, lieferung.vertriebId, lieferung.datum), Some(lieferplanung.id)).map { zusatzLieferung =>
                       offenLieferung(lieferplanung.id, project, zusatzLieferung)
                     }
+                  }
+                  case Some(zusatzLieferung) => {
+                    offenLieferung(lieferplanung.id, project, zusatzLieferung)
                   }
                 }
               }
