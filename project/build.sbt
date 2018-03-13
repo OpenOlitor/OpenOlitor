@@ -1,2 +1,2 @@
-resolvers += Classpaths.typesafeResolver
+//resolvers += Classpaths.typesafeResolver
 

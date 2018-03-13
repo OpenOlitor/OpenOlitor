@@ -1,11 +1,11 @@
-import sbt._
-import Keys._
+//import sbt._
+//import Keys._
 
-import scalariform.formatter.preferences._
-import com.typesafe.sbt.SbtScalariform
-import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+//import scalariform.formatter.preferences._
+//import com.typesafe.sbt.SbtScalariform
+//import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
-object BuildSettings {
+/*object BuildSettings {
   val specs2V = "2.4.17" // based on spray 1.3.x built in support
   val akkaV = "2.4.+"
   val sprayV = "1.3.+"
@@ -74,18 +74,18 @@ object BuildSettings {
 	  )
 	}
   )
-}
+}*/
 
-object ScalaxbSettings {
+/*object ScalaxbSettings {
   import sbtscalaxb.ScalaxbKeys._
 
   lazy val scalaxbSettings = Seq(
       scalaxbXsdSource in (Compile, scalaxb) := baseDirectory.value / "src" / "main" / "resources" / "xsd",
       scalaxbPackageName in (Compile, scalaxb) := "ch.openolitor.generated.xsd"
     )
-}
+}*/
 
-object OpenOlitorBuild extends Build {
+/*object OpenOlitorBuild extends Build {
   import BuildSettings._
 
   lazy val akkaPersistenceSqlAsyncUri = uri("git://github.com/OpenOlitor/akka-persistence-sql-async#fix/scalikejdbc_version")
@@ -126,4 +126,4 @@ object OpenOlitorBuild extends Build {
       }
       )) dependsOn (macroSub, sprayJsonMacro, akkaPersistenceSqlAsync)
   lazy val root = Project("root", file("root"), settings = buildSettings) aggregate (macroSub, main, sprayJsonMacro)
-}
+}*/
