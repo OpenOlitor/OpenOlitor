@@ -35,6 +35,10 @@ The following sites provide useful information about OpenOplitor:
 
 * There is another, internal Wiki where the active OpenOplito team manages the planed work.
 
+## Lizenz / License
+Code bis April 2018 wurde unter [GPL v3](LICENSE_legacy) publiziert. Ab April 2018 wird OpenOlitor unter [AGPL v3](LICENSE_legacy) veröffentlicht.
 
+Le code produit jusqu'en avril 2018 à été publié sous [GPL v3](LICENSE_legacy). Dès ce moment nous publion sous [AGPL v3](LICENSE).
 
+Until april 2018 we have published all code under [GPL v3](LICENSE_legacy). After this moment we have switched to [AGPL v3](LICENSE).
 
