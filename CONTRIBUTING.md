@@ -3,6 +3,8 @@
 
 OpenOlitor is a software tool that helps the management of [Community Supported Agriculture (CSA)](https://en.wikipedia.org/wiki/Community-supported_agriculture) groups. This software it is made by people that follows the solidarity and transparency model of the CSAs. Your contributions help to change the food distribution system as well as making the community bigger and stronger.
 
+This software was started and it is mainly maintained by [Tegonal GmbH](https://www.tegonal.com), available in https://github.com/tegonal.
+
 ## Ways to contribute
 
 ### First time contributor?
