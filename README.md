@@ -27,7 +27,7 @@ Les informations suivantes sont à votre disposition:
 
 ## Welcome at OpenOlitor
 
-The following sites provide useful information about OpenOplitor:
+The following sites provide useful information about OpenOlitor:
 
 * [www.openolitor.org](http://www.openolitor.org/en/): The main website contains general information about the product, explains the organizational structure and financing. Furthermore it provides current news, contact details and information about how to get involved as well as the newsletter subscription.
 
