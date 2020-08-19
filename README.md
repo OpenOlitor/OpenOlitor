@@ -33,7 +33,7 @@ The following sites provide useful information about OpenOplitor:
 
 * The main documentation is available on the [GitHub-Wiki](https://github.com/OpenOlitor/OpenOlitor/wiki).
 
-* There is another, internal Wiki where the active OpenOplito team manages the planed work.
+* There is another, internal Wiki where the active OpenOlitor team manages the planed work.
 
 ## Lizenz / License
 Code bis April 2018 wurde unter [GPL v3](LICENSE_legacy) publiziert. Ab April 2018 wird OpenOlitor unter [AGPL v3](LICENSE_legacy) veröffentlicht.
