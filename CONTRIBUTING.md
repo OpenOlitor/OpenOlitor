@@ -6,7 +6,7 @@ OpenOlitor is a software tool that helps the management of [Community Supported 
 ## Ways to contribute
 
 ### First time contributor?
-If you are looking for tasks where you could offer your help, please check the tasks that are labeled with [help wanted](https://github.com/OpenOlitor/OpenOlitor/labels/help wanted) However, those are not the only ways to help the project!. Here a more exhaustive list:
+If you are looking for tasks where you could offer your help, please check the tasks that are labeled with [help wanted](https://github.com/OpenOlitor/OpenOlitor/labels/help%20wanted) However, those are not the only ways to help the project!. Here a more exhaustive list:
 * Improve our [documentation](#improving-our-documentation)
 * [Improve our translations](#improving-our-translations) OpenOlitor to other languages
 * Find and mark duplicate issues
@@ -27,7 +27,7 @@ If you are looking for general technical information about the project you can g
 The technical documentation of this project is published in the [wiki](https://github.com/OpenOlitor/OpenOlitor/wiki). Is our documentation up to date? Have we covered everything we should? Could our wording be improved? then open a pull request with your suggested changes or additions.
 The user documentation is published in the OpenOlitor website. Please, [contact us](https://openolitor.org/kontakt/) in case you would like to participate on the improuvement of the user documentation.
 
-###Improving-our-translations
+### Improving-our-translations
 The translations for the software are available in Crowdin, [subscriber client](https://crowdin.com/project/openolitor-subscriber-client), [admin client](https://crowdin.com/project/openolitor-client-admin) and [core client](https://crowdin.com/project/openolitor-core-client).
 1. If you would like to add a completely new language, please contact us to info@tegonal.com. We will create the language in Crowdin for you;
 2. If you want to propose changes to the current translations, register yourself into Crowdin, and you would be ready to propose it! 
@@ -43,4 +43,4 @@ If you have questions about more specific features, check the list of [videos av
 #### License
 The software is provided under AGPL-3.0. Contributions to this project are accepted under the same license.
 
-This software was started and it is maintained mainly by Tegonal GmbH (www.tegonal.com).
+This software was started and it is mainly maintained by [Tegonal GmbH](https://www.tegonal.com), available in https://github.com/tegonal.
