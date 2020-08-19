@@ -22,7 +22,7 @@ If you are looking for tasks where you could offer your help, please check the t
 If you are looking for general technical information about the project you can go to the project [wiki](https://github.com/OpenOlitor/OpenOlitor/wiki) or other resources online like the [presentation in FOSDEM 2020](https://fosdem.org/2020/schedule/event/openolitor_community_supported_agriculture/).
 
 1. Before you submit a pull request, please make sure your contribution passes all tests. Test failures need to be addressed before we can merge your contribution.
-2. Provide detail about the issue you are solving in the pull request description. Note: If your pull request addresses a specific issue, please reference it using medic/<repo>#<issue number>
+2. Provide detail about the issue you are solving in the pull request description. Note: If your pull request addresses a specific issue, please reference it using openolitor/<repo>#<issue number>
 3. Your PR will be reviewed by one of the repository's maintainers. Most PRs have at least one change requested before they're merged so don't be offended if your change doesn't get accepted on the first try!
 
 ### Improving our documentation
