@@ -9,7 +9,7 @@
 
 Zu OpenOlitor sind die folgenden Online-Informationen verfügbar:
 
-* [www.openolitor.org](http://www.openolitor.org/de/): Die Webseite von OpenOlitor enthält Information zur Software, zur Organisation und zur Finanzierung sowie aktuelle Informationen, Kontaktdaten, Vorschläge zur Mitarbeit und die Anmeldung für den Newsletter.
+* [www.openolitor.org](http://www.openolitor.org/): Die Webseite von OpenOlitor enthält Information zur Software, zur Organisation und zur Finanzierung sowie aktuelle Informationen, Kontaktdaten, Vorschläge zur Mitarbeit und die Anmeldung für den Newsletter.
 
 * Die Dokumentation zu OpenOlitor befindet sich auf [dem GitHub-Wiki](https://github.com/OpenOlitor/OpenOlitor/wiki).
 
