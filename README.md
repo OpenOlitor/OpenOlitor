@@ -8,13 +8,13 @@ Dieses Repository wird für die Erfassung und Planung von [Issues](https://githu
 
 ## OpenOlitor - Bienvenue chez OpenOlitor
 
-Ce repository et utilisé pour le traçage de [tâche et problèmes (issues)](https://github.com/OpenOlitor/OpenOlitor/issues) verwendet.
+Ce repository et utilisé pour le traçage de [tâche et problèmes (issues)](https://github.com/OpenOlitor/OpenOlitor/issues).
 
 [Plus d'informations concernant OpenOlitor](https://github.com/OpenOlitor)
 
 ## OpenOlitor - Welcome at OpenOlitor
 
-This repository is used to track our [issues](https://github.com/OpenOlitor/OpenOlitor/issues) verwendet.
+This repository is used to track our [issues](https://github.com/OpenOlitor/OpenOlitor/issues).
 
 [More information on OpenOlitor](https://github.com/OpenOlitor)
 
