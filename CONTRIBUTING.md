@@ -45,4 +45,4 @@ If you have questions about more specific features, check the list of [videos av
 #### License
 The software is provided under AGPL-3.0. Contributions to this project are accepted under the same license.
 
-This software was started and it is mainly maintained by [Tegonal GmbH](https://www.tegonal.com), available in https://github.com/tegonal.
+This software was started and it is mainly maintained by [Tegonal Genossenschaft](https://www.tegonal.com), available in https://github.com/tegonal.
